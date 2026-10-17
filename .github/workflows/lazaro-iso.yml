@@ -120,3 +120,40 @@ jobs:
             pruebas/resultados/*.png
             pruebas/resultados/*.ppm
           retention-days: 14
+
+  # Deja la ISO estable, ya probada, en una Release pública "en-desarrollo"
+  # (prerelease): descarga directa del .iso, sin iniciar sesión en GitHub
+  # y reanudable, a diferencia de los Artifacts.
+  publicar:
+    name: Publicar ISO en desarrollo
+    needs: pruebas
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: lazaro-publicar
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: iso-estable
+          path: iso
+
+      - name: Actualizar la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          etiqueta=en-desarrollo
+          notas="ISO de prueba compilada desde main ($GITHUB_SHA) y verificada en QEMU (BIOS y UEFI). No es una versión final: pruébala solo en una máquina virtual o en un equipo de sobra."
+          if gh release view "$etiqueta" >/dev/null 2>&1; then
+            gh release edit "$etiqueta" --prerelease --notes "$notas"
+          else
+            gh release create "$etiqueta" --prerelease --target "$GITHUB_SHA" \
+              --title "Lázaro Linux (en desarrollo)" --notes "$notas"
+          fi
+          # La etiqueta sigue al último commit probado.
+          git_ref="refs/tags/$etiqueta"
+          gh api -X PATCH "repos/$GH_REPO/git/$git_ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          gh release upload "$etiqueta" iso/* --clobber
