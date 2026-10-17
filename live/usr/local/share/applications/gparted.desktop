@@ -1,0 +1,15 @@
+[Desktop Entry]
+# Reemplaza al de GParted (/usr/local/share va antes que /usr/share): en
+# la sesión live se abre a través de lazaro-abrir-gparted, que impide
+# usarlo a la vez que el instalador.
+Type=Application
+Name=GParted
+GenericName=Partition Editor
+GenericName[es]=Editor de particiones
+Comment=Create, reorganize, and delete partitions
+Comment[es]=Crear, reorganizar y eliminar particiones
+Exec=lazaro-abrir-gparted %f
+Icon=gparted
+Terminal=false
+Categories=GNOME;System;Filesystem;
+Keywords=Partition;Disk;Particiones;Disco;
