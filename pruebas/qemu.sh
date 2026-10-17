@@ -108,7 +108,7 @@ prueba_live() {
 		captura "$mon" "$RES/$nombre-fallo"
 		echo "FALLO: Calamares no se abrió en la sesión live ($MODO)." >&2
 		ok=1
-	elif esperar "$serie" "$pid" 120 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
+	elif esperar "$serie" "$pid" 180 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
 		captura "$mon" "$RES/$nombre-calamares"
 		echo "OK: la sesión live arrancó ($MODO), Calamares se abrió y ve el disco."
 	else

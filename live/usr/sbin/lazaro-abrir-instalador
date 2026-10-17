@@ -6,4 +6,6 @@
 # primera pantalla.
 LANG="${LANG:-es_ES.UTF-8}"
 export LANG
-exec flock -n /tmp/lazaro-instalador.lock doas -n /usr/bin/calamares "$@"
+# -D 6: guarda en el registro (/root/.cache/.../session.log) los discos
+# que Calamares encuentra; la prueba automática lo revisa.
+exec flock -n /tmp/lazaro-instalador.lock doas -n /usr/bin/calamares -D 6 "$@"

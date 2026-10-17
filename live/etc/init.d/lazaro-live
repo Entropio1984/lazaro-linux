@@ -25,19 +25,25 @@ parametro() {
 }
 
 revisar_discos() {
-	# Lo mismo que hace Calamares (kpmcore) para encontrar dónde instalar.
-	# Si no hay ningún disco, la pantalla de bienvenida bloquea la
-	# instalación con "There are no partitions to install on".
-	sleep 30
-	salida=$(lsblk --nodeps --paths --sort name --json --output type,name 2>&1)
-	if printf '%s' "$salida" | grep -q '"type": *"disk"'; then
+	# Calamares escribe en su registro la lista de discos donde se puede
+	# instalar (después de "LIST OF DETECTED DEVICES:"). Si está vacía, la
+	# bienvenida bloquea con "There are no partitions to install on".
+	registro=""
+	i=0
+	while [ $i -lt 24 ]; do
+		registro=$(find /root/.cache -name session.log 2>/dev/null | head -n 1)
+		[ -n "$registro" ] && grep -q 'LIST OF DETECTED DEVICES' "$registro" && break
+		i=$((i + 1))
+		sleep 5
+	done
+	if [ -n "$registro" ] && grep -A 4 'LIST OF DETECTED DEVICES' "$registro" |
+		grep -q '/dev/'; then
 		serie "LAZARO-DISCOS-OK"
 	else
 		serie "LAZARO-DISCOS-FALLO"
 	fi
-	serie "$salida"
-	registro=/root/.cache/calamares/session.log
-	[ -f "$registro" ] && tail -n 60 "$registro" > /dev/ttyS0 2>/dev/null
+	lsblk --nodeps --paths --json --output type,name > /dev/ttyS0 2>&1
+	[ -n "$registro" ] && grep -A 4 'LIST OF DETECTED DEVICES' "$registro" > /dev/ttyS0 2>&1
 	return 0
 }
 
