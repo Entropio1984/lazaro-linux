@@ -14,8 +14,9 @@
 # Uso:
 #   lazaro-instalar base RAIZ ESCRITORIO
 #   lazaro-instalar escritorio RAIZ ESCRITORIO
-#   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
-#     EXTRAS: esencial (por defecto), flatpak o flatpak-apps
+#   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS [OFICINA]]
+#     EXTRAS: esencial (por defecto), flatpak o flatpak-chrome
+#     OFICINA: ninguna (por defecto), libreoffice u onlyoffice (activa Flatpak)
 #   lazaro-instalar auto DISCO ESCRITORIO     (¡BORRA EL DISCO COMPLETO!)
 
 set -eu
@@ -179,13 +180,23 @@ paso_ajustes() {
 	variante="${5:-}"
 	zona="${6:-America/Bogota}"
 	extras="${7:-esencial}"
+	oficina="${8:-ninguna}"
 	opt_flatpak=no
-	opt_apps_flatpak=no
+	opt_chrome=no
 	case "$extras" in
 		esencial) ;;
 		flatpak) opt_flatpak=yes ;;
-		flatpak-apps) opt_flatpak=yes; opt_apps_flatpak=yes ;;
+		flatpak-chrome) opt_flatpak=yes; opt_chrome=yes ;;
 		*) log "Aviso: aplicaciones adicionales desconocidas '$extras'; se instala lo esencial." ;;
+	esac
+	opt_libreoffice=no
+	opt_onlyoffice=no
+	case "$oficina" in
+		ninguna) ;;
+		libreoffice) opt_libreoffice=yes ;;
+		# OnlyOffice solo existe en Flathub: necesita Flatpak.
+		onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
+		*) log "Aviso: programa de oficina desconocido '$oficina'; no se instala ninguno." ;;
 	esac
 
 	if [ -e "$raiz/usr/share/zoneinfo/$zona" ]; then
@@ -240,11 +251,11 @@ paso_ajustes() {
 	OPT_NVIDIA_MODE=optimus
 	OPT_GCOMPAT=no
 	OPT_CUPS=yes
-	OPT_LIBREOFFICE=yes
+	OPT_LIBREOFFICE=$opt_libreoffice
 	OPT_FIREFOX=yes
 	OPT_FLATPAK=$opt_flatpak
-	OPT_ONLYOFFICE=$opt_apps_flatpak
-	OPT_CHROME=$opt_apps_flatpak
+	OPT_ONLYOFFICE=$opt_onlyoffice
+	OPT_CHROME=$opt_chrome
 	OPT_UPDATE_SHORTCUT=yes
 	DOAS_USER=$usuario
 	EOF
@@ -361,7 +372,7 @@ orden="${1:-}"
 case "$orden" in
 	base)       [ $# -eq 2 ] || die "uso: lazaro-instalar base RAIZ ESCRITORIO"; paso_base "$@" ;;
 	escritorio) [ $# -eq 2 ] || die "uso: lazaro-instalar escritorio RAIZ ESCRITORIO"; paso_escritorio "$@" ;;
-	ajustes)    [ $# -ge 2 ] || die "uso: lazaro-instalar ajustes RAIZ USUARIO [IDIOMA TECLADO VARIANTE ZONA EXTRAS]"; paso_ajustes "$@" ;;
+	ajustes)    [ $# -ge 2 ] || die "uso: lazaro-instalar ajustes RAIZ USUARIO [IDIOMA TECLADO VARIANTE ZONA EXTRAS OFICINA]"; paso_ajustes "$@" ;;
 	auto)       [ $# -eq 2 ] || die "uso: lazaro-instalar auto DISCO ESCRITORIO"; paso_auto "$@" ;;
 	*)
 		sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2

@@ -1,0 +1,9 @@
+// Sesión live: el usuario "lazaro" no tiene contraseña, así que no podría
+// autenticarse para abrir GParted. Solo en la sesión live (este archivo no
+// pasa al sistema instalado) se le permite abrirlo sin preguntar.
+polkit.addRule(function(action, subject) {
+	if (action.id == "org.gnome.gparted" && subject.user == "lazaro" &&
+	    subject.local && subject.active) {
+		return polkit.Result.YES;
+	}
+});
