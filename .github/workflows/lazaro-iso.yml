@@ -19,6 +19,9 @@ concurrency:
 
 jobs:
   iso:
+    # Los PR que vienen de forks no compilan: la caché guarda la llave que
+    # firma Calamares y el índice de la ISO, y un fork podría leerla.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ISO (${{ matrix.alpine }})
     runs-on: ubuntu-latest
     timeout-minutes: 150
