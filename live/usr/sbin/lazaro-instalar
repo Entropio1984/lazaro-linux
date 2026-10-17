@@ -328,7 +328,11 @@ paso_auto() {
 		rc-status default
 		# Nada en la carpeta del usuario debe ser de otro dueño (si
 		# no, Plasma y otros no pueden guardar su configuración).
-		ajenos="$(find /home/prueba ! -user prueba 2>/dev/null | head -n 5)"
+		if [ ! -d /home/prueba ]; then
+			ajenos="falta /home/prueba"
+		else
+			ajenos="$(find /home/prueba ! -user prueba 2>/dev/null | head -n 5)"
+		fi
 		if [ -z "$ajenos" ]; then
 			echo "LAZARO-HOME-OK"
 		else

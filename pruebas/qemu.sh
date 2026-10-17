@@ -187,7 +187,7 @@ prueba_instalar() {
 	if esperar "$serie2" "$pid" 600 LAZARO-PRUEBA-FIN; then
 		captura "$mon" "$RES/$nombre-instalado"
 		if grep -q LAZARO-HOME-AJENO "$serie2"; then
-			echo "FALLO: hay archivos de root en la carpeta del usuario (no podrá guardar su configuración)." >&2
+			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
 		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started' "$serie2"; then
 			echo "OK: el sistema instalado arrancó y su gestor de sesión está activo."
