@@ -186,7 +186,10 @@ prueba_instalar() {
 	ok=0
 	if esperar "$serie2" "$pid" 600 LAZARO-PRUEBA-FIN; then
 		captura "$mon" "$RES/$nombre-instalado"
-		if grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started' "$serie2"; then
+		if grep -q LAZARO-HOME-AJENO "$serie2"; then
+			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
+			ok=1
+		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started' "$serie2"; then
 			echo "OK: el sistema instalado arrancó y su gestor de sesión está activo."
 		else
 			echo "FALLO: el sistema arrancó, pero el gestor de sesión no está activo." >&2

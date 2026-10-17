@@ -4,6 +4,13 @@
 # automático y un clic coinciden, solo se abre uno.
 # Sin LANG Calamares arranca en inglés; el usuario puede cambiarlo en la
 # primera pantalla.
+# Al abrirse solo al iniciar la sesión, espera a que NetworkManager termine
+# de conectarse (como mucho 30 s): Calamares revisa internet una sola vez,
+# al abrir, y si la red aún no estaba lista decía que no había conexión.
+if [ "${1:-}" = --esperar-red ]; then
+	shift
+	command -v nm-online >/dev/null 2>&1 && nm-online -s -q -t 30 || true
+fi
 LANG="${LANG:-es_ES.UTF-8}"
 export LANG
 # -D 6: guarda en el registro (/root/.cache/.../session.log) los discos
