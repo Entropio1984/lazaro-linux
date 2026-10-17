@@ -6,4 +6,15 @@
 set -a
 . /etc/lazaro/postinstall.env
 set +a
-exec /bin/sh /usr/libexec/lazaro/desktop-postinstall.sh </dev/null
+rc=0
+/bin/sh /usr/libexec/lazaro/desktop-postinstall.sh </dev/null || rc=$?
+
+# El script corre como root antes de que el usuario inicie sesión por
+# primera vez: lo que cree en su carpeta personal (por ejemplo ~/.config)
+# quedaría de root y Plasma no podría guardar su configuración
+# ("kioworkerrc not writable"). La carpeta es nueva, toda es del usuario.
+casa="$(getent passwd "$DOAS_USER" 2>/dev/null | cut -d: -f6)"
+if [ -n "$DOAS_USER" ] && [ -n "$casa" ] && [ "$casa" != / ] && [ -d "$casa" ]; then
+	chown -R "$DOAS_USER:$(id -gn "$DOAS_USER")" "$casa"
+fi
+exit $rc

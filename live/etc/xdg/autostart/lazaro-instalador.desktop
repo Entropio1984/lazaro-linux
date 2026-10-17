@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Instalar Lázaro Linux
-Exec=lazaro-abrir-instalador
+Exec=lazaro-abrir-instalador --esperar-red
 Icon=system-software-install
 Terminal=false
 OnlyShowIn=XFCE;
