@@ -27,12 +27,11 @@ if [ "${1:-}" != "--dentro" ]; then
 	mkdir -p "$SALIDA" "$CACHE"
 	msg "Compilando en alpine:$ALPINE_DOCKER_TAG (Alpine $ALPINE_BRANCH)"
 	# Copia local del script (opcional): se monta dentro del contenedor.
-	SCRIPT_LOCAL=""
+	set --
 	if [ -n "${LAZARO_SCRIPT:-}" ]; then
-		SCRIPT_LOCAL="-v $(realpath "$LAZARO_SCRIPT"):/postinstall.sh:ro -e LAZARO_SCRIPT=/postinstall.sh"
+		set -- -v "$(realpath "$LAZARO_SCRIPT"):/postinstall.sh:ro" -e LAZARO_SCRIPT=/postinstall.sh
 	fi
-	# shellcheck disable=SC2086
-	exec docker run --rm $SCRIPT_LOCAL \
+	exec docker run --rm "$@" \
 		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR \
 		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL \
 		-e SALIDA=/salida -e CACHE=/cache \
@@ -83,6 +82,15 @@ rm -rf "$TRABAJO"
 mkdir -p "$TRABAJO"
 cp -r "$LAZARO_DIR/paquetes" "$TRABAJO/"
 chown -R constructor:abuild "$TRABAJO"
+
+# Un Calamares de la caché sirve solo si sus dependencias siguen
+# existiendo en los repositorios actuales de Alpine (por ejemplo, tras
+# subir de versión Qt o kpmcore). Si no, se vuelve a compilar.
+if ls "$REPO_PROPIO/paquetes/$ALPINE_ARCH/calamares-$CALAMARES_VERSION-"*.apk >/dev/null 2>&1 &&
+	! apk add --simulate --quiet --repository "$REPO_PROPIO/paquetes" calamares >/dev/null 2>&1; then
+	msg "El Calamares de la caché ya no encaja con los paquetes actuales de Alpine; se recompila"
+	rm -f "$REPO_PROPIO/paquetes/$ALPINE_ARCH"/calamares-*.apk
+fi
 
 if ls "$REPO_PROPIO/paquetes/$ALPINE_ARCH/calamares-$CALAMARES_VERSION-"*.apk >/dev/null 2>&1; then
 	msg "Calamares $CALAMARES_VERSION ya está compilado (caché)"

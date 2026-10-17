@@ -29,8 +29,10 @@ uso() { sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2; }
 
 [ $# -ge 3 ] || uso
 orden="$1"
+[ -f "$2" ] || { echo "No existe la ISO: $2 (indica un solo archivo)" >&2; exit 2; }
 ISO="$(realpath "$2")"
 MODO="$3"
+case "$MODO" in bios|uefi) ;; *) echo "Modo inválido: $MODO (usa bios o uefi)" >&2; uso ;; esac
 
 KVM=""
 [ -w /dev/kvm ] && KVM="-enable-kvm -cpu host"
@@ -194,7 +196,10 @@ prueba_instalar() {
 }
 
 case "$orden" in
-	live) prueba_live ;;
-	instalar) [ $# -eq 5 ] || uso; prueba_instalar "$4" "$5" ;;
+	live) [ $# -eq 3 ] || uso; prueba_live ;;
+	instalar)
+		[ $# -eq 5 ] || uso
+		case "$5" in con-red|sin-red) ;; *) uso ;; esac
+		prueba_instalar "$4" "$5" ;;
 	*) uso ;;
 esac
