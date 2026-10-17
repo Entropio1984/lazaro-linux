@@ -10,6 +10,14 @@ sin hacer preguntas. Ese script vive en su propio repositorio,
 [alpine-desktop-setup](https://github.com/Entropio1984/alpine-desktop-setup),
 y se descarga al compilar la ISO.
 
+## Descargar
+
+La última ISO probada está en la versión
+[en desarrollo](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo)
+(archivo `.iso` y su suma `.sha256`). Se actualiza sola cada vez que
+cambia la rama principal y pasan las pruebas. Todavía no es una versión
+final: pruébala en una máquina virtual o en un equipo de sobra.
+
 ## Cómo está armada
 
 | Pieza | Dónde | Qué hace |
