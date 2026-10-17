@@ -2,4 +2,8 @@
 # Abre Calamares como root dentro de la sesión gráfica del usuario live.
 # El candado se mantiene mientras Calamares está abierto: si el inicio
 # automático y un clic coinciden, solo se abre uno.
+# Sin LANG Calamares arranca en inglés; el usuario puede cambiarlo en la
+# primera pantalla.
+LANG="${LANG:-es_ES.UTF-8}"
+export LANG
 exec flock -n /tmp/lazaro-instalador.lock doas -n /usr/bin/calamares "$@"

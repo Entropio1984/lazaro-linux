@@ -15,7 +15,10 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 	xfce4 elogind gvfs lightdm lightdm-gtk-greeter polkit-elogind
 	xfce4-screensaver xfce4-terminal font-dejavu dbus dbus-x11 firefox"
 
-LAZARO_LIVE="alpine-base $LAZARO_XFCE
+# util-linux: Calamares (kpmcore) busca los discos con "lsblk --json" y
+# usa blkid, blockdev y sfdisk; busybox no trae lsblk y sin él Calamares
+# dice "There are no partitions to install on".
+LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc"

@@ -24,6 +24,23 @@ parametro() {
 	return 1
 }
 
+revisar_discos() {
+	# Lo mismo que hace Calamares (kpmcore) para encontrar dónde instalar.
+	# Si no hay ningún disco, la pantalla de bienvenida bloquea la
+	# instalación con "There are no partitions to install on".
+	sleep 30
+	salida=$(lsblk --nodeps --paths --sort name --json --output type,name 2>&1)
+	if printf '%s' "$salida" | grep -q '"type": *"disk"'; then
+		serie "LAZARO-DISCOS-OK"
+	else
+		serie "LAZARO-DISCOS-FALLO"
+	fi
+	serie "$salida"
+	registro=/root/.cache/calamares/session.log
+	[ -f "$registro" ] && tail -n 60 "$registro" > /dev/ttyS0 2>/dev/null
+	return 0
+}
+
 start() {
 	ebegin "Preparando la sesión live de Lázaro Linux"
 	if ! id lazaro >/dev/null 2>&1; then
@@ -47,6 +64,7 @@ start() {
 		while [ $i -lt 120 ]; do
 			if pidof calamares >/dev/null 2>&1; then
 				serie "LAZARO-CALAMARES-ABIERTO"
+				revisar_discos
 				exit 0
 			fi
 			i=$((i + 1))

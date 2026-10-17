@@ -92,25 +92,33 @@ prueba_live() {
 	nombre="live-$MODO"
 	serie="$RES/$nombre-serie.log"
 	mon="$SOCK_DIR/$nombre.mon"
-	rm -f "$serie" "$mon"
+	disco="$RES/$nombre.qcow2"
+	rm -f "$serie" "$mon" "$disco"
+	# Disco vacío: Calamares tiene que verlo para dejar instalar.
+	qemu-img create -q -f qcow2 "$disco" 20G
 	# shellcheck disable=SC2046
 	qemu-system-x86_64 $KVM -m "$MEM" -smp 2 $(firmware_args "$nombre") \
 		-cdrom "$ISO" -boot d -vga std -display none \
+		-drive "file=$disco,if=virtio,format=qcow2" \
 		-nic user,model=virtio-net-pci \
 		-serial "file:$serie" -monitor "unix:$mon,server,nowait" &
 	pid=$!
 	ok=0
-	if esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
-		sleep 20
-		captura "$mon" "$RES/$nombre-calamares"
-		echo "OK: la sesión live arrancó ($MODO) y Calamares se abrió."
-	else
+	if ! esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
 		captura "$mon" "$RES/$nombre-fallo"
 		echo "FALLO: Calamares no se abrió en la sesión live ($MODO)." >&2
 		ok=1
+	elif esperar "$serie" "$pid" 120 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
+		captura "$mon" "$RES/$nombre-calamares"
+		echo "OK: la sesión live arrancó ($MODO), Calamares se abrió y ve el disco."
+	else
+		captura "$mon" "$RES/$nombre-fallo"
+		echo "FALLO: Calamares se abrió pero no ve ningún disco ($MODO)." >&2
+		ok=1
 	fi
 	terminar "$pid"
-	tail -n 40 "$serie" || true
+	rm -f "$disco"
+	tail -n 80 "$serie" || true
 	return $ok
 }
 
