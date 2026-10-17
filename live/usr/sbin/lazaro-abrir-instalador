@@ -2,4 +2,10 @@
 # Abre Calamares como root dentro de la sesión gráfica del usuario live.
 # El candado se mantiene mientras Calamares está abierto: si el inicio
 # automático y un clic coinciden, solo se abre uno.
-exec flock -n /tmp/lazaro-instalador.lock doas -n /usr/bin/calamares "$@"
+# Sin LANG Calamares arranca en inglés; el usuario puede cambiarlo en la
+# primera pantalla.
+LANG="${LANG:-es_ES.UTF-8}"
+export LANG
+# -D 6: guarda en el registro (/root/.cache/.../session.log) los discos
+# que Calamares encuentra; la prueba automática lo revisa.
+exec flock -n /tmp/lazaro-instalador.lock doas -n /usr/bin/calamares -D 6 "$@"

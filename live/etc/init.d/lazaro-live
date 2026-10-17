@@ -24,6 +24,29 @@ parametro() {
 	return 1
 }
 
+revisar_discos() {
+	# Calamares escribe en su registro la lista de discos donde se puede
+	# instalar (después de "LIST OF DETECTED DEVICES:"). Si está vacía, la
+	# bienvenida bloquea con "There are no partitions to install on".
+	registro=""
+	i=0
+	while [ $i -lt 24 ]; do
+		registro=$(find /root/.cache -name session.log 2>/dev/null | head -n 1)
+		[ -n "$registro" ] && grep -q 'LIST OF DETECTED DEVICES' "$registro" && break
+		i=$((i + 1))
+		sleep 5
+	done
+	if [ -n "$registro" ] && grep -A 4 'LIST OF DETECTED DEVICES' "$registro" |
+		grep -q '/dev/'; then
+		serie "LAZARO-DISCOS-OK"
+	else
+		serie "LAZARO-DISCOS-FALLO"
+	fi
+	lsblk --nodeps --paths --json --output type,name > /dev/ttyS0 2>&1
+	[ -n "$registro" ] && grep -A 4 'LIST OF DETECTED DEVICES' "$registro" > /dev/ttyS0 2>&1
+	return 0
+}
+
 start() {
 	ebegin "Preparando la sesión live de Lázaro Linux"
 	if ! id lazaro >/dev/null 2>&1; then
@@ -47,6 +70,7 @@ start() {
 		while [ $i -lt 120 ]; do
 			if pidof calamares >/dev/null 2>&1; then
 				serie "LAZARO-CALAMARES-ABIERTO"
+				revisar_discos
 				exit 0
 			fi
 			i=$((i + 1))
