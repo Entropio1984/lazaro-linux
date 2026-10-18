@@ -386,6 +386,7 @@ paso_auto() {
 		EOF
 	fi
 	if [ -n "$pdm" ]; then
+		en_destino "$raiz" apk add -q xdpyinfo xset >>"$LOG" 2>&1 || true
 		echo "$pdm" > "$raiz/etc/lazaro/prueba-pantalla"
 		# Traza de "guardar" para el diagnóstico.
 		sed -i 's|^Exec=.*|Exec=sh -c "sh -x /usr/local/libexec/pantalla-inicio/guardar 2>/tmp/guardar-traza.log"|' \
@@ -397,6 +398,15 @@ paso_auto() {
 		exec 2>/tmp/prueba-800x600.log
 		set -x
 		sleep 5
+		# EXPERIMENTO: gestión de energía de LXQt.
+		{
+			echo "DISPLAY=$DISPLAY"
+			xdpyinfo -queryExtensions 2>&1 | grep -iE 'dpms|screen|sync|number of ext'
+			xset q 2>&1 | grep -iA3 dpms
+			timeout 15 lxqt-powermanagement 2>&1
+			echo "salida=$?"
+		} > /tmp/lazaro-energia.log 2>&1
+		chmod 644 /tmp/lazaro-energia.log
 		if [ -n "${WAYLAND_DISPLAY:-}" ]; then
 			o="$(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g')"
 			printf '%s\n' "$o" >&2
@@ -513,6 +523,9 @@ paso_auto() {
 		else
 			echo "LAZARO-PANTALLA-SIN-AJUSTE"
 		fi
+		echo "--- energía LXQt ---"
+		cat /tmp/lazaro-energia.log 2>&1
+		echo "--- fin energía ---"
 		for s in lightdm sddm gdm greetd; do
 			rc-service --exists "$s" && rc-service "$s" status
 		done
