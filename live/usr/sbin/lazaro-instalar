@@ -527,6 +527,22 @@ paso_auto() {
 			rc-service pantalla-inicio-gdm status 2>&1
 			ls -la /var/lib/gdm/.config 2>&1
 			cat /var/lib/gdm/.config/monitors.xml 2>&1
+			# Lo que ve el gnome-shell del saludo: tipo de sesión, rutas
+			# y los modos de pantalla que ofrece Mutter.
+			for c in /proc/[0-9]*/comm; do
+				p="${c%/comm}"
+				[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] \
+					&& [ "$(stat -c %U "$p" 2>/dev/null)" = gdm ] || continue
+				tr '\0' '\n' < "$p/environ" | grep -E '^(HOME|XDG_CONFIG_HOME|XDG_SESSION_TYPE|DBUS_SESSION_BUS_ADDRESS|WAYLAND_DISPLAY|DISPLAY)='
+				bus="$(tr '\0' '\n' < "$p/environ" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')"
+				[ -n "$bus" ] && su -s /bin/sh gdm -c "DBUS_SESSION_BUS_ADDRESS='$bus' gdbus call --session \
+					--dest org.gnome.Mutter.DisplayConfig --object-path /org/gnome/Mutter/DisplayConfig \
+					--method org.gnome.Mutter.DisplayConfig.GetCurrentState" 2>&1 | head -c 3000
+				echo
+			done
+			ps -eo user,args 2>/dev/null | grep -E '[X]org|[X]wayland|[g]nome-shell|[g]dm-'
+			grep -iE 'monitor|mutter|gnome-shell' /var/log/messages 2>/dev/null | tail -n 30
+			find /var/lib/gdm /var/log -name '*.log' 2>/dev/null | head
 			echo "--- fin de los datos ---"
 		elif [ -n "$pdm" ]; then
 			# 1) La sesión debe anotar la resolución que eligió.
