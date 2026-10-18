@@ -101,7 +101,7 @@ jobs:
         run: |
           set -- ${{ matrix.prueba }}
           orden="$1"; shift
-          LAZARO_EXTRAS_PRUEBA=flatpak ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
+          LAZARO_EXTRAS_PRUEBA=flatpak-chrome ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
 
       - name: Nombre de los resultados
         if: always()

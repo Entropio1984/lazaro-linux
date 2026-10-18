@@ -360,7 +360,7 @@ paso_auto() {
 	echo "- postinstall.env:"; grep FLATPAK "$raiz/etc/lazaro/postinstall.env"
 	echo "- apk flatpak:"; en_destino "$raiz" apk info -e flatpak gnome-software-plugin-flatpak 2>&1
 	echo "- remotes:"; en_destino "$raiz" flatpak remotes --system 2>&1
-	echo "- log:"; grep -n -i -B2 -A8 "flatpak" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 120
+	echo "- log:"; grep -n -i -B2 -A8 "flatpak" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 200
 	echo "- instalar.log:"; grep -n -i "postinstall\|aviso" "$LOG" | tail -n 20
 	echo "LAZARO-FLATPAK-FIN"
 
