@@ -169,6 +169,13 @@ prueba_instalar() {
 		tail -n 120 "$serie" >&2 || true
 		return 1
 	fi
+	# Flatpak viene por defecto: con red debe quedar Flathub agregado.
+	if [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-OK "$serie"; then
+		terminar "$pid"
+		echo "FALLO: Flatpak/Flathub no quedó instalado." >&2
+		sed -n '/LAZARO-FLATPAK-NO/,$p' "$serie" | head -n 60 >&2 || true
+		return 1
+	fi
 	# La instalación apaga la máquina sola.
 	t=0
 	while kill -0 "$pid" 2>/dev/null && [ $t -lt 120 ]; do sleep 2; t=$((t + 2)); done
