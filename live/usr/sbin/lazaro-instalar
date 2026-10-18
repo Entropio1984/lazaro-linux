@@ -274,6 +274,7 @@ paso_ajustes() {
 	mkdir -p "$raiz/etc/lazaro"
 	cat > "$raiz/etc/lazaro/postinstall.env" <<-EOF
 	OPT_KEYBOARD=$opt_teclado
+	OPT_LANG=$idioma
 	OPT_NVIDIA_SAFE=yes
 	OPT_NVIDIA_MODE=optimus
 	OPT_GCOMPAT=no
