@@ -329,11 +329,26 @@ paso_auto() {
 	paso_escritorio "$raiz" "$de"
 	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
 
-	# Como si el usuario hubiera elegido 800x600 en su sesión: la
-	# pantalla de inicio debe arrancar con esa resolución.
-	mkdir -p "$raiz/home/prueba/.config"
-	echo 'Virtual-1 800x600' > "$raiz/home/prueba/.config/pantalla-inicio"
-	en_destino "$raiz" chown -R prueba:prueba /home/prueba/.config >>"$LOG" 2>&1
+	# Recorrido real de la resolución: "prueba" entra sola a su sesión,
+	# cambia la pantalla a 800x600, la prueba cierra la sesión y la
+	# pantalla de inicio debe volver con 800x600.
+	if [ -f "$raiz/etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf" ]; then
+		en_destino "$raiz" addgroup -S autologin >>"$LOG" 2>&1 || true
+		en_destino "$raiz" addgroup prueba autologin >>"$LOG" 2>&1 || true
+		cat > "$raiz/etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf" <<-EOF
+		[Seat:*]
+		autologin-user=prueba
+		autologin-user-timeout=0
+		autologin-session=$de
+		EOF
+		cat > "$raiz/etc/xdg/autostart/zz-lazaro-prueba-resolucion.desktop" <<-'EOF'
+		[Desktop Entry]
+		Type=Application
+		Name=Prueba de resolucion
+		Exec=sh -c 'sleep 5; xrandr -s 800x600'
+		NoDisplay=true
+		EOF
+	fi
 
 	# Solo pruebas: al arrancar el sistema instalado, informar por el
 	# puerto serie y apagar.
@@ -359,6 +374,25 @@ paso_auto() {
 		# Resolución de la pantalla de inicio (LightDM): la que quedó
 		# anotada en ~/.config/pantalla-inicio.
 		if [ -f /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf ]; then
+			# 1) La sesión debe anotar la resolución que eligió.
+			t=0
+			until grep -qs 800x600 /home/prueba/.config/pantalla-inicio || [ $t -ge 180 ]; do
+				sleep 3
+				t=$((t + 3))
+			done
+			if grep -qs 800x600 /home/prueba/.config/pantalla-inicio; then
+				echo "LAZARO-GUARDADO-OK"
+			else
+				echo "LAZARO-GUARDADO-NO"
+				echo "--- diagnóstico del guardado ---"
+				cat /home/prueba/.config/pantalla-inicio 2>&1
+				ps -ef 2>/dev/null | grep -E '[g]uardar|[x]fce4-session|[m]ate-session|[l]ightdm'
+				loginctl list-sessions 2>&1
+				echo "--- fin del diagnóstico ---"
+			fi
+			# 2) Se cierra la sesión (sin volver a entrar sola).
+			rm -f /etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf
+			rc-service lightdm restart >/dev/null 2>&1
 			# Se reintenta: X puede tardar en aceptar conexiones y la
 			# resolución se aplica justo antes de mostrar el saludo.
 			# La llave de LightDM queda atada al nombre del equipo, que

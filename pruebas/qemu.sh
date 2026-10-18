@@ -190,6 +190,11 @@ prueba_instalar() {
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
 		elif [ "$red" = con-red ] && { [ "$de" = xfce ] || [ "$de" = mate ]; } \
+			&& ! grep -q LAZARO-GUARDADO-OK "$serie2"; then
+			echo "FALLO: la sesión del usuario no anotó la resolución que eligió (800x600)." >&2
+			sed -n '/--- diagnóstico del guardado/,/--- fin del diagnóstico/p' "$serie2" >&2
+			ok=1
+		elif [ "$red" = con-red ] && { [ "$de" = xfce ] || [ "$de" = mate ]; } \
 			&& ! grep -q LAZARO-PANTALLA-800x600 "$serie2"; then
 			# Solo escritorios con LightDM, que es lo que mide la prueba.
 			# Sin red, desktop-postinstall.sh corre recién en el primer
