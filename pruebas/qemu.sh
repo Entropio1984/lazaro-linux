@@ -189,7 +189,9 @@ prueba_instalar() {
 		if grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
-		elif [ "$red" = con-red ] && ! grep -q LAZARO-PANTALLA-800x600 "$serie2"; then
+		elif [ "$red" = con-red ] && { [ "$de" = xfce ] || [ "$de" = mate ]; } \
+			&& ! grep -q LAZARO-PANTALLA-800x600 "$serie2"; then
+			# Solo escritorios con LightDM, que es lo que mide la prueba.
 			# Sin red, desktop-postinstall.sh corre recién en el primer
 			# arranque: solo se revisa con red.
 			echo "FALLO: la pantalla de inicio no usó la resolución guardada del usuario (800x600)." >&2

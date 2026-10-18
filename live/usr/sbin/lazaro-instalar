@@ -359,11 +359,16 @@ paso_auto() {
 		# Resolución de la pantalla de inicio (LightDM): la que quedó
 		# anotada en ~/.config/pantalla-inicio.
 		if [ -f /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf ]; then
+			# Se reintenta: X puede tardar en aceptar conexiones y la
+			# resolución se aplica justo antes de mostrar el saludo.
 			t=0
-			while [ ! -e /var/run/lightdm/root/:0 ] && [ $t -lt 90 ]; do sleep 3; t=$((t + 3)); done
-			sleep 10
-			modo="$(DISPLAY=:0 XAUTHORITY=/var/run/lightdm/root/:0 xrandr --current 2>/dev/null \
-				| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+\+/) { split($i, g, "+"); print g[1]; exit } }')"
+			modo=""
+			while [ "$modo" != 800x600 ] && [ $t -lt 120 ]; do
+				sleep 3
+				t=$((t + 3))
+				modo="$(DISPLAY=:0 XAUTHORITY=/var/run/lightdm/root/:0 xrandr --current 2>/dev/null \
+					| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+[+]/) { sub(/[+].*/, "", $i); print $i; exit } }')"
+			done
 			echo "LAZARO-PANTALLA-${modo:-desconocida}"
 		else
 			echo "LAZARO-PANTALLA-SIN-AJUSTE"
