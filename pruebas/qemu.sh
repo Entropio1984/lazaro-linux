@@ -1,7 +1,7 @@
 #!/bin/sh
 # Pruebas automáticas de la ISO en QEMU (las usa GitHub Actions, pero
 # también sirven en cualquier Linux con qemu-system-x86_64, xorriso y
-# socat; con OVMF para UEFI).
+# socat; con OVMF para UEFI e ImageMagick para medir las capturas).
 #
 #   pruebas/qemu.sh live ISO bios|uefi
 #       Arranca la ISO como lo haría un usuario y espera a que Calamares
@@ -176,16 +176,39 @@ prueba_instalar() {
 
 	echo "Arrancando el sistema instalado..."
 	serie2="$RES/$nombre-arranque.log"
-	rm -f "$serie2" "$mon"
+	rm -f "$serie2" "$mon" "$RES/$nombre-instalado.png" "$RES/$nombre-instalado.ppm"
+	# GNOME reinicia una vez en la prueba (GDM toma la resolución al
+	# arrancar) y pide más memoria.
+	mem2=2048
+	espera2=600
+	if [ "$de" = gnome ]; then
+		mem2=3072
+		espera2=1200
+	fi
 	# shellcheck disable=SC2046
-	qemu-system-x86_64 $KVM -m 2048 -smp 2 $(firmware_args "$nombre") \
+	qemu-system-x86_64 $KVM -m "$mem2" -smp 2 $(firmware_args "$nombre") \
 		-drive "file=$disco,if=virtio,format=qcow2" -boot c \
 		-vga std -display none $nic \
 		-serial "file:$serie2" -monitor "unix:$mon,server,nowait" &
 	pid=$!
 	ok=0
-	if esperar "$serie2" "$pid" 600 LAZARO-PRUEBA-FIN; then
+	if [ "$de" = gnome ]; then
+		# Lo que haría la persona: pulsar Intro en "¿Mantener los
+		# cambios?" de GNOME (el botón predeterminado es "Mantener").
+		(
+			esperar "$serie2" "$pid" "$espera2" LAZARO-CONFIRMAR >/dev/null 2>&1 || exit 0
+			for _ in 1 2; do
+				sleep 6
+				printf 'sendkey ret\n' | socat - "UNIX-CONNECT:$mon" >/dev/null 2>&1 || true
+			done
+		) &
+	fi
+	if esperar "$serie2" "$pid" "$espera2" LAZARO-PRUEBA-FIN; then
 		captura "$mon" "$RES/$nombre-instalado"
+		tam=""
+		if [ -f "$RES/$nombre-instalado.png" ]; then
+			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)"
+		fi
 		if grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
@@ -202,6 +225,16 @@ prueba_instalar() {
 			echo "FALLO: la pantalla de inicio no usó la resolución guardada del usuario (800x600)." >&2
 			grep LAZARO-PANTALLA "$serie2" >&2 || true
 			sed -n '/--- diagnóstico de la resolución/,/--- fin del diagnóstico/p' "$serie2" >&2
+			ok=1
+		elif [ "$red" = con-red ] && [ "$de" = gnome ] && ! grep -q LAZARO-GUARDADO-OK "$serie2"; then
+			echo "FALLO: GNOME no guardó la resolución que eligió el usuario (800x600)." >&2
+			sed -n '/--- diagnóstico del guardado/,/--- fin del diagnóstico/p' "$serie2" >&2
+			ok=1
+		elif [ "$red" = con-red ] && [ "$de" = gnome ] \
+			&& { ! grep -q 'LAZARO-GDM-MODO 800x600' "$serie2" || [ "$tam" != 800x600 ]; }; then
+			echo "FALLO: tras reiniciar, la pantalla de inicio de GNOME mide ${tam:-?}, no 800x600." >&2
+			grep -E 'LAZARO-SALUDO|LAZARO-GDM-MODO' "$serie2" >&2 || true
+			sed -n '/--- datos de GDM/,/--- fin de los datos/p' "$serie2" >&2
 			ok=1
 		elif [ "$de" = ninguno ]; then
 			if grep -Eq '(lightdm|sddm|gdm|greetd).*started|Starting (lightdm|sddm|gdm|greetd)|LAZARO-DM-ACTIVO' "$serie2"; then
