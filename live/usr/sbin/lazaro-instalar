@@ -169,6 +169,11 @@ paso_escritorio() {
 		# programas gráficos.
 		mkdir -p "$raiz/etc/lazaro"
 		: > "$raiz/etc/lazaro/sin-escritorio"
+		# Si se reutilizó sin formatear una partición con un escritorio
+		# anterior, su pantalla de inicio no debe volver a arrancar.
+		for dm in lightdm sddm gdm greetd; do
+			rm -f "$raiz"/etc/runlevels/*/"$dm"
+		done
 		log "Sin escritorio: el sistema arrancará en modo texto."
 		return 0
 	fi
@@ -212,6 +217,13 @@ paso_ajustes() {
 		opt_chrome=no
 		opt_libreoffice=no
 		opt_onlyoffice=no
+	fi
+	opt_firefox=yes
+	opt_cups=yes
+	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
+		# Solo consola: tampoco navegador ni impresoras.
+		opt_firefox=no
+		opt_cups=no
 	fi
 
 	if [ -e "$raiz/usr/share/zoneinfo/$zona" ]; then
@@ -265,9 +277,9 @@ paso_ajustes() {
 	OPT_NVIDIA_SAFE=yes
 	OPT_NVIDIA_MODE=optimus
 	OPT_GCOMPAT=no
-	OPT_CUPS=yes
+	OPT_CUPS=$opt_cups
 	OPT_LIBREOFFICE=$opt_libreoffice
-	OPT_FIREFOX=yes
+	OPT_FIREFOX=$opt_firefox
 	OPT_FLATPAK=$opt_flatpak
 	OPT_ONLYOFFICE=$opt_onlyoffice
 	OPT_CHROME=$opt_chrome
