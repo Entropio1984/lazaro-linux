@@ -159,7 +159,7 @@ prueba_instalar() {
 		-kernel "$k" -initrd "$i" \
 		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda" \
 		$cd_args -drive "file=$disco,if=virtio,format=qcow2" \
-		-vga std -display none $nic \
+		-vga qxl -display none $nic \
 		-serial "file:$serie" -monitor "unix:$mon,server,nowait" &
 	pid=$!
 	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
@@ -180,7 +180,7 @@ prueba_instalar() {
 	# shellcheck disable=SC2046
 	qemu-system-x86_64 $KVM -m 2048 -smp 2 $(firmware_args "$nombre") \
 		-drive "file=$disco,if=virtio,format=qcow2" -boot c \
-		-vga std -display none $nic \
+		-vga qxl -display none $nic \
 		-serial "file:$serie2" -monitor "unix:$mon,server,nowait" &
 	pid=$!
 	ok=0
