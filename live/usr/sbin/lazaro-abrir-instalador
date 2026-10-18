@@ -11,6 +11,15 @@ if [ "${1:-}" = --esperar-red ]; then
 	shift
 	command -v nm-online >/dev/null 2>&1 && nm-online -s -q -t 30 || true
 fi
+# Con GParted abierto no se abre: Calamares leería los discos a medio
+# cambiar (ver lazaro-abrir-gparted). Al iniciar la sesión no puede estar
+# abierto, así que solo se avisa cuando el usuario hace clic.
+if pgrep -x gpartedbin >/dev/null 2>&1; then
+	zenity --warning --title="Instalar Lázaro Linux" --width=380 \
+		--text="Cierra primero GParted y luego vuelve a abrir el instalador." \
+		2>/dev/null
+	exit 0
+fi
 LANG="${LANG:-es_ES.UTF-8}"
 export LANG
 # -D 6: guarda en el registro (/root/.cache/.../session.log) los discos

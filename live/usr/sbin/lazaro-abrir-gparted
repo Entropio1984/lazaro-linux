@@ -1,0 +1,13 @@
+#!/bin/sh
+# Abre GParted en la sesión live, pero nunca a la vez que el instalador:
+# Calamares lee los discos al abrirse y no se entera de lo que GParted
+# cambie después, así que podría instalar sobre particiones que ya no
+# existen. Mientras GParted está abierto tiene el mismo candado que el
+# instalador, y lazaro-abrir-instalador avisa en vez de abrirse.
+if pgrep -x calamares >/dev/null 2>&1; then
+	zenity --warning --title="GParted" --width=380 \
+		--text="Cierra primero el instalador de Lázaro Linux.\n\nEl instalador revisa los discos solo al abrirse: si los cambias con GParted mientras está abierto, no verá los cambios." \
+		2>/dev/null
+	exit 0
+fi
+exec flock -n /tmp/lazaro-instalador.lock gparted "$@"

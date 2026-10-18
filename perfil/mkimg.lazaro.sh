@@ -19,10 +19,14 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # usa blkid, blockdev y sfdisk; busybox no trae lsblk y sin él Calamares
 # dice "There are no partitions to install on".
 # ckbcomp: dibuja las teclas en la vista previa del teclado de Calamares.
+# gparted (+ xhost, que su lanzador usa para abrir la ventana como root):
+# editor de particiones para revisar o preparar discos antes de instalar.
+# zenity: avisa si se intenta abrir GParted y el instalador a la vez.
 LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
-	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc"
+	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
+	gparted xhost zenity"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
