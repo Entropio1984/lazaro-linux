@@ -231,9 +231,9 @@ prueba_instalar() {
 			sed -n '/--- diagnóstico del guardado/,/--- fin del diagnóstico/p' "$serie2" >&2
 			ok=1
 		elif [ "$red" = con-red ] && [ "$de" = gnome ] \
-			&& { ! grep -q LAZARO-SALUDO-LISTO "$serie2" || [ "$tam" != 800x600 ]; }; then
+			&& { ! grep -q 'LAZARO-GDM-MODO 800x600' "$serie2" || [ "$tam" != 800x600 ]; }; then
 			echo "FALLO: tras reiniciar, la pantalla de inicio de GNOME mide ${tam:-?}, no 800x600." >&2
-			grep LAZARO-SALUDO "$serie2" >&2 || true
+			grep -E 'LAZARO-SALUDO|LAZARO-GDM-MODO' "$serie2" >&2 || true
 			sed -n '/--- datos de GDM/,/--- fin de los datos/p' "$serie2" >&2
 			ok=1
 		elif [ "$de" = ninguno ]; then
