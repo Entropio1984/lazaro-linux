@@ -517,7 +517,7 @@ paso_auto() {
 		# pantalla de inicio: en una máquina lenta OpenRC lo marca como
 		# fallido aunque esté corriendo. Se mira el proceso.
 		for s in lightdm sddm gdm greetd; do
-			pgrep -x "$s" >/dev/null 2>&1 && echo "LAZARO-DM-ACTIVO $s"
+			cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 		done
 		echo "LAZARO-PRUEBA-FIN"
 	} > /dev/ttyS0 2>&1
