@@ -331,8 +331,11 @@ paso_auto() {
 
 	# Recorrido real de la resolución: "prueba" entra sola a su sesión,
 	# cambia la pantalla a 800x600, la prueba cierra la sesión y la
-	# pantalla de inicio debe volver con 800x600.
-	if [ -f "$raiz/etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf" ]; then
+	# pantalla de inicio debe volver con 800x600 (LightDM o SDDM).
+	pdm=""
+	[ -f "$raiz/etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf" ] && pdm=lightdm
+	[ -f "$raiz/etc/sddm.conf.d/50-pantalla-inicio.conf" ] && pdm=sddm
+	if [ "$pdm" = lightdm ]; then
 		en_destino "$raiz" addgroup -S autologin >>"$LOG" 2>&1 || true
 		en_destino "$raiz" addgroup prueba autologin >>"$LOG" 2>&1 || true
 		cat > "$raiz/etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf" <<-EOF
@@ -341,14 +344,47 @@ paso_auto() {
 		autologin-user-timeout=0
 		autologin-session=$de
 		EOF
+	elif [ "$pdm" = sddm ]; then
+		# Plasma entra en su sesión Wayland (la predeterminada).
+		sesion=""
+		for f in "$raiz/usr/share/wayland-sessions/$de.desktop" \
+			"$raiz/usr/share/xsessions/$de.desktop"; do
+			[ -f "$f" ] && { sesion="${f##*/}"; break; }
+		done
+		cat > "$raiz/etc/sddm.conf.d/90-lazaro-prueba.conf" <<-EOF
+		[Autologin]
+		User=prueba
+		Session=${sesion:-$de.desktop}
+		EOF
+	fi
+	if [ -n "$pdm" ]; then
+		echo "$pdm" > "$raiz/etc/lazaro/prueba-pantalla"
 		# Traza de "guardar" para el diagnóstico.
 		sed -i 's|^Exec=.*|Exec=sh -c "sh -x /usr/local/libexec/pantalla-inicio/guardar 2>/tmp/guardar-traza.log"|' \
 			"$raiz/etc/xdg/autostart/pantalla-inicio.desktop"
+		mkdir -p "$raiz/usr/local/bin"
+		cat > "$raiz/usr/local/bin/lazaro-prueba-800x600" <<-'EOF'
+		#!/bin/sh
+		# Solo pruebas: la sesión del usuario elige 800x600.
+		exec 2>/tmp/prueba-800x600.log
+		set -x
+		sleep 5
+		if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+			o="$(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g')"
+			printf '%s\n' "$o" >&2
+			salida="$(printf '%s\n' "$o" | awk '/Output:/ { for (i = 1; i < NF; i++) if ($i == "Output:") { print $(i + 2); exit } }')"
+			modo="$(printf '%s\n' "$o" | grep -o '[0-9]*:800x600@[0-9.]*' | head -n 1 | cut -d: -f1)"
+			kscreen-doctor "output.$salida.mode.$modo"
+		else
+			xrandr -s 800x600
+		fi
+		EOF
+		chmod 755 "$raiz/usr/local/bin/lazaro-prueba-800x600"
 		cat > "$raiz/etc/xdg/autostart/zz-lazaro-prueba-resolucion.desktop" <<-'EOF'
 		[Desktop Entry]
 		Type=Application
 		Name=Prueba de resolucion
-		Exec=sh -c 'sleep 5; xrandr -s 800x600'
+		Exec=/usr/local/bin/lazaro-prueba-800x600
 		NoDisplay=true
 		EOF
 	fi
@@ -374,12 +410,13 @@ paso_auto() {
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
 		fi
-		# Resolución de la pantalla de inicio (LightDM): la que quedó
-		# anotada en ~/.config/pantalla-inicio.
-		if [ -f /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf ]; then
+		# Resolución de la pantalla de inicio (LightDM o SDDM): la que
+		# quedó anotada en ~/.config/pantalla-inicio.
+		pdm="$(cat /etc/lazaro/prueba-pantalla 2>/dev/null)"
+		if [ -n "$pdm" ]; then
 			# 1) La sesión debe anotar la resolución que eligió.
 			t=0
-			until grep -qs 800x600 /home/prueba/.config/pantalla-inicio || [ $t -ge 180 ]; do
+			until grep -qs 800x600 /home/prueba/.config/pantalla-inicio || [ $t -ge 240 ]; do
 				sleep 3
 				t=$((t + 3))
 			done
@@ -389,45 +426,52 @@ paso_auto() {
 				echo "LAZARO-GUARDADO-NO"
 				echo "--- diagnóstico del guardado ---"
 				cat /home/prueba/.config/pantalla-inicio 2>&1
-				ps -ef 2>/dev/null | grep -E '[g]uardar|[x]fce4-session|[m]ate-session|[l]ightdm'
+				ps -ef 2>/dev/null | grep -E '[g]uardar|[x]fce4-session|[m]ate-session|[p]lasma|[k]win|[l]ightdm|[s]ddm'
 				loginctl list-sessions --no-pager 2>&1 | cat
 				for pid in $(pgrep -f pantalla-inicio/guardar); do
 					tr '\0' '\n' < /proc/$pid/environ | grep -E '^(DISPLAY|XAUTHORITY|XDG_SESSION_ID|WAYLAND_DISPLAY|HOME)='
 				done
+				echo "- cambio a 800x600:"
+				tail -n 30 /tmp/prueba-800x600.log 2>&1
+				echo "- guardar:"
 				tail -n 40 /tmp/guardar-traza.log 2>&1
 				echo "--- fin del diagnóstico ---"
 			fi
 			# 2) Se cierra la sesión (sin volver a entrar sola).
-			rm -f /etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf
-			rc-service lightdm restart >/dev/null 2>&1
+			rm -f /etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf /etc/sddm.conf.d/90-lazaro-prueba.conf
+			rc-service "$pdm" restart >/dev/null 2>&1
 			# Se reintenta: X puede tardar en aceptar conexiones y la
 			# resolución se aplica justo antes de mostrar el saludo.
-			# La llave de LightDM queda atada al nombre del equipo, que
-			# cambia al arrancar: se usa una copia válida para cualquier
-			# nombre (familia "ffff").
+			# La llave de X queda atada al nombre del equipo, que cambia
+			# al arrancar: se usa una copia válida para cualquier nombre
+			# (familia "ffff"). La llave y la pantalla salen de Xorg.
 			llave=/tmp/lazaro-llave-x
 			t=0
 			modo=""
 			while [ "$modo" != 800x600 ] && [ $t -lt 120 ]; do
 				sleep 3
 				t=$((t + 3))
-				xauth -f /run/lightdm/root/:0 nlist 2>/dev/null | sed 's/^..../ffff/' \
+				x="$(ps -eo args | awk '/[X]org/ { for (i = 2; i <= NF; i++) { if ($i ~ /^:[0-9]+$/) d = $i; if ($i == "-auth") a = $(i + 1) } } END { print d, a }')"
+				pantalla="${x%% *}"
+				rm -f "$llave"
+				xauth -f "${x#* }" nlist 2>/dev/null | sed 's/^..../ffff/' \
 					| xauth -f "$llave" nmerge - 2>/dev/null
-				modo="$(DISPLAY=:0 XAUTHORITY="$llave" xrandr --current 2>/dev/null \
+				modo="$(DISPLAY="${pantalla:-:0}" XAUTHORITY="$llave" xrandr --current 2>/dev/null \
 					| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+[+]/) { sub(/[+].*/, "", $i); print $i; exit } }')"
 			done
 			echo "LAZARO-PANTALLA-${modo:-desconocida}"
 			if [ "$modo" != 800x600 ]; then
 				echo "--- diagnóstico de la resolución ---"
 				command -v xrandr || echo "sin xrandr"
-				ls -la /run/lightdm /run/lightdm/root /usr/local/libexec/pantalla-inicio 2>&1
-				cat /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf
-				ps -ef 2>/dev/null | grep -E '[X]org|[l]ightdm'
+				echo "Xorg: $x"
+				ls -la /usr/local/libexec/pantalla-inicio 2>&1
+				cat /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf /etc/sddm.conf.d/50-pantalla-inicio.conf 2>/dev/null
+				ps -ef 2>/dev/null | grep -E '[X]org|[l]ightdm|[s]ddm'
 				command -v xauth || echo "sin xauth"
-				DISPLAY=:0 XAUTHORITY="$llave" xrandr --current 2>&1 | head -n 5
+				DISPLAY="${pantalla:-:0}" XAUTHORITY="$llave" xrandr --current 2>&1 | head -n 5
 				grep pantalla-inicio /var/log/messages 2>/dev/null | tail -n 5
-				tail -n 25 /var/log/lightdm/lightdm.log 2>&1
-				grep -E 'EE|WW|Output|Modeline|modeset' /var/log/lightdm/x-0.log 2>/dev/null | tail -n 15
+				tail -n 25 /var/log/lightdm/lightdm.log 2>/dev/null
+				grep -i sddm /var/log/messages 2>/dev/null | tail -n 25
 				echo "--- fin del diagnóstico ---"
 			fi
 		else
