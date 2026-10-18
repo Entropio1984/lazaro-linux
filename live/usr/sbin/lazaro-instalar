@@ -370,6 +370,17 @@ paso_auto() {
 					| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+[+]/) { sub(/[+].*/, "", $i); print $i; exit } }')"
 			done
 			echo "LAZARO-PANTALLA-${modo:-desconocida}"
+			if [ "$modo" != 800x600 ]; then
+				echo "--- diagnóstico de la resolución ---"
+				command -v xrandr || echo "sin xrandr"
+				ls -la /run/lightdm /run/lightdm/root /usr/local/libexec/pantalla-inicio 2>&1
+				cat /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf
+				ps -ef 2>/dev/null | grep -E '[X]org|[l]ightdm'
+				DISPLAY=:0 XAUTHORITY=/run/lightdm/root/:0 xrandr --current 2>&1 | head -n 5
+				tail -n 25 /var/log/lightdm/lightdm.log 2>&1
+				grep -E 'EE|WW|Output|Modeline|modeset' /var/log/lightdm/x-0.log 2>/dev/null | tail -n 15
+				echo "--- fin del diagnóstico ---"
+			fi
 		else
 			echo "LAZARO-PANTALLA-SIN-AJUSTE"
 		fi

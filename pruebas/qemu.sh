@@ -196,6 +196,7 @@ prueba_instalar() {
 			# arranque: solo se revisa con red.
 			echo "FALLO: la pantalla de inicio no usó la resolución guardada del usuario (800x600)." >&2
 			grep LAZARO-PANTALLA "$serie2" >&2 || true
+			sed -n '/--- diagnóstico de la resolución/,/--- fin del diagnóstico/p' "$serie2" >&2
 			ok=1
 		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started' "$serie2"; then
 			echo "OK: el sistema instalado arrancó y su gestor de sesión está activo."
