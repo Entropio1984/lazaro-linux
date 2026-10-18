@@ -542,7 +542,8 @@ paso_auto() {
 			done
 			ps -eo user,args 2>/dev/null | grep -E '[X]org|[X]wayland|[g]nome-shell|[g]dm-'
 			grep -iE 'monitor|mutter|gnome-shell' /var/log/messages 2>/dev/null | tail -n 30
-			find /var/lib/gdm /var/log -name '*.log' 2>/dev/null | head
+			echo "- greeter.log:"
+			grep -iE 'monitor|config|mutter|warn|crit' /var/log/gdm/greeter.log 2>/dev/null | head -n 40
 			echo "--- fin de los datos ---"
 		elif [ -n "$pdm" ]; then
 			# 1) La sesión debe anotar la resolución que eligió.
