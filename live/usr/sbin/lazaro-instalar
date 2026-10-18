@@ -439,7 +439,13 @@ paso_auto() {
 			fi
 			# 2) Se cierra la sesión (sin volver a entrar sola).
 			rm -f /etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf /etc/sddm.conf.d/90-lazaro-prueba.conf
-			rc-service "$pdm" restart >/dev/null 2>&1
+			if [ "$pdm" = sddm ]; then
+				# Como al cerrar sesión: SDDM vuelve a su pantalla de
+				# inicio (sin "Relogin" no entra sola de nuevo).
+				loginctl terminate-user prueba >/dev/null 2>&1
+			else
+				rc-service lightdm restart >/dev/null 2>&1
+			fi
 			# Se reintenta: X puede tardar en aceptar conexiones y la
 			# resolución se aplica justo antes de mostrar el saludo.
 			# La llave de X queda atada al nombre del equipo, que cambia
