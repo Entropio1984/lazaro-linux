@@ -329,6 +329,12 @@ paso_auto() {
 	paso_escritorio "$raiz" "$de"
 	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
 
+	# Como si el usuario hubiera elegido 800x600 en su sesión: la
+	# pantalla de inicio debe arrancar con esa resolución.
+	mkdir -p "$raiz/home/prueba/.config"
+	echo 'Virtual-1 800x600' > "$raiz/home/prueba/.config/pantalla-inicio"
+	en_destino "$raiz" chown -R prueba:prueba /home/prueba/.config >>"$LOG" 2>&1
+
 	# Solo pruebas: al arrancar el sistema instalado, informar por el
 	# puerto serie y apagar.
 	mkdir -p "$raiz/etc/local.d"
@@ -349,6 +355,42 @@ paso_auto() {
 		else
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
+		fi
+		# Resolución de la pantalla de inicio (LightDM): la que quedó
+		# anotada en ~/.config/pantalla-inicio.
+		if [ -f /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf ]; then
+			# Se reintenta: X puede tardar en aceptar conexiones y la
+			# resolución se aplica justo antes de mostrar el saludo.
+			# La llave de LightDM queda atada al nombre del equipo, que
+			# cambia al arrancar: se usa una copia válida para cualquier
+			# nombre (familia "ffff").
+			llave=/tmp/lazaro-llave-x
+			t=0
+			modo=""
+			while [ "$modo" != 800x600 ] && [ $t -lt 120 ]; do
+				sleep 3
+				t=$((t + 3))
+				xauth -f /run/lightdm/root/:0 nlist 2>/dev/null | sed 's/^..../ffff/' \
+					| xauth -f "$llave" nmerge - 2>/dev/null
+				modo="$(DISPLAY=:0 XAUTHORITY="$llave" xrandr --current 2>/dev/null \
+					| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+[+]/) { sub(/[+].*/, "", $i); print $i; exit } }')"
+			done
+			echo "LAZARO-PANTALLA-${modo:-desconocida}"
+			if [ "$modo" != 800x600 ]; then
+				echo "--- diagnóstico de la resolución ---"
+				command -v xrandr || echo "sin xrandr"
+				ls -la /run/lightdm /run/lightdm/root /usr/local/libexec/pantalla-inicio 2>&1
+				cat /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf
+				ps -ef 2>/dev/null | grep -E '[X]org|[l]ightdm'
+				command -v xauth || echo "sin xauth"
+				DISPLAY=:0 XAUTHORITY="$llave" xrandr --current 2>&1 | head -n 5
+				grep pantalla-inicio /var/log/messages 2>/dev/null | tail -n 5
+				tail -n 25 /var/log/lightdm/lightdm.log 2>&1
+				grep -E 'EE|WW|Output|Modeline|modeset' /var/log/lightdm/x-0.log 2>/dev/null | tail -n 15
+				echo "--- fin del diagnóstico ---"
+			fi
+		else
+			echo "LAZARO-PANTALLA-SIN-AJUSTE"
 		fi
 		for s in lightdm sddm gdm greetd; do
 			rc-service --exists "$s" && rc-service "$s" status
