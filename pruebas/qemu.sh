@@ -203,7 +203,7 @@ prueba_instalar() {
 			grep LAZARO-PANTALLA "$serie2" >&2 || true
 			sed -n '/--- diagnóstico de la resolución/,/--- fin del diagnóstico/p' "$serie2" >&2
 			ok=1
-		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started' "$serie2"; then
+		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started|LAZARO-DM-ACTIVO' "$serie2"; then
 			echo "OK: el sistema instalado arrancó y su gestor de sesión está activo."
 		else
 			echo "FALLO: el sistema arrancó, pero el gestor de sesión no está activo." >&2

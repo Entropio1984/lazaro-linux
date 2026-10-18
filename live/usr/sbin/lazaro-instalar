@@ -486,6 +486,12 @@ paso_auto() {
 		for s in lightdm sddm gdm greetd; do
 			rc-service --exists "$s" && rc-service "$s" status
 		done
+		# El servicio de SDDM de Alpine espera solo 2 segundos a la
+		# pantalla de inicio: en una máquina lenta OpenRC lo marca como
+		# fallido aunque esté corriendo. Se mira el proceso.
+		for s in lightdm sddm gdm greetd; do
+			pgrep -x "$s" >/dev/null 2>&1 && echo "LAZARO-DM-ACTIVO $s"
+		done
 		echo "LAZARO-PRUEBA-FIN"
 	} > /dev/ttyS0 2>&1
 	sleep 20
