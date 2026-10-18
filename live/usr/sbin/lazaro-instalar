@@ -26,7 +26,7 @@ DATOS=/usr/share/lazaro
 # ALPINE_BRANCH, ALPINE_MIRROR, ISO_VERSION, LAZARO_LLAVE (de build.sh)
 . "$DATOS/version.env"
 ARCH="$(apk --print-arch)"
-ESCRITORIOS="xfce xfce-wayland gnome plasma mate sway lxqt"
+ESCRITORIOS="xfce xfce-wayland gnome plasma mate sway lxqt ninguno"
 # El único escritorio cuyos paquetes van dentro de la ISO.
 ESCRITORIO_OFFLINE="xfce"
 
@@ -123,7 +123,7 @@ paso_base() {
 	hay_red && red=si
 	log "Lázaro Linux $ISO_VERSION sobre Alpine $ALPINE_BRANCH"
 	log "Repositorio de la ISO: ${iso:-ninguno}; internet: $red"
-	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$red" = no ]; then
+	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] && [ "$red" = no ]; then
 		die "El escritorio '$de' se descarga de internet y no hay conexión. Conéctate a una red o elige XFCE."
 	fi
 	[ -n "$iso" ] || [ "$red" = si ] || die "No se encontró el repositorio de la ISO ni hay internet."
@@ -164,6 +164,14 @@ paso_escritorio() {
 	raiz="${1%/}"
 	de="$2"
 	validar_escritorio "$de"
+	if [ "$de" = ninguno ]; then
+		# Solo consola: queda una marca para que los ajustes no instalen
+		# programas gráficos.
+		mkdir -p "$raiz/etc/lazaro"
+		: > "$raiz/etc/lazaro/sin-escritorio"
+		log "Sin escritorio: el sistema arrancará en modo texto."
+		return 0
+	fi
 	log "Instalando el escritorio '$de' con setup-desktop..."
 	if ! en_destino "$raiz" setup-desktop "$de" </dev/null >>"$LOG" 2>&1; then
 		die "setup-desktop $de falló (detalles en $LOG)"
@@ -198,6 +206,13 @@ paso_ajustes() {
 		onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
 		*) log "Aviso: programa de oficina desconocido '$oficina'; no se instala ninguno." ;;
 	esac
+	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
+		# Flatpak, Chrome y la oficina no sirven sin escritorio.
+		opt_flatpak=no
+		opt_chrome=no
+		opt_libreoffice=no
+		opt_onlyoffice=no
+	fi
 
 	if [ -e "$raiz/usr/share/zoneinfo/$zona" ]; then
 		ln -sf "/usr/share/zoneinfo/$zona" "$raiz/etc/localtime"
