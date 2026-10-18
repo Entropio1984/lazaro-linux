@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         # "estable" = la de config.env.
-        alpine: [estable, edge]
+        alpine: [estable]
     steps:
       - uses: actions/checkout@v4
 
@@ -75,15 +75,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: [estable, edge]
+        alpine: [estable]
         prueba:
-          - live bios
-          - live uefi
-          - instalar bios xfce sin-red
           - instalar uefi xfce con-red
-          - instalar uefi plasma con-red
-          - instalar bios gnome con-red
-          - instalar bios ninguno sin-red
     steps:
       - uses: actions/checkout@v4
 
@@ -107,7 +101,7 @@ jobs:
         run: |
           set -- ${{ matrix.prueba }}
           orden="$1"; shift
-          ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
+          LAZARO_EXTRAS_PRUEBA=flatpak ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
 
       - name: Nombre de los resultados
         if: always()

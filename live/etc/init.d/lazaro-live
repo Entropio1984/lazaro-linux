@@ -83,7 +83,8 @@ start() {
 	#   lazaro.autoinstall=ESCRITORIO lazaro.disco=/dev/vda
 	if de=$(parametro lazaro.autoinstall) && disco=$(parametro lazaro.disco); then
 		(
-			if LAZARO_KERNELOPTS="console=tty0 console=ttyS0,115200" \
+			extras=$(parametro lazaro.extras) || extras=esencial
+			if LAZARO_EXTRAS="$extras" LAZARO_KERNELOPTS="console=tty0 console=ttyS0,115200" \
 				lazaro-instalar auto "$disco" "$de" > /dev/ttyS0 2>&1; then
 				serie "LAZARO-AUTOINSTALL-OK"
 			else

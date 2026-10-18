@@ -157,7 +157,7 @@ prueba_instalar() {
 	# shellcheck disable=SC2046
 	qemu-system-x86_64 $KVM -m "$MEM" -smp 2 $(firmware_args "$nombre") \
 		-kernel "$k" -initrd "$i" \
-		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda${LAZARO_EXTRAS_PRUEBA:+ lazaro.extras=$LAZARO_EXTRAS_PRUEBA}" \
 		$cd_args -drive "file=$disco,if=virtio,format=qcow2" \
 		-vga std -display none $nic \
 		-serial "file:$serie" -monitor "unix:$mon,server,nowait" &
@@ -169,6 +169,7 @@ prueba_instalar() {
 		tail -n 120 "$serie" >&2 || true
 		return 1
 	fi
+	sed -n '/LAZARO-FLATPAK-INICIO/,/LAZARO-FLATPAK-FIN/p' "$serie" || true
 	# La instalación apaga la máquina sola.
 	t=0
 	while kill -0 "$pid" 2>/dev/null && [ $t -lt 120 ]; do sleep 2; t=$((t + 2)); done
