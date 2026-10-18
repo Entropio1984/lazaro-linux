@@ -360,7 +360,7 @@ paso_auto() {
 	echo "- postinstall.env:"; grep FLATPAK "$raiz/etc/lazaro/postinstall.env"
 	echo "- apk flatpak:"; en_destino "$raiz" apk info -e flatpak gnome-software-plugin-flatpak 2>&1
 	echo "- remotes:"; en_destino "$raiz" flatpak remotes --system 2>&1
-	echo "- log:"; grep -n -i -B2 -A8 "flatpak" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 200
+	echo "- log:"; grep -n -i -B2 -A25 "chrome" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 120
 	echo "- instalar.log:"; grep -n -i "postinstall\|aviso" "$LOG" | tail -n 20
 	echo "LAZARO-FLATPAK-FIN"
 
@@ -465,6 +465,11 @@ paso_auto() {
 	#!/bin/sh
 	{
 		echo "LAZARO-INSTALADO-ARRANCO"
+		echo "- pendientes:"; cat /etc/flatpak-pendientes 2>&1
+		t=0
+		while [ -e /etc/flatpak-pendientes ] && [ $t -lt 1200 ]; do sleep 10; t=$((t + 10)); done
+		if flatpak list --app 2>/dev/null | grep -q com.google.Chrome; then echo "LAZARO-CHROME-OK $t"; else echo "LAZARO-CHROME-NO $t"; fi
+		tail -n 30 /var/log/flatpak-pendientes.log 2>&1
 		rc-status default
 		# Nada en la carpeta del usuario debe ser de otro dueño (si
 		# no, Plasma y otros no pueden guardar su configuración).
