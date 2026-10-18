@@ -107,8 +107,25 @@ en_destino() {
 	chroot "$raiz" /usr/bin/env -i \
 		PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root TERM=linux \
 		"$@" || rc=$?
+	matar_restos "$raiz"
 	desmontar_propios
 	return $rc
+}
+
+# Procesos que siguen vivos dentro del sistema instalado (por ejemplo,
+# servicios de D-Bus que arranca flatpak) impiden desmontarlo al final.
+matar_restos() {
+	mr_raiz="${1%/}"
+	for mr_senal in TERM KILL; do
+		mr_quedan=""
+		for mr_p in /proc/[0-9]*; do
+			[ "$(readlink "$mr_p/root" 2>/dev/null)" = "$mr_raiz" ] || continue
+			[ "$mr_senal" = KILL ] || log "Aviso: se cierra un proceso que quedó vivo en $mr_raiz: $(tr '\0' ' ' < "$mr_p/cmdline" 2>/dev/null)"
+			kill -s "$mr_senal" "${mr_p#/proc/}" 2>/dev/null && mr_quedan=1
+		done
+		[ -n "$mr_quedan" ] || return 0
+		sleep 1
+	done
 }
 
 # --- Paso 1: sistema base -------------------------------------------------
@@ -358,7 +375,9 @@ paso_auto() {
 	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
 	# Flatpak viene por defecto: con red, Flathub debe quedar agregado.
 	if [ ! -e "$raiz/etc/lazaro/sin-escritorio" ] && hay_red; then
-		if en_destino "$raiz" flatpak remotes --system 2>/dev/null | grep -q '^flathub'; then
+		# Se lee la configuración en vez de ejecutar flatpak dentro del
+		# sistema instalado: un proceso que quede vivo ahí impide desmontarlo.
+		if grep -q '^\[remote "flathub"\]' "$raiz/var/lib/flatpak/repo/config" 2>/dev/null; then
 			echo "LAZARO-FLATPAK-OK"
 		else
 			echo "LAZARO-FLATPAK-NO"
