@@ -359,10 +359,12 @@ paso_auto() {
 
 	# Recorrido real de la resolución: "prueba" entra sola a su sesión,
 	# cambia la pantalla a 800x600, la prueba cierra la sesión y la
-	# pantalla de inicio debe volver con 800x600 (LightDM o SDDM).
+	# pantalla de inicio debe volver con 800x600 (LightDM o SDDM). Con
+	# GDM la prueba reinicia, porque GDM solo la toma al arrancar.
 	pdm=""
 	[ -f "$raiz/etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf" ] && pdm=lightdm
 	[ -f "$raiz/etc/sddm.conf.d/50-pantalla-inicio.conf" ] && pdm=sddm
+	[ -f "$raiz/etc/init.d/pantalla-inicio-gdm" ] && pdm=gdm
 	if [ "$pdm" = lightdm ]; then
 		en_destino "$raiz" addgroup -S autologin >>"$LOG" 2>&1 || true
 		en_destino "$raiz" addgroup prueba autologin >>"$LOG" 2>&1 || true
@@ -384,6 +386,17 @@ paso_auto() {
 		User=prueba
 		Session=${sesion:-$de.desktop}
 		EOF
+	elif [ "$pdm" = gdm ]; then
+		# Se guarda el custom.conf original y se repone antes de reiniciar.
+		mkdir -p "$raiz/etc/gdm"
+		if [ -f "$raiz/etc/gdm/custom.conf" ]; then
+			cp "$raiz/etc/gdm/custom.conf" "$raiz/etc/lazaro/gdm-custom.conf.orig"
+		fi
+		cat > "$raiz/etc/gdm/custom.conf" <<-EOF
+		[daemon]
+		AutomaticLoginEnable=True
+		AutomaticLogin=prueba
+		EOF
 	fi
 	if [ -n "$pdm" ]; then
 		echo "$pdm" > "$raiz/etc/lazaro/prueba-pantalla"
@@ -397,7 +410,28 @@ paso_auto() {
 		exec 2>/tmp/prueba-800x600.log
 		set -x
 		sleep 5
-		if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+		case ":${XDG_CURRENT_DESKTOP:-}:" in *:GNOME:*) gnome=1 ;; *) gnome="" ;; esac
+		if [ -n "$gnome" ]; then
+			# Como la Configuración de GNOME: se aplica de forma permanente
+			# y GNOME pregunta "¿Mantener los cambios?" (la prueba pulsa
+			# Intro desde QEMU). Solo así GNOME escribe monitors.xml.
+			t=0
+			until e="$(gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
+				--object-path /org/gnome/Mutter/DisplayConfig \
+				--method org.gnome.Mutter.DisplayConfig.GetCurrentState)" || [ $t -ge 60 ]; do
+				sleep 3
+				t=$((t + 3))
+			done
+			printf '%s\n' "$e" >&2
+			serie="$(printf '%s\n' "$e" | sed -n 's/^(uint32 \([0-9]*\).*/\1/p')"
+			conector="$(printf '%s\n' "$e" | grep -o "(('[^']*'" | head -n 1 | cut -d"'" -f2)"
+			modo="$(printf '%s\n' "$e" | grep -o "'800x600@[0-9.]*'" | head -n 1 | tr -d "'")"
+			gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
+				--object-path /org/gnome/Mutter/DisplayConfig \
+				--method org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig \
+				"$serie" 2 "[(0, 0, 1.0, 0, true, [('$conector', '$modo', @a{sv} {})])]" "@a{sv} {}"
+			touch /tmp/lazaro-confirmar
+		elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
 			o="$(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g')"
 			printf '%s\n' "$o" >&2
 			salida="$(printf '%s\n' "$o" | awk '/Output:/ { for (i = 1; i < NF; i++) if ($i == "Output:") { print $(i + 2); exit } }')"
@@ -441,7 +475,60 @@ paso_auto() {
 		# Resolución de la pantalla de inicio (LightDM o SDDM): la que
 		# quedó anotada en ~/.config/pantalla-inicio.
 		pdm="$(cat /etc/lazaro/prueba-pantalla 2>/dev/null)"
-		if [ -n "$pdm" ]; then
+		reiniciar=""
+		if [ "$pdm" = gdm ] && [ ! -f /etc/lazaro/prueba-reiniciada ]; then
+			# Primera vuelta: la sesión de GNOME elige 800x600.
+			t=0
+			until [ -f /tmp/lazaro-confirmar ] || [ $t -ge 240 ]; do
+				sleep 3
+				t=$((t + 3))
+			done
+			# qemu.sh pulsa Intro en "¿Mantener los cambios?".
+			echo "LAZARO-CONFIRMAR"
+			t=0
+			until grep -qs '<width>800</width>' /home/prueba/.config/monitors.xml || [ $t -ge 120 ]; do
+				sleep 3
+				t=$((t + 3))
+			done
+			if grep -qs '<width>800</width>' /home/prueba/.config/monitors.xml; then
+				echo "LAZARO-GUARDADO-OK"
+			else
+				echo "LAZARO-GUARDADO-NO"
+				echo "--- diagnóstico del guardado ---"
+				ls -la /home/prueba/.config 2>&1
+				cat /home/prueba/.config/monitors.xml 2>&1
+				echo "- cambio a 800x600:"
+				tail -n 30 /tmp/prueba-800x600.log 2>&1
+				echo "--- fin del diagnóstico ---"
+			fi
+			if [ -f /etc/lazaro/gdm-custom.conf.orig ]; then
+				mv /etc/lazaro/gdm-custom.conf.orig /etc/gdm/custom.conf
+			else
+				rm -f /etc/gdm/custom.conf
+			fi
+			touch /etc/lazaro/prueba-reiniciada
+			echo "LAZARO-REINICIANDO"
+			reiniciar=1
+		elif [ "$pdm" = gdm ]; then
+			# Segunda vuelta: GDM debe mostrarse en 800x600 (qemu.sh
+			# mide la pantalla). Se espera al gnome-shell del saludo.
+			t=0
+			saludo=""
+			while [ -z "$saludo" ] && [ $t -lt 180 ]; do
+				for c in /proc/[0-9]*/comm; do
+					[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] \
+						&& [ "$(stat -c %U "${c%/comm}" 2>/dev/null)" = gdm ] && saludo=1
+				done
+				[ -n "$saludo" ] || { sleep 3; t=$((t + 3)); }
+			done
+			sleep 20
+			echo "LAZARO-SALUDO-${saludo:+LISTO}"
+			echo "--- datos de GDM ---"
+			rc-service pantalla-inicio-gdm status 2>&1
+			ls -la /var/lib/gdm/.config 2>&1
+			cat /var/lib/gdm/.config/monitors.xml 2>&1
+			echo "--- fin de los datos ---"
+		elif [ -n "$pdm" ]; then
 			# 1) La sesión debe anotar la resolución que eligió.
 			t=0
 			until grep -qs 800x600 /home/prueba/.config/pantalla-inicio || [ $t -ge 240 ]; do
@@ -522,8 +609,12 @@ paso_auto() {
 		for s in lightdm sddm gdm greetd; do
 			cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 		done
-		echo "LAZARO-PRUEBA-FIN"
+		[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 	} > /dev/ttyS0 2>&1
+	if [ -n "$reiniciar" ]; then
+		reboot
+		exit 0
+	fi
 	sleep 20
 	poweroff
 	EOF
