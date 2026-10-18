@@ -547,6 +547,14 @@ paso_auto() {
 			rc-service pantalla-inicio-gdm status 2>&1
 			stat -c '%n acceso=%x cambio=%y' /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml 2>&1
 			cmp /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml && echo "copia idéntica"
+			# Orden: ¿arrancó el saludo antes o después de la copia?
+			arranque="$(awk '/^btime/ { print $2 }' /proc/stat)"
+			for c in /proc/[0-9]*/comm; do
+				[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] || continue
+				inicio=$((arranque + $(awk '{ print $22 }' "${c%/comm}/stat") / 100))
+				echo "gnome-shell $(stat -c %U "${c%/comm}") empezó $(date -d "@$inicio" '+%T')"
+			done
+			echo "sistema arrancó $(date -d "@$arranque" '+%T')"
 			if ! modo_gdm | grep -qx '800x600@.*'; then
 				# Pruebas para encontrar la causa: reiniciar GDM con el
 				# archivo ya en su sitio, y luego como archivo del sistema.
