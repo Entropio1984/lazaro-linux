@@ -1,7 +1,7 @@
 #!/bin/sh
 # Pruebas automáticas de la ISO en QEMU (las usa GitHub Actions, pero
 # también sirven en cualquier Linux con qemu-system-x86_64, xorriso y
-# socat; con OVMF para UEFI).
+# socat; con OVMF para UEFI e ImageMagick para medir las capturas).
 #
 #   pruebas/qemu.sh live ISO bios|uefi
 #       Arranca la ISO como lo haría un usuario y espera a que Calamares
@@ -176,7 +176,7 @@ prueba_instalar() {
 
 	echo "Arrancando el sistema instalado..."
 	serie2="$RES/$nombre-arranque.log"
-	rm -f "$serie2" "$mon"
+	rm -f "$serie2" "$mon" "$RES/$nombre-instalado.png" "$RES/$nombre-instalado.ppm"
 	# GNOME reinicia una vez en la prueba (GDM toma la resolución al
 	# arrancar) y pide más memoria.
 	mem2=2048
