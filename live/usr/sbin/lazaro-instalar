@@ -329,6 +329,12 @@ paso_auto() {
 	paso_escritorio "$raiz" "$de"
 	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
 
+	# Como si el usuario hubiera elegido 800x600 en su sesión: la
+	# pantalla de inicio debe arrancar con esa resolución.
+	mkdir -p "$raiz/home/prueba/.config"
+	echo 'Virtual-1 800x600' > "$raiz/home/prueba/.config/pantalla-inicio"
+	en_destino "$raiz" chown -R prueba:prueba /home/prueba/.config >>"$LOG" 2>&1
+
 	# Solo pruebas: al arrancar el sistema instalado, informar por el
 	# puerto serie y apagar.
 	mkdir -p "$raiz/etc/local.d"
@@ -349,6 +355,18 @@ paso_auto() {
 		else
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
+		fi
+		# Resolución de la pantalla de inicio (LightDM): la que quedó
+		# anotada en ~/.config/pantalla-inicio.
+		if [ -f /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf ]; then
+			t=0
+			while [ ! -e /var/run/lightdm/root/:0 ] && [ $t -lt 90 ]; do sleep 3; t=$((t + 3)); done
+			sleep 10
+			modo="$(DISPLAY=:0 XAUTHORITY=/var/run/lightdm/root/:0 xrandr --current 2>/dev/null \
+				| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+\+/) { split($i, g, "+"); print g[1]; exit } }')"
+			echo "LAZARO-PANTALLA-${modo:-desconocida}"
+		else
+			echo "LAZARO-PANTALLA-SIN-AJUSTE"
 		fi
 		for s in lightdm sddm gdm greetd; do
 			rc-service --exists "$s" && rc-service "$s" status
