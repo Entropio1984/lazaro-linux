@@ -203,6 +203,13 @@ prueba_instalar() {
 			grep LAZARO-PANTALLA "$serie2" >&2 || true
 			sed -n '/--- diagnóstico de la resolución/,/--- fin del diagnóstico/p' "$serie2" >&2
 			ok=1
+		elif [ "$de" = ninguno ]; then
+			if grep -Eq '(lightdm|sddm|gdm|greetd).*started|Starting (lightdm|sddm|gdm|greetd)|LAZARO-DM-ACTIVO' "$serie2"; then
+				echo "FALLO: se eligió \"sin escritorio\" pero arrancó una pantalla de inicio gráfica." >&2
+				ok=1
+			else
+				echo "OK: el sistema instalado arrancó en modo texto (sin escritorio)."
+			fi
 		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started|LAZARO-DM-ACTIVO' "$serie2"; then
 			echo "OK: el sistema instalado arrancó y su gestor de sesión está activo."
 		else

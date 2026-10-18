@@ -82,6 +82,7 @@ jobs:
           - instalar bios xfce sin-red
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red
+          - instalar bios ninguno sin-red
     steps:
       - uses: actions/checkout@v4
 
