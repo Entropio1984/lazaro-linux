@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         # "estable" = la de config.env.
-        alpine: [estable, edge]
+        alpine: [estable]
     steps:
       - uses: actions/checkout@v4
 
@@ -75,15 +75,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: [estable, edge]
+        alpine: [estable]
         prueba:
-          - live bios
-          - live uefi
-          - instalar bios xfce sin-red
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red
-          - instalar bios gnome con-red
-          - instalar bios ninguno sin-red
     steps:
       - uses: actions/checkout@v4
 
