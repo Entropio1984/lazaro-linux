@@ -702,13 +702,23 @@ paso_auto() {
 					>> /etc/greetd/config.toml
 				rc-service greetd restart
 				t=0
-				until cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$ses" || [ $t -ge 120 ]; do
+				# "dbus-run-session sway" -> el proceso se llama "sway".
+				proc="${ses##* }"
+				until cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$proc" || [ $t -ge 120 ]; do
 					sleep 3
 					t=$((t + 3))
 				done
-				if cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$ses"; then
-					sleep 15
+				if cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$proc"; then
+					sleep 20
 					echo "LAZARO-SESION-GREETD-OK $ses"
+					# Sway: barra waybar con el icono de wifi (nm-applet).
+					if [ "$proc" = sway ]; then
+						for b in waybar nm-applet; do
+							cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$b" \
+								&& echo "LAZARO-SWAY-CORRE $b"
+						done
+						cat /etc/sway/config.d/*.conf 2>/dev/null
+					fi
 				else
 					echo "LAZARO-SESION-GREETD-NO $ses"
 					grep -iE 'greetd|sway|seat|logind' /var/log/messages 2>/dev/null | tail -n 30

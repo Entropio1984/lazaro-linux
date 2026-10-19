@@ -264,6 +264,11 @@ prueba_instalar() {
 			echo "FALLO: desde la pantalla de inicio no se pudo entrar a Sway." >&2
 			sed -n '/LAZARO-SESION-GREETD-NO/,$p' "$serie2" | head -n 35 >&2
 			ok=1
+		elif [ "$de" = sway ] && { ! grep -q 'LAZARO-SWAY-CORRE waybar' "$serie2" \
+			|| ! grep -q 'LAZARO-SWAY-CORRE nm-applet' "$serie2"; }; then
+			echo "FALLO: en Sway no arrancó la barra (waybar) o el icono de wifi (nm-applet)." >&2
+			grep LAZARO-SWAY-CORRE "$serie2" >&2 || true
+			ok=1
 		elif [ "$de" = ninguno ]; then
 			if grep -Eq '(lightdm|sddm|gdm|greetd).*started|Starting (lightdm|sddm|gdm|greetd)|LAZARO-DM-ACTIVO' "$serie2"; then
 				echo "FALLO: se eligió \"sin escritorio\" pero arrancó una pantalla de inicio gráfica." >&2
