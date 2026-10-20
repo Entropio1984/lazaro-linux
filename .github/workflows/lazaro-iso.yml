@@ -18,10 +18,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sondeo:
+    name: Sondeo plymouth (${{ matrix.tag }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tag: ["3.24", edge]
+    steps:
+      - name: Sondeo
+        run: |
+          cat > /tmp/s.sh <<'FIN'
+          set -x
+          apk update >/dev/null
+          apk search -v 'plymouth*'
+          apk add plymouth plymouth-themes 2>&1 | tail -3
+          apk search -v 'plymouth*' | sed 's/ - .*//' | while read -r p; do echo "### $p"; apk info -L "${p%-[0-9]*-r[0-9]*}" 2>/dev/null | grep -v -e '^$' | head -80; done
+          ls -R /usr/lib/plymouth /usr/share/plymouth 2>/dev/null | head -150
+          cat /etc/plymouth/plymouthd.conf 2>/dev/null
+          ls /usr/share/mkinitfs/features.d/ 2>/dev/null; ls /etc/mkinitfs/features.d 2>/dev/null; grep -rl plymouth /usr/share/mkinitfs /etc/mkinitfs 2>/dev/null; cat /usr/share/mkinitfs/initramfs-init 2>/dev/null | grep -n -i -B2 -A8 plymouth | head -80
+          apk info -L plymouth 2>/dev/null | grep -i -e init.d -e openrc -e conf.d
+          for f in $(apk info -L plymouth 2>/dev/null | grep -e etc/init.d -e etc/conf.d); do echo "=== /$f"; cat "/$f"; done
+          plymouthd --help 2>&1 | head -20; plymouth --help 2>&1 | head -40
+          FIN
+          docker run --rm -v /tmp/s.sh:/s.sh:ro alpine:${{ matrix.tag }} sh /s.sh 2>&1
+
   iso:
     # Los PR que vienen de forks no compilan: la caché guarda la llave que
     # firma Calamares y el índice de la ISO, y un fork podría leerla.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: false
     name: ISO (${{ matrix.alpine }})
     runs-on: ubuntu-latest
     timeout-minutes: 150
