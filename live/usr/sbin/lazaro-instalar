@@ -675,7 +675,12 @@ paso_auto() {
 				ps -ef | grep -iE '[g]dm|[g]nome-shell|[p]lymouth|[X]org|[X]wayland'
 				ls -l /var/log/gdm 2>&1
 				grep -iE 'gdm|plymouth|mutter|gnome-shell' /var/log/messages 2>/dev/null | head -n 60
-				head -n 40 /var/log/gdm/greeter.log 2>/dev/null
+				for f in /var/log/gdm/greeter.log*; do
+					[ "$(wc -c < "$f")" -lt 2000 ] || continue
+					echo "-- $f:"
+					cat "$f"
+				done
+				dmesg | grep -iE 'drm|plymouth|vt|tty' | tail -n 30
 			fi
 			echo "--- fin de los datos ---"
 		elif [ -n "$pdm" ]; then
