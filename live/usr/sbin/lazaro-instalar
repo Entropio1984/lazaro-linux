@@ -2,7 +2,7 @@
 # lazaro-instalar: pasos de instalación de Lázaro Linux.
 #
 # Calamares llama a cada paso desde sus módulos shellprocess (ver
-# /etc/calamares/modules/shellprocess@*.conf). Las pruebas automáticas
+# /etc/calamares/modules/shellprocess-*.conf). Las pruebas automáticas
 # usan "auto", que hace lo mismo sin interfaz gráfica.
 #
 # El trabajo pesado lo hacen las herramientas oficiales de Alpine:
@@ -18,6 +18,8 @@
 #     EXTRAS: flatpak (por defecto), esencial o flatpak-chrome
 #     OFICINA: ninguna (por defecto), libreoffice u onlyoffice (activa Flatpak)
 #   lazaro-instalar auto DISCO ESCRITORIO     (¡BORRA EL DISCO COMPLETO!)
+#     Solo pruebas: además deja en el disco las comprobaciones de
+#     /usr/share/lazaro/pruebas, que informan por el puerto serie.
 
 set -eu
 
@@ -72,15 +74,34 @@ validar_escritorio() {
 # --- Ejecutar comandos dentro del sistema instalado ----------------------
 MONTADOS=""
 
+# Cada montaje que falla se informa y devuelve error. Hace falta decirlo
+# así: en_destino se llama casi siempre dentro de un "if" o con "||", y
+# ahí "set -e" no detiene nada.
 montar_si_falta() { # TIPO ORIGEN DESTINO
 	mountpoint -q "$3" && return 0
-	mkdir -p "$3"
+	mkdir -p "$3" || { log "ERROR: no se pudo crear $3"; return 1; }
 	if [ "$1" = bind ]; then
-		mount --bind "$2" "$3"
+		mount --bind "$2" "$3" || { log "ERROR: no se pudo montar $2 en $3"; return 1; }
 	else
-		mount -t "$1" "$2" "$3"
+		mount -t "$1" "$2" "$3" || { log "ERROR: no se pudo montar $1 en $3"; return 1; }
 	fi
 	MONTADOS="$3 $MONTADOS"
+}
+
+# Lo que necesita un chroot al sistema instalado: /proc, /sys, /dev, las
+# variables EFI y el repositorio de la ISO (para instalar sin internet).
+montar_destino() { # RAIZ
+	montar_si_falta proc proc "$1/proc" || return 1
+	montar_si_falta sysfs sys "$1/sys" || return 1
+	montar_si_falta bind /dev "$1/dev" || return 1
+	if [ -d /sys/firmware/efi/efivars ]; then
+		montar_si_falta efivarfs efivarfs "$1/sys/firmware/efi/efivars" || return 1
+	fi
+	md_iso="$(repo_iso)"
+	if [ -n "$md_iso" ]; then
+		montar_si_falta bind "$md_iso" "$1$md_iso" || return 1
+	fi
+	return 0
 }
 
 desmontar_propios() {
@@ -94,14 +115,10 @@ desmontar_propios() {
 en_destino() {
 	raiz="$1"
 	shift
-	montar_si_falta proc proc "$raiz/proc"
-	montar_si_falta sysfs sys "$raiz/sys"
-	montar_si_falta bind /dev "$raiz/dev"
-	if [ -d /sys/firmware/efi/efivars ]; then
-		montar_si_falta efivarfs efivarfs "$raiz/sys/firmware/efi/efivars"
+	if ! montar_destino "$raiz"; then
+		desmontar_propios
+		return 1
 	fi
-	iso="$(repo_iso)"
-	[ -z "$iso" ] || montar_si_falta bind "$iso" "$raiz$iso"
 	cp /etc/resolv.conf "$raiz/etc/resolv.conf" 2>/dev/null || true
 	rc=0
 	chroot "$raiz" /usr/bin/env -i \
@@ -168,10 +185,28 @@ paso_base() {
 	rm -rf "$ovl"
 
 	log "Instalando el sistema base con setup-disk (puede tardar)..."
-	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}" \
+	# "splash" enciende la pantalla de arranque con el pulso (Plymouth).
+	# No se usa en dos casos:
+	# - Sin escritorio: el arranque se ve en texto, como en la consola, y
+	#   ese sistema no tiene udev, que Plymouth necesita para encontrar la
+	#   pantalla.
+	# - GNOME: con Plymouth, GDM no logra abrir su pantalla de inicio al
+	#   encender (prueba el modo X, que no está instalado, y se rinde).
+	splash=" splash"
+	case "$de" in ninguno | gnome) splash="" ;; esac
+	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}$splash" \
 		setup-disk -v -m sys -o /tmp/lazaro-destino.apkovl.tar.gz "$raiz" \
 		>>"$LOG" 2>&1; then
 		die "setup-disk falló (detalles en $LOG)"
+	fi
+	# El tema del pulso no viene en ningún paquete: se copia el de la ISO.
+	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
+	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"
+	cp /etc/plymouth/plymouthd.conf "$raiz/etc/plymouth/plymouthd.conf"
+	if [ -n "$splash" ]; then
+		install -m 755 /usr/share/lazaro/plymouth-salir "$raiz/etc/init.d/plymouth-salir"
+		mkdir -p "$raiz/etc/runlevels/default"
+		ln -sf /etc/init.d/plymouth-salir "$raiz/etc/runlevels/default/plymouth-salir"
 	fi
 	log "Sistema base instalado."
 }
@@ -228,17 +263,15 @@ paso_ajustes() {
 		onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
 		*) log "Aviso: programa de oficina desconocido '$oficina'; no se instala ninguno." ;;
 	esac
+	opt_firefox=yes
+	opt_cups=yes
 	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
-		# Flatpak, Chrome y la oficina no sirven sin escritorio.
+		# Solo consola: nada gráfico (Flatpak, Chrome, oficina, navegador)
+		# ni impresoras.
 		opt_flatpak=no
 		opt_chrome=no
 		opt_libreoffice=no
 		opt_onlyoffice=no
-	fi
-	opt_firefox=yes
-	opt_cups=yes
-	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
-		# Solo consola: tampoco navegador ni impresoras.
 		opt_firefox=no
 		opt_cups=no
 	fi
@@ -332,67 +365,69 @@ programar_primer_arranque() {
 }
 
 # --- Instalación desatendida (pruebas automáticas) -----------------------
-paso_auto() {
-	disco="$1"
-	de="$2"
-	validar_escritorio "$de"
-	[ -b "$disco" ] || die "$disco no es un disco"
-	case "$disco" in
-		*[0-9]) p="${disco}p" ;;
-		*) p="$disco" ;;
-	esac
+# Los archivos que solo usan las pruebas están en $PRUEBAS y se copian al
+# sistema instalado; aquí queda solo lo que depende de esta instalación.
+PRUEBAS="$DATOS/pruebas"
 
-	log "Instalación desatendida en $disco con '$de' (se borra el disco)"
-	raiz=/mnt/lazaro
+# Borra el disco, lo particiona (GPT con partición EFI en UEFI, MBR en
+# BIOS) y monta la raíz en $raiz.
+auto_particionar() { # DISCO
+	case "$1" in
+		*[0-9]) p="${1}p" ;;
+		*) p="$1" ;;
+	esac
 	if [ -d /sys/firmware/efi ]; then
-		printf 'label: gpt\nsize=300M, type=uefi\ntype=linux\n' | sfdisk --wipe always "$disco" >>"$LOG" 2>&1
+		printf 'label: gpt\nsize=300M, type=uefi\ntype=linux\n' | sfdisk --wipe always "$1" >>"$LOG" 2>&1
 		udevadm settle 2>/dev/null || sleep 2
 		mkfs.vfat -F 32 -n EFI "${p}1" >>"$LOG" 2>&1
 		mkfs.ext4 -q -F -L lazaro "${p}2"
 		mkdir -p "$raiz"
-		mount -t ext4 "${p}2" "$raiz"
+		mount -t ext4 "${p}2" "$raiz" || die "no se pudo montar ${p}2 en $raiz"
 		mkdir -p "$raiz/boot/efi"
-		mount -t vfat "${p}1" "$raiz/boot/efi"
+		mount -t vfat "${p}1" "$raiz/boot/efi" || die "no se pudo montar ${p}1 en $raiz/boot/efi"
 	else
-		printf 'label: dos\ntype=83, bootable\n' | sfdisk --wipe always "$disco" >>"$LOG" 2>&1
+		printf 'label: dos\ntype=83, bootable\n' | sfdisk --wipe always "$1" >>"$LOG" 2>&1
 		udevadm settle 2>/dev/null || sleep 2
 		mkfs.ext4 -q -F -L lazaro "${p}1"
 		mkdir -p "$raiz"
-		mount -t ext4 "${p}1" "$raiz"
+		mount -t ext4 "${p}1" "$raiz" || die "no se pudo montar ${p}1 en $raiz"
 	fi
+}
 
-	paso_base "$raiz" "$de"
-
-	# Lo que en Calamares hace el módulo "users".
+# Lo que en Calamares hace el módulo "users": usuario "prueba",
+# contraseña "lazaro".
+auto_usuario() {
 	en_destino "$raiz" adduser -D -g "Prueba" -s /bin/ash prueba >>"$LOG" 2>&1
 	echo 'prueba:lazaro' | en_destino "$raiz" chpasswd >>"$LOG" 2>&1
 	for g in wheel audio video netdev input plugdev lp users; do
 		en_destino "$raiz" addgroup prueba "$g" >>"$LOG" 2>&1 || true
 	done
 	echo lazaro-prueba > "$raiz/etc/hostname"
+}
 
-	paso_escritorio "$raiz" "$de"
-	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
-	# Flatpak viene por defecto: con red, Flathub debe quedar agregado.
-	if [ ! -e "$raiz/etc/lazaro/sin-escritorio" ] && hay_red; then
-		# Se lee la configuración en vez de ejecutar flatpak dentro del
-		# sistema instalado: un proceso que quede vivo ahí impide desmontarlo.
-		if grep -q '^\[remote "flathub"\]' "$raiz/var/lib/flatpak/repo/config" 2>/dev/null; then
-			echo "LAZARO-FLATPAK-OK"
-		else
-			echo "LAZARO-FLATPAK-NO"
-			grep -n -i -A6 "flatpak" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 40
-		fi
+# Flatpak viene por defecto: con red, Flathub debe quedar agregado.
+auto_revisar_flatpak() {
+	[ ! -e "$raiz/etc/lazaro/sin-escritorio" ] && hay_red || return 0
+	# Se lee la configuración en vez de ejecutar flatpak dentro del
+	# sistema instalado: un proceso que quede vivo ahí impide desmontarlo.
+	if grep -q '^\[remote "flathub"\]' "$raiz/var/lib/flatpak/repo/config" 2>/dev/null; then
+		echo "LAZARO-FLATPAK-OK"
+	else
+		echo "LAZARO-FLATPAK-NO"
+		grep -n -i -A6 "flatpak" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 40
 	fi
+}
 
-	# Recorrido real de la resolución: "prueba" entra sola a su sesión,
-	# cambia la pantalla a 800x600, la prueba cierra la sesión y la
-	# pantalla de inicio debe volver con 800x600 (LightDM o SDDM). Con
-	# GDM la prueba reinicia, porque GDM solo la toma al arrancar.
+# Recorrido real de la resolución: "prueba" entra sola a su sesión,
+# cambia la pantalla a 800x600, la prueba cierra la sesión y la
+# pantalla de inicio debe volver con 800x600 (LightDM o SDDM). Con
+# GDM la prueba reinicia, porque GDM solo la toma al arrancar.
+auto_prueba_resolucion() { # ESCRITORIO
 	pdm=""
 	[ -f "$raiz/etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf" ] && pdm=lightdm
 	[ -f "$raiz/etc/sddm.conf.d/50-pantalla-inicio.conf" ] && pdm=sddm
 	[ -f "$raiz/etc/init.d/pantalla-inicio-gdm" ] && pdm=gdm
+	# Inicio automático de "prueba" según la pantalla de inicio.
 	if [ "$pdm" = lightdm ]; then
 		en_destino "$raiz" addgroup -S autologin >>"$LOG" 2>&1 || true
 		en_destino "$raiz" addgroup prueba autologin >>"$LOG" 2>&1 || true
@@ -400,22 +435,23 @@ paso_auto() {
 		[Seat:*]
 		autologin-user=prueba
 		autologin-user-timeout=0
-		autologin-session=$de
+		autologin-session=$1
 		EOF
 	elif [ "$pdm" = sddm ]; then
 		# Plasma entra en su sesión Wayland (la predeterminada).
 		sesion=""
-		for f in "$raiz/usr/share/wayland-sessions/$de.desktop" \
-			"$raiz/usr/share/xsessions/$de.desktop"; do
+		for f in "$raiz/usr/share/wayland-sessions/$1.desktop" \
+			"$raiz/usr/share/xsessions/$1.desktop"; do
 			[ -f "$f" ] && { sesion="${f##*/}"; break; }
 		done
 		cat > "$raiz/etc/sddm.conf.d/90-lazaro-prueba.conf" <<-EOF
 		[Autologin]
 		User=prueba
-		Session=${sesion:-$de.desktop}
+		Session=${sesion:-$1.desktop}
 		EOF
 	elif [ "$pdm" = gdm ]; then
-		# Se guarda el custom.conf original y se repone antes de reiniciar.
+		# Se guarda el custom.conf original y zz-lazaro-prueba.start lo
+		# repone antes de reiniciar.
 		mkdir -p "$raiz/etc/gdm"
 		if [ -f "$raiz/etc/gdm/custom.conf" ]; then
 			cp "$raiz/etc/gdm/custom.conf" "$raiz/etc/lazaro/gdm-custom.conf.orig"
@@ -426,275 +462,48 @@ paso_auto() {
 		AutomaticLogin=prueba
 		EOF
 	fi
-	if [ -n "$pdm" ]; then
-		echo "$pdm" > "$raiz/etc/lazaro/prueba-pantalla"
-		# Traza de "guardar" para el diagnóstico.
-		sed -i 's|^Exec=.*|Exec=sh -c "sh -x /usr/local/libexec/pantalla-inicio/guardar 2>/tmp/guardar-traza.log"|' \
-			"$raiz/etc/xdg/autostart/pantalla-inicio.desktop"
-		mkdir -p "$raiz/usr/local/bin"
-		cat > "$raiz/usr/local/bin/lazaro-prueba-800x600" <<-'EOF'
-		#!/bin/sh
-		# Solo pruebas: la sesión del usuario elige 800x600.
-		exec 2>/tmp/prueba-800x600.log
-		set -x
-		sleep 5
-		case ":${XDG_CURRENT_DESKTOP:-}:" in *:GNOME:*) gnome=1 ;; *) gnome="" ;; esac
-		if [ -n "$gnome" ]; then
-			# Como la Configuración de GNOME: se aplica de forma permanente
-			# y GNOME pregunta "¿Mantener los cambios?" (la prueba pulsa
-			# Intro desde QEMU). Solo así GNOME escribe monitors.xml.
-			t=0
-			until e="$(gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
-				--object-path /org/gnome/Mutter/DisplayConfig \
-				--method org.gnome.Mutter.DisplayConfig.GetCurrentState)" || [ $t -ge 60 ]; do
-				sleep 3
-				t=$((t + 3))
-			done
-			printf '%s\n' "$e" >&2
-			serie="$(printf '%s\n' "$e" | sed -n 's/^(uint32 \([0-9]*\).*/\1/p')"
-			conector="$(printf '%s\n' "$e" | grep -o "(('[^']*'" | head -n 1 | cut -d"'" -f2)"
-			modo="$(printf '%s\n' "$e" | grep -o "'800x600@[0-9.]*'" | head -n 1 | tr -d "'")"
-			gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
-				--object-path /org/gnome/Mutter/DisplayConfig \
-				--method org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig \
-				"$serie" 2 "[(0, 0, 1.0, 0, true, [('$conector', '$modo', @a{sv} {})])]" "@a{sv} {}"
-			touch /tmp/lazaro-confirmar
-		elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
-			o="$(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g')"
-			printf '%s\n' "$o" >&2
-			salida="$(printf '%s\n' "$o" | awk '/Output:/ { for (i = 1; i < NF; i++) if ($i == "Output:") { print $(i + 2); exit } }')"
-			modo="$(printf '%s\n' "$o" | grep -o '[0-9]*: *800x600@[0-9.]*' | head -n 1 | cut -d: -f1)"
-			[ -n "$modo" ] && kscreen-doctor "output.$salida.mode.$modo"
-		else
-			xrandr -s 800x600
-		fi
-		EOF
-		chmod 755 "$raiz/usr/local/bin/lazaro-prueba-800x600"
-		cat > "$raiz/etc/xdg/autostart/zz-lazaro-prueba-resolucion.desktop" <<-'EOF'
-		[Desktop Entry]
-		Type=Application
-		Name=Prueba de resolucion
-		Exec=/usr/local/bin/lazaro-prueba-800x600
-		NoDisplay=true
-		EOF
-	fi
+	[ -n "$pdm" ] || return 0
+	# zz-lazaro-prueba.start sabe así qué pantalla de inicio revisar.
+	echo "$pdm" > "$raiz/etc/lazaro/prueba-pantalla"
+	# Traza de "guardar" para el diagnóstico.
+	sed -i 's|^Exec=.*|Exec=sh -c "sh -x /usr/local/libexec/pantalla-inicio/guardar 2>/tmp/guardar-traza.log"|' \
+		"$raiz/etc/xdg/autostart/pantalla-inicio.desktop"
+	# Al entrar, la sesión del usuario elige 800x600.
+	mkdir -p "$raiz/usr/local/bin"
+	install -m 755 "$PRUEBAS/lazaro-prueba-800x600" "$raiz/usr/local/bin/lazaro-prueba-800x600"
+	install -m 644 "$PRUEBAS/zz-lazaro-prueba-resolucion.desktop" \
+		"$raiz/etc/xdg/autostart/zz-lazaro-prueba-resolucion.desktop"
+}
 
-	# Solo pruebas: al arrancar el sistema instalado, informar por el
-	# puerto serie y apagar.
+# Al arrancar el sistema instalado: mirar la pantalla de arranque
+# mientras está en pie (lazaro-prueba-plymouth, en el nivel boot: al
+# llegar a "local" puede haberla cerrado ya la pantalla de inicio) y
+# luego informar por el puerto serie y apagar (zz-lazaro-prueba.start).
+auto_prueba_arranque() {
+	install -m 755 "$PRUEBAS/lazaro-prueba-plymouth" "$raiz/etc/init.d/lazaro-prueba-plymouth"
+	mkdir -p "$raiz/etc/runlevels/boot"
+	ln -sf /etc/init.d/lazaro-prueba-plymouth "$raiz/etc/runlevels/boot/lazaro-prueba-plymouth"
 	mkdir -p "$raiz/etc/local.d"
-	cat > "$raiz/etc/local.d/zz-lazaro-prueba.start" <<-'EOF'
-	#!/bin/sh
-	{
-		echo "LAZARO-INSTALADO-ARRANCO"
-		rc-status default
-		# Nada en la carpeta del usuario debe ser de otro dueño (si
-		# no, Plasma y otros no pueden guardar su configuración).
-		if [ ! -d /home/prueba ]; then
-			ajenos="falta /home/prueba"
-		else
-			ajenos="$(find /home/prueba ! -user prueba 2>/dev/null | head -n 5)"
-		fi
-		if [ -z "$ajenos" ]; then
-			echo "LAZARO-HOME-OK"
-		else
-			echo "LAZARO-HOME-AJENO"
-			echo "$ajenos"
-		fi
-		# Resolución de la pantalla de inicio (LightDM o SDDM): la que
-		# quedó anotada en ~/.config/pantalla-inicio.
-		pdm="$(cat /etc/lazaro/prueba-pantalla 2>/dev/null)"
-		reiniciar=""
-		if [ "$pdm" = gdm ] && [ ! -f /etc/lazaro/prueba-reiniciada ]; then
-			# Primera vuelta: la sesión de GNOME elige 800x600.
-			t=0
-			until [ -f /tmp/lazaro-confirmar ] || [ $t -ge 240 ]; do
-				sleep 3
-				t=$((t + 3))
-			done
-			# qemu.sh pulsa Intro en "¿Mantener los cambios?".
-			echo "LAZARO-CONFIRMAR"
-			t=0
-			until grep -qs '<width>800</width>' /home/prueba/.config/monitors.xml || [ $t -ge 120 ]; do
-				sleep 3
-				t=$((t + 3))
-			done
-			if grep -qs '<width>800</width>' /home/prueba/.config/monitors.xml; then
-				echo "LAZARO-GUARDADO-OK"
-			else
-				echo "LAZARO-GUARDADO-NO"
-				echo "--- diagnóstico del guardado ---"
-				ls -la /home/prueba/.config 2>&1
-				cat /home/prueba/.config/monitors.xml 2>&1
-				echo "- cambio a 800x600:"
-				tail -n 30 /tmp/prueba-800x600.log 2>&1
-				echo "--- fin del diagnóstico ---"
-			fi
-			if [ -f /etc/lazaro/gdm-custom.conf.orig ]; then
-				mv /etc/lazaro/gdm-custom.conf.orig /etc/gdm/custom.conf
-			else
-				rm -f /etc/gdm/custom.conf
-			fi
-			touch /etc/lazaro/prueba-reiniciada
-			echo "LAZARO-REINICIANDO"
-			reiniciar=1
-		elif [ "$pdm" = gdm ]; then
-			# Segunda vuelta: GDM debe mostrarse en 800x600 (qemu.sh
-			# mide la pantalla). Se espera al gnome-shell del saludo.
-			t=0
-			saludo=""
-			while [ -z "$saludo" ] && [ $t -lt 180 ]; do
-				for c in /proc/[0-9]*/comm; do
-					[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] \
-						&& [ "$(stat -c %U "${c%/comm}" 2>/dev/null)" = gdm ] && saludo=1
-				done
-				[ -n "$saludo" ] || { sleep 3; t=$((t + 3)); }
-			done
-			sleep 20
-			echo "LAZARO-SALUDO-${saludo:+LISTO}"
-			# Modo actual del saludo, preguntado al Mutter de GDM.
-			modo_gdm() {
-				for c in /proc/[0-9]*/comm; do
-					p="${c%/comm}"
-					[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] \
-						&& [ "$(stat -c %U "$p" 2>/dev/null)" = gdm ] || continue
-					bus="$(tr '\0' '\n' < "$p/environ" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')"
-					[ -n "$bus" ] || continue
-					su -s /bin/sh gdm -c "DBUS_SESSION_BUS_ADDRESS='$bus' gdbus call --session \
-						--dest org.gnome.Mutter.DisplayConfig --object-path /org/gnome/Mutter/DisplayConfig \
-						--method org.gnome.Mutter.DisplayConfig.GetCurrentState" 2>/dev/null \
-						| grep -o "('[0-9]*x[0-9]*@[0-9.]*', [^)]*'is-current': <true>" | cut -d"'" -f2
-					return 0
-				done
-			}
-			reiniciar_gdm() {
-				rc-service gdm restart >/dev/null 2>&1
-				sleep 45
-			}
-			echo "LAZARO-GDM-MODO $(modo_gdm)"
-			echo "--- datos de GDM ---"
-			rc-service pantalla-inicio-gdm status 2>&1
-			stat -c '%n acceso=%x cambio=%y' /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml 2>&1
-			cmp /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml && echo "copia idéntica"
-			# Orden: ¿arrancó el saludo antes o después de la copia?
-			arranque="$(awk '/^btime/ { print $2 }' /proc/stat)"
-			for c in /proc/[0-9]*/comm; do
-				[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] || continue
-				inicio=$((arranque + $(awk '{ print $22 }' "${c%/comm}/stat") / 100))
-				echo "gnome-shell $(stat -c %U "${c%/comm}") empezó $(date -d "@$inicio" '+%T')"
-			done
-			echo "sistema arrancó $(date -d "@$arranque" '+%T')"
-			if ! modo_gdm | grep -qx '800x600@.*'; then
-				# Pruebas para encontrar la causa: reiniciar GDM con el
-				# archivo ya en su sitio, y luego como archivo del sistema.
-				reiniciar_gdm
-				echo "tras reiniciar GDM: $(modo_gdm)"
-				stat -c '%n acceso=%x' /var/lib/gdm/.config/monitors.xml
-				cp /var/lib/gdm/.config/monitors.xml /etc/xdg/monitors.xml
-				reiniciar_gdm
-				echo "con /etc/xdg/monitors.xml: $(modo_gdm)"
-				rm -f /etc/xdg/monitors.xml
-				sed -i 's|<layoutmode>logical</layoutmode>|<layoutmode>physical</layoutmode>|' /var/lib/gdm/.config/monitors.xml
-				reiniciar_gdm
-				echo "con layoutmode physical: $(modo_gdm)"
-				sed -i '/<layoutmode>/d' /var/lib/gdm/.config/monitors.xml
-				reiniciar_gdm
-				echo "sin layoutmode: $(modo_gdm)"
-			fi
-			echo "- greeter.log:"
-			grep -iE 'monitor|config' /var/log/gdm/greeter.log 2>/dev/null | head -n 20
-			echo "--- fin de los datos ---"
-		elif [ -n "$pdm" ]; then
-			# 1) La sesión debe anotar la resolución que eligió.
-			t=0
-			until grep -qs 800x600 /home/prueba/.config/pantalla-inicio || [ $t -ge 240 ]; do
-				sleep 3
-				t=$((t + 3))
-			done
-			if grep -qs 800x600 /home/prueba/.config/pantalla-inicio; then
-				echo "LAZARO-GUARDADO-OK"
-			else
-				echo "LAZARO-GUARDADO-NO"
-				echo "--- diagnóstico del guardado ---"
-				cat /home/prueba/.config/pantalla-inicio 2>&1
-				ps -ef 2>/dev/null | grep -E '[g]uardar|[x]fce4-session|[m]ate-session|[p]lasma|[k]win|[l]ightdm|[s]ddm'
-				loginctl list-sessions --no-pager 2>&1 | cat
-				for pid in $(pgrep -f pantalla-inicio/guardar); do
-					tr '\0' '\n' < /proc/$pid/environ | grep -E '^(DISPLAY|XAUTHORITY|XDG_SESSION_ID|WAYLAND_DISPLAY|HOME)='
-				done
-				echo "- cambio a 800x600:"
-				tail -n 30 /tmp/prueba-800x600.log 2>&1
-				echo "- guardar:"
-				tail -n 40 /tmp/guardar-traza.log 2>&1
-				echo "--- fin del diagnóstico ---"
-			fi
-			# 2) Se cierra la sesión (sin volver a entrar sola).
-			rm -f /etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf /etc/sddm.conf.d/90-lazaro-prueba.conf
-			# Los Xorg de la sesión del usuario: no cuentan como saludo.
-			viejos=" $(ps -eo pid,args | awk '/[X]org/ { printf "%s ", $1 }')"
-			if [ "$pdm" = sddm ]; then
-				# Como al cerrar sesión: SDDM vuelve a su pantalla de
-				# inicio (sin "Relogin" no entra sola de nuevo).
-				loginctl terminate-user prueba >/dev/null 2>&1
-			else
-				rc-service lightdm restart >/dev/null 2>&1
-			fi
-			# Se reintenta: X puede tardar en aceptar conexiones y la
-			# resolución se aplica justo antes de mostrar el saludo.
-			# La llave de X queda atada al nombre del equipo, que cambia
-			# al arrancar: se usa una copia válida para cualquier nombre
-			# (familia "ffff"). La llave y la pantalla salen de Xorg.
-			llave=/tmp/lazaro-llave-x
-			t=0
-			modo=""
-			while [ "$modo" != 800x600 ] && [ $t -lt 120 ]; do
-				sleep 3
-				t=$((t + 3))
-				x="$(ps -eo pid,args | awk -v viejos="$viejos" '/[X]org/ && index(viejos, " " $1 " ") == 0 { for (i = 3; i <= NF; i++) { if ($i ~ /^:[0-9]+$/) d = $i; if ($i == "-auth") a = $(i + 1) } } END { print d, a }')"
-				pantalla="${x%% *}"
-				rm -f "$llave"
-				xauth -f "${x#* }" nlist 2>/dev/null | sed 's/^..../ffff/' \
-					| xauth -f "$llave" nmerge - 2>/dev/null
-				modo="$(DISPLAY="${pantalla:-:0}" XAUTHORITY="$llave" xrandr --current 2>/dev/null \
-					| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+[+]/) { sub(/[+].*/, "", $i); print $i; exit } }')"
-			done
-			echo "LAZARO-PANTALLA-${modo:-desconocida}"
-			if [ "$modo" != 800x600 ]; then
-				echo "--- diagnóstico de la resolución ---"
-				command -v xrandr || echo "sin xrandr"
-				echo "Xorg: $x"
-				ls -la /usr/local/libexec/pantalla-inicio 2>&1
-				cat /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf /etc/sddm.conf.d/50-pantalla-inicio.conf 2>/dev/null
-				ps -ef 2>/dev/null | grep -E '[X]org|[l]ightdm|[s]ddm'
-				command -v xauth || echo "sin xauth"
-				DISPLAY="${pantalla:-:0}" XAUTHORITY="$llave" xrandr --current 2>&1 | head -n 5
-				grep pantalla-inicio /var/log/messages 2>/dev/null | tail -n 5
-				tail -n 25 /var/log/lightdm/lightdm.log 2>/dev/null
-				grep -i sddm /var/log/messages 2>/dev/null | tail -n 25
-				echo "--- fin del diagnóstico ---"
-			fi
-		else
-			echo "LAZARO-PANTALLA-SIN-AJUSTE"
-		fi
-		for s in lightdm sddm gdm greetd; do
-			rc-service --exists "$s" && rc-service "$s" status
-		done
-		# El servicio de SDDM de Alpine espera solo 2 segundos a la
-		# pantalla de inicio: en una máquina lenta OpenRC lo marca como
-		# fallido aunque esté corriendo. Se mira el proceso.
-		for s in lightdm sddm gdm greetd; do
-			cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
-		done
-		[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
-	} > /dev/ttyS0 2>&1
-	if [ -n "$reiniciar" ]; then
-		reboot
-		exit 0
-	fi
-	sleep 20
-	poweroff
-	EOF
-	chmod +x "$raiz/etc/local.d/zz-lazaro-prueba.start"
+	install -m 755 "$PRUEBAS/zz-lazaro-prueba.start" "$raiz/etc/local.d/zz-lazaro-prueba.start"
 	ln -sf /etc/init.d/local "$raiz/etc/runlevels/default/local"
+}
+
+paso_auto() {
+	disco="$1"
+	de="$2"
+	validar_escritorio "$de"
+	[ -b "$disco" ] || die "$disco no es un disco"
+
+	log "Instalación desatendida en $disco con '$de' (se borra el disco)"
+	raiz=/mnt/lazaro
+	auto_particionar "$disco"
+	paso_base "$raiz" "$de"
+	auto_usuario
+	paso_escritorio "$raiz" "$de"
+	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
+	auto_revisar_flatpak
+	auto_prueba_resolucion "$de"
+	auto_prueba_arranque
 
 	sync
 	[ ! -d "$raiz/boot/efi" ] || ! mountpoint -q "$raiz/boot/efi" || umount "$raiz/boot/efi"

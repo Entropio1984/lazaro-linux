@@ -23,7 +23,7 @@ jobs:
     # firma Calamares y el índice de la ISO, y un fork podría leerla.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ISO (${{ matrix.alpine }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 150
     continue-on-error: ${{ matrix.alpine == 'edge' }}
     strategy:
@@ -32,7 +32,7 @@ jobs:
         # "estable" = la de config.env.
         alpine: [estable, edge]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Versión de Alpine
         id: version
@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Caché de Calamares compilado
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: cache
           key: calamares-${{ steps.version.outputs.branch }}-${{ hashFiles('paquetes/**', 'config.env', 'build.sh') }}
@@ -59,7 +59,7 @@ jobs:
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" cache salida || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: iso-${{ matrix.alpine }}
           path: salida/*.iso*
@@ -69,7 +69,7 @@ jobs:
   pruebas:
     name: Prueba ${{ matrix.prueba }} (${{ matrix.alpine }})
     needs: iso
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     continue-on-error: ${{ matrix.alpine == 'edge' }}
     strategy:
@@ -85,7 +85,7 @@ jobs:
           - instalar bios gnome con-red
           - instalar bios ninguno sin-red
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Activar KVM
         run: |
@@ -98,7 +98,7 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf xorriso socat imagemagick
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: iso-${{ matrix.alpine }}
           path: iso
@@ -114,7 +114,7 @@ jobs:
         id: nombre
         run: echo "valor=$(echo '${{ matrix.prueba }}-${{ matrix.alpine }}' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: resultados-${{ steps.nombre.outputs.valor }}
@@ -131,14 +131,14 @@ jobs:
     name: Publicar ISO en desarrollo
     needs: pruebas
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     concurrency:
       group: lazaro-publicar
       cancel-in-progress: false
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: iso-estable
           path: iso

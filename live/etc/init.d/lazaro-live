@@ -11,9 +11,31 @@ depend() {
 	before lightdm
 }
 
+# Todo lo que va al puerto serie (avisos para las pruebas en QEMU) pasa
+# por aquí, y solo se escribe si el puerto existe:
+#   serie TEXTO...           una línea
+#   ORDEN | serie            la salida de una orden
+#   serie -- ORDEN [ARGS]    ejecuta la orden con su salida al puerto y
+#                            devuelve su resultado
 serie() {
-	# Solo informa por el puerto serie si existe (pruebas en QEMU).
-	[ -c /dev/ttyS0 ] && printf '%s\n' "$*" > /dev/ttyS0 2>/dev/null || true
+	if [ "${1:-}" = -- ]; then
+		shift
+		if [ -c /dev/ttyS0 ]; then
+			"$@" > /dev/ttyS0 2>&1
+		else
+			"$@" > /dev/null 2>&1
+		fi
+		return
+	fi
+	if [ ! -c /dev/ttyS0 ]; then
+		[ $# -gt 0 ] || cat > /dev/null
+		return 0
+	fi
+	if [ $# -gt 0 ]; then
+		printf '%s\n' "$*"
+	else
+		cat
+	fi > /dev/ttyS0 2>/dev/null || true
 }
 
 parametro() {
@@ -42,8 +64,8 @@ revisar_discos() {
 	else
 		serie "LAZARO-DISCOS-FALLO"
 	fi
-	lsblk --nodeps --paths --json --output type,name > /dev/ttyS0 2>&1
-	[ -n "$registro" ] && grep -A 4 'LIST OF DETECTED DEVICES' "$registro" > /dev/ttyS0 2>&1
+	serie -- lsblk --nodeps --paths --json --output type,name
+	[ -z "$registro" ] || serie -- grep -A 4 'LIST OF DETECTED DEVICES' "$registro"
 	return 0
 }
 
@@ -91,8 +113,8 @@ start() {
 						serie "LAZARO-SPICE-OK"
 					else
 						serie "LAZARO-SPICE-NO"
-						ps -ef | grep -i '[s]pice' > /dev/ttyS0 2>&1
-						ls /etc/xdg/autostart > /dev/ttyS0 2>&1
+						ps -ef 2>&1 | grep -i '[s]pice' | serie
+						serie -- ls /etc/xdg/autostart
 					fi
 				fi
 				exit 0
@@ -107,12 +129,12 @@ start() {
 	#   lazaro.autoinstall=ESCRITORIO lazaro.disco=/dev/vda
 	if de=$(parametro lazaro.autoinstall) && disco=$(parametro lazaro.disco); then
 		(
-			if LAZARO_KERNELOPTS="console=tty0 console=ttyS0,115200" \
-				lazaro-instalar auto "$disco" "$de" > /dev/ttyS0 2>&1; then
+			if serie -- env LAZARO_KERNELOPTS="console=tty0 console=ttyS0,115200 plymouth.ignore-serial-consoles" \
+				lazaro-instalar auto "$disco" "$de"; then
 				serie "LAZARO-AUTOINSTALL-OK"
 			else
 				serie "LAZARO-AUTOINSTALL-FALLO"
-				tail -n 80 /var/log/lazaro-instalar.log > /dev/ttyS0 2>&1
+				serie -- tail -n 80 /var/log/lazaro-instalar.log
 			fi
 			sync
 			poweroff

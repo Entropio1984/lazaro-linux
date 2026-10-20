@@ -1,0 +1,212 @@
+#!/bin/sh
+{
+	echo "LAZARO-INSTALADO-ARRANCO"
+	rc-status default
+	# Nada en la carpeta del usuario debe ser de otro dueño (si
+	# no, Plasma y otros no pueden guardar su configuración).
+	if [ ! -d /home/prueba ]; then
+		ajenos="falta /home/prueba"
+	else
+		ajenos="$(find /home/prueba ! -user prueba 2>/dev/null | head -n 5)"
+	fi
+	if [ -z "$ajenos" ]; then
+		echo "LAZARO-HOME-OK"
+	else
+		echo "LAZARO-HOME-AJENO"
+		echo "$ajenos"
+	fi
+	# La pantalla de arranque (Plymouth) cargó el tema del pulso: el
+	# servicio lazaro-prueba-plymouth vio a plymouthd con el módulo
+	# "script", que solo usa el tema de Lázaro (el de Alpine es otro).
+	# Sin escritorio no hay pantalla de arranque ("splash"): plymouthd
+	# puede estar en pie igual, pero sin el tema cargado.
+	# Sin "splash" no se espera: GNOME necesita que la prueba siga
+	# enseguida para confirmar "¿Mantener los cambios?" a tiempo.
+	t=0
+	while grep -qw splash /proc/cmdline && [ ! -s /run/lazaro-plymouth ] && [ $t -lt 40 ]; do
+		t=$((t + 1))
+		sleep 1
+	done
+	ply="$(head -n 1 /run/lazaro-plymouth 2>/dev/null)"
+	if ! grep -qw splash /proc/cmdline && [ "$ply" != OK ]; then
+		echo "LAZARO-PLYMOUTH-SIN-SPLASH"
+	elif grep -qw splash /proc/cmdline && [ "$ply" = OK ] &&
+		grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
+		echo "LAZARO-PLYMOUTH-OK"
+	elif [ -d /sys/firmware/efi ] && [ "$ply" = NO ] &&
+		grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
+		# En UEFI la tarjeta de video de QEMU a veces aparece tarde y
+		# el arranque llega a la pantalla de inicio antes de que
+		# Plymouth dibuje. No es un fallo: el tema ya se prueba en BIOS.
+		echo "LAZARO-PLYMOUTH-UEFI-SIN-VER"
+	else
+		echo "LAZARO-PLYMOUTH-NO"
+		cat /proc/cmdline
+		cat /run/lazaro-plymouth 2>&1
+		cat /etc/plymouth/plymouthd.conf 2>&1
+		ls /usr/share/plymouth/themes/lazaro 2>&1 | head -n 5
+		echo "--- fin de plymouth ---"
+	fi
+	# Resolución de la pantalla de inicio (LightDM o SDDM): la que
+	# quedó anotada en ~/.config/pantalla-inicio.
+	pdm="$(cat /etc/lazaro/prueba-pantalla 2>/dev/null)"
+	reiniciar=""
+	if [ "$pdm" = gdm ] && [ ! -f /etc/lazaro/prueba-reiniciada ]; then
+		# Primera vuelta: la sesión de GNOME elige 800x600.
+		t=0
+		until [ -f /tmp/lazaro-confirmar ] || [ $t -ge 240 ]; do
+			sleep 3
+			t=$((t + 3))
+		done
+		# qemu.sh pulsa Intro en "¿Mantener los cambios?".
+		echo "LAZARO-CONFIRMAR"
+		t=0
+		until grep -qs '<width>800</width>' /home/prueba/.config/monitors.xml || [ $t -ge 120 ]; do
+			sleep 3
+			t=$((t + 3))
+		done
+		if grep -qs '<width>800</width>' /home/prueba/.config/monitors.xml; then
+			echo "LAZARO-GUARDADO-OK"
+		else
+			echo "LAZARO-GUARDADO-NO"
+			echo "--- diagnóstico del guardado ---"
+			ls -la /home/prueba/.config 2>&1
+			cat /home/prueba/.config/monitors.xml 2>&1
+			echo "- cambio a 800x600:"
+			tail -n 30 /tmp/prueba-800x600.log 2>&1
+			echo "--- fin del diagnóstico ---"
+		fi
+		if [ -f /etc/lazaro/gdm-custom.conf.orig ]; then
+			mv /etc/lazaro/gdm-custom.conf.orig /etc/gdm/custom.conf
+		else
+			rm -f /etc/gdm/custom.conf
+		fi
+		touch /etc/lazaro/prueba-reiniciada
+		echo "LAZARO-REINICIANDO"
+		reiniciar=1
+	elif [ "$pdm" = gdm ]; then
+		# Segunda vuelta: GDM debe mostrarse en 800x600 (qemu.sh
+		# mide la pantalla). Se espera al gnome-shell del saludo.
+		t=0
+		saludo=""
+		while [ -z "$saludo" ] && [ $t -lt 180 ]; do
+			for c in /proc/[0-9]*/comm; do
+				[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] \
+					&& [ "$(stat -c %U "${c%/comm}" 2>/dev/null)" = gdm ] && saludo=1
+			done
+			[ -n "$saludo" ] || { sleep 3; t=$((t + 3)); }
+		done
+		sleep 20
+		echo "LAZARO-SALUDO-${saludo:+LISTO}"
+		# Modo actual del saludo, preguntado al Mutter de GDM.
+		modo_gdm() {
+			for c in /proc/[0-9]*/comm; do
+				p="${c%/comm}"
+				[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] \
+					&& [ "$(stat -c %U "$p" 2>/dev/null)" = gdm ] || continue
+				bus="$(tr '\0' '\n' < "$p/environ" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')"
+				[ -n "$bus" ] || continue
+				su -s /bin/sh gdm -c "DBUS_SESSION_BUS_ADDRESS='$bus' gdbus call --session \
+					--dest org.gnome.Mutter.DisplayConfig --object-path /org/gnome/Mutter/DisplayConfig \
+					--method org.gnome.Mutter.DisplayConfig.GetCurrentState" 2>/dev/null \
+					| grep -o "('[0-9]*x[0-9]*@[0-9.]*', [^)]*'is-current': <true>" | cut -d"'" -f2
+				return 0
+			done
+		}
+		echo "LAZARO-GDM-MODO $(modo_gdm)"
+		# Datos breves por si falla (qemu.sh los muestra solo entonces).
+		echo "--- datos de GDM ---"
+		rc-service pantalla-inicio-gdm status 2>&1
+		stat -c '%n acceso=%x cambio=%y' /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml 2>&1
+		echo "- greeter.log:"
+		grep -iE 'monitor|config' /var/log/gdm/greeter.log 2>/dev/null | head -n 20
+		echo "--- fin de los datos ---"
+	elif [ -n "$pdm" ]; then
+		# 1) La sesión debe anotar la resolución que eligió.
+		t=0
+		until grep -qs 800x600 /home/prueba/.config/pantalla-inicio || [ $t -ge 240 ]; do
+			sleep 3
+			t=$((t + 3))
+		done
+		if grep -qs 800x600 /home/prueba/.config/pantalla-inicio; then
+			echo "LAZARO-GUARDADO-OK"
+		else
+			echo "LAZARO-GUARDADO-NO"
+			echo "--- diagnóstico del guardado ---"
+			cat /home/prueba/.config/pantalla-inicio 2>&1
+			ps -ef 2>/dev/null | grep -E '[g]uardar|[x]fce4-session|[m]ate-session|[p]lasma|[k]win|[l]ightdm|[s]ddm'
+			loginctl list-sessions --no-pager 2>&1 | cat
+			for pid in $(pgrep -f pantalla-inicio/guardar); do
+				tr '\0' '\n' < /proc/$pid/environ | grep -E '^(DISPLAY|XAUTHORITY|XDG_SESSION_ID|WAYLAND_DISPLAY|HOME)='
+			done
+			echo "- cambio a 800x600:"
+			tail -n 30 /tmp/prueba-800x600.log 2>&1
+			echo "- guardar:"
+			tail -n 40 /tmp/guardar-traza.log 2>&1
+			echo "--- fin del diagnóstico ---"
+		fi
+		# 2) Se cierra la sesión (sin volver a entrar sola).
+		rm -f /etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf /etc/sddm.conf.d/90-lazaro-prueba.conf
+		# Los Xorg de la sesión del usuario: no cuentan como saludo.
+		viejos=" $(ps -eo pid,args | awk '/[X]org/ { printf "%s ", $1 }')"
+		if [ "$pdm" = sddm ]; then
+			# Como al cerrar sesión: SDDM vuelve a su pantalla de
+			# inicio (sin "Relogin" no entra sola de nuevo).
+			loginctl terminate-user prueba >/dev/null 2>&1
+		else
+			rc-service lightdm restart >/dev/null 2>&1
+		fi
+		# Se reintenta: X puede tardar en aceptar conexiones y la
+		# resolución se aplica justo antes de mostrar el saludo.
+		# La llave de X queda atada al nombre del equipo, que cambia
+		# al arrancar: se usa una copia válida para cualquier nombre
+		# (familia "ffff"). La llave y la pantalla salen de Xorg.
+		llave=/tmp/lazaro-llave-x
+		t=0
+		modo=""
+		while [ "$modo" != 800x600 ] && [ $t -lt 120 ]; do
+			sleep 3
+			t=$((t + 3))
+			x="$(ps -eo pid,args | awk -v viejos="$viejos" '/[X]org/ && index(viejos, " " $1 " ") == 0 { for (i = 3; i <= NF; i++) { if ($i ~ /^:[0-9]+$/) d = $i; if ($i == "-auth") a = $(i + 1) } } END { print d, a }')"
+			pantalla="${x%% *}"
+			rm -f "$llave"
+			xauth -f "${x#* }" nlist 2>/dev/null | sed 's/^..../ffff/' \
+				| xauth -f "$llave" nmerge - 2>/dev/null
+			modo="$(DISPLAY="${pantalla:-:0}" XAUTHORITY="$llave" xrandr --current 2>/dev/null \
+				| awk '$2 == "connected" { for (i = 3; i <= NF; i++) if ($i ~ /^[0-9]+x[0-9]+[+]/) { sub(/[+].*/, "", $i); print $i; exit } }')"
+		done
+		echo "LAZARO-PANTALLA-${modo:-desconocida}"
+		if [ "$modo" != 800x600 ]; then
+			echo "--- diagnóstico de la resolución ---"
+			command -v xrandr || echo "sin xrandr"
+			echo "Xorg: $x"
+			ls -la /usr/local/libexec/pantalla-inicio 2>&1
+			cat /etc/lightdm/lightdm.conf.d/50-pantalla-inicio.conf /etc/sddm.conf.d/50-pantalla-inicio.conf 2>/dev/null
+			ps -ef 2>/dev/null | grep -E '[X]org|[l]ightdm|[s]ddm'
+			command -v xauth || echo "sin xauth"
+			DISPLAY="${pantalla:-:0}" XAUTHORITY="$llave" xrandr --current 2>&1 | head -n 5
+			grep pantalla-inicio /var/log/messages 2>/dev/null | tail -n 5
+			tail -n 25 /var/log/lightdm/lightdm.log 2>/dev/null
+			grep -i sddm /var/log/messages 2>/dev/null | tail -n 25
+			echo "--- fin del diagnóstico ---"
+		fi
+	else
+		echo "LAZARO-PANTALLA-SIN-AJUSTE"
+	fi
+	for s in lightdm sddm gdm greetd; do
+		rc-service --exists "$s" && rc-service "$s" status
+	done
+	# El servicio de SDDM de Alpine espera solo 2 segundos a la
+	# pantalla de inicio: en una máquina lenta OpenRC lo marca como
+	# fallido aunque esté corriendo. Se mira el proceso.
+	for s in lightdm sddm gdm greetd; do
+		cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
+	done
+	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
+} > /dev/ttyS0 2>&1
+if [ -n "$reiniciar" ]; then
+	reboot
+	exit 0
+fi
+sleep 20
+poweroff

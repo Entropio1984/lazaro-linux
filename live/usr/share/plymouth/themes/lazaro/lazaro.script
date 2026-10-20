@@ -1,0 +1,66 @@
+# Pantalla de arranque y apagado de Lázaro Linux: el logo al centro y,
+# debajo, una línea de pulso azul que lo recorre una y otra vez. Los
+# cuadros de la línea (pulso-0.png ... pulso-59.png) los dibuja
+# plymouth/generar-pulso.py en el repositorio.
+
+Window.SetBackgroundTopColor(0.02, 0.04, 0.08);
+Window.SetBackgroundBottomColor(0.02, 0.04, 0.08);
+
+ancho = Window.GetWidth();
+alto = Window.GetHeight();
+
+# En pantallas chicas todo se achica para que quepa.
+escala = 1;
+if (ancho < 900)
+    escala = ancho / 900;
+
+logo.imagen = Image("logo.png");
+logo.imagen = logo.imagen.Scale(logo.imagen.GetWidth() * escala, logo.imagen.GetHeight() * escala);
+logo.sprite = Sprite(logo.imagen);
+logo.sprite.SetPosition(Window.GetX() + ancho / 2 - logo.imagen.GetWidth() / 2,
+                        Window.GetY() + alto * 0.40 - logo.imagen.GetHeight() / 2, 1);
+
+CUADROS = 60;
+for (i = 0; i < CUADROS; i++)
+  {
+    imagen = Image("pulso-" + i + ".png");
+    pulso.cuadros[i] = imagen.Scale(imagen.GetWidth() * escala, imagen.GetHeight() * escala);
+  }
+pulso.sprite = Sprite(pulso.cuadros[0]);
+pulso.sprite.SetPosition(Window.GetX() + ancho / 2 - pulso.cuadros[0].GetWidth() / 2,
+                         Window.GetY() + alto * 0.72 - pulso.cuadros[0].GetHeight() / 2, 1);
+
+# Plymouth llama a esta función 50 veces por segundo: cada cuadro dura
+# 2 llamadas (una vuelta completa en 2,4 s) y entre vuelta y vuelta la
+# línea queda apagada un momento, como entre latido y latido.
+tic = 0;
+fun refrescar ()
+  {
+    paso = Math.Int(tic / 2) % (CUADROS + 15);
+    if (paso < CUADROS)
+      {
+        pulso.sprite.SetImage(pulso.cuadros[paso]);
+        pulso.sprite.SetOpacity(1);
+      }
+    else
+        pulso.sprite.SetOpacity(0);
+    tic++;
+  }
+Plymouth.SetRefreshFunction(refrescar);
+
+# Mensajes del sistema (por ejemplo, la revisión del disco): abajo, en
+# letra chica.
+mensaje.sprite = Sprite();
+fun mostrar_mensaje (texto)
+  {
+    mensaje.imagen = Image.Text(texto, 0.6, 0.75, 0.9);
+    mensaje.sprite.SetImage(mensaje.imagen);
+    mensaje.sprite.SetPosition(Window.GetX() + ancho / 2 - mensaje.imagen.GetWidth() / 2,
+                               Window.GetY() + alto * 0.92, 2);
+  }
+fun ocultar_mensaje (texto)
+  {
+    mensaje.sprite.SetOpacity(0);
+  }
+Plymouth.SetMessageFunction(mostrar_mensaje);
+Plymouth.SetHideMessageFunction(ocultar_mensaje);

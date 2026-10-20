@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+# Lázaro Linux: cierra la pantalla de arranque (Plymouth) justo antes de
+# la pantalla de inicio de sesión. Si Plymouth sigue en pie, la pantalla
+# de inicio (por ejemplo SDDM en UEFI) puede quedarse sin aparecer.
+
+description="Cierra la pantalla de arranque antes de la de inicio de sesión"
+
+depend() {
+	after elogind
+	before gdm lightdm sddm greetd
+}
+
+start() {
+	command -v plymouth >/dev/null 2>&1 || return 0
+	plymouth --ping 2>/dev/null || return 0
+	ebegin "Cerrando la pantalla de arranque"
+	plymouth quit
+	# Esperar a que el puesto de trabajo vuelva a estar listo para
+	# gráficos: si la pantalla de inicio arranca antes, puede creer que
+	# no hay pantalla.
+	t=0
+	while [ $t -lt 20 ] && command -v loginctl >/dev/null 2>&1 &&
+		! loginctl show-seat seat0 -p CanGraphical 2>/dev/null | grep -qx 'CanGraphical=yes'; do
+		sleep 0.5
+		t=$((t + 1))
+	done
+	eend 0
+}

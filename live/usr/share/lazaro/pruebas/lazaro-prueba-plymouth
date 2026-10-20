@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+description="Prueba: tema de Plymouth cargado"
+start() {
+	(
+		t=0
+		while [ $t -lt 30 ]; do
+			ppid="$(pidof plymouthd 2>/dev/null | cut -d' ' -f1)"
+			if [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps"; then
+				echo OK > /run/lazaro-plymouth
+				exit 0
+			fi
+			t=$((t + 1))
+			sleep 1
+		done
+		{
+			echo NO
+			ps -ef | grep -i '[p]lymouth'
+			[ -n "$ppid" ] && grep -o '/[^ ]*plymouth[^ ]*' "/proc/$ppid/maps" | sort -u
+		} > /run/lazaro-plymouth 2>&1
+	) &
+	return 0
+}
