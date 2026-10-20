@@ -186,6 +186,11 @@ paso_base() {
 	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
 	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"
 	cp /etc/plymouth/plymouthd.conf "$raiz/etc/plymouth/plymouthd.conf"
+	if [ -n "$splash" ]; then
+		install -m 755 /usr/share/lazaro/plymouth-salir "$raiz/etc/init.d/plymouth-salir"
+		mkdir -p "$raiz/etc/runlevels/default"
+		ln -sf /etc/init.d/plymouth-salir "$raiz/etc/runlevels/default/plymouth-salir"
+	fi
 	log "Sistema base instalado."
 }
 
