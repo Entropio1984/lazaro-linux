@@ -700,6 +700,9 @@ paso_auto() {
 			if [ -n "$ses" ]; then
 				printf '\n[initial_session]\ncommand = "%s"\nuser = "prueba"\n' "$ses" \
 					>> /etc/greetd/config.toml
+				# greetd usa initial_session solo la primera vez que
+				# arranca: lo recuerda en su runfile.
+				rm -f /run/greetd.run
 				rc-service greetd restart
 				t=0
 				# "dbus-run-session sway" -> el proceso se llama "sway".
