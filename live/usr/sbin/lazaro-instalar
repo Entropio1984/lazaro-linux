@@ -72,15 +72,34 @@ validar_escritorio() {
 # --- Ejecutar comandos dentro del sistema instalado ----------------------
 MONTADOS=""
 
+# Cada montaje que falla se informa y devuelve error. Hace falta decirlo
+# así: en_destino se llama casi siempre dentro de un "if" o con "||", y
+# ahí "set -e" no detiene nada.
 montar_si_falta() { # TIPO ORIGEN DESTINO
 	mountpoint -q "$3" && return 0
-	mkdir -p "$3"
+	mkdir -p "$3" || { log "ERROR: no se pudo crear $3"; return 1; }
 	if [ "$1" = bind ]; then
-		mount --bind "$2" "$3"
+		mount --bind "$2" "$3" || { log "ERROR: no se pudo montar $2 en $3"; return 1; }
 	else
-		mount -t "$1" "$2" "$3"
+		mount -t "$1" "$2" "$3" || { log "ERROR: no se pudo montar $1 en $3"; return 1; }
 	fi
 	MONTADOS="$3 $MONTADOS"
+}
+
+# Lo que necesita un chroot al sistema instalado: /proc, /sys, /dev, las
+# variables EFI y el repositorio de la ISO (para instalar sin internet).
+montar_destino() { # RAIZ
+	montar_si_falta proc proc "$1/proc" || return 1
+	montar_si_falta sysfs sys "$1/sys" || return 1
+	montar_si_falta bind /dev "$1/dev" || return 1
+	if [ -d /sys/firmware/efi/efivars ]; then
+		montar_si_falta efivarfs efivarfs "$1/sys/firmware/efi/efivars" || return 1
+	fi
+	md_iso="$(repo_iso)"
+	if [ -n "$md_iso" ]; then
+		montar_si_falta bind "$md_iso" "$1$md_iso" || return 1
+	fi
+	return 0
 }
 
 desmontar_propios() {
@@ -94,14 +113,10 @@ desmontar_propios() {
 en_destino() {
 	raiz="$1"
 	shift
-	montar_si_falta proc proc "$raiz/proc"
-	montar_si_falta sysfs sys "$raiz/sys"
-	montar_si_falta bind /dev "$raiz/dev"
-	if [ -d /sys/firmware/efi/efivars ]; then
-		montar_si_falta efivarfs efivarfs "$raiz/sys/firmware/efi/efivars"
+	if ! montar_destino "$raiz"; then
+		desmontar_propios
+		return 1
 	fi
-	iso="$(repo_iso)"
-	[ -z "$iso" ] || montar_si_falta bind "$iso" "$raiz$iso"
 	cp /etc/resolv.conf "$raiz/etc/resolv.conf" 2>/dev/null || true
 	rc=0
 	chroot "$raiz" /usr/bin/env -i \
@@ -246,17 +261,15 @@ paso_ajustes() {
 		onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
 		*) log "Aviso: programa de oficina desconocido '$oficina'; no se instala ninguno." ;;
 	esac
+	opt_firefox=yes
+	opt_cups=yes
 	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
-		# Flatpak, Chrome y la oficina no sirven sin escritorio.
+		# Solo consola: nada gráfico (Flatpak, Chrome, oficina, navegador)
+		# ni impresoras.
 		opt_flatpak=no
 		opt_chrome=no
 		opt_libreoffice=no
 		opt_onlyoffice=no
-	fi
-	opt_firefox=yes
-	opt_cups=yes
-	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
-		# Solo consola: tampoco navegador ni impresoras.
 		opt_firefox=no
 		opt_cups=no
 	fi
@@ -368,15 +381,15 @@ paso_auto() {
 		mkfs.vfat -F 32 -n EFI "${p}1" >>"$LOG" 2>&1
 		mkfs.ext4 -q -F -L lazaro "${p}2"
 		mkdir -p "$raiz"
-		mount -t ext4 "${p}2" "$raiz"
+		mount -t ext4 "${p}2" "$raiz" || die "no se pudo montar ${p}2 en $raiz"
 		mkdir -p "$raiz/boot/efi"
-		mount -t vfat "${p}1" "$raiz/boot/efi"
+		mount -t vfat "${p}1" "$raiz/boot/efi" || die "no se pudo montar ${p}1 en $raiz/boot/efi"
 	else
 		printf 'label: dos\ntype=83, bootable\n' | sfdisk --wipe always "$disco" >>"$LOG" 2>&1
 		udevadm settle 2>/dev/null || sleep 2
 		mkfs.ext4 -q -F -L lazaro "${p}1"
 		mkdir -p "$raiz"
-		mount -t ext4 "${p}1" "$raiz"
+		mount -t ext4 "${p}1" "$raiz" || die "no se pudo montar ${p}1 en $raiz"
 	fi
 
 	paso_base "$raiz" "$de"
