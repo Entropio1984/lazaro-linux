@@ -107,7 +107,7 @@ start() {
 	#   lazaro.autoinstall=ESCRITORIO lazaro.disco=/dev/vda
 	if de=$(parametro lazaro.autoinstall) && disco=$(parametro lazaro.disco); then
 		(
-			if LAZARO_KERNELOPTS="console=tty0 console=ttyS0,115200 plymouth.ignore-serial-consoles plymouth.debug=file:/run/plymouth-debug.log" \
+			if LAZARO_KERNELOPTS="console=tty0 console=ttyS0,115200 plymouth.ignore-serial-consoles" \
 				lazaro-instalar auto "$disco" "$de" > /dev/ttyS0 2>&1; then
 				serie "LAZARO-AUTOINSTALL-OK"
 			else

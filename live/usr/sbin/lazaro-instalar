@@ -505,15 +505,20 @@ paso_auto() {
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
 		fi
-		# La pantalla de arranque (Plymouth) cargó el tema del pulso:
-		# la prueba arranca con plymouth.debug, que deja este registro.
-		if grep -qs 'themes/lazaro' /run/plymouth-debug.log; then
+		# La pantalla de arranque (Plymouth) cargó el tema del pulso: a
+		# esta altura plymouthd sigue en pie y tiene cargado el módulo
+		# "script", que solo usa el tema de Lázaro (el de Alpine es otro).
+		ppid="$(pidof plymouthd 2>/dev/null | cut -d' ' -f1)"
+		if [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps" &&
+			grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
 			echo "LAZARO-PLYMOUTH-OK"
 		else
 			echo "LAZARO-PLYMOUTH-NO"
 			cat /proc/cmdline
-			ls -l /run/plymouth-debug.log /usr/lib/rc/plugins 2>&1
-			grep -i -e error -e fail -e theme -e plugin -e renderer /run/plymouth-debug.log 2>/dev/null | head -n 40
+			ps -ef | grep -i '[p]lymouth'
+			[ -n "$ppid" ] && grep -o '/[^ ]*plymouth[^ ]*' "/proc/$ppid/maps" | sort -u
+			cat /etc/plymouth/plymouthd.conf 2>&1
+			ls /usr/share/plymouth/themes/lazaro 2>&1 | head -n 5
 			echo "--- fin de plymouth ---"
 		fi
 		# Resolución de la pantalla de inicio (LightDM o SDDM): la que
