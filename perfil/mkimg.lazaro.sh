@@ -22,11 +22,13 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # gparted (+ xhost, que su lanzador usa para abrir la ventana como root):
 # editor de particiones para revisar o preparar discos antes de instalar.
 # zenity: avisa si se intenta abrir GParted y el instalador a la vez.
+# spice-vdagent: portapapeles compartido (copiar y pegar) y ajuste de
+# pantalla al probar la ISO en Virt Manager/QEMU con SPICE.
 LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
-	gparted xhost zenity"
+	gparted xhost zenity spice-vdagent spice-vdagent-openrc"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,

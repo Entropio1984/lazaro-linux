@@ -101,6 +101,9 @@ prueba_live() {
 		-cdrom "$ISO" -boot d -vga std -display none \
 		-drive "file=$disco,if=virtio,format=qcow2" \
 		-nic user,model=virtio-net-pci \
+		-spice "unix=on,addr=$SOCK_DIR/$nombre.spice,disable-ticketing=on" \
+		-device virtio-serial-pci -chardev spicevmc,id=vdagent,name=vdagent \
+		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
 		-serial "file:$serie" -monitor "unix:$mon,server,nowait" &
 	pid=$!
 	ok=0
@@ -110,7 +113,13 @@ prueba_live() {
 		ok=1
 	elif esperar "$serie" "$pid" 180 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
 		captura "$mon" "$RES/$nombre-calamares"
-		echo "OK: la sesión live arrancó ($MODO), Calamares se abrió y ve el disco."
+		if esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
+			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
+		else
+			echo "FALLO: el agente del portapapeles compartido (spice-vdagent) no corre en la sesión live ($MODO)." >&2
+			sed -n '/LAZARO-SPICE-NO/,$p' "$serie" | head -n 30 >&2
+			ok=1
+		fi
 	else
 		captura "$mon" "$RES/$nombre-fallo"
 		echo "FALLO: Calamares se abrió pero no ve ningún disco ($MODO)." >&2

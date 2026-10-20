@@ -64,6 +64,13 @@ start() {
 	chown -R lazaro:lazaro /home/lazaro
 	serie "LAZARO-LIVE-LISTO"
 
+	# En una máquina virtual con SPICE (Virt Manager): el agente que
+	# comparte el portapapeles con el equipo anfitrión. En un equipo real
+	# no existe ese puerto y no se arranca.
+	if [ -e /dev/virtio-ports/com.redhat.spice.0 ]; then
+		rc-service spice-vdagentd start >/dev/null 2>&1 || true
+	fi
+
 	# Aviso para las pruebas: Calamares llegó a abrirse en pantalla.
 	(
 		i=0
@@ -71,6 +78,23 @@ start() {
 			if pidof calamares >/dev/null 2>&1; then
 				serie "LAZARO-CALAMARES-ABIERTO"
 				revisar_discos
+				# Portapapeles compartido: el servicio y el agente de la
+				# sesión del usuario deben estar corriendo.
+				if [ -e /dev/virtio-ports/com.redhat.spice.0 ]; then
+					# El agente de la sesión puede arrancar un poco después.
+					j=0
+					until { pidof spice-vdagentd && pidof spice-vdagent; } >/dev/null 2>&1 || [ $j -ge 12 ]; do
+						j=$((j + 1))
+						sleep 5
+					done
+					if pidof spice-vdagentd >/dev/null 2>&1 && pidof spice-vdagent >/dev/null 2>&1; then
+						serie "LAZARO-SPICE-OK"
+					else
+						serie "LAZARO-SPICE-NO"
+						ps -ef | grep -i '[s]pice' > /dev/ttyS0 2>&1
+						ls /etc/xdg/autostart > /dev/ttyS0 2>&1
+					fi
+				fi
 				exit 0
 			fi
 			i=$((i + 1))
