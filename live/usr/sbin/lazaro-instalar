@@ -522,13 +522,22 @@ paso_auto() {
 				xfce4-panel|mate-panel|lxqt-panel|plasmashell|gnome-shell|sway) ;;
 				*) continue ;;
 				esac
-				[ "$(stat -c %U "${c%/comm}" 2>/dev/null)" = prueba ] || continue
+				# Dueño por el Uid real (/proc/PID puede figurar como de
+				# root si el proceso no es "dumpable").
+				[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] || continue
 				panel="${c%/comm}"
 				break
 			done
 			[ -n "$panel" ] || { sleep 3; t=$((t + 3)); }
 		done
-		[ -n "$panel" ] || return 0
+		if [ -z "$panel" ]; then
+			echo "LAZARO-IDIOMA-SIN-PANEL"
+			for c in /proc/[0-9]*/comm; do
+				[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] \
+					&& echo "  $(cat "$c" 2>/dev/null)"
+			done | sort -u | head -n 30
+			return 0
+		fi
 		idioma="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
 		echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma:-sin-LANG}"
 		# En Sway la barra es waybar: también se mira su idioma.
