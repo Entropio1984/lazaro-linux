@@ -30,13 +30,22 @@
 		[ -n "$vt" ] || { sleep 1; t=$((t + 1)); }
 	done
 	if [ -n "$vt" ]; then
-		sleep 5
+		# La pantalla de inicio puede tardar unos segundos en pasar a su
+		# consola después de arrancar su Xorg.
+		t=0
 		activa="$(cat /sys/class/tty/tty0/active 2>/dev/null)"
+		while [ "$activa" != "tty$vt" ] && [ $t -lt 20 ]; do
+			sleep 1
+			t=$((t + 1))
+			activa="$(cat /sys/class/tty/tty0/active 2>/dev/null)"
+		done
 		if [ "$activa" = "tty$vt" ]; then
 			echo "LAZARO-VT-OK"
 		else
 			echo "LAZARO-VT-ESCONDIDA al frente $activa, pantalla de inicio en tty$vt"
 		fi
+	elif rc-service --exists lightdm || rc-service --exists sddm; then
+		echo "LAZARO-VT-SIN-XORG"
 	fi
 	# La pantalla de arranque (Plymouth) cargó el tema del pulso: el
 	# servicio lazaro-prueba-plymouth vio a plymouthd con el módulo
