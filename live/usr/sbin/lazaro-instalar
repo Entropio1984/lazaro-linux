@@ -372,7 +372,18 @@ paso_auto() {
 	echo lazaro-prueba > "$raiz/etc/hostname"
 
 	paso_escritorio "$raiz" "$de"
+	# Si los ajustes se cuelgan, la prueba debe mostrar dónde: cada 4
+	# minutos se informa por el puerto serie qué está corriendo.
+	(
+		while sleep 240; do
+			echo "--- vigilancia $(date +%H:%M:%S) ---"
+			tail -n 12 "$raiz/var/log/desktop-postinstall.log" 2>/dev/null
+			ps -o pid,etime,args 2>/dev/null | grep -v -e '\[' -e 'ps -o' -e 'sleep 240' | tail -n 25
+		done
+	) >&2 &
+	vigia=$!
 	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
+	kill "$vigia" 2>/dev/null || true
 	# Flatpak viene por defecto: con red, Flathub debe quedar agregado.
 	if [ ! -e "$raiz/etc/lazaro/sin-escritorio" ] && hay_red; then
 		# Se lee la configuración en vez de ejecutar flatpak dentro del

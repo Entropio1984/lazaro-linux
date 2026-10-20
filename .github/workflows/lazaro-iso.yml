@@ -85,6 +85,7 @@ jobs:
           - instalar bios gnome con-red
           - instalar bios sway con-red
           - instalar uefi lxqt con-red
+          - instalar bios mate con-red
           - instalar bios ninguno sin-red
     steps:
       - uses: actions/checkout@v4
