@@ -11,6 +11,7 @@
 	fi
 	if [ -z "$ajenos" ]; then
 		echo "LAZARO-HOME-OK"
+		echo "LAZARO-VT-INICIO $(cat /sys/class/tty/tty0/active)"
 	else
 		echo "LAZARO-HOME-AJENO"
 		echo "$ajenos"
@@ -202,6 +203,8 @@
 	for s in lightdm sddm gdm greetd; do
 		cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 	done
+	echo "LAZARO-VT-FIN $(cat /sys/class/tty/tty0/active)"
+	ps -ef | grep -E '[X]org|[a]getty|[p]lymouth' 
 	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 } > /dev/ttyS0 2>&1
 if [ -n "$reiniciar" ]; then
