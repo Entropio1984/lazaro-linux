@@ -508,6 +508,39 @@ paso_auto() {
 	mkdir -p "$raiz/etc/local.d"
 	cat > "$raiz/etc/local.d/zz-lazaro-prueba.start" <<-'EOF'
 	#!/bin/sh
+	# Idioma de la sesión del usuario: el panel de cada escritorio debe
+	# correr con el idioma elegido (es_CO en la prueba). Se mira una sola
+	# vez, mientras la sesión sigue abierta.
+	idioma_sesion() {
+		[ -z "${idioma_visto:-}" ] || return 0
+		idioma_visto=1
+		t=0
+		panel=""
+		while [ -z "$panel" ] && [ $t -lt 90 ]; do
+			for c in /proc/[0-9]*/comm; do
+				case "$(cat "$c" 2>/dev/null)" in
+				xfce4-panel|mate-panel|lxqt-panel|plasmashell|gnome-shell|sway) ;;
+				*) continue ;;
+				esac
+				[ "$(stat -c %U "${c%/comm}" 2>/dev/null)" = prueba ] || continue
+				panel="${c%/comm}"
+				break
+			done
+			[ -n "$panel" ] || { sleep 3; t=$((t + 3)); }
+		done
+		[ -n "$panel" ] || return 0
+		idioma="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+		echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma:-sin-LANG}"
+		# En Sway la barra es waybar: también se mira su idioma.
+		if [ "$(cat "$panel/comm")" = sway ]; then
+			for c in /proc/[0-9]*/comm; do
+				[ "$(cat "$c" 2>/dev/null)" = waybar ] || continue
+				idioma="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+				echo "LAZARO-IDIOMA-SESION waybar ${idioma:-sin-LANG}"
+				break
+			done
+		fi
+	}
 	{
 		echo "LAZARO-INSTALADO-ARRANCO"
 		rc-status default
@@ -544,6 +577,7 @@ paso_auto() {
 				sleep 3
 				t=$((t + 3))
 			done
+			idioma_sesion
 			# qemu.sh pulsa Intro en "¿Mantener los cambios?".
 			echo "LAZARO-CONFIRMAR"
 			t=0
@@ -643,6 +677,7 @@ paso_auto() {
 				sleep 3
 				t=$((t + 3))
 			done
+			idioma_sesion
 			if grep -qs 800x600 /home/prueba/.config/pantalla-inicio; then
 				echo "LAZARO-GUARDADO-OK"
 			else
@@ -787,37 +822,8 @@ paso_auto() {
 		for s in lightdm sddm gdm greetd; do
 			cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 		done
-		# Idioma de la sesión del usuario: el panel de cada escritorio
-		# debe correr con el idioma elegido (es_CO en la prueba).
-		if [ -z "$reiniciar" ]; then
-			t=0
-			panel=""
-			while [ -z "$panel" ] && [ $t -lt 90 ]; do
-				for c in /proc/[0-9]*/comm; do
-					case "$(cat "$c" 2>/dev/null)" in
-					xfce4-panel|mate-panel|lxqt-panel|plasmashell|gnome-shell|sway) ;;
-					*) continue ;;
-					esac
-					[ "$(stat -c %U "${c%/comm}" 2>/dev/null)" = prueba ] || continue
-					panel="${c%/comm}"
-					break
-				done
-				[ -n "$panel" ] || { sleep 3; t=$((t + 3)); }
-			done
-			if [ -n "$panel" ]; then
-				idioma_sesion="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
-				echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma_sesion:-sin-LANG}"
-				# En Sway la barra es waybar: también se mira su idioma.
-				if [ "$(cat "$panel/comm")" = sway ]; then
-					for c in /proc/[0-9]*/comm; do
-						[ "$(cat "$c" 2>/dev/null)" = waybar ] || continue
-						idioma_barra="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
-						echo "LAZARO-IDIOMA-SESION waybar ${idioma_barra:-sin-LANG}"
-						break
-					done
-				fi
-			fi
-		fi
+		# Idioma de la sesión (si no se miró antes de cerrarla).
+		[ -n "$reiniciar" ] || idioma_sesion
 		[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 	} > /dev/ttyS0 2>&1
 	if [ -n "$reiniciar" ]; then
