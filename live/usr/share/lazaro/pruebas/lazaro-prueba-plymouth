@@ -21,7 +21,11 @@ t=$t $(cut -d' ' -f1 /proc/uptime)s plymouthd=${ppid:-no} drm=$(ls /dev/dri 2>/d
 			echo NO
 			echo "$traza"
 			ps -ef | grep -i '[p]lymouth'
-			dmesg | grep -i -e drm -e fb0 -e plymouth | tail -n 15
+			dmesg | grep -i -e drm -e fb0 -e plymouth -e segfault -e trap | tail -n 15
+			echo "--- plymouth-debug.log ---"
+			tail -n 60 /var/log/plymouth-debug.log 2>&1
+			echo "--- rc.log ---"
+			tail -n 40 /var/log/rc.log 2>&1
 		} > /run/lazaro-plymouth 2>&1
 	) &
 	return 0
