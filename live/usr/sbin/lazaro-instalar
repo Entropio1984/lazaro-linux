@@ -716,7 +716,7 @@ paso_auto() {
 					echo "LAZARO-SESION-GREETD-OK $ses"
 					# Sway: barra waybar con el icono de wifi (nm-applet).
 					if [ "$proc" = sway ]; then
-						for b in waybar nm-applet; do
+						for b in waybar nm-applet polkit-gnome-au; do
 							cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$b" \
 								&& echo "LAZARO-SWAY-CORRE $b"
 						done
