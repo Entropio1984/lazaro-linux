@@ -524,6 +524,15 @@ paso_auto() {
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
 		fi
+		# Cuánto pesan las traducciones (paquetes *-lang): descarga e
+		# instalado, en MiB, y las 10 más grandes.
+		awk -F: '/^P:/ { p = $2 } /^S:/ { s[p] = $2 } /^I:/ { i[p] = $2 }
+			END { for (p in s) if (p ~ /-lang$/) { n++; ts += s[p]; ti += i[p]
+				print s[p], i[p], p > "/tmp/lang-tamanos" }
+				printf "LAZARO-LANG-TAMANO paquetes=%d descarga=%.0fMiB instalado=%.0fMiB\n",
+					n, ts / 1048576, ti / 1048576 }' /lib/apk/db/installed
+		sort -rn /tmp/lang-tamanos 2>/dev/null | head -n 10 \
+			| awk '{ printf "  %s descarga=%.1fMiB instalado=%.1fMiB\n", $3, $1 / 1048576, $2 / 1048576 }'
 		# Resolución de la pantalla de inicio (LightDM o SDDM): la que
 		# quedó anotada en ~/.config/pantalla-inicio.
 		pdm="$(cat /etc/lazaro/prueba-pantalla 2>/dev/null)"
