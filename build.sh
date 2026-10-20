@@ -22,6 +22,7 @@ SALIDA="${SALIDA:-$LAZARO_DIR/salida}"
 CACHE="${CACHE:-$LAZARO_DIR/cache}"
 
 msg() { printf '\n==> %s\n' "$*"; }
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 if [ "${1:-}" != "--dentro" ]; then
 	mkdir -p "$SALIDA" "$CACHE"
@@ -42,7 +43,7 @@ if [ "${1:-}" != "--dentro" ]; then
 		/bin/sh /src/build.sh --dentro
 fi
 
-[ "$(id -u)" -eq 0 ] || { echo "build.sh --dentro debe ejecutarse como root" >&2; exit 1; }
+[ "$(id -u)" -eq 0 ] || die "build.sh --dentro debe ejecutarse como root"
 
 msg "Preparando el entorno de compilación"
 printf '%s\n%s\n' "$ALPINE_REPO_MAIN" "$ALPINE_REPO_COMMUNITY" > /etc/apk/repositories
@@ -110,9 +111,9 @@ else
 	REGISTRO="$CACHE/abuild-calamares.log"
 	if ! su constructor -c "CALAMARES_VERSION=$CALAMARES_VERSION REPODEST=$REPO_PROPIO abuild -r" \
 		> "$REGISTRO" 2>&1; then
-		echo "ERROR: falló la compilación de Calamares. Últimas líneas útiles:"
-		sed -n '/Uninstalling dependencies/q;p' "$REGISTRO" | tail -n 80
-		exit 1
+		echo "Últimas líneas útiles de $REGISTRO:" >&2
+		sed -n '/Uninstalling dependencies/q;p' "$REGISTRO" | tail -n 80 >&2
+		die "falló la compilación de Calamares"
 	fi
 	tail -n 5 "$REGISTRO"
 fi
@@ -146,7 +147,7 @@ else
 	msg "Descargando desktop-postinstall.sh"
 	curl -fsSL --retry 3 -o "$SCRIPT" "$POSTINSTALL_URL"
 fi
-sh -n "$SCRIPT" || { echo "desktop-postinstall.sh tiene errores de sintaxis" >&2; exit 1; }
+sh -n "$SCRIPT" || die "desktop-postinstall.sh tiene errores de sintaxis"
 chown constructor:abuild "$SCRIPT"
 
 # --- ISO ----------------------------------------------------------------
@@ -170,7 +171,7 @@ su constructor -c "cd $CONSTRUCTOR_HOME && \
 		--profile lazaro"
 
 ISO_GENERADA="$SALIDA/lazaro-linux-$ISO_VERSION-$ALPINE_ARCH.iso"
-[ -f "$ISO_GENERADA" ] || { echo "No se generó la ISO" >&2; exit 1; }
+[ -f "$ISO_GENERADA" ] || die "No se generó la ISO"
 mv "$ISO_GENERADA" "$SALIDA/$ISO_FILE"
 (cd "$SALIDA" && sha256sum "$ISO_FILE" > "$ISO_FILE.sha256")
 msg "Listo: $SALIDA/$ISO_FILE ($(du -h "$SALIDA/$ISO_FILE" | cut -f1))"
