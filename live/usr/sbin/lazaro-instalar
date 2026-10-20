@@ -658,6 +658,10 @@ paso_auto() {
 				tail -n 30 /tmp/prueba-800x600.log 2>&1
 				echo "- guardar:"
 				tail -n 40 /tmp/guardar-traza.log 2>&1
+				echo "- lightdm (inicio automático):"
+				grep -iE 'autolog|prueba|fail|error' /var/log/lightdm/lightdm.log 2>&1 | head -n 25
+				tail -n 15 /var/log/lightdm/x-0.log 2>/dev/null
+				ls -la /home/prueba/.xsession-errors 2>/dev/null && tail -n 20 /home/prueba/.xsession-errors
 				echo "--- fin del diagnóstico ---"
 			fi
 			# 2) Se cierra la sesión (sin volver a entrar sola).

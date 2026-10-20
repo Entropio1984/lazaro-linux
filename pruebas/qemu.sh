@@ -218,6 +218,8 @@ prueba_instalar() {
 	fi
 	if esperar "$serie2" "$pid" "$espera2" LAZARO-PRUEBA-FIN; then
 		captura "$mon" "$RES/$nombre-instalado"
+		# Peso de las traducciones instaladas (solo informativo).
+		sed -n '/LAZARO-LANG-TAMANO/,+10p' "$serie2" | tr -d '\r'
 		tam=""
 		if [ -f "$RES/$nombre-instalado.png" ]; then
 			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)"
