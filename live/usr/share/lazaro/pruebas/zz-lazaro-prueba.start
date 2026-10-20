@@ -15,6 +15,38 @@
 		echo "LAZARO-HOME-AJENO"
 		echo "$ajenos"
 	fi
+	# La pantalla de inicio sobre Xorg (LightDM, SDDM) tiene que estar
+	# al frente, no escondida detrás de la consola de texto. GNOME no se
+	# mira: su pantalla de inicio no usa Xorg y su prueba no puede esperar.
+	t=0
+	vt=""
+	while { rc-service --exists lightdm || rc-service --exists sddm; } \
+		&& [ -z "$vt" ] && [ $t -lt 30 ]; do
+		vt="$(for c in /proc/[0-9]*/cmdline; do
+			case "$(tr '\0' ' ' < "$c")" in
+			*Xorg*) tr '\0' '\n' < "$c" | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' ;;
+			esac
+		done 2>/dev/null | head -n 1)"
+		[ -n "$vt" ] || { sleep 1; t=$((t + 1)); }
+	done
+	if [ -n "$vt" ]; then
+		# La pantalla de inicio puede tardar unos segundos en pasar a su
+		# consola después de arrancar su Xorg.
+		t=0
+		activa="$(cat /sys/class/tty/tty0/active 2>/dev/null)"
+		while [ "$activa" != "tty$vt" ] && [ $t -lt 20 ]; do
+			sleep 1
+			t=$((t + 1))
+			activa="$(cat /sys/class/tty/tty0/active 2>/dev/null)"
+		done
+		if [ "$activa" = "tty$vt" ]; then
+			echo "LAZARO-VT-OK"
+		else
+			echo "LAZARO-VT-ESCONDIDA al frente $activa, pantalla de inicio en tty$vt"
+		fi
+	elif rc-service --exists lightdm || rc-service --exists sddm; then
+		echo "LAZARO-VT-SIN-XORG"
+	fi
 	# La pantalla de arranque (Plymouth) cargó el tema del pulso: el
 	# servicio lazaro-prueba-plymouth vio a plymouthd con el módulo
 	# "script", que solo usa el tema de Lázaro (el de Alpine es otro).

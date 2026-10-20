@@ -10,11 +10,32 @@ depend() {
 	before gdm lightdm sddm greetd
 }
 
+# Número de la consola donde corre la pantalla de inicio, si ya arrancó:
+# el "vtN" con que se lanzó su Xorg.
+consola_pantalla_inicio() {
+	for c in /proc/[0-9]*/cmdline; do
+		case "$(tr '\0' ' ' < "$c")" in
+		*Xorg*) tr '\0' '\n' < "$c" | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' ;;
+		esac
+	done 2>/dev/null | head -n 1
+}
+
 start() {
 	command -v plymouth >/dev/null 2>&1 || return 0
 	plymouth --ping 2>/dev/null || return 0
 	ebegin "Cerrando la pantalla de arranque"
 	plymouth quit
+	# Al cerrarse, Plymouth vuelve a la consola de texto (tty1). Si la
+	# pantalla de inicio ya había arrancado en su propia consola, queda
+	# escondida detrás: se espera a que Plymouth termine y se vuelve a
+	# ella (con chvt, como Ctrl+Alt+F7).
+	t=0
+	while [ $t -lt 20 ] && plymouth --ping 2>/dev/null; do
+		sleep 0.5
+		t=$((t + 1))
+	done
+	vt="$(consola_pantalla_inicio)"
+	[ -n "$vt" ] && chvt "$vt"
 	# Esperar a que el puesto de trabajo vuelva a estar listo para
 	# gráficos: si la pantalla de inicio arranca antes, puede creer que
 	# no hay pantalla.
