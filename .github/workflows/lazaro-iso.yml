@@ -23,22 +23,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tag: ["3.24", edge]
+        tag: ["3.24"]
     steps:
       - name: Sondeo
         run: |
           cat > /tmp/s.sh <<'FIN'
-          set -x
           apk update >/dev/null
-          apk search -v 'plymouth*'
-          apk add plymouth plymouth-themes 2>&1 | tail -3
-          apk search -v 'plymouth*' | sed 's/ - .*//' | while read -r p; do echo "### $p"; apk info -L "${p%-[0-9]*-r[0-9]*}" 2>/dev/null | grep -v -e '^$' | head -80; done
-          ls -R /usr/lib/plymouth /usr/share/plymouth 2>/dev/null | head -150
-          cat /etc/plymouth/plymouthd.conf 2>/dev/null
-          ls /usr/share/mkinitfs/features.d/ 2>/dev/null; ls /etc/mkinitfs/features.d 2>/dev/null; grep -rl plymouth /usr/share/mkinitfs /etc/mkinitfs 2>/dev/null; cat /usr/share/mkinitfs/initramfs-init 2>/dev/null | grep -n -i -B2 -A8 plymouth | head -80
-          apk info -L plymouth 2>/dev/null | grep -i -e init.d -e openrc -e conf.d
-          for f in $(apk info -L plymouth 2>/dev/null | grep -e etc/init.d -e etc/conf.d); do echo "=== /$f"; cat "/$f"; done
-          plymouthd --help 2>&1 | head -20; plymouth --help 2>&1 | head -40
+          apk add plymouth plymouth-themes plymouth-drm plymouth-openrc-plugin plymouth-doc 2>&1 | tail -2
+          for p in plymouth-drm plymouth-openrc-plugin; do apk info -L $p; apk info -d $p; apk info -R $p; done
+          find / -xdev -path /proc -prune -o \( -iname '*plymouth*' -o -iname '*splash*' \) -print 2>/dev/null | grep -v -e /usr/share/plymouth/themes/ -e /usr/share/man | head -60
+          cat /usr/share/plymouth/plymouthd.defaults
+          cat /usr/share/plymouth/themes/script/script.plymouth
+          cat /usr/share/plymouth/themes/spinner/spinner.plymouth
+          ls /usr/share/doc/plymouth* 2>/dev/null; for f in $(apk info -L plymouth-openrc-plugin 2>/dev/null | grep -i -e doc -e readme); do cat /$f; done
+          ls /lib/rc/plugins /usr/lib/rc/plugins 2>/dev/null
+          grep -a -o 'splash[a-z_=:-]*\|plymouth[a-z_/=:.-]*' $(apk info -L plymouth-openrc-plugin | grep '\.so$' | sed 's#^#/#') | sort -u | head -40
+          cat /usr/share/plymouth/themes/script/script.script | head -60
           FIN
           docker run --rm -v /tmp/s.sh:/s.sh:ro alpine:${{ matrix.tag }} sh /s.sh 2>&1
 
