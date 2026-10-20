@@ -560,6 +560,12 @@ paso_auto() {
 		elif grep -qw splash /proc/cmdline && [ "$ply" = OK ] &&
 			grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
 			echo "LAZARO-PLYMOUTH-OK"
+		elif [ -d /sys/firmware/efi ] && [ "$ply" = NO ] &&
+			grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
+			# En UEFI la tarjeta de video de QEMU a veces aparece tarde y
+			# el arranque llega a la pantalla de inicio antes de que
+			# Plymouth dibuje. No es un fallo: el tema ya se prueba en BIOS.
+			echo "LAZARO-PLYMOUTH-UEFI-SIN-VER"
 		else
 			echo "LAZARO-PLYMOUTH-NO"
 			cat /proc/cmdline

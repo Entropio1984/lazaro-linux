@@ -7,6 +7,7 @@
 description="Cierra la pantalla de arranque antes de la de inicio de sesión"
 
 depend() {
+	after elogind
 	before gdm lightdm sddm greetd
 }
 
@@ -15,5 +16,14 @@ start() {
 	plymouth --ping 2>/dev/null || return 0
 	ebegin "Cerrando la pantalla de arranque"
 	plymouth quit
+	# Esperar a que el puesto de trabajo vuelva a estar listo para
+	# gráficos: si GDM arranca antes, cree que no hay pantalla, intenta
+	# el modo X (que no está instalado) y se rinde.
+	t=0
+	while [ $t -lt 20 ] && command -v loginctl >/dev/null 2>&1 &&
+		! loginctl show-seat seat0 -p CanGraphical 2>/dev/null | grep -qx 'CanGraphical=yes'; do
+		sleep 0.5
+		t=$((t + 1))
+	done
 	eend 0
 }
