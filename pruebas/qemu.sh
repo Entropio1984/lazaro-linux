@@ -229,6 +229,13 @@ prueba_instalar() {
 			echo "FALLO: la pantalla de arranque (Plymouth) no cargó el tema del pulso." >&2
 			sed -n '/LAZARO-PLYMOUTH-NO/,/--- fin de plymouth/p' "$serie2" >&2
 			ok=1
+		elif [ "$de" != ninguno ] && [ "$de" != gnome ] && ! grep -q LAZARO-PLYMOUTH-OK "$serie2" \
+			&& ! { [ "$MODO" = uefi ] && grep -q LAZARO-PLYMOUTH-UEFI-SIN-VER "$serie2"; }; then
+			# Con la pantalla del pulso, la prueba tiene que haber visto el
+			# tema cargado (en UEFI se tolera que QEMU no llegue a mostrarlo).
+			echo "FALLO: no se confirmó que la pantalla de arranque (Plymouth) cargara el tema del pulso." >&2
+			grep LAZARO-PLYMOUTH "$serie2" >&2 || true
+			ok=1
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
