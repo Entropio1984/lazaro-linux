@@ -716,14 +716,23 @@ paso_auto() {
 		# gtkgreet, en el idioma elegido, y dejar entrar a la sesión.
 		if grep -qs 'gtkgreet' /etc/greetd/config.toml; then
 			grep '^command' /etc/greetd/config.toml
-			grep -qs '^command = "env LANG=es_CO.UTF-8 ' /etc/greetd/config.toml \
-				&& echo "LAZARO-GREETD-IDIOMA-OK"
 			t=0
 			until cat /proc/[0-9]*/comm 2>/dev/null | grep -qx gtkgreet || [ $t -ge 120 ]; do
 				sleep 3
 				t=$((t + 3))
 			done
 			if cat /proc/[0-9]*/comm 2>/dev/null | grep -qx gtkgreet; then
+				# El idioma que de verdad usa gtkgreet (su LANG), no solo
+				# lo que dice la configuración.
+				for c in /proc/[0-9]*/comm; do
+					[ "$(cat "$c" 2>/dev/null)" = gtkgreet ] || continue
+					idioma_saludo="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+					break
+				done
+				echo "LAZARO-GTKGREET-LANG ${idioma_saludo:-sin-LANG}"
+				grep -qs '^command = "env LANG=es_CO.UTF-8 ' /etc/greetd/config.toml \
+					&& [ "$idioma_saludo" = es_CO.UTF-8 ] \
+					&& echo "LAZARO-GREETD-IDIOMA-OK"
 				sleep 10
 				echo "LAZARO-GTKGREET-LISTO"
 				# qemu.sh toma la captura de la pantalla de inicio.
@@ -798,6 +807,15 @@ paso_auto() {
 			if [ -n "$panel" ]; then
 				idioma_sesion="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
 				echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma_sesion:-sin-LANG}"
+				# En Sway la barra es waybar: también se mira su idioma.
+				if [ "$(cat "$panel/comm")" = sway ]; then
+					for c in /proc/[0-9]*/comm; do
+						[ "$(cat "$c" 2>/dev/null)" = waybar ] || continue
+						idioma_barra="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+						echo "LAZARO-IDIOMA-SESION waybar ${idioma_barra:-sin-LANG}"
+						break
+					done
+				fi
 			fi
 		fi
 		[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"

@@ -183,7 +183,8 @@ prueba_instalar() {
 
 	echo "Arrancando el sistema instalado..."
 	serie2="$RES/$nombre-arranque.log"
-	rm -f "$serie2" "$mon" "$RES/$nombre-instalado.png" "$RES/$nombre-instalado.ppm"
+	rm -f "$serie2" "$mon" "$RES/$nombre-instalado.png" "$RES/$nombre-instalado.ppm" \
+		"$RES/$nombre-pantalla-inicio.png" "$RES/$nombre-pantalla-inicio.ppm"
 	# GNOME reinicia una vez en la prueba (GDM toma la resolución al
 	# arrancar) y pide más memoria.
 	mem2=2048
@@ -251,16 +252,20 @@ prueba_instalar() {
 			grep -E 'LAZARO-SALUDO|LAZARO-GDM-MODO' "$serie2" >&2 || true
 			sed -n '/--- datos de GDM/,/--- fin de los datos/p' "$serie2" >&2
 			ok=1
-		elif [ "$red" = con-red ] && grep -q 'LAZARO-IDIOMA-SESION ' "$serie2" \
-			&& ! grep -q 'LAZARO-IDIOMA-SESION .* es_CO\.UTF-8' "$serie2"; then
+		elif [ "$red" = con-red ] && [ "$de" != ninguno ] && { ! grep -q 'LAZARO-IDIOMA-SESION ' "$serie2" \
+			|| grep 'LAZARO-IDIOMA-SESION ' "$serie2" | tr -d '\r' | grep -qv ' es_CO\.UTF-8$'; }; then
 			echo "FALLO: la sesión del usuario no quedó en el idioma elegido (es_CO.UTF-8)." >&2
-			grep LAZARO-IDIOMA-SESION "$serie2" >&2
+			grep LAZARO-IDIOMA-SESION "$serie2" >&2 || echo "(no se encontró el panel de la sesión)" >&2
 			ok=1
 		elif [ "$de" = sway ] && ! grep -q LAZARO-GTKGREET-LISTO "$serie2"; then
 			echo "FALLO: Sway no muestra su pantalla de inicio gráfica (gtkgreet)." >&2
 			ok=1
+		elif [ "$de" = sway ] && [ ! -s "$RES/$nombre-pantalla-inicio.png" ]; then
+			echo "FALLO: no se pudo capturar la pantalla de inicio de Sway." >&2
+			ok=1
 		elif [ "$de" = sway ] && [ "$red" = con-red ] && ! grep -q LAZARO-GREETD-IDIOMA-OK "$serie2"; then
 			echo "FALLO: la pantalla de inicio de Sway no quedó en el idioma elegido." >&2
+			grep -E '^command|LAZARO-GTKGREET-LANG' "$serie2" >&2 || true
 			ok=1
 		elif [ "$de" = sway ] && ! grep -q 'LAZARO-SESION-GREETD-OK' "$serie2"; then
 			echo "FALLO: desde la pantalla de inicio no se pudo entrar a Sway." >&2
