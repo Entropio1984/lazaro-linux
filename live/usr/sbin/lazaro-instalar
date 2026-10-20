@@ -169,11 +169,14 @@ paso_base() {
 
 	log "Instalando el sistema base con setup-disk (puede tardar)..."
 	# "splash" enciende la pantalla de arranque con el pulso (Plymouth).
-	# Sin escritorio no se usa: el arranque se ve en texto, como en la
-	# consola, y ese sistema no tiene udev, que Plymouth necesita para
-	# encontrar la pantalla.
+	# No se usa en dos casos:
+	# - Sin escritorio: el arranque se ve en texto, como en la consola, y
+	#   ese sistema no tiene udev, que Plymouth necesita para encontrar la
+	#   pantalla.
+	# - GNOME: con Plymouth, GDM no logra abrir su pantalla de inicio al
+	#   encender (prueba el modo X, que no está instalado, y se rinde).
 	splash=" splash"
-	[ "$de" = ninguno ] && splash=""
+	case "$de" in ninguno | gnome) splash="" ;; esac
 	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}$splash" \
 		setup-disk -v -m sys -o /tmp/lazaro-destino.apkovl.tar.gz "$raiz" \
 		>>"$LOG" 2>&1; then
@@ -183,9 +186,6 @@ paso_base() {
 	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
 	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"
 	cp /etc/plymouth/plymouthd.conf "$raiz/etc/plymouth/plymouthd.conf"
-	install -m 755 /usr/share/lazaro/plymouth-salir "$raiz/etc/init.d/plymouth-salir"
-	mkdir -p "$raiz/etc/runlevels/default"
-	ln -sf /etc/init.d/plymouth-salir "$raiz/etc/runlevels/default/plymouth-salir"
 	log "Sistema base instalado."
 }
 
