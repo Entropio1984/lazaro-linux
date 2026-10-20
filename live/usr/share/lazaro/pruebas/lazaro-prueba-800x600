@@ -31,5 +31,18 @@ elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
 	modo="$(printf '%s\n' "$o" | grep -o '[0-9]*: *800x600@[0-9.]*' | head -n 1 | cut -d: -f1)"
 	[ -n "$modo" ] && kscreen-doctor "output.$salida.mode.$modo"
 else
-	xrandr -s 800x600
+	# Como "guardar": si la llave de ~/.Xauthority no coincide con el
+	# nombre del equipo, se usa una copia comodín de la misma llave.
+	t=0
+	until xrandr -s 800x600 || [ $t -ge 60 ]; do
+		if [ -z "${comodin:-}" ] && [ -f "${XAUTHORITY:-$HOME/.Xauthority}" ]; then
+			comodin="$(mktemp)"
+			xauth -f "${XAUTHORITY:-$HOME/.Xauthority}" nlist | sed 's/^..../ffff/' \
+				| xauth -f "$comodin" nmerge -
+			XAUTHORITY="$comodin"
+			export XAUTHORITY
+		fi
+		sleep 3
+		t=$((t + 3))
+	done
 fi

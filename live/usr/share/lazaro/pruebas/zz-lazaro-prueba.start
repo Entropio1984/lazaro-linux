@@ -1,4 +1,48 @@
 #!/bin/sh
+# Idioma de la sesión del usuario: el panel de cada escritorio debe
+# correr con el idioma elegido (es_CO en la prueba). Se mira una sola
+# vez, mientras la sesión sigue abierta.
+idioma_sesion() {
+	[ -z "${idioma_visto:-}" ] || return 0
+	idioma_visto=1
+	t=0
+	panel=""
+	while [ -z "$panel" ] && [ $t -lt 90 ]; do
+		for c in /proc/[0-9]*/comm; do
+			case "$(cat "$c" 2>/dev/null)" in
+			xfce4-panel|mate-panel|lxqt-panel|plasmashell|gnome-shell|sway) ;;
+			*) continue ;;
+			esac
+			# Dueño por el Uid real (/proc/PID puede figurar como de
+			# root si el proceso no es "dumpable").
+			[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] || continue
+			panel="${c%/comm}"
+			break
+		done
+		[ -n "$panel" ] || { sleep 3; t=$((t + 3)); }
+	done
+	if [ -z "$panel" ]; then
+		echo "LAZARO-IDIOMA-SIN-PANEL"
+		for c in /proc/[0-9]*/comm; do
+			[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] \
+				&& echo "  $(cat "$c" 2>/dev/null)"
+		done | sort -u | head -n 30
+		echo "  --- .xsession-errors ---"
+		tail -n 25 /home/prueba/.xsession-errors 2>/dev/null | sed 's/^/  /'
+		return 0
+	fi
+	idioma="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+	echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma:-sin-LANG}"
+	# En Sway la barra es waybar: también se mira su idioma.
+	if [ "$(cat "$panel/comm")" = sway ]; then
+		for c in /proc/[0-9]*/comm; do
+			[ "$(cat "$c" 2>/dev/null)" = waybar ] || continue
+			idioma="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+			echo "LAZARO-IDIOMA-SESION waybar ${idioma:-sin-LANG}"
+			break
+		done
+	fi
+}
 {
 	echo "LAZARO-INSTALADO-ARRANCO"
 	rc-status default
@@ -15,6 +59,15 @@
 		echo "LAZARO-HOME-AJENO"
 		echo "$ajenos"
 	fi
+	# Cuánto pesan las traducciones (paquetes *-lang): descarga e
+	# instalado, en MiB, y las 10 más grandes.
+	awk -F: '/^P:/ { p = $2 } /^S:/ { s[p] = $2 } /^I:/ { i[p] = $2 }
+		END { for (p in s) if (p ~ /-lang$/) { n++; ts += s[p]; ti += i[p]
+			print s[p], i[p], p > "/tmp/lang-tamanos" }
+			printf "LAZARO-LANG-TAMANO paquetes=%d descarga=%.0fMiB instalado=%.0fMiB\n",
+				n, ts / 1048576, ti / 1048576 }' /lib/apk/db/installed
+	sort -rn /tmp/lang-tamanos 2>/dev/null | head -n 10 \
+		| awk '{ printf "  %s descarga=%.1fMiB instalado=%.1fMiB\n", $3, $1 / 1048576, $2 / 1048576 }'
 	# La pantalla de inicio sobre Xorg (LightDM, SDDM) tiene que estar
 	# al frente, no escondida detrás de la consola de texto. GNOME no se
 	# mira: su pantalla de inicio no usa Xorg y su prueba no puede esperar.
@@ -90,6 +143,7 @@
 			sleep 3
 			t=$((t + 3))
 		done
+		idioma_sesion
 		# qemu.sh pulsa Intro en "¿Mantener los cambios?".
 		echo "LAZARO-CONFIRMAR"
 		t=0
@@ -160,6 +214,7 @@
 			sleep 3
 			t=$((t + 3))
 		done
+		idioma_sesion
 		if grep -qs 800x600 /home/prueba/.config/pantalla-inicio; then
 			echo "LAZARO-GUARDADO-OK"
 		else
@@ -175,6 +230,10 @@
 			tail -n 30 /tmp/prueba-800x600.log 2>&1
 			echo "- guardar:"
 			tail -n 40 /tmp/guardar-traza.log 2>&1
+			echo "- lightdm (inicio automático):"
+			grep -iE 'autolog|prueba|fail|error' /var/log/lightdm/lightdm.log 2>&1 | head -n 25
+			tail -n 15 /var/log/lightdm/x-0.log 2>/dev/null
+			ls -la /home/prueba/.xsession-errors 2>/dev/null && tail -n 20 /home/prueba/.xsession-errors
 			echo "--- fin del diagnóstico ---"
 		fi
 		# 2) Se cierra la sesión (sin volver a entrar sola).
@@ -225,6 +284,72 @@
 	else
 		echo "LAZARO-PANTALLA-SIN-AJUSTE"
 	fi
+	# Pantalla de inicio greetd (Sway, XFCE Wayland): debe mostrarse
+	# gtkgreet, en el idioma elegido, y dejar entrar a la sesión.
+	if grep -qs 'gtkgreet' /etc/greetd/config.toml; then
+		grep '^command' /etc/greetd/config.toml
+		t=0
+		until cat /proc/[0-9]*/comm 2>/dev/null | grep -qx gtkgreet || [ $t -ge 120 ]; do
+			sleep 3
+			t=$((t + 3))
+		done
+		if cat /proc/[0-9]*/comm 2>/dev/null | grep -qx gtkgreet; then
+			# El idioma que de verdad usa gtkgreet (su LANG), no solo
+			# lo que dice la configuración.
+			for c in /proc/[0-9]*/comm; do
+				[ "$(cat "$c" 2>/dev/null)" = gtkgreet ] || continue
+				idioma_saludo="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
+				break
+			done
+			echo "LAZARO-GTKGREET-LANG ${idioma_saludo:-sin-LANG}"
+			grep -qs '^command = "env LANG=es_CO.UTF-8 ' /etc/greetd/config.toml \
+				&& [ "$idioma_saludo" = es_CO.UTF-8 ] \
+				&& echo "LAZARO-GREETD-IDIOMA-OK"
+			sleep 10
+			echo "LAZARO-GTKGREET-LISTO"
+			# qemu.sh toma la captura de la pantalla de inicio.
+			sleep 10
+		else
+			echo "LAZARO-GTKGREET-NO"
+		fi
+		# Entrar como "prueba" sin escribir la contraseña: lo mismo
+		# que hace gtkgreet al aceptar el usuario.
+		ses="$(head -n 1 /etc/greetd/environments 2>/dev/null)"
+		if [ -n "$ses" ]; then
+			printf '\n[initial_session]\ncommand = "%s"\nuser = "prueba"\n' "$ses" \
+				>> /etc/greetd/config.toml
+			# greetd usa initial_session solo la primera vez que
+			# arranca: lo recuerda en su runfile.
+			rm -f /run/greetd.run
+			rc-service greetd restart
+			t=0
+			# "dbus-run-session sway" -> el proceso se llama "sway".
+			proc="${ses##* }"
+			until cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$proc" || [ $t -ge 120 ]; do
+				sleep 3
+				t=$((t + 3))
+			done
+			if cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$proc"; then
+				sleep 20
+				echo "LAZARO-SESION-GREETD-OK $ses"
+				# Sway: barra waybar con el icono de wifi (nm-applet).
+				if [ "$proc" = sway ]; then
+					for b in waybar nm-applet polkit-gnome-au; do
+						cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$b" \
+							&& echo "LAZARO-SWAY-CORRE $b"
+					done
+					cat /etc/sway/config.d/*.conf 2>/dev/null
+					# Lista de atajos del botón de la barra, en español.
+					LANG=es_CO.UTF-8 HOME=/home/prueba sway-atajos --lista 2>&1 \
+						| grep -q 'Super+F1  →  Ver esta lista de atajos' \
+						&& echo "LAZARO-SWAY-CORRE atajos"
+				fi
+			else
+				echo "LAZARO-SESION-GREETD-NO $ses"
+				grep -iE 'greetd|sway|seat|logind' /var/log/messages 2>/dev/null | tail -n 30
+			fi
+		fi
+	fi
 	for s in lightdm sddm gdm greetd; do
 		rc-service --exists "$s" && rc-service "$s" status
 	done
@@ -234,6 +359,8 @@
 	for s in lightdm sddm gdm greetd; do
 		cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 	done
+	# Idioma de la sesión (si no se miró antes de cerrarla).
+	[ -n "$reiniciar" ] || idioma_sesion
 	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 } > /dev/ttyS0 2>&1
 if [ -n "$reiniciar" ]; then

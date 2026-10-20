@@ -500,7 +500,18 @@ paso_auto() {
 	paso_base "$raiz" "$de"
 	auto_usuario
 	paso_escritorio "$raiz" "$de"
+	# Si los ajustes se cuelgan, la prueba debe mostrar dónde: cada 4
+	# minutos se informa por el puerto serie qué está corriendo.
+	(
+		while sleep 240; do
+			echo "--- vigilancia $(date +%H:%M:%S) ---"
+			tail -n 12 "$raiz/var/log/desktop-postinstall.log" 2>/dev/null
+			ps -o pid,etime,args 2>/dev/null | grep -v -e '\[' -e 'ps -o' -e 'sleep 240' | tail -n 25
+		done
+	) >&2 &
+	vigia=$!
 	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
+	kill "$vigia" 2>/dev/null || true
 	auto_revisar_flatpak
 	auto_prueba_resolucion "$de"
 	auto_prueba_arranque
