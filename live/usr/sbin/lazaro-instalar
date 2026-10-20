@@ -168,11 +168,16 @@ paso_base() {
 	rm -rf "$ovl"
 
 	log "Instalando el sistema base con setup-disk (puede tardar)..."
-	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}" \
+	# "splash" enciende la pantalla de arranque con el pulso (Plymouth).
+	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet} splash" \
 		setup-disk -v -m sys -o /tmp/lazaro-destino.apkovl.tar.gz "$raiz" \
 		>>"$LOG" 2>&1; then
 		die "setup-disk falló (detalles en $LOG)"
 	fi
+	# El tema del pulso no viene en ningún paquete: se copia el de la ISO.
+	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
+	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"
+	cp /etc/plymouth/plymouthd.conf "$raiz/etc/plymouth/plymouthd.conf"
 	log "Sistema base instalado."
 }
 
@@ -499,6 +504,17 @@ paso_auto() {
 		else
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
+		fi
+		# La pantalla de arranque (Plymouth) cargó el tema del pulso:
+		# la prueba arranca con plymouth.debug, que deja este registro.
+		if grep -qs 'themes/lazaro' /run/plymouth-debug.log; then
+			echo "LAZARO-PLYMOUTH-OK"
+		else
+			echo "LAZARO-PLYMOUTH-NO"
+			cat /proc/cmdline
+			ls -l /run/plymouth-debug.log /usr/lib/rc/plugins 2>&1
+			grep -i -e error -e fail -e theme -e plugin -e renderer /run/plymouth-debug.log 2>/dev/null | head -n 40
+			echo "--- fin de plymouth ---"
 		fi
 		# Resolución de la pantalla de inicio (LightDM o SDDM): la que
 		# quedó anotada en ~/.config/pantalla-inicio.

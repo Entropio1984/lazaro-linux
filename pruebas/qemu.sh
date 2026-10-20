@@ -225,7 +225,11 @@ prueba_instalar() {
 		if [ -f "$RES/$nombre-instalado.png" ]; then
 			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)"
 		fi
-		if grep -q LAZARO-HOME-AJENO "$serie2"; then
+		if grep -q LAZARO-PLYMOUTH-NO "$serie2"; then
+			echo "FALLO: la pantalla de arranque (Plymouth) no cargó el tema del pulso." >&2
+			sed -n '/LAZARO-PLYMOUTH-NO/,/--- fin de plymouth/p' "$serie2" >&2
+			ok=1
+		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
 		elif [ "$red" = con-red ] && { [ "$de" = xfce ] || [ "$de" = mate ] || [ "$de" = plasma ]; } \

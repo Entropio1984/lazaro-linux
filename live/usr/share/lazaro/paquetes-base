@@ -21,3 +21,8 @@ acpid
 util-linux
 e2fsprogs
 dosfstools
+# Pantalla de arranque y apagado con el pulso (tema en
+# /usr/share/plymouth/themes/lazaro).
+plymouth
+plymouth-drm
+plymouth-openrc-plugin
