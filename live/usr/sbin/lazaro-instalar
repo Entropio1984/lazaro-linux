@@ -169,7 +169,12 @@ paso_base() {
 
 	log "Instalando el sistema base con setup-disk (puede tardar)..."
 	# "splash" enciende la pantalla de arranque con el pulso (Plymouth).
-	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet} splash" \
+	# Sin escritorio no se usa: el arranque se ve en texto, como en la
+	# consola, y ese sistema no tiene udev, que Plymouth necesita para
+	# encontrar la pantalla.
+	splash=" splash"
+	[ "$de" = ninguno ] && splash=""
+	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}$splash" \
 		setup-disk -v -m sys -o /tmp/lazaro-destino.apkovl.tar.gz "$raiz" \
 		>>"$LOG" 2>&1; then
 		die "setup-disk falló (detalles en $LOG)"
@@ -508,8 +513,11 @@ paso_auto() {
 		# La pantalla de arranque (Plymouth) cargó el tema del pulso: a
 		# esta altura plymouthd sigue en pie y tiene cargado el módulo
 		# "script", que solo usa el tema de Lázaro (el de Alpine es otro).
+		# Sin escritorio no hay pantalla de arranque ("splash").
 		ppid="$(pidof plymouthd 2>/dev/null | cut -d' ' -f1)"
-		if [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps" &&
+		if ! grep -qw splash /proc/cmdline && [ -z "$ppid" ]; then
+			echo "LAZARO-PLYMOUTH-SIN-SPLASH"
+		elif [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps" &&
 			grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
 			echo "LAZARO-PLYMOUTH-OK"
 		else
