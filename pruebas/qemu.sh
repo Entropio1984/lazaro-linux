@@ -38,6 +38,8 @@ KVM=""
 [ -w /dev/kvm ] && KVM="-enable-kvm -cpu host"
 MEM="${MEM:-4096}"
 
+# Firmware UEFI para QEMU. Se busca una sola vez, aquí y no dentro de
+# $(...): ahí el "exit" no detendría la prueba y QEMU arrancaría en BIOS.
 ovmf() {
 	for d in /usr/share/OVMF /usr/share/edk2/ovmf /usr/share/qemu; do
 		for c in OVMF_CODE_4M.fd OVMF_CODE.fd; do
@@ -51,13 +53,28 @@ ovmf() {
 	echo "No se encontró OVMF (firmware UEFI para QEMU)" >&2
 	exit 1
 }
+[ "$MODO" != uefi ] || ovmf
 
-firmware_args() { # nombre-de-la-prueba
+# arrancar NOMBRE MEMORIA ARCHIVO_SERIE [OPCIONES DE QEMU...]
+# Arranca QEMU en segundo plano con lo que comparten todas las pruebas
+# (KVM, firmware, pantalla, puerto serie y monitor en
+# $SOCK_DIR/NOMBRE.mon) y deja su PID en $pid.
+arrancar() {
+	a_nombre="$1"
+	a_mem="$2"
+	a_serie="$3"
+	shift 3
 	if [ "$MODO" = uefi ]; then
-		ovmf
-		[ -f "$RES/$1-vars.fd" ] || cp "$OVMF_VARS_ORIG" "$RES/$1-vars.fd"
-		echo "-drive if=pflash,format=raw,readonly=on,file=$OVMF_CODE -drive if=pflash,format=raw,file=$RES/$1-vars.fd"
+		# Las variables EFI de cada prueba, en su propio archivo.
+		[ -f "$RES/$a_nombre-vars.fd" ] || cp "$OVMF_VARS_ORIG" "$RES/$a_nombre-vars.fd"
+		set -- -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE" \
+			-drive "if=pflash,format=raw,file=$RES/$a_nombre-vars.fd" "$@"
 	fi
+	# shellcheck disable=SC2086
+	qemu-system-x86_64 $KVM -m "$a_mem" -smp 2 "$@" \
+		-vga std -display none \
+		-serial "file:$a_serie" -monitor "unix:$SOCK_DIR/$a_nombre.mon,server,nowait" &
+	pid=$!
 }
 
 captura() { # socket archivo
@@ -66,6 +83,11 @@ captura() { # socket archivo
 	if [ -f "$2.ppm" ] && command -v convert >/dev/null 2>&1; then
 		convert "$2.ppm" "$2.png" && rm -f "$2.ppm"
 	fi
+}
+
+# tramo ARCHIVO DESDE HASTA: muestra esa parte del registro (diagnósticos).
+tramo() {
+	sed -n "/$2/,/$3/p" "$1" >&2
 }
 
 # esperar ARCHIVO_SERIE PID SEGUNDOS TEXTO_OK [TEXTO_FALLO]
@@ -96,16 +118,13 @@ prueba_live() {
 	rm -f "$serie" "$mon" "$disco"
 	# Disco vacío: Calamares tiene que verlo para dejar instalar.
 	qemu-img create -q -f qcow2 "$disco" 20G
-	# shellcheck disable=SC2046
-	qemu-system-x86_64 $KVM -m "$MEM" -smp 2 $(firmware_args "$nombre") \
-		-cdrom "$ISO" -boot d -vga std -display none \
+	arrancar "$nombre" "$MEM" "$serie" \
+		-cdrom "$ISO" -boot d \
 		-drive "file=$disco,if=virtio,format=qcow2" \
 		-nic user,model=virtio-net-pci \
 		-spice "unix=on,addr=$SOCK_DIR/$nombre.spice,disable-ticketing=on" \
 		-device virtio-serial-pci -chardev spicevmc,id=vdagent,name=vdagent \
-		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
-		-serial "file:$serie" -monitor "unix:$mon,server,nowait" &
-	pid=$!
+		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0
 	ok=0
 	if ! esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
 		captura "$mon" "$RES/$nombre-fallo"
@@ -141,8 +160,8 @@ prueba_instalar() {
 	rm -f "$disco" "$serie" "$mon" "$RES/$nombre-vars.fd"
 	qemu-img create -q -f qcow2 "$disco" 20G
 
-	nic="-nic user,model=virtio-net-pci"
-	[ "$red" = sin-red ] && nic="-nic none"
+	nic=user,model=virtio-net-pci
+	[ "$red" = con-red ] || nic=none
 
 	# Kernel e initramfs de la propia ISO, para poder pasar parámetros de
 	# instalación desatendida sin tocar el menú de arranque.
@@ -155,22 +174,22 @@ prueba_instalar() {
 
 	# Con OVMF y arranque directo del kernel, el CD por IDE no se detecta a
 	# tiempo y el initramfs no encuentra la ISO; por virtio-scsi sí.
-	cd_args="-cdrom $ISO"
+	# Las opciones del CD quedan en "$@" (de y red ya están guardados).
 	mods="loop,squashfs,sd-mod,usb-storage"
 	if [ "$MODO" = uefi ]; then
-		cd_args="-device virtio-scsi-pci,id=scsi0 -drive id=cd0,if=none,media=cdrom,readonly=on,file=$ISO -device scsi-cd,drive=cd0,bus=scsi0.0"
+		set -- -device virtio-scsi-pci,id=scsi0 \
+			-drive "id=cd0,if=none,media=cdrom,readonly=on,file=$ISO" \
+			-device scsi-cd,drive=cd0,bus=scsi0.0
 		mods="$mods,virtio_scsi,sr-mod"
+	else
+		set -- -cdrom "$ISO"
 	fi
 
 	echo "Instalando ($MODO, $de, $red)..."
-	# shellcheck disable=SC2046
-	qemu-system-x86_64 $KVM -m "$MEM" -smp 2 $(firmware_args "$nombre") \
+	arrancar "$nombre" "$MEM" "$serie" \
 		-kernel "$k" -initrd "$i" \
 		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda" \
-		$cd_args -drive "file=$disco,if=virtio,format=qcow2" \
-		-vga std -display none $nic \
-		-serial "file:$serie" -monitor "unix:$mon,server,nowait" &
-	pid=$!
+		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic "$nic"
 	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
 		captura "$mon" "$RES/$nombre-instalacion-fallo"
 		terminar "$pid"
@@ -201,13 +220,20 @@ prueba_instalar() {
 		mem2=3072
 		espera2=1200
 	fi
-	# shellcheck disable=SC2046
-	qemu-system-x86_64 $KVM -m "$mem2" -smp 2 $(firmware_args "$nombre") \
-		-drive "file=$disco,if=virtio,format=qcow2" -boot c \
-		-vga std -display none $nic \
-		-serial "file:$serie2" -monitor "unix:$mon,server,nowait" &
-	pid=$!
+	arrancar "$nombre" "$mem2" "$serie2" \
+		-drive "file=$disco,if=virtio,format=qcow2" -boot c -nic "$nic"
 	ok=0
+	# Qué resolución se revisa. Solo con red: sin red,
+	# desktop-postinstall.sh corre recién en el primer arranque.
+	#   dm   LightDM o SDDM: la pantalla de inicio tras cerrar la sesión
+	#   gdm  GNOME: la pantalla de inicio tras reiniciar
+	resolucion=""
+	if [ "$red" = con-red ]; then
+		case "$de" in
+			xfce | mate | plasma) resolucion=dm ;;
+			gnome) resolucion=gdm ;;
+		esac
+	fi
 	if [ "$de" = gnome ]; then
 		# Lo que haría la persona: pulsar Intro en "¿Mantener los
 		# cambios?" de GNOME (el botón predeterminado es "Mantener").
@@ -223,11 +249,11 @@ prueba_instalar() {
 		captura "$mon" "$RES/$nombre-instalado"
 		tam=""
 		if [ -f "$RES/$nombre-instalado.png" ]; then
-			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)"
+			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)" || tam=""
 		fi
 		if grep -q LAZARO-PLYMOUTH-NO "$serie2"; then
 			echo "FALLO: la pantalla de arranque (Plymouth) no cargó el tema del pulso." >&2
-			sed -n '/LAZARO-PLYMOUTH-NO/,/--- fin de plymouth/p' "$serie2" >&2
+			tramo "$serie2" LAZARO-PLYMOUTH-NO '--- fin de plymouth'
 			ok=1
 		elif [ "$de" != ninguno ] && [ "$de" != gnome ] && ! grep -q LAZARO-PLYMOUTH-OK "$serie2" \
 			&& ! { [ "$MODO" = uefi ] && grep -q LAZARO-PLYMOUTH-UEFI-SIN-VER "$serie2"; }; then
@@ -239,29 +265,24 @@ prueba_instalar() {
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
-		elif [ "$red" = con-red ] && { [ "$de" = xfce ] || [ "$de" = mate ] || [ "$de" = plasma ]; } \
-			&& ! grep -q LAZARO-GUARDADO-OK "$serie2"; then
-			echo "FALLO: la sesión del usuario no anotó la resolución que eligió (800x600)." >&2
-			sed -n '/--- diagnóstico del guardado/,/--- fin del diagnóstico/p' "$serie2" >&2
+		elif [ -n "$resolucion" ] && ! grep -q LAZARO-GUARDADO-OK "$serie2"; then
+			if [ "$resolucion" = gdm ]; then
+				echo "FALLO: GNOME no guardó la resolución que eligió el usuario (800x600)." >&2
+			else
+				echo "FALLO: la sesión del usuario no anotó la resolución que eligió (800x600)." >&2
+			fi
+			tramo "$serie2" '--- diagnóstico del guardado' '--- fin del diagnóstico'
 			ok=1
-		elif [ "$red" = con-red ] && { [ "$de" = xfce ] || [ "$de" = mate ] || [ "$de" = plasma ]; } \
-			&& ! grep -q LAZARO-PANTALLA-800x600 "$serie2"; then
-			# Solo escritorios con LightDM o SDDM, que es lo que mide la prueba.
-			# Sin red, desktop-postinstall.sh corre recién en el primer
-			# arranque: solo se revisa con red.
+		elif [ "$resolucion" = dm ] && ! grep -q LAZARO-PANTALLA-800x600 "$serie2"; then
 			echo "FALLO: la pantalla de inicio no usó la resolución guardada del usuario (800x600)." >&2
 			grep LAZARO-PANTALLA "$serie2" >&2 || true
-			sed -n '/--- diagnóstico de la resolución/,/--- fin del diagnóstico/p' "$serie2" >&2
+			tramo "$serie2" '--- diagnóstico de la resolución' '--- fin del diagnóstico'
 			ok=1
-		elif [ "$red" = con-red ] && [ "$de" = gnome ] && ! grep -q LAZARO-GUARDADO-OK "$serie2"; then
-			echo "FALLO: GNOME no guardó la resolución que eligió el usuario (800x600)." >&2
-			sed -n '/--- diagnóstico del guardado/,/--- fin del diagnóstico/p' "$serie2" >&2
-			ok=1
-		elif [ "$red" = con-red ] && [ "$de" = gnome ] \
+		elif [ "$resolucion" = gdm ] \
 			&& { ! grep -q 'LAZARO-GDM-MODO 800x600' "$serie2" || [ "$tam" != 800x600 ]; }; then
 			echo "FALLO: tras reiniciar, la pantalla de inicio de GNOME mide ${tam:-?}, no 800x600." >&2
 			grep -E 'LAZARO-SALUDO|LAZARO-GDM-MODO' "$serie2" >&2 || true
-			sed -n '/--- datos de GDM/,/--- fin de los datos/p' "$serie2" >&2
+			tramo "$serie2" '--- datos de GDM' '--- fin de los datos'
 			ok=1
 		elif [ "$de" = ninguno ]; then
 			if grep -Eq '(lightdm|sddm|gdm|greetd).*started|Starting (lightdm|sddm|gdm|greetd)|LAZARO-DM-ACTIVO' "$serie2"; then
