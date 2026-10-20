@@ -18,7 +18,7 @@ Presentation
             id: logo
             source: "bienvenida.png"
             fillMode: Image.PreserveAspectFit
-            width: Math.min(parent.width * 0.9, 640)
+            width: Math.min(parent.width * 0.9, parent.height * 0.9, 400)
             anchors.centerIn: parent
         }
     }
