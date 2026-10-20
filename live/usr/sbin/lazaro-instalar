@@ -549,8 +549,10 @@ paso_auto() {
 		# "script", que solo usa el tema de Lázaro (el de Alpine es otro).
 		# Sin escritorio no hay pantalla de arranque ("splash"): plymouthd
 		# puede estar en pie igual, pero sin el tema cargado.
+		# Sin "splash" no se espera: GNOME necesita que la prueba siga
+		# enseguida para confirmar "¿Mantener los cambios?" a tiempo.
 		t=0
-		until [ -s /run/lazaro-plymouth ] || [ $t -ge 40 ]; do
+		while grep -qw splash /proc/cmdline && [ ! -s /run/lazaro-plymouth ] && [ $t -lt 40 ]; do
 			t=$((t + 1))
 			sleep 1
 		done
