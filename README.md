@@ -152,5 +152,4 @@ siguiente (edge):
 ## Pendiente
 
 - Probar en el ASUS K53SV (BIOS antiguo, Intel HD 3000 + NVIDIA GT 540M).
-- Capturas reales de cada escritorio en el selector (hoy son tarjetas).
 - Cifrado de disco (desactivado por ahora).
