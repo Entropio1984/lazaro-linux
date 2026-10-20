@@ -660,54 +660,13 @@ paso_auto() {
 					return 0
 				done
 			}
-			reiniciar_gdm() {
-				rc-service gdm restart >/dev/null 2>&1
-				sleep 45
-			}
 			echo "LAZARO-GDM-MODO $(modo_gdm)"
+			# Datos breves por si falla (qemu.sh los muestra solo entonces).
 			echo "--- datos de GDM ---"
 			rc-service pantalla-inicio-gdm status 2>&1
 			stat -c '%n acceso=%x cambio=%y' /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml 2>&1
-			cmp /var/lib/gdm/.config/monitors.xml /home/prueba/.config/monitors.xml && echo "copia idéntica"
-			# Orden: ¿arrancó el saludo antes o después de la copia?
-			arranque="$(awk '/^btime/ { print $2 }' /proc/stat)"
-			for c in /proc/[0-9]*/comm; do
-				[ "$(cat "$c" 2>/dev/null)" = gnome-shell ] || continue
-				inicio=$((arranque + $(awk '{ print $22 }' "${c%/comm}/stat") / 100))
-				echo "gnome-shell $(stat -c %U "${c%/comm}") empezó $(date -d "@$inicio" '+%T')"
-			done
-			echo "sistema arrancó $(date -d "@$arranque" '+%T')"
-			if ! modo_gdm | grep -qx '800x600@.*'; then
-				# Pruebas para encontrar la causa: reiniciar GDM con el
-				# archivo ya en su sitio, y luego como archivo del sistema.
-				reiniciar_gdm
-				echo "tras reiniciar GDM: $(modo_gdm)"
-				stat -c '%n acceso=%x' /var/lib/gdm/.config/monitors.xml
-				cp /var/lib/gdm/.config/monitors.xml /etc/xdg/monitors.xml
-				reiniciar_gdm
-				echo "con /etc/xdg/monitors.xml: $(modo_gdm)"
-				rm -f /etc/xdg/monitors.xml
-				sed -i 's|<layoutmode>logical</layoutmode>|<layoutmode>physical</layoutmode>|' /var/lib/gdm/.config/monitors.xml
-				reiniciar_gdm
-				echo "con layoutmode physical: $(modo_gdm)"
-				sed -i '/<layoutmode>/d' /var/lib/gdm/.config/monitors.xml
-				reiniciar_gdm
-				echo "sin layoutmode: $(modo_gdm)"
-			fi
 			echo "- greeter.log:"
 			grep -iE 'monitor|config' /var/log/gdm/greeter.log 2>/dev/null | head -n 20
-			if [ -z "$saludo" ]; then
-				echo "- el saludo no arrancó al encender:"
-				ps -ef | grep -iE '[g]dm|[g]nome-shell|[p]lymouth|[X]org|[X]wayland'
-				ls -l /var/log/gdm 2>&1
-				grep -iE 'gdm|plymouth|mutter|gnome-shell' /var/log/messages 2>/dev/null | head -n 60
-				for f in /var/log/gdm/greeter.log*; do
-					[ "$(wc -c < "$f")" -lt 2000 ] || continue
-					echo "-- $f:"
-					cat "$f"
-				done
-				dmesg | grep -iE 'drm|plymouth|vt|tty' | tail -n 30
-			fi
 			echo "--- fin de los datos ---"
 		elif [ -n "$pdm" ]; then
 			# 1) La sesión debe anotar la resolución que eligió.
