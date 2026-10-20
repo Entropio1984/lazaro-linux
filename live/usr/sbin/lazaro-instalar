@@ -513,9 +513,11 @@ paso_auto() {
 		# La pantalla de arranque (Plymouth) cargó el tema del pulso: a
 		# esta altura plymouthd sigue en pie y tiene cargado el módulo
 		# "script", que solo usa el tema de Lázaro (el de Alpine es otro).
-		# Sin escritorio no hay pantalla de arranque ("splash").
+		# Sin escritorio no hay pantalla de arranque ("splash"): plymouthd
+		# puede estar en pie igual, pero sin el tema cargado.
 		ppid="$(pidof plymouthd 2>/dev/null | cut -d' ' -f1)"
-		if ! grep -qw splash /proc/cmdline && [ -z "$ppid" ]; then
+		if ! grep -qw splash /proc/cmdline &&
+			! grep -qs 'plymouth/script.so' "/proc/${ppid:-0}/maps"; then
 			echo "LAZARO-PLYMOUTH-SIN-SPLASH"
 		elif [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps" &&
 			grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
