@@ -15,16 +15,18 @@
 		echo "LAZARO-HOME-AJENO"
 		echo "$ajenos"
 	fi
-	# La pantalla de inicio (si corre sobre Xorg) tiene que estar al
-	# frente, no escondida detrás de la consola de texto.
+	# La pantalla de inicio sobre Xorg (LightDM, SDDM) tiene que estar
+	# al frente, no escondida detrás de la consola de texto. GNOME no se
+	# mira: su pantalla de inicio no usa Xorg y su prueba no puede esperar.
 	t=0
 	vt=""
-	while [ -z "$vt" ] && [ $t -lt 30 ]; do
+	while { rc-service --exists lightdm || rc-service --exists sddm; } \
+		&& [ -z "$vt" ] && [ $t -lt 30 ]; do
 		vt="$(for c in /proc/[0-9]*/cmdline; do
-			case "$(tr '\0' ' ' < "$c" 2>/dev/null)" in
-			*Xorg*) tr '\0' '\n' < "$c" 2>/dev/null | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' ;;
+			case "$(tr '\0' ' ' < "$c")" in
+			*Xorg*) tr '\0' '\n' < "$c" | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' ;;
 			esac
-		done | head -n 1)"
+		done 2>/dev/null | head -n 1)"
 		[ -n "$vt" ] || { sleep 1; t=$((t + 1)); }
 	done
 	if [ -n "$vt" ]; then

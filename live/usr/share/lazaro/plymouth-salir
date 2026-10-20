@@ -14,10 +14,10 @@ depend() {
 # el "vtN" con que se lanzó su Xorg.
 consola_pantalla_inicio() {
 	for c in /proc/[0-9]*/cmdline; do
-		case "$(tr '\0' ' ' < "$c" 2>/dev/null)" in
-		*Xorg*) tr '\0' '\n' < "$c" 2>/dev/null | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' ;;
+		case "$(tr '\0' ' ' < "$c")" in
+		*Xorg*) tr '\0' '\n' < "$c" | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' ;;
 		esac
-	done | head -n 1
+	done 2>/dev/null | head -n 1
 }
 
 start() {
