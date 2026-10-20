@@ -1,9 +1,8 @@
 #!/sbin/openrc-run
 # Lázaro Linux: cierra la pantalla de arranque (Plymouth) justo antes de
-# la pantalla de inicio de sesión, dejando la última imagen hasta que
-# esta se dibuje. Si Plymouth sigue en pie, la pantalla de inicio no
-# puede cambiar la resolución (GNOME quedaba en la del monitor y no en
-# la que eligió el usuario).
+# la pantalla de inicio de sesión. Si Plymouth sigue en pie, o deja su
+# imagen puesta (--retain-splash), GNOME arranca su pantalla de inicio
+# en la resolución del monitor y no en la que eligió el usuario.
 
 description="Cierra la pantalla de arranque antes de la de inicio de sesión"
 
@@ -15,6 +14,6 @@ start() {
 	command -v plymouth >/dev/null 2>&1 || return 0
 	plymouth --ping 2>/dev/null || return 0
 	ebegin "Cerrando la pantalla de arranque"
-	plymouth quit --retain-splash
+	plymouth quit
 	eend 0
 }
