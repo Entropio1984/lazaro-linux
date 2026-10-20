@@ -271,6 +271,13 @@ prueba_instalar() {
 			echo "FALLO: no se confirmó que la pantalla de arranque (Plymouth) cargara el tema del pulso." >&2
 			grep LAZARO-PLYMOUTH "$serie2" >&2 || true
 			ok=1
+		elif grep -q LAZARO-VT-ESCONDIDA "$serie2"; then
+			echo "FALLO: la pantalla de inicio quedó escondida detrás de la consola de texto." >&2
+			grep LAZARO-VT-ESCONDIDA "$serie2" >&2
+			ok=1
+		elif grep -q LAZARO-VT-SIN-XORG "$serie2"; then
+			echo "FALLO: LightDM o SDDM está instalado pero no se encontró su pantalla de inicio (Xorg) para ver si está al frente." >&2
+			ok=1
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1
