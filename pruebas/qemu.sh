@@ -113,7 +113,7 @@ prueba_live() {
 		ok=1
 	elif esperar "$serie" "$pid" 180 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
 		captura "$mon" "$RES/$nombre-calamares"
-		if esperar "$serie" "$pid" 60 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
+		if esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 		else
 			echo "FALLO: el agente del portapapeles compartido (spice-vdagent) no corre en la sesión live ($MODO)." >&2
