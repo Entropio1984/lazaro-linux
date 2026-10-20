@@ -28,7 +28,8 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
-	gparted xhost zenity spice-vdagent spice-vdagent-openrc"
+	gparted xhost zenity spice-vdagent spice-vdagent-openrc
+	plymouth plymouth-drm plymouth-openrc-plugin"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
@@ -57,6 +58,9 @@ profile_lazaro() {
 	# console=ttyS0 primero y tty0 al final: la consola principal sigue
 	# siendo la pantalla; el puerto serie solo sirve a las pruebas (QEMU).
 	kernel_cmdline="console=ttyS0,115200 console=tty0"
+	# Pantalla de arranque con el pulso (Plymouth), salvo en el modo
+	# gráfico seguro. Plymouth no dibuja en el puerto serie.
+	lazaro_splash="splash plymouth.ignore-serial-consoles"
 	syslinux_serial="0 115200"
 	boot_addons="amd-ucode intel-ucode"
 	initrd_ucode="/boot/amd-ucode.img /boot/intel-ucode.img"
@@ -86,7 +90,7 @@ syslinux_gen_config() {
 		MENU LABEL Lazaro Linux (sesion live)
 		KERNEL /boot/vmlinuz-lts
 		INITRD /boot/amd-ucode.img,/boot/intel-ucode.img,/boot/initramfs-lts
-		APPEND $initfs_cmdline $kernel_cmdline
+		APPEND $initfs_cmdline $kernel_cmdline $lazaro_splash
 
 	LABEL seguro
 		MENU LABEL Lazaro Linux (modo grafico seguro)
@@ -104,7 +108,7 @@ grub_gen_config() {
 	terminal_output console serial
 
 	menuentry "Lazaro Linux - Tu hardware aun tiene pulso" {
-		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline
+		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline $lazaro_splash
 		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
 	}
 

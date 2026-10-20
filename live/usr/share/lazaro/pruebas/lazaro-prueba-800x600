@@ -1,0 +1,48 @@
+#!/bin/sh
+# Solo pruebas: la sesión del usuario elige 800x600.
+exec 2>/tmp/prueba-800x600.log
+set -x
+sleep 5
+case ":${XDG_CURRENT_DESKTOP:-}:" in *:GNOME:*) gnome=1 ;; *) gnome="" ;; esac
+if [ -n "$gnome" ]; then
+	# Como la Configuración de GNOME: se aplica de forma permanente
+	# y GNOME pregunta "¿Mantener los cambios?" (la prueba pulsa
+	# Intro desde QEMU). Solo así GNOME escribe monitors.xml.
+	t=0
+	until e="$(gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
+		--object-path /org/gnome/Mutter/DisplayConfig \
+		--method org.gnome.Mutter.DisplayConfig.GetCurrentState)" || [ $t -ge 60 ]; do
+		sleep 3
+		t=$((t + 3))
+	done
+	printf '%s\n' "$e" >&2
+	serie="$(printf '%s\n' "$e" | sed -n 's/^(uint32 \([0-9]*\).*/\1/p')"
+	conector="$(printf '%s\n' "$e" | grep -o "(('[^']*'" | head -n 1 | cut -d"'" -f2)"
+	modo="$(printf '%s\n' "$e" | grep -o "'800x600@[0-9.]*'" | head -n 1 | tr -d "'")"
+	gdbus call --session --dest org.gnome.Mutter.DisplayConfig \
+		--object-path /org/gnome/Mutter/DisplayConfig \
+		--method org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig \
+		"$serie" 2 "[(0, 0, 1.0, 0, true, [('$conector', '$modo', @a{sv} {})])]" "@a{sv} {}"
+	touch /tmp/lazaro-confirmar
+elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
+	o="$(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g')"
+	printf '%s\n' "$o" >&2
+	salida="$(printf '%s\n' "$o" | awk '/Output:/ { for (i = 1; i < NF; i++) if ($i == "Output:") { print $(i + 2); exit } }')"
+	modo="$(printf '%s\n' "$o" | grep -o '[0-9]*: *800x600@[0-9.]*' | head -n 1 | cut -d: -f1)"
+	[ -n "$modo" ] && kscreen-doctor "output.$salida.mode.$modo"
+else
+	# Como "guardar": si la llave de ~/.Xauthority no coincide con el
+	# nombre del equipo, se usa una copia comodín de la misma llave.
+	t=0
+	until xrandr -s 800x600 || [ $t -ge 60 ]; do
+		if [ -z "${comodin:-}" ] && [ -f "${XAUTHORITY:-$HOME/.Xauthority}" ]; then
+			comodin="$(mktemp)"
+			xauth -f "${XAUTHORITY:-$HOME/.Xauthority}" nlist | sed 's/^..../ffff/' \
+				| xauth -f "$comodin" nmerge -
+			XAUTHORITY="$comodin"
+			export XAUTHORITY
+		fi
+		sleep 3
+		t=$((t + 3))
+	done
+fi

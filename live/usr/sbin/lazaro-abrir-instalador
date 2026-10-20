@@ -7,6 +7,12 @@
 # Al abrirse solo al iniciar la sesión, espera a que NetworkManager termine
 # de conectarse (como mucho 30 s): Calamares revisa internet una sola vez,
 # al abrir, y si la red aún no estaba lista decía que no había conexión.
+# En la instalación desatendida de las pruebas (lazaro.autoinstall en la
+# línea del kernel, como la detecta /etc/init.d/lazaro-live) ya se está
+# instalando sin interfaz: no se abre Calamares.
+for p in $(cat /proc/cmdline); do
+	case "$p" in lazaro.autoinstall=*) exit 0 ;; esac
+done
 if [ "${1:-}" = --esperar-red ]; then
 	shift
 	command -v nm-online >/dev/null 2>&1 && nm-online -s -q -t 30 || true

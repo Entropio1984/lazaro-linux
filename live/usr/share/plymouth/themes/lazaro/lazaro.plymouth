@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Lázaro
+Description=Logo de Lázaro Linux con una línea de pulso azul que lo recorre.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/lazaro
+ScriptFile=/usr/share/plymouth/themes/lazaro/lazaro.script

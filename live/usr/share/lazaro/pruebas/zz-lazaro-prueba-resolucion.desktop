@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Prueba de resolucion
+Exec=/usr/local/bin/lazaro-prueba-800x600
+NoDisplay=true
