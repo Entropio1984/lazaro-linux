@@ -536,6 +536,8 @@ paso_auto() {
 				[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] \
 					&& echo "  $(cat "$c" 2>/dev/null)"
 			done | sort -u | head -n 30
+			echo "  --- .xsession-errors ---"
+			tail -n 25 /home/prueba/.xsession-errors 2>/dev/null | sed 's/^/  /'
 			return 0
 		fi
 		idioma="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
