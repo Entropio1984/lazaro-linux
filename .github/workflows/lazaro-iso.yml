@@ -84,6 +84,8 @@ jobs:
           - instalar uefi plasma con-red
           - instalar bios gnome con-red
           - instalar bios ninguno sin-red
+          - instalar bios mate con-red
+          - instalar bios mate sin-red
     steps:
       - uses: actions/checkout@v5
 
