@@ -489,6 +489,37 @@ paso_auto() {
 		EOF
 	fi
 
+	# Solo pruebas: mirar la pantalla de arranque mientras está en pie.
+	# Al llegar a "local" puede haberla cerrado ya la pantalla de inicio,
+	# así que se revisa temprano (nivel boot) y se anota en /run.
+	cat > "$raiz/etc/init.d/lazaro-prueba-plymouth" <<-'EOF'
+	#!/sbin/openrc-run
+	description="Prueba: tema de Plymouth cargado"
+	start() {
+		(
+			t=0
+			while [ $t -lt 30 ]; do
+				ppid="$(pidof plymouthd 2>/dev/null | cut -d' ' -f1)"
+				if [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps"; then
+					echo OK > /run/lazaro-plymouth
+					exit 0
+				fi
+				t=$((t + 1))
+				sleep 1
+			done
+			{
+				echo NO
+				ps -ef | grep -i '[p]lymouth'
+				[ -n "$ppid" ] && grep -o '/[^ ]*plymouth[^ ]*' "/proc/$ppid/maps" | sort -u
+			} > /run/lazaro-plymouth 2>&1
+		) &
+		return 0
+	}
+	EOF
+	chmod 755 "$raiz/etc/init.d/lazaro-prueba-plymouth"
+	mkdir -p "$raiz/etc/runlevels/boot"
+	ln -sf /etc/init.d/lazaro-prueba-plymouth "$raiz/etc/runlevels/boot/lazaro-prueba-plymouth"
+
 	# Solo pruebas: al arrancar el sistema instalado, informar por el
 	# puerto serie y apagar.
 	mkdir -p "$raiz/etc/local.d"
@@ -510,23 +541,26 @@ paso_auto() {
 			echo "LAZARO-HOME-AJENO"
 			echo "$ajenos"
 		fi
-		# La pantalla de arranque (Plymouth) cargó el tema del pulso: a
-		# esta altura plymouthd sigue en pie y tiene cargado el módulo
+		# La pantalla de arranque (Plymouth) cargó el tema del pulso: el
+		# servicio lazaro-prueba-plymouth vio a plymouthd con el módulo
 		# "script", que solo usa el tema de Lázaro (el de Alpine es otro).
 		# Sin escritorio no hay pantalla de arranque ("splash"): plymouthd
 		# puede estar en pie igual, pero sin el tema cargado.
-		ppid="$(pidof plymouthd 2>/dev/null | cut -d' ' -f1)"
-		if ! grep -qw splash /proc/cmdline &&
-			! grep -qs 'plymouth/script.so' "/proc/${ppid:-0}/maps"; then
+		t=0
+		until [ -s /run/lazaro-plymouth ] || [ $t -ge 40 ]; do
+			t=$((t + 1))
+			sleep 1
+		done
+		ply="$(head -n 1 /run/lazaro-plymouth 2>/dev/null)"
+		if ! grep -qw splash /proc/cmdline && [ "$ply" != OK ]; then
 			echo "LAZARO-PLYMOUTH-SIN-SPLASH"
-		elif [ -n "$ppid" ] && grep -qs 'plymouth/script.so' "/proc/$ppid/maps" &&
+		elif grep -qw splash /proc/cmdline && [ "$ply" = OK ] &&
 			grep -qsx 'Theme=lazaro' /etc/plymouth/plymouthd.conf; then
 			echo "LAZARO-PLYMOUTH-OK"
 		else
 			echo "LAZARO-PLYMOUTH-NO"
 			cat /proc/cmdline
-			ps -ef | grep -i '[p]lymouth'
-			[ -n "$ppid" ] && grep -o '/[^ ]*plymouth[^ ]*' "/proc/$ppid/maps" | sort -u
+			cat /run/lazaro-plymouth 2>&1
 			cat /etc/plymouth/plymouthd.conf 2>&1
 			ls /usr/share/plymouth/themes/lazaro 2>&1 | head -n 5
 			echo "--- fin de plymouth ---"
