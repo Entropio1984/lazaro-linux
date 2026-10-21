@@ -53,6 +53,17 @@ idioma_sesion() {
 	else
 		ajenos="$(find /home/prueba ! -user prueba 2>/dev/null | head -n 5)"
 	fi
+	# Lo marcado en "Software adicional" (la prueba marca fastfetch) se
+	# instala con desktop-postinstall.sh: solo se mira cuando ya corrió
+	# (sin internet queda para el primer arranque con red).
+	if grep -q '^LAZARO_EXTRAS_APK=.*fastfetch' /etc/lazaro/postinstall.env 2>/dev/null \
+		&& [ ! -e /etc/runlevels/default/lazaro-primer-arranque ]; then
+		if command -v fastfetch >/dev/null 2>&1; then
+			echo "LAZARO-EXTRAS-OK"
+		else
+			echo "LAZARO-EXTRAS-NO"
+		fi
+	fi
 	if [ -z "$ajenos" ]; then
 		echo "LAZARO-HOME-OK"
 	else

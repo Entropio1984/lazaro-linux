@@ -32,18 +32,19 @@ instalador (Calamares) pregunta, en este orden:
    **Sin escritorio (solo consola)**. Esta última opción deja solo el
    sistema básico en modo texto, sin programas gráficos, navegador ni
    impresoras; sirve para servidores o personas con experiencia.
-3. **Oficina**: **Ninguno** (por defecto, la instalación queda más
-   liviana y puedes agregarla después), **LibreOffice** o
-   **OnlyOffice**. OnlyOffice se instala desde Flathub, así que también
-   instala Flatpak. Las dos necesitan internet.
-4. **Aplicaciones**: **Lo esencial + tienda Flathub** (por defecto:
-   Firefox, impresoras y Flatpak, para que la tienda de aplicaciones
-   ofrezca miles de programas de Flathub), **Solo lo esencial** (sin
-   Flatpak) o **Lo esencial + Flathub + Chrome**.
-5. **Disco** y **usuario**.
+3. **Software adicional**, con casillas. Firefox e impresoras se
+   instalan siempre.
+   - Programas de Alpine (desmarcados): **Fastfetch**, **Btop**,
+     **VLC** y **LibreOffice** (en el idioma elegido).
+   - Aplicaciones Flatpak: **Flatpak + tienda Flathub** (marcada por
+     defecto, para que la tienda ofrezca miles de programas),
+     **OnlyOffice**, **Google Chrome** y **Brave**. Se instalan solas
+     después del primer arranque con internet; marcar una de ellas
+     instala también Flatpak.
+4. **Disco** y **usuario**.
 
 XFCE y "Sin escritorio" se instalan sin internet, desde la propia ISO.
-Los demás escritorios se descargan, igual que la oficina y Flathub.
+Los demás escritorios se descargan, igual que el software adicional.
 
 Con el sistema ya instalado, el arranque también muestra el pulso
 (Plymouth). Por ahora no aparece en dos casos: con GNOME (su pantalla de

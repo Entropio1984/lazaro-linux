@@ -1,0 +1,7 @@
+# Módulo propio de Lázaro Linux: pasa lo marcado en la pantalla
+# "Software adicional" (netinstall) a lazaro-instalar.
+---
+type: "job"
+name: "lazaroextras"
+interface: "python"
+script: "main.py"
