@@ -35,12 +35,16 @@ idioma_sesion() {
 	echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma:-sin-LANG}"
 	# Experimento (no fusionar): el aviso de actualizaciones en la sesión.
 	t=0
-	while [ $t -lt 30 ] && ! ps -o args 2>/dev/null | grep -q '[a]lpine-update-aviso'; do sleep 3; t=$((t + 3)); done
-	echo "--- aviso en sesion: $(ps -o args 2>/dev/null | grep '[a]lpine-update-aviso' | head -n1)"
+	while [ $t -lt 120 ] && ! ps -o args 2>/dev/null | grep -q '[a]lpine-update-aviso'; do sleep 3; t=$((t + 3)); done
+	echo "--- aviso en sesion tras ${t}s: $(ps -o args 2>/dev/null | grep '[a]lpine-update-aviso' | head -n1) / nm-applet: $(ps -o args 2>/dev/null | grep -c '[n]m-applet') / polkit: $(ps -o args 2>/dev/null | grep -c '[p]olkit-gnome')"
 	if ! ps -o args 2>/dev/null | grep -q '[a]lpine-update-aviso'; then
 		pantalla="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | grep -e '^DISPLAY=' -e '^WAYLAND_DISPLAY=' -e '^XAUTHORITY=' -e '^DBUS_SESSION_BUS_ADDRESS=' -e '^XDG_RUNTIME_DIR=' | tr '\n' ' ')"
 		echo "--- entorno: $pantalla"
 		su prueba -s /bin/sh -c "env $pantalla timeout 8 /usr/local/bin/alpine-update-aviso" 2>&1 | tail -n 8 | sed 's/^/  aviso: /'
+		tail -n 30 /home/prueba/.xsession-errors 2>/dev/null | sed 's/^/  xse: /'
+		ls -la /home/prueba/.config/autostart 2>&1 | sed 's/^/  ua: /'
+		grep -rl -i "autostart\|SessionName" /home/prueba/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml 2>/dev/null | sed 's/^/  ses: /'
+		ls /home/prueba/.cache/sessions 2>&1 | sed 's/^/  cache: /'
 	fi
 	# En Sway la barra es waybar: también se mira su idioma.
 	if [ "$(cat "$panel/comm")" = sway ]; then
