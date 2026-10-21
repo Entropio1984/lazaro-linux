@@ -96,8 +96,20 @@ idioma_sesion() {
 			t=$((t + 1))
 			activa="$(cat /sys/class/tty/tty0/active 2>/dev/null)"
 		done
+		# Al frente también puede estar la sesión gráfica ya abierta en
+		# su propia consola: Plasma Wayland entra solo (prueba) en una
+		# consola nueva, aparte del Xorg de SDDM.
+		sesion_al_frente=""
+		for s in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{ print $1 }'); do
+			case "$(loginctl show-session "$s" -p Type -p TTY -p Active 2>/dev/null | sort | tr '\n' ' ')" in
+			"Active=yes TTY=$activa Type=wayland "|"Active=yes TTY=$activa Type=x11 ")
+				sesion_al_frente="$s" ;;
+			esac
+		done
 		if [ "$activa" = "tty$vt" ]; then
 			echo "LAZARO-VT-OK"
+		elif [ -n "$sesion_al_frente" ]; then
+			echo "LAZARO-VT-OK sesion grafica $sesion_al_frente en $activa"
 		else
 			echo "LAZARO-VT-ESCONDIDA al frente $activa, pantalla de inicio en tty$vt"
 			# Para entender el fallo: todos los Xorg, las sesiones y lo
