@@ -211,6 +211,22 @@ paso_base() {
 	log "Sistema base instalado."
 }
 
+# setup-desktop agrega la pantalla de inicio y sus servicios con
+# "rc-update add" sin decir en qué nivel. Dentro del chroot no hay nivel
+# en curso y OpenRC los pone en sysinit: la pantalla de inicio arrancaba
+# entonces al principio del encendido y cerraba la animación del pulso.
+# Se pasan al nivel default, donde van (también si quedaron de una
+# instalación anterior en la misma partición).
+servicios_a_default() {
+	for svc in dbus elogind lightdm sddm gdm greetd; do
+		[ -L "$1/etc/runlevels/sysinit/$svc" ] || continue
+		rm -f "$1/etc/runlevels/sysinit/$svc"
+		mkdir -p "$1/etc/runlevels/default"
+		ln -sf "/etc/init.d/$svc" "$1/etc/runlevels/default/$svc"
+		log "Servicio $svc: del nivel sysinit al default."
+	done
+}
+
 # --- Paso 2: escritorio ---------------------------------------------------
 paso_escritorio() {
 	raiz="${1%/}"
@@ -226,6 +242,7 @@ paso_escritorio() {
 		for dm in lightdm sddm gdm greetd; do
 			rm -f "$raiz"/etc/runlevels/*/"$dm"
 		done
+		servicios_a_default "$raiz"
 		log "Sin escritorio: el sistema arrancará en modo texto."
 		return 0
 	fi
@@ -233,6 +250,7 @@ paso_escritorio() {
 	if ! en_destino "$raiz" setup-desktop "$de" </dev/null >>"$LOG" 2>&1; then
 		die "setup-desktop $de falló (detalles en $LOG)"
 	fi
+	servicios_a_default "$raiz"
 	log "Escritorio '$de' instalado."
 }
 
