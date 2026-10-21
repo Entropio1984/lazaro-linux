@@ -59,6 +59,10 @@ idioma_sesion() {
 		echo "LAZARO-HOME-AJENO"
 		echo "$ajenos"
 	fi
+	# La pantalla de inicio y sus servicios van en el nivel default: en
+	# sysinit arrancan al principio y cierran la animación del pulso.
+	temprano="$(ls /etc/runlevels/sysinit 2>/dev/null | grep -x -e dbus -e elogind -e lightdm -e sddm -e gdm -e greetd | tr '\n' ' ')"
+	[ -z "$temprano" ] || echo "LAZARO-SERVICIOS-EN-SYSINIT $temprano"
 	# Cuánto pesan las traducciones (paquetes *-lang): descarga e
 	# instalado, en MiB, y las 10 más grandes.
 	awk -F: '/^P:/ { p = $2 } /^S:/ { s[p] = $2 } /^I:/ { i[p] = $2 }

@@ -233,6 +233,18 @@ paso_escritorio() {
 	if ! en_destino "$raiz" setup-desktop "$de" </dev/null >>"$LOG" 2>&1; then
 		die "setup-desktop $de falló (detalles en $LOG)"
 	fi
+	# setup-desktop agrega la pantalla de inicio y sus servicios con
+	# "rc-update add" sin decir en qué nivel. Dentro del chroot no hay
+	# nivel en curso y OpenRC los pone en sysinit: la pantalla de inicio
+	# arrancaba entonces al principio del encendido y cerraba la
+	# animación del pulso. Se pasan al nivel default, donde van.
+	for svc in dbus elogind lightdm sddm gdm greetd; do
+		[ -L "$raiz/etc/runlevels/sysinit/$svc" ] || continue
+		rm -f "$raiz/etc/runlevels/sysinit/$svc"
+		mkdir -p "$raiz/etc/runlevels/default"
+		ln -sf "/etc/init.d/$svc" "$raiz/etc/runlevels/default/$svc"
+		log "Servicio $svc: del nivel sysinit al default."
+	done
 	log "Escritorio '$de' instalado."
 }
 

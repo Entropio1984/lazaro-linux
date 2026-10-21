@@ -260,7 +260,11 @@ prueba_instalar() {
 		if [ -f "$RES/$nombre-instalado.png" ]; then
 			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)" || tam=""
 		fi
-		if grep -q LAZARO-PLYMOUTH-NO "$serie2"; then
+		if grep -q LAZARO-SERVICIOS-EN-SYSINIT "$serie2"; then
+			echo "FALLO: hay servicios del escritorio en el nivel sysinit (arrancan antes de tiempo y cierran el pulso)." >&2
+			grep LAZARO-SERVICIOS-EN-SYSINIT "$serie2" >&2
+			ok=1
+		elif grep -q LAZARO-PLYMOUTH-NO "$serie2"; then
 			echo "FALLO: la pantalla de arranque (Plymouth) no cargó el tema del pulso." >&2
 			tramo "$serie2" LAZARO-PLYMOUTH-NO '--- fin de plymouth'
 			ok=1
