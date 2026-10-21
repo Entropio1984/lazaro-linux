@@ -23,7 +23,11 @@ t=$t $(cut -d' ' -f1 /proc/uptime)s plymouthd=${ppid:-no} drm=$(ls /dev/dri 2>/d
 			ps -ef | grep -i '[p]lymouth'
 			dmesg | grep -i -e drm -e fb0 -e plymouth -e segfault -e trap | tail -n 15
 			echo "--- llamadas a plymouth ---"
-			grep -v -e ' --ping' -e ' message ' -e ' update ' /run/lazaro-plymouth-llamadas 2>&1 | head -n 30
+			grep -v -e ' --ping' -e ' message ' -e ' update ' /run/lazaro-plymouth-llamadas 2>&1 | head -n 60
+			echo "--- niveles ---"
+			ls -l /etc/runlevels/sysinit /etc/runlevels/boot 2>&1
+			grep -H -e '^rc_' -e 'need\|use\|after\|before\|provide' /etc/conf.d/lightdm /etc/init.d/lightdm 2>&1 | head -n 20
+			grep -v '^#' /etc/rc.conf | grep . | head -n 20
 			echo "--- plymouth-debug.log (antes de on_quit) ---"
 			grep -n -B 25 'on_quit' /var/log/plymouth-debug.log 2>&1 | head -n 40
 			echo "--- rc.log ---"
