@@ -64,6 +64,10 @@ idioma_sesion() {
 			echo "LAZARO-EXTRAS-NO"
 		fi
 	fi
+	# Experimento (no fusionar): aviso de actualizaciones.
+	echo "--- aviso: $(ls /etc/periodic/hourly/ 2>/dev/null | tr '\n' ' ') autostart=$(ls /etc/xdg/autostart/alpine-update-aviso.desktop 2>/dev/null) proc=$(ps -o args 2>/dev/null | grep -c '[a]lpine-update-aviso') crond=$(rc-service crond status 2>&1 | tail -n1)"
+	sh /etc/periodic/hourly/alpine-update-revisar 2>&1 | tail -n 3
+	echo "--- pendientes=$(cat /var/lib/alpine-update/pendientes 2>/dev/null)"
 	if [ -z "$ajenos" ]; then
 		echo "LAZARO-HOME-OK"
 	else
