@@ -22,8 +22,10 @@ t=$t $(cut -d' ' -f1 /proc/uptime)s plymouthd=${ppid:-no} drm=$(ls /dev/dri 2>/d
 			echo "$traza"
 			ps -ef | grep -i '[p]lymouth'
 			dmesg | grep -i -e drm -e fb0 -e plymouth -e segfault -e trap | tail -n 15
-			echo "--- plymouth-debug.log ---"
-			tail -n 60 /var/log/plymouth-debug.log 2>&1
+			echo "--- llamadas a plymouth ---"
+			grep -v -e ' --ping' -e ' message ' -e ' update ' /run/lazaro-plymouth-llamadas 2>&1 | head -n 30
+			echo "--- plymouth-debug.log (antes de on_quit) ---"
+			grep -n -B 25 'on_quit' /var/log/plymouth-debug.log 2>&1 | head -n 40
 			echo "--- rc.log ---"
 			tail -n 40 /var/log/rc.log 2>&1
 		} > /run/lazaro-plymouth 2>&1

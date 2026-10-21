@@ -486,6 +486,18 @@ auto_prueba_arranque() {
 	mkdir -p "$raiz/etc/local.d"
 	install -m 755 "$PRUEBAS/zz-lazaro-prueba.start" "$raiz/etc/local.d/zz-lazaro-prueba.start"
 	ln -sf /etc/init.d/local "$raiz/etc/runlevels/default/local"
+	# EXPERIMENTO: anotar quién llama a "plymouth" y con qué.
+	if [ -x "$raiz/usr/bin/plymouth" ] && [ ! -e "$raiz/usr/bin/plymouth.real" ]; then
+		mv "$raiz/usr/bin/plymouth" "$raiz/usr/bin/plymouth.real"
+		cat > "$raiz/usr/bin/plymouth" <<'SHIM'
+#!/bin/sh
+{
+	echo "$(cut -d' ' -f1 /proc/uptime) plymouth $* | padre=$PPID $(tr '\0' ' ' < /proc/$PPID/cmdline 2>/dev/null) | abuelo=$(awk '/^PPid:/ {print $2}' /proc/$PPID/status 2>/dev/null) $(tr '\0' ' ' < /proc/$(awk '/^PPid:/ {print $2}' /proc/$PPID/status 2>/dev/null)/cmdline 2>/dev/null) | rc=$(cat /run/openrc/softlevel 2>/dev/null) svc=${RC_SVCNAME:-}"
+} >> /run/lazaro-plymouth-llamadas 2>/dev/null
+exec /usr/bin/plymouth.real "$@"
+SHIM
+		chmod 755 "$raiz/usr/bin/plymouth"
+	fi
 }
 
 paso_auto() {
