@@ -43,6 +43,11 @@ idioma_sesion() {
 		su prueba -s /bin/sh -c "env $pantalla timeout 8 /usr/local/bin/alpine-update-aviso" 2>&1 | tail -n 8 | sed 's/^/  aviso: /'
 		tail -n 30 /home/prueba/.xsession-errors 2>/dev/null | sed 's/^/  xse: /'
 		ls -la /home/prueba/.config/autostart 2>&1 | sed 's/^/  ua: /'
+		sed 's/^/  salida: /' /tmp/aviso-salida.log 2>&1 | grep -v Deprecat | tail -n 20
+		dmesg 2>/dev/null | grep -iE 'oom|killed|segfault|traps' | tail -n 10 | sed 's/^/  dmesg: /'
+		grep -iE 'oom|killed|segfault' /var/log/messages 2>/dev/null | tail -n 10 | sed 's/^/  msg: /'
+		free -m | sed 's/^/  mem: /'
+		ps -o pid,args 2>/dev/null | grep -E '[n]m-applet|[x]fce4-|[p]olkit|[a]viso' | sed 's/^/  ps: /'
 		grep -rl -i "autostart\|SessionName" /home/prueba/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml 2>/dev/null | sed 's/^/  ses: /'
 		ls /home/prueba/.cache/sessions 2>&1 | sed 's/^/  cache: /'
 	fi

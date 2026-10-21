@@ -494,6 +494,18 @@ auto_prueba_resolucion() { # ESCRITORIO
 		"$raiz/etc/xdg/autostart/pantalla-inicio.desktop"
 	# Al entrar, la sesión del usuario elige 800x600.
 	mkdir -p "$raiz/usr/local/bin"
+	# Experimento (no fusionar): anotar cuándo y cómo termina el aviso.
+	if [ -f "$raiz/etc/xdg/autostart/alpine-update-aviso.desktop" ]; then
+		cat > "$raiz/usr/local/bin/aviso-envoltura" <<-'EOF'
+		#!/bin/sh
+		echo "empieza $(date +%T) DISPLAY=$DISPLAY" >> /tmp/aviso-salida.log
+		/usr/local/bin/alpine-update-aviso >> /tmp/aviso-salida.log 2>&1
+		echo "salio=$? $(date +%T)" >> /tmp/aviso-salida.log
+		EOF
+		chmod 755 "$raiz/usr/local/bin/aviso-envoltura"
+		sed -i 's|^Exec=.*|Exec=/usr/local/bin/aviso-envoltura|' \
+			"$raiz/etc/xdg/autostart/alpine-update-aviso.desktop"
+	fi
 	install -m 755 "$PRUEBAS/lazaro-prueba-800x600" "$raiz/usr/local/bin/lazaro-prueba-800x600"
 	install -m 644 "$PRUEBAS/zz-lazaro-prueba-resolucion.desktop" \
 		"$raiz/etc/xdg/autostart/zz-lazaro-prueba-resolucion.desktop"
