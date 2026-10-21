@@ -76,10 +76,9 @@ jobs:
       fail-fast: false
       matrix:
         alpine: [estable]
-        vuelta: [1, 2, 3]
+        vuelta: [1, 2, 3, 4, 5, 6]
         prueba:
           - instalar bios mate con-red
-          - instalar bios xfce con-red
     steps:
       - uses: actions/checkout@v5
 
