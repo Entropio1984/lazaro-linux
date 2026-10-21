@@ -100,6 +100,15 @@ idioma_sesion() {
 			echo "LAZARO-VT-OK"
 		else
 			echo "LAZARO-VT-ESCONDIDA al frente $activa, pantalla de inicio en tty$vt"
+			# Para entender el fallo: todos los Xorg, las sesiones y lo
+			# que la pantalla de inicio dejó en el registro.
+			for c in /proc/[0-9]*/cmdline; do
+				case "$(tr '\0' ' ' < "$c")" in
+				*Xorg*) echo "  xorg ${c#/proc/} $(tr '\0' ' ' < "$c")" ;;
+				esac
+			done 2>/dev/null
+			loginctl list-sessions --no-legend 2>/dev/null | sed 's/^/  sesion /'
+			grep -i -e sddm -e lightdm /var/log/messages 2>/dev/null | tail -n 40 | sed 's/^/  log /'
 		fi
 	elif rc-service --exists lightdm || rc-service --exists sddm; then
 		echo "LAZARO-VT-SIN-XORG"
