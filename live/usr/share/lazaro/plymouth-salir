@@ -26,33 +26,22 @@ start() {
 	ebegin "Cerrando la pantalla de arranque"
 	plymouth quit
 	# Al cerrarse, Plymouth vuelve a la consola de texto (tty1) y la
-	# pantalla de inicio, que arranca justo después en su propia
-	# consola, puede quedar escondida detrás (con SDDM pasa siempre). Se
-	# espera a que Plymouth termine y, en segundo plano, a que aparezca
-	# la pantalla de inicio, para ponerla al frente (con chvt, como
-	# Ctrl+Alt+F7) hasta que se quede ahí unos segundos.
+	# pantalla de inicio, que corre en su propia consola, puede quedar
+	# escondida detrás. Se espera a que Plymouth termine y se pasa a esa
+	# consola (con chvt, como Ctrl+Alt+F7): la de su Xorg si ya arrancó,
+	# o la 7, que es donde arrancan LightDM y SDDM (lazaro-instalar le
+	# fija la 7 a SDDM). Cambiar de consola antes de que arranque evita
+	# moverla mientras abre la sesión.
 	t=0
 	while [ $t -lt 20 ] && plymouth --ping 2>/dev/null; do
 		sleep 0.5
 		t=$((t + 1))
 	done
-	(
-		t=0
-		quieta=0
-		while [ $t -lt 60 ] && [ $quieta -lt 6 ]; do
-			vt="$(consola_pantalla_inicio)"
-			if [ -n "$vt" ]; then
-				if [ "$(cat /sys/class/tty/tty0/active 2>/dev/null)" = "tty$vt" ]; then
-					quieta=$((quieta + 1))
-				else
-					quieta=0
-					chvt "$vt"
-				fi
-			fi
-			sleep 0.5
-			t=$((t + 1))
-		done
-	) </dev/null >/dev/null 2>&1 &
+	vt="$(consola_pantalla_inicio)"
+	if [ -z "$vt" ] && { [ -e /etc/runlevels/default/lightdm ] || [ -e /etc/runlevels/default/sddm ]; }; then
+		vt=7
+	fi
+	[ -n "$vt" ] && chvt "$vt"
 	# Esperar a que el puesto de trabajo vuelva a estar listo para
 	# gráficos: si la pantalla de inicio arranca antes, puede creer que
 	# no hay pantalla.

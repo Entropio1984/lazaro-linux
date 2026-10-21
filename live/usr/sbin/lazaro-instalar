@@ -251,6 +251,13 @@ paso_escritorio() {
 		die "setup-desktop $de falló (detalles en $LOG)"
 	fi
 	servicios_a_default "$raiz"
+	# SDDM elige la primera consola libre (la 2) y al cerrarse Plymouth
+	# queda detrás de tty1. Con la 7, como LightDM, plymouth-salir pasa a
+	# ella antes de que arranque.
+	if [ -e "$raiz/etc/init.d/sddm" ]; then
+		mkdir -p "$raiz/etc/sddm.conf.d"
+		printf '[X11]\nMinimumVT=7\n' > "$raiz/etc/sddm.conf.d/10-lazaro-consola.conf"
+	fi
 	log "Escritorio '$de' instalado."
 }
 
