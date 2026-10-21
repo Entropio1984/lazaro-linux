@@ -9,6 +9,17 @@ set +a
 rc=0
 /bin/sh /usr/libexec/lazaro/desktop-postinstall.sh </dev/null || rc=$?
 
+# Programas de Alpine marcados en "Software adicional" (fastfetch, btop,
+# vlc). apk puede quedarse esperando una descarga detenida: cada intento
+# tiene un límite de 15 minutos y se hace uno más si falla.
+if [ -n "${LAZARO_EXTRAS_APK:-}" ]; then
+	echo "Instalando programas adicionales: $LAZARO_EXTRAS_APK"
+	# shellcheck disable=SC2086
+	timeout 900 apk add $LAZARO_EXTRAS_APK \
+		|| timeout 900 apk add $LAZARO_EXTRAS_APK \
+		|| { echo "Aviso: no se pudieron instalar: $LAZARO_EXTRAS_APK"; rc=1; }
+fi
+
 # El script corre como root antes de que el usuario inicie sesión por
 # primera vez: lo que cree en su carpeta personal (por ejemplo ~/.config)
 # quedaría de root y Plasma no podría guardar su configuración

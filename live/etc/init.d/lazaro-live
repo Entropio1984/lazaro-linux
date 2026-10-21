@@ -64,6 +64,16 @@ revisar_discos() {
 	else
 		serie "LAZARO-DISCOS-FALLO"
 	fi
+	# Todas las pantallas y pasos de settings.conf tienen que cargar (por
+	# ejemplo netinstall y el módulo propio lazaroextras).
+	if [ -n "$registro" ] && grep -q -e 'not found in module search paths' \
+		-e 'exists but not loaded' -e 'cannot be created from descriptor' \
+		-e 'loading FAILED' "$registro"; then
+		serie "LAZARO-MODULOS-FALLO"
+		serie -- grep -e 'not found in module' -e 'not loaded' -e 'cannot be created' -e 'loading FAILED' "$registro"
+	elif [ -n "$registro" ]; then
+		serie "LAZARO-MODULOS-OK"
+	fi
 	serie -- lsblk --nodeps --paths --json --output type,name
 	[ -z "$registro" ] || serie -- grep -A 4 'LIST OF DETECTED DEVICES' "$registro"
 	return 0

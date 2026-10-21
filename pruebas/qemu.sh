@@ -132,7 +132,11 @@ prueba_live() {
 		ok=1
 	elif esperar "$serie" "$pid" 180 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
 		captura "$mon" "$RES/$nombre-calamares"
-		if esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
+		if ! esperar "$serie" "$pid" 30 LAZARO-MODULOS-OK LAZARO-MODULOS-FALLO; then
+			echo "FALLO: Calamares no pudo cargar alguna de sus pantallas o pasos ($MODO)." >&2
+			sed -n '/LAZARO-MODULOS-FALLO/,+6p' "$serie" >&2
+			ok=1
+		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 		else
 			echo "FALLO: el agente del portapapeles compartido (spice-vdagent) no corre en la sesión live ($MODO)." >&2
@@ -281,6 +285,12 @@ prueba_instalar() {
 			ok=1
 		elif grep -q LAZARO-VT-SIN-XORG "$serie2"; then
 			echo "FALLO: LightDM o SDDM está instalado pero no se encontró su pantalla de inicio (Xorg) para ver si está al frente." >&2
+			ok=1
+		elif grep -q LAZARO-EXTRAS-NO "$serie2"; then
+			echo "FALLO: no se instaló el programa adicional marcado (fastfetch)." >&2
+			ok=1
+		elif [ "$red" = con-red ] && ! grep -q LAZARO-EXTRAS-OK "$serie2"; then
+			echo "FALLO: con internet no se confirmó la instalación del programa adicional marcado (fastfetch)." >&2
 			ok=1
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2

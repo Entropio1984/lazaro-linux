@@ -14,9 +14,10 @@
 # Uso:
 #   lazaro-instalar base RAIZ ESCRITORIO
 #   lazaro-instalar escritorio RAIZ ESCRITORIO
-#   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS [OFICINA]]
-#     EXTRAS: flatpak (por defecto), esencial o flatpak-chrome
-#     OFICINA: ninguna (por defecto), libreoffice u onlyoffice (activa Flatpak)
+#   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
+#     EXTRAS: lo marcado en "Software adicional", separado por espacios,
+#     detrás de "base": fastfetch btop vlc libreoffice (Alpine) y
+#     flatpak onlyoffice chrome brave (Flathub). Sin EXTRAS: "base flatpak".
 #   lazaro-instalar auto DISCO ESCRITORIO     (¡BORRA EL DISCO COMPLETO!)
 #     Solo pruebas: además deja en el disco las comprobaciones de
 #     /usr/share/lazaro/pruebas, que informan por el puerto serie.
@@ -262,25 +263,26 @@ paso_ajustes() {
 	teclado="${4:-latam}"
 	variante="${5:-}"
 	zona="${6:-America/Bogota}"
-	extras="${7:-flatpak}"
-	oficina="${8:-ninguna}"
+	extras="${7:-base flatpak}"
 	opt_flatpak=no
 	opt_chrome=no
-	case "$extras" in
-		esencial) ;;
-		flatpak) opt_flatpak=yes ;;
-		flatpak-chrome) opt_flatpak=yes; opt_chrome=yes ;;
-		*) log "Aviso: aplicaciones adicionales desconocidas '$extras'; se instala lo esencial con Flatpak."; opt_flatpak=yes ;;
-	esac
+	opt_brave=no
 	opt_libreoffice=no
 	opt_onlyoffice=no
-	case "$oficina" in
-		ninguna) ;;
-		libreoffice) opt_libreoffice=yes ;;
-		# OnlyOffice solo existe en Flathub: necesita Flatpak.
-		onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
-		*) log "Aviso: programa de oficina desconocido '$oficina'; no se instala ninguno." ;;
-	esac
+	extras_apk=""
+	for e in $extras; do
+		case "$e" in
+			base) ;;
+			fastfetch|btop|vlc) extras_apk="$extras_apk $e" ;;
+			libreoffice) opt_libreoffice=yes ;;
+			flatpak) opt_flatpak=yes ;;
+			# Las aplicaciones de Flathub necesitan Flatpak.
+			onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
+			chrome) opt_chrome=yes; opt_flatpak=yes ;;
+			brave) opt_brave=yes; opt_flatpak=yes ;;
+			*) log "Aviso: programa adicional desconocido '$e'; se omite." ;;
+		esac
+	done
 	opt_firefox=yes
 	opt_cups=yes
 	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
@@ -288,10 +290,12 @@ paso_ajustes() {
 		# ni impresoras.
 		opt_flatpak=no
 		opt_chrome=no
+		opt_brave=no
 		opt_libreoffice=no
 		opt_onlyoffice=no
 		opt_firefox=no
 		opt_cups=no
+		extras_apk="$(echo "$extras_apk" | tr ' ' '\n' | grep -vx vlc | tr '\n' ' ')"
 	fi
 
 	if [ -e "$raiz/usr/share/zoneinfo/$zona" ]; then
@@ -352,7 +356,9 @@ paso_ajustes() {
 	OPT_FLATPAK=$opt_flatpak
 	OPT_ONLYOFFICE=$opt_onlyoffice
 	OPT_CHROME=$opt_chrome
+	OPT_BRAVE=$opt_brave
 	OPT_UPDATE_SHORTCUT=yes
+	LAZARO_EXTRAS_APK="$(echo $extras_apk)"
 	DOAS_USER=$usuario
 	EOF
 
@@ -528,7 +534,9 @@ paso_auto() {
 		done
 	) >&2 &
 	vigia=$!
-	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota
+	# Fastfetch, el programa adicional más liviano: la prueba comprueba
+	# que lo marcado en "Software adicional" se instala.
+	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch"
 	kill "$vigia" 2>/dev/null || true
 	auto_revisar_flatpak
 	auto_prueba_resolucion "$de"
@@ -545,7 +553,7 @@ orden="${1:-}"
 case "$orden" in
 	base)       [ $# -eq 2 ] || die "uso: lazaro-instalar base RAIZ ESCRITORIO"; paso_base "$@" ;;
 	escritorio) [ $# -eq 2 ] || die "uso: lazaro-instalar escritorio RAIZ ESCRITORIO"; paso_escritorio "$@" ;;
-	ajustes)    [ $# -ge 2 ] || die "uso: lazaro-instalar ajustes RAIZ USUARIO [IDIOMA TECLADO VARIANTE ZONA EXTRAS OFICINA]"; paso_ajustes "$@" ;;
+	ajustes)    [ $# -ge 2 ] || die "uso: lazaro-instalar ajustes RAIZ USUARIO [IDIOMA TECLADO VARIANTE ZONA EXTRAS]"; paso_ajustes "$@" ;;
 	auto)       [ $# -eq 2 ] || die "uso: lazaro-instalar auto DISCO ESCRITORIO"; paso_auto "$@" ;;
 	*)
 		sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2
