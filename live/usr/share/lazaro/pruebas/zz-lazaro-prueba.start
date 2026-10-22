@@ -48,6 +48,12 @@ idioma_sesion() {
 		grep -iE 'oom|killed|segfault' /var/log/messages 2>/dev/null | tail -n 10 | sed 's/^/  msg: /'
 		free -m | sed 's/^/  mem: /'
 		ps -o pid,args 2>/dev/null | grep -E '[n]m-applet|[x]fce4-|[p]olkit|[a]viso' | sed 's/^/  ps: /'
+		echo "  ps-total: $(ps -o pid 2>/dev/null | wc -l) proc-total: $(ls -d /proc/[0-9]* | wc -l) panel=$panel"
+		ps -o pid,user,args 2>&1 | grep -w "${panel#/proc/}" | sed 's/^/  ps-panel: /'
+		for c in /proc/[0-9]*/cmdline; do
+			l="$(tr '\0' ' ' < "$c" 2>/dev/null)"
+			case "$l" in *alpine-update-aviso*|*nm-applet*|*polkit*) echo "  proc: ${c%/cmdline} $l" ;; esac
+		done
 		grep -rl -i "autostart\|SessionName" /home/prueba/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml 2>/dev/null | sed 's/^/  ses: /'
 		ls /home/prueba/.cache/sessions 2>&1 | sed 's/^/  cache: /'
 	fi
