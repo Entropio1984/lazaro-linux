@@ -365,7 +365,12 @@ paso_ajustes() {
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
 	if hay_red; then
 		log "Ejecutando desktop-postinstall.sh (descarga paquetes, puede tardar)..."
-		if en_destino "$raiz" /usr/libexec/lazaro/lazaro-postinstalacion \
+		# Experimento (no fusionar): el script corre desde la sesión live
+		# con --destino (él mismo monta y entra al sistema nuevo).
+		args="$(LAZARO_ENV="$raiz/etc/lazaro/postinstall.env" sh "$DATOS/lazaro-postinstalacion" --argumentos)"
+		log "desktop-postinstall.sh --destino $raiz $args"
+		# shellcheck disable=SC2086
+		if sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
 			</dev/null >>"$LOG" 2>&1; then
 			log "desktop-postinstall.sh terminó bien."
 		else

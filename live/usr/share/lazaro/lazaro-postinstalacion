@@ -1,31 +1,27 @@
 #!/bin/sh
-# Ejecuta desktop-postinstall.sh sin preguntas, con las opciones que dejó
-# el instalador en /etc/lazaro/postinstall.env. Corre dentro del sistema
-# instalado: durante la instalación (si hay internet) o en el primer
-# arranque (servicio lazaro-primer-arranque).
-set -a
-. /etc/lazaro/postinstall.env
-set +a
-rc=0
-/bin/sh /usr/libexec/lazaro/desktop-postinstall.sh </dev/null || rc=$?
-
-# Programas de Alpine marcados en "Software adicional" (fastfetch, btop,
-# vlc). apk puede quedarse esperando una descarga detenida: cada intento
-# tiene un límite de 15 minutos y se hace uno más si falla.
-if [ -n "${LAZARO_EXTRAS_APK:-}" ]; then
-	echo "Instalando programas adicionales: $LAZARO_EXTRAS_APK"
-	# shellcheck disable=SC2086
-	timeout 900 apk add $LAZARO_EXTRAS_APK \
-		|| timeout 900 apk add $LAZARO_EXTRAS_APK \
-		|| { echo "Aviso: no se pudieron instalar: $LAZARO_EXTRAS_APK"; rc=1; }
+# Experimento (no fusionar): ejecuta desktop-postinstall.sh con OPCIONES
+# (--minimo --con ...) en vez de variables OPT_*. Con --argumentos solo
+# imprime las opciones (lazaro-instalar las usa con --destino).
+env_file="${LAZARO_ENV:-/etc/lazaro/postinstall.env}"
+# Sin "set -a": las variables NO pasan al script por el entorno.
+. "$env_file"
+con=""
+[ "$OPT_CUPS" = yes ] && con="$con,impresoras"
+[ "$OPT_LIBREOFFICE" = yes ] && con="$con,libreoffice"
+[ "$OPT_FIREFOX" = yes ] && con="$con,firefox"
+[ "$OPT_FLATPAK" = yes ] && con="$con,flatpak"
+[ "$OPT_ONLYOFFICE" = yes ] && con="$con,onlyoffice"
+[ "$OPT_CHROME" = yes ] && con="$con,chrome"
+[ "$OPT_BRAVE" = yes ] && con="$con,brave"
+[ "$OPT_UPDATE_SHORTCUT" = yes ] && con="$con,actualizaciones"
+for e in ${LAZARO_EXTRAS_APK:-}; do con="$con,$e"; done
+args="--minimo --idioma $OPT_LANG --usuario $DOAS_USER --nvidia $OPT_NVIDIA_MODE"
+if [ "$OPT_KEYBOARD" = yes ]; then args="$args --teclado latam"; else args="$args --teclado no"; fi
+[ -z "$con" ] || args="$args --con ${con#,}"
+if [ "${1:-}" = "--argumentos" ]; then
+	echo "$args"
+	exit 0
 fi
-
-# El script corre como root antes de que el usuario inicie sesión por
-# primera vez: lo que cree en su carpeta personal (por ejemplo ~/.config)
-# quedaría de root y Plasma no podría guardar su configuración
-# ("kioworkerrc not writable"). La carpeta es nueva, toda es del usuario.
-casa="$(getent passwd "$DOAS_USER" 2>/dev/null | cut -d: -f6)"
-if [ -n "$DOAS_USER" ] && [ -n "$casa" ] && [ "$casa" != / ] && [ -d "$casa" ]; then
-	chown -R "$DOAS_USER:$(id -gn "$DOAS_USER")" "$casa"
-fi
-exit $rc
+echo "desktop-postinstall.sh $args"
+# shellcheck disable=SC2086
+exec /bin/sh /usr/libexec/lazaro/desktop-postinstall.sh $args </dev/null
