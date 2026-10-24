@@ -397,6 +397,12 @@ idioma_sesion() {
 	done
 	# Idioma de la sesión (si no se miró antes de cerrarla).
 	[ -n "$reiniciar" ] || idioma_sesion
+	# Experimento (no fusionar): avance en pantalla del script.
+	for f in /var/log/lazaro-instalar.log /var/log/lazaro-primer-arranque.log; do
+		[ -e "$f" ] || continue
+		echo "LAZARO-AVANCE $f paquetes=$(grep -c ') Instalando ' "$f") sigue=$(grep -c 'sigue trabajando' "$f") flathub=$(grep -c 'Descargando de Flathub' "$f")"
+		grep -E ') (Instalando|Quitando) |sigue trabajando|Flathub' "$f" | head -n 8
+	done
 	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 } > /dev/ttyS0 2>&1
 if [ -n "$reiniciar" ]; then
