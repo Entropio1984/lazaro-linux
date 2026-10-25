@@ -369,6 +369,20 @@ programar_primer_arranque() {
 		"$1/etc/init.d/lazaro-primer-arranque"
 	mkdir -p "$1/etc/runlevels/default"
 	ln -sf /etc/init.d/lazaro-primer-arranque "$1/etc/runlevels/default/lazaro-primer-arranque"
+	avisar_primer_arranque
+}
+
+# Calamares termina igual con o sin la configuración final, así que se
+# avisa aparte de que queda para el primer arranque. La ventana queda
+# abierta junto a "Terminado" (no detiene la instalación). Sin pantalla
+# (pruebas automáticas) no se muestra nada.
+avisar_primer_arranque() {
+	[ -n "${DISPLAY:-}" ] && command -v zenity >/dev/null 2>&1 || return 0
+	setsid zenity --info --title="Lázaro Linux" --width=460 \
+		--text="La instalación terminó, pero falta la configuración final del escritorio (barra, pantalla de inicio y programas elegidos) porque no hubo internet.
+
+Al encender el equipo por primera vez, conéctate a internet y espera unos minutos: se completa sola y luego aparece la pantalla de inicio, sin necesidad de reiniciar otra vez." \
+		</dev/null >/dev/null 2>&1 &
 }
 
 # --- Instalación desatendida (pruebas automáticas) -----------------------
