@@ -53,9 +53,9 @@ hay_red() {
 		"$ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/APKINDEX.tar.gz" 2>/dev/null
 }
 
-# Como hay_red, pero tolera un corte breve: espera a NetworkManager y
-# prueba hasta 4 veces (unos 45 s como mucho). Si aun así no llega al
-# servidor, anota en el registro el motivo que da wget.
+# Como hay_red, pero tolera un corte breve (pasos base y ajustes): espera
+# a NetworkManager y prueba hasta 4 veces (unos 45 s como mucho). Si aun
+# así no llega al servidor, anota en el registro el motivo que da wget.
 esperar_red() {
 	command -v nm-online >/dev/null 2>&1 && nm-online -s -q -t 10 || true
 	for _intento in 1 2 3 4; do
@@ -343,7 +343,7 @@ paso_ajustes() {
 	echo "$args" > "$raiz/etc/lazaro/postinstall.args"
 
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
-	if hay_red; then
+	if esperar_red; then
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
 		log "Ejecutando desktop-postinstall.sh --destino $raiz $args"
