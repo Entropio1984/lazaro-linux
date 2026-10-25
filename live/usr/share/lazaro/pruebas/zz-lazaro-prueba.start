@@ -6,6 +6,7 @@
 _n=0
 while [ -e /etc/runlevels/default/lazaro-primer-arranque ] && [ $_n -lt 220 ]; do sleep 5; _n=$((_n+1)); done
 echo "LAZARO-APLAZADO-ESPERA $((_n*5))s" > /dev/ttyS0
+grep -q "terminando de configurarse" /etc/issue && echo "LAZARO-ISSUE-SIGUE" > /dev/ttyS0 || echo "LAZARO-ISSUE-RESTAURADO" > /dev/ttyS0
 sleep 15
 for _dm in lightdm sddm gdm greetd; do
 	[ -e /etc/runlevels/default/$_dm ] || continue
