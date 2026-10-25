@@ -376,6 +376,8 @@ idioma_sesion() {
 					done
 					cat /etc/sway/config.d/*.conf 2>/dev/null
 					# Lista de atajos del botón de la barra, en español.
+					[ -x /usr/local/bin/sway-apagar ] && grep -q sway-apagar /home/prueba/.config/waybar/config.jsonc \
+						&& echo "LAZARO-SWAY-APAGADO-OK"
 					LANG=es_CO.UTF-8 HOME=/home/prueba sway-atajos --lista 2>&1 \
 						| grep -q 'Super+F1  →  Ver esta lista de atajos' \
 						&& echo "LAZARO-SWAY-CORRE atajos"
