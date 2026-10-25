@@ -397,6 +397,11 @@ idioma_sesion() {
 	done
 	# Idioma de la sesión (si no se miró antes de cerrarla).
 	[ -n "$reiniciar" ] || idioma_sesion
+	# Experimento (no fusionar): plugin de volumen en el panel de XFCE.
+	if [ -f /etc/xdg/xfce4/panel/default.xml ]; then
+		grep -c 'value="pulseaudio"' /etc/xdg/xfce4/panel/default.xml | sed 's/^/LAZARO-VOLUMEN-XML /'
+		if grep -qs pulseaudio-plugin /proc/[0-9]*/cmdline; then echo "LAZARO-VOLUMEN-PANEL-OK"; else echo "LAZARO-VOLUMEN-PANEL-NO"; fi
+	fi
 	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 } > /dev/ttyS0 2>&1
 if [ -n "$reiniciar" ]; then
