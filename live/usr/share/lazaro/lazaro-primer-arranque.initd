@@ -21,6 +21,12 @@ start() {
 			if wget -q --spider -T 8 "$indice"; then
 				if /usr/libexec/lazaro/lazaro-postinstalacion; then
 					rc-update del lazaro-primer-arranque default
+					# Fuera el aviso de la consola (ver lazaro-instalar).
+					for f in issue motd; do
+						[ -e "/etc/lazaro/$f.original" ] || continue
+						cp -p "/etc/lazaro/$f.original" "/etc/$f" \
+							&& rm -f "/etc/lazaro/$f.original"
+					done
 					# El script dejó habilitada la pantalla de inicio,
 					# pero en este arranque aún no corría: se enciende
 					# ya, sin pedir otro reinicio.

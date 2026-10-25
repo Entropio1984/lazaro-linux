@@ -369,7 +369,45 @@ programar_primer_arranque() {
 		"$1/etc/init.d/lazaro-primer-arranque"
 	mkdir -p "$1/etc/runlevels/default"
 	ln -sf /etc/init.d/lazaro-primer-arranque "$1/etc/runlevels/default/lazaro-primer-arranque"
+	aviso_consola "$1"
 	avisar_primer_arranque
+}
+
+# Mientras falte la configuración final, el sistema arranca a la consola de
+# texto: el aviso va en /etc/issue (se ve sobre "login:") y en /etc/motd
+# (se ve al entrar). lazaro-primer-arranque devuelve los originales al
+# terminar.
+aviso_consola() { # RAIZ
+	mkdir -p "$1/etc/lazaro"
+	if [ -e "$1/etc/lazaro/sin-escritorio" ]; then
+		falta="los programas y ajustes elegidos"
+		luego="se completa solo."
+	else
+		falta="la barra completa, la pantalla de inicio y los programas elegidos"
+		luego="se completa solo y luego aparece la pantalla de inicio."
+	fi
+	for f in issue motd; do
+		[ -e "$1/etc/lazaro/$f.original" ] || cp -p "$1/etc/$f" "$1/etc/lazaro/$f.original" 2>/dev/null \
+			|| : > "$1/etc/lazaro/$f.original"
+		{
+			cat "$1/etc/lazaro/$f.original"
+			cat <<AVISO
+
+  *** Lázaro Linux todavía está terminando de configurarse ***
+  Falta instalar $falta,
+  porque no hubo internet al final de la instalación.
+
+  Conecta el equipo a internet y espera unos minutos:
+  $luego
+  No hace falta reiniciar.
+
+  Sin cable de red, conecta el wifi entrando aquí y escribiendo:
+      nmcli device wifi connect "NOMBRE-DE-LA-RED" --ask
+  Registro: /var/log/desktop-postinstall.log
+
+AVISO
+		} > "$1/etc/$f"
+	done
 }
 
 # Calamares termina igual con o sin la configuración final, así que se
