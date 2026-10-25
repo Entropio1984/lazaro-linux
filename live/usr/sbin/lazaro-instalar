@@ -343,7 +343,7 @@ paso_ajustes() {
 	echo "$args" > "$raiz/etc/lazaro/postinstall.args"
 
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
-	if esperar_red; then
+	if false; then # EXPERIMENTO: siempre se aplaza
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
 		log "Ejecutando desktop-postinstall.sh --destino $raiz $args"

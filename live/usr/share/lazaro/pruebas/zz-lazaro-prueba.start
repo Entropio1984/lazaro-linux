@@ -2,6 +2,16 @@
 # Idioma de la sesión del usuario: el panel de cada escritorio debe
 # correr con el idioma elegido (es_CO en la prueba). Se mira una sola
 # vez, mientras la sesión sigue abierta.
+# EXPERIMENTO prueba-aplazado: espera a que el primer arranque termine.
+_n=0
+while [ -e /etc/runlevels/default/lazaro-primer-arranque ] && [ $_n -lt 220 ]; do sleep 5; _n=$((_n+1)); done
+echo "LAZARO-APLAZADO-ESPERA $((_n*5))s" > /dev/ttyS0
+sleep 15
+for _dm in lightdm sddm gdm greetd; do
+	[ -e /etc/runlevels/default/$_dm ] || continue
+	if rc-service -q $_dm status; then echo "LAZARO-DM-SOLO-OK $_dm" > /dev/ttyS0; else echo "LAZARO-DM-SOLO-NO $_dm" > /dev/ttyS0; fi
+done
+
 idioma_sesion() {
 	[ -z "${idioma_visto:-}" ] || return 0
 	idioma_visto=1

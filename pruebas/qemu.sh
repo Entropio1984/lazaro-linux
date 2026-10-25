@@ -220,7 +220,7 @@ prueba_instalar() {
 	# GNOME reinicia una vez en la prueba (GDM toma la resolución al
 	# arrancar) y pide más memoria.
 	mem2=2048
-	espera2=600
+	espera2=1800
 	if [ "$de" = gnome ]; then
 		mem2=3072
 		espera2=1200
