@@ -1,31 +1,9 @@
 #!/bin/sh
-# Ejecuta desktop-postinstall.sh sin preguntas, con las opciones que dejó
-# el instalador en /etc/lazaro/postinstall.env. Corre dentro del sistema
-# instalado: durante la instalación (si hay internet) o en el primer
-# arranque (servicio lazaro-primer-arranque).
-set -a
-. /etc/lazaro/postinstall.env
-set +a
-rc=0
-/bin/sh /usr/libexec/lazaro/desktop-postinstall.sh </dev/null || rc=$?
-
-# Programas de Alpine marcados en "Software adicional" (fastfetch, btop,
-# vlc). apk puede quedarse esperando una descarga detenida: cada intento
-# tiene un límite de 15 minutos y se hace uno más si falla.
-if [ -n "${LAZARO_EXTRAS_APK:-}" ]; then
-	echo "Instalando programas adicionales: $LAZARO_EXTRAS_APK"
-	# shellcheck disable=SC2086
-	timeout 900 apk add $LAZARO_EXTRAS_APK \
-		|| timeout 900 apk add $LAZARO_EXTRAS_APK \
-		|| { echo "Aviso: no se pudieron instalar: $LAZARO_EXTRAS_APK"; rc=1; }
-fi
-
-# El script corre como root antes de que el usuario inicie sesión por
-# primera vez: lo que cree en su carpeta personal (por ejemplo ~/.config)
-# quedaría de root y Plasma no podría guardar su configuración
-# ("kioworkerrc not writable"). La carpeta es nueva, toda es del usuario.
-casa="$(getent passwd "$DOAS_USER" 2>/dev/null | cut -d: -f6)"
-if [ -n "$DOAS_USER" ] && [ -n "$casa" ] && [ "$casa" != / ] && [ -d "$casa" ]; then
-	chown -R "$DOAS_USER:$(id -gn "$DOAS_USER")" "$casa"
-fi
-exit $rc
+# Primer arranque: ejecuta desktop-postinstall.sh con las opciones que dejó
+# el instalador en /etc/lazaro/postinstall.args (si durante la instalación
+# no hubo internet o el script falló). El propio script deja la carpeta
+# personal a nombre del usuario.
+args="$(cat /etc/lazaro/postinstall.args)"
+echo "desktop-postinstall.sh $args"
+# shellcheck disable=SC2086
+exec /bin/sh /usr/libexec/lazaro/desktop-postinstall.sh $args </dev/null

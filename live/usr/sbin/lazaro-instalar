@@ -264,39 +264,19 @@ paso_ajustes() {
 	variante="${5:-}"
 	zona="${6:-America/Bogota}"
 	extras="${7:-base flatpak}"
-	opt_flatpak=no
-	opt_chrome=no
-	opt_brave=no
-	opt_libreoffice=no
-	opt_onlyoffice=no
-	extras_apk=""
+	# Programas para desktop-postinstall.sh --con. El script ya se encarga
+	# de las dependencias: las apps de Flathub activan Flatpak y, sin
+	# escritorio, descarta todo lo gráfico.
+	con="firefox,actualizaciones"
+	[ -e "$raiz/etc/lazaro/sin-escritorio" ] || con="$con,impresoras"
 	for e in $extras; do
 		case "$e" in
 			base) ;;
-			fastfetch|btop|vlc) extras_apk="$extras_apk $e" ;;
-			libreoffice) opt_libreoffice=yes ;;
-			flatpak) opt_flatpak=yes ;;
-			# Las aplicaciones de Flathub necesitan Flatpak.
-			onlyoffice) opt_onlyoffice=yes; opt_flatpak=yes ;;
-			chrome) opt_chrome=yes; opt_flatpak=yes ;;
-			brave) opt_brave=yes; opt_flatpak=yes ;;
+			fastfetch|btop|vlc|libreoffice|flatpak|onlyoffice|chrome|brave)
+				con="$con,$e" ;;
 			*) log "Aviso: programa adicional desconocido '$e'; se omite." ;;
 		esac
 	done
-	opt_firefox=yes
-	opt_cups=yes
-	if [ -e "$raiz/etc/lazaro/sin-escritorio" ]; then
-		# Solo consola: nada gráfico (Flatpak, Chrome, oficina, navegador)
-		# ni impresoras.
-		opt_flatpak=no
-		opt_chrome=no
-		opt_brave=no
-		opt_libreoffice=no
-		opt_onlyoffice=no
-		opt_firefox=no
-		opt_cups=no
-		extras_apk="$(echo "$extras_apk" | tr ' ' '\n' | grep -vx vlc | tr '\n' ' ')"
-	fi
 
 	if [ -e "$raiz/usr/share/zoneinfo/$zona" ]; then
 		ln -sf "/usr/share/zoneinfo/$zona" "$raiz/etc/localtime"
@@ -337,35 +317,24 @@ paso_ajustes() {
 	escribir_repos "$raiz/etc/apk/repositories" "" si
 	[ -z "${LAZARO_LLAVE:-}" ] || rm -f "$raiz/etc/apk/keys/$LAZARO_LLAVE"
 
-	# desktop-postinstall.sh sin preguntas: sus opciones se fijan con las
-	# variables OPT_* (las mismas casillas premarcadas de su menú).
+	# desktop-postinstall.sh sin preguntas: --minimo deja todo en "no" y
+	# --con marca lo elegido en Calamares. Las opciones se guardan para
+	# repetirlas en el primer arranque si ahora no hay internet.
 	install -Dm755 "$DATOS/desktop-postinstall.sh" \
 		"$raiz/usr/libexec/lazaro/desktop-postinstall.sh"
 	opt_teclado=no
-	[ "$teclado" = latam ] && opt_teclado=yes
+	[ "$teclado" = latam ] && opt_teclado=latam
+	args="--minimo --usuario $usuario --idioma $idioma --nvidia optimus --teclado $opt_teclado --con $con"
 	mkdir -p "$raiz/etc/lazaro"
-	cat > "$raiz/etc/lazaro/postinstall.env" <<-EOF
-	OPT_KEYBOARD=$opt_teclado
-	OPT_LANG=$idioma
-	OPT_NVIDIA_SAFE=yes
-	OPT_NVIDIA_MODE=optimus
-	OPT_GCOMPAT=no
-	OPT_CUPS=$opt_cups
-	OPT_LIBREOFFICE=$opt_libreoffice
-	OPT_FIREFOX=$opt_firefox
-	OPT_FLATPAK=$opt_flatpak
-	OPT_ONLYOFFICE=$opt_onlyoffice
-	OPT_CHROME=$opt_chrome
-	OPT_BRAVE=$opt_brave
-	OPT_UPDATE_SHORTCUT=yes
-	LAZARO_EXTRAS_APK="$(echo $extras_apk)"
-	DOAS_USER=$usuario
-	EOF
+	echo "$args" > "$raiz/etc/lazaro/postinstall.args"
 
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
 	if hay_red; then
-		log "Ejecutando desktop-postinstall.sh (descarga paquetes, puede tardar)..."
-		if en_destino "$raiz" /usr/libexec/lazaro/lazaro-postinstalacion \
+		# El script corre desde la sesión live: con --destino monta el
+		# sistema nuevo y se ejecuta dentro de él.
+		log "Ejecutando desktop-postinstall.sh --destino $raiz $args"
+		# shellcheck disable=SC2086
+		if sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
 			</dev/null >>"$LOG" 2>&1; then
 			log "desktop-postinstall.sh terminó bien."
 		else
