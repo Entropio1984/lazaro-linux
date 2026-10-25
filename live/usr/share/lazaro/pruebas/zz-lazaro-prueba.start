@@ -400,7 +400,13 @@ idioma_sesion() {
 	# Experimento (no fusionar): plugin de volumen en el panel de XFCE.
 	if [ -f /etc/xdg/xfce4/panel/default.xml ]; then
 		grep -c 'value="pulseaudio"' /etc/xdg/xfce4/panel/default.xml | sed 's/^/LAZARO-VOLUMEN-XML /'
-		if grep -qs pulseaudio-plugin /proc/[0-9]*/cmdline; then echo "LAZARO-VOLUMEN-PANEL-OK"; else echo "LAZARO-VOLUMEN-PANEL-NO"; fi
+		if grep -qs pulseaudio /proc/[0-9]*/cmdline /proc/[0-9]*/maps; then echo "LAZARO-VOLUMEN-PANEL-OK"; else echo "LAZARO-VOLUMEN-PANEL-NO"; fi
+		grep -ls pulseaudio /proc/[0-9]*/maps /proc/[0-9]*/cmdline | head -n 3
+		ls -la /home/prueba/.config/xfce4/xfconf/xfce-perchannel-xml/ 2>&1 | head -n 12
+		grep -h 'value="[a-z-]*"/>\|type="string" value' /home/prueba/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml 2>/dev/null | grep plugin- | head -n 20
+		ls /usr/lib/xfce4/panel/plugins/ 2>&1 | tr '\n' ' '; echo
+		grep -h "X-XFCE" /usr/share/xfce4/panel/plugins/pulseaudio.desktop 2>&1
+		for p in /proc/[0-9]*; do c="$(tr '\0' ' ' <"$p/cmdline" 2>/dev/null)"; case "$c" in *xfce4-panel*|*wrapper*) echo "PROC $c";; esac; done
 	fi
 	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"
 } > /dev/ttyS0 2>&1
