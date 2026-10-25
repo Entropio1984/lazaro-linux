@@ -53,6 +53,20 @@ hay_red() {
 		"$ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/APKINDEX.tar.gz" 2>/dev/null
 }
 
+# Como hay_red, pero tolera un corte breve: espera a NetworkManager y
+# prueba hasta 4 veces (unos 45 s como mucho). Si aun así no llega al
+# servidor, anota en el registro el motivo que da wget.
+esperar_red() {
+	command -v nm-online >/dev/null 2>&1 && nm-online -s -q -t 10 || true
+	for _intento in 1 2 3 4; do
+		hay_red && return 0
+		[ "$_intento" = 4 ] || sleep 3
+	done
+	log "Sin respuesta de $ALPINE_MIRROR tras 4 intentos. Motivo:"
+	wget --spider -T 8 "$ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/APKINDEX.tar.gz" >>"$LOG" 2>&1 || true
+	return 1
+}
+
 # escribir_repos ARCHIVO REPO_ISO(vacío=no) RED(si/no)
 escribir_repos() {
 	{
@@ -155,7 +169,7 @@ paso_base() {
 
 	iso="$(repo_iso)"
 	red=no
-	hay_red && red=si
+	esperar_red && red=si
 	log "Lázaro Linux $ISO_VERSION sobre Alpine $ALPINE_BRANCH"
 	log "Repositorio de la ISO: ${iso:-ninguno}; internet: $red"
 	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] && [ "$red" = no ]; then
