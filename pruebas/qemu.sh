@@ -136,6 +136,12 @@ prueba_live() {
 			echo "FALLO: Calamares no pudo cargar alguna de sus pantallas o pasos ($MODO)." >&2
 			sed -n '/LAZARO-MODULOS-FALLO/,+6p' "$serie" >&2
 			ok=1
+		elif ! grep -q 'LAZARO-GRAFICAS decision=sin-nvidia' "$serie"; then
+			# La revisión de gráficas (lazaro-graficas) tiene que haber
+			# corrido; en QEMU no hay NVIDIA.
+			echo "FALLO: la revisión de tarjetas gráficas no corrió o no decidió lo esperado ($MODO)." >&2
+			grep 'LAZARO-GRAFICAS' "$serie" >&2 || true
+			ok=1
 		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 		else

@@ -1,0 +1,198 @@
+#!/bin/sh
+# lazaro-graficas: revisa las tarjetas gráficas al arrancar la sesión live,
+# ANTES de cargar el controlador de una NVIDIA, y decide si cargarlo.
+#
+# El menú de arranque de la ISO lleva "modprobe.blacklist=nouveau": así
+# el sistema no carga nouveau por su cuenta. Este programa lo carga solo
+# cuando es seguro, con las mismas reglas que desktop-postinstall.sh:
+#   - portátil Optimus (pantalla en la integrada y una NVIDIA aparte):
+#     se carga, porque solo nouveau sabe apagar la NVIDIA;
+#   - NVIDIA Kepler (2012) o más nueva: se carga;
+#   - Tesla, Fermi o una tarjeta que no se pudo identificar, como
+#     gráfica principal: NO se carga (en algunas da pantalla negra o
+#     cuelgues). La sesión usa la imagen básica del firmware y se avisa.
+# Con varias NVIDIA manda la más antigua.
+#
+# Se puede forzar con el parámetro de arranque lazaro.nvidia=activa o
+# lazaro.nvidia=seguro; el instalador pasa esa elección al sistema nuevo.
+# Con "nomodeset" (modo gráfico seguro del menú) no se carga nunca.
+#
+# La decisión queda en /run/lazaro/graficas (variables de shell) y, en
+# las pruebas automáticas, en el puerto serie (LAZARO-GRAFICAS ...).
+#
+# Uso:
+#   lazaro-graficas            revisar, decidir y cargar nouveau si toca
+#   lazaro-graficas --sin-cargar   igual, sin cargar nada (pruebas)
+#   lazaro-graficas --aviso    en la sesión: avisar si la NVIDIA quedó sin
+#                              controlador
+# Variables para las pruebas: LAZARO_SYS (en vez de /sys), LAZARO_CMDLINE
+# (en vez de /proc/cmdline) y LAZARO_GRAFICAS (archivo de la decisión).
+
+set -eu
+
+SYS="${LAZARO_SYS:-/sys}"
+CMDLINE="${LAZARO_CMDLINE:-/proc/cmdline}"
+SALIDA="${LAZARO_GRAFICAS:-/run/lazaro/graficas}"
+
+# Valor de "nombre=valor" en la línea de comandos del kernel.
+parametro() {
+	for p in $(cat "$CMDLINE" 2>/dev/null); do
+		case "$p" in "$1"=*) echo "${p#*=}"; return 0 ;; esac
+	done
+	return 1
+}
+
+tiene_parametro() {
+	for p in $(cat "$CMDLINE" 2>/dev/null); do
+		[ "$p" != "$1" ] || return 0
+	done
+	return 1
+}
+
+# Generación por el nombre del chip (mismas reglas que el script).
+generacion_de_chip() {
+	case "$1" in
+		TU*|GA*|GH*|AD*|GB*) echo moderna ;;
+		GV*) echo volta ;;
+		GP*) echo pascal ;;
+		GM*) echo maxwell ;;
+		GK*) echo kepler ;;
+		GF*) echo fermi ;;
+		NV*|G[0-9]*|GT2*|MCP*|C[0-9]*) echo tesla ;;
+		*) echo desconocida ;;
+	esac
+}
+
+# Orden de antigüedad; la desconocida cuenta como la más antigua.
+orden() {
+	case "$1" in
+		tesla) echo 1 ;; fermi) echo 2 ;; kepler) echo 3 ;; maxwell) echo 4 ;;
+		pascal) echo 5 ;; volta) echo 6 ;; moderna) echo 7 ;; *) echo 0 ;;
+	esac
+}
+
+# Chip de la tarjeta en la ranura $1 según la base de datos de lspci
+# ("GF108M [GeForce GT 540M]": el chip es la primera palabra). nouveau
+# todavía no está cargado, así que el registro del kernel no ayuda.
+chip_de() {
+	command -v lspci >/dev/null 2>&1 || return 0
+	lspci -mm -s "$1" 2>/dev/null \
+		| awk -F'"' 'NR == 1 { split($6, p, " "); print p[1] }' || true
+}
+
+serie() {
+	[ -c /dev/ttyS0 ] || return 0
+	printf '%s\n' "$*" > /dev/ttyS0 2>/dev/null || true
+}
+
+revisar() {
+	cargar="$1"
+	nvidias=0
+	nv_principal=no
+	principal=""
+	chips=""
+	gen=""
+	for dev in "$SYS"/bus/pci/devices/*; do
+		[ -r "$dev/class" ] || continue
+		case "$(cat "$dev/class")" in
+			0x0300*|0x0302*|0x0380*) ;;
+			*) continue ;;
+		esac
+		vendor="$(cat "$dev/vendor" 2>/dev/null || echo 0)"
+		boot_vga="$(cat "$dev/boot_vga" 2>/dev/null || echo 0)"
+		[ "$boot_vga" != 1 ] || principal="$vendor"
+		[ "$vendor" = 0x10de ] || continue
+		nvidias=$((nvidias + 1))
+		[ "$boot_vga" != 1 ] || nv_principal=si
+		chip="$(chip_de "${dev##*/}")"
+		g="$(generacion_de_chip "$chip")"
+		chips="$chips ${chip:-?}"
+		if [ -z "$gen" ] || [ "$(orden "$g")" -lt "$(orden "$gen")" ]; then
+			gen="$g"
+		fi
+	done
+	chips="${chips# }"
+
+	portatil=no
+	case "$(cat "$SYS/class/dmi/id/chassis_type" 2>/dev/null || true)" in
+		8|9|10|11|14|30|31|32) portatil=si ;;
+	esac
+	if [ "$portatil" = no ] && ls -d "$SYS"/class/power_supply/BAT* >/dev/null 2>&1; then
+		portatil=si
+	fi
+	optimus=no
+	if [ "$portatil" = si ] && [ "$nvidias" -eq 1 ]; then
+		case "$principal" in 0x8086|0x1002) optimus=si ;; esac
+	fi
+
+	forzado="$(parametro lazaro.nvidia || true)"
+	if [ "$nvidias" -eq 0 ]; then
+		decision=sin-nvidia; motivo=sin-nvidia
+	elif tiene_parametro nomodeset; then
+		decision=seguro; motivo=nomodeset
+	elif [ "$forzado" = activa ] || [ "$forzado" = seguro ]; then
+		decision="$forzado"; motivo=elegido
+	elif [ "$optimus" = si ]; then
+		decision=activa; motivo=optimus
+	else
+		case "$gen" in
+			kepler|maxwell|pascal|volta|moderna) decision=activa; motivo=generacion ;;
+			*) decision=seguro; motivo=generacion ;;
+		esac
+	fi
+
+	if [ "$decision" = activa ] && [ "$cargar" = si ]; then
+		# Si la NVIDIA maneja la pantalla, nouveau reemplaza la imagen
+		# básica en la que dibuja Plymouth: se cierra antes la animación.
+		if [ "$nv_principal" = si ] && command -v plymouth >/dev/null 2>&1 \
+			&& plymouth --ping 2>/dev/null; then
+			plymouth quit 2>/dev/null || true
+		fi
+		if ! modprobe nouveau 2>/dev/null; then
+			decision=seguro; motivo=fallo-carga
+		fi
+	fi
+
+	mkdir -p "$(dirname "$SALIDA")"
+	cat > "$SALIDA" <<-EOF
+	DECISION=$decision
+	MOTIVO=$motivo
+	GENERACION=${gen:-ninguna}
+	CHIPS="$chips"
+	OPTIMUS=$optimus
+	EOF
+	resumen="decision=$decision motivo=$motivo generacion=${gen:-ninguna} chips=${chips:-ninguno} optimus=$optimus"
+	echo "lazaro-graficas: $resumen"
+	serie "LAZARO-GRAFICAS $resumen"
+}
+
+# Aviso en la sesión live cuando la NVIDIA quedó sin controlador por
+# precaución, o porque no se pudo cargar.
+aviso() {
+	[ -r "$SALIDA" ] || return 0
+	DECISION="" MOTIVO="" GENERACION="" CHIPS=""
+	. "$SALIDA"
+	[ "$DECISION" = seguro ] || return 0
+	case "$MOTIVO" in
+		generacion)
+			texto="Este equipo tiene una tarjeta NVIDIA antigua ($CHIPS, generación $GENERACION).
+
+Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.
+
+Al instalar, Lázaro Linux la dejará igual (modo seguro)." ;;
+		fallo-carga)
+			texto="No se pudo cargar el controlador de la tarjeta NVIDIA ($CHIPS).
+
+La sesión de prueba usa la imagen básica, que puede ir más lenta o con una resolución fija." ;;
+		*) return 0 ;;
+	esac
+	command -v zenity >/dev/null 2>&1 || return 0
+	zenity --info --title="Tarjeta gráfica NVIDIA" --width=420 --text="$texto" >/dev/null 2>&1 || true
+}
+
+case "${1:-}" in
+	--aviso) aviso ;;
+	--sin-cargar) revisar no ;;
+	"") revisar si ;;
+	*) echo "uso: $0 [--sin-cargar|--aviso]" >&2; exit 2 ;;
+esac

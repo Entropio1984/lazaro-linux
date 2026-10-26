@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# Revisa las tarjetas gráficas antes de cargar el controlador de una
+# NVIDIA y decide si es seguro cargarlo (ver /usr/sbin/lazaro-graficas).
+
+description="Revisión de tarjetas gráficas de Lázaro Linux"
+
+depend() {
+	after modloop udev-trigger udev-settle
+	before lazaro-live lightdm
+}
+
+start() {
+	ebegin "Revisando las tarjetas gráficas"
+	lazaro-graficas
+	eend 0
+}
