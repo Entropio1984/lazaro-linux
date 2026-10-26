@@ -66,6 +66,16 @@ jobs:
           retention-days: 7
           compression-level: 0
 
+  # Decisiones de la revisión de tarjetas gráficas de la live con un /sys
+  # simulado: las máquinas virtuales no tienen NVIDIA.
+  graficas:
+    name: Revisión de gráficas (simulada)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: sh pruebas/graficas.sh
+
   pruebas:
     name: Prueba ${{ matrix.prueba }} (${{ matrix.alpine }})
     needs: iso
@@ -132,7 +142,7 @@ jobs:
   # y reanudable, a diferencia de los Artifacts.
   publicar:
     name: Publicar ISO en desarrollo
-    needs: pruebas
+    needs: [pruebas, graficas]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:

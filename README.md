@@ -46,6 +46,17 @@ instalador (Calamares) pregunta, en este orden:
 XFCE y "Sin escritorio" se instalan sin internet, desde la propia ISO.
 Los demás escritorios se descargan, igual que el software adicional.
 
+**Tarjetas NVIDIA.** Antes de cargar el controlador de una NVIDIA
+(nouveau), la sesión de prueba revisa qué tarjeta es. Lo carga en los
+portátiles con dos gráficas (para poder apagar la NVIDIA) y en las
+tarjetas de 2012 (Kepler) en adelante. Con las más antiguas (Tesla y
+Fermi) o una que no reconoce, como gráfica principal, no lo carga:
+algunas dan pantalla negra o bloqueos. La sesión usa entonces la imagen
+básica y muestra un aviso. Para forzar la decisión, en el menú de
+arranque se edita la línea del kernel y se agrega `lazaro.nvidia=activa`
+o `lazaro.nvidia=seguro`; el sistema instalado respeta esa elección. La
+opción "modo gráfico seguro" del menú no carga ningún controlador.
+
 Con el sistema ya instalado, el arranque también muestra el pulso
 (Plymouth). Por ahora no aparece en dos casos: con GNOME (su pantalla de
 inicio todavía no se lleva bien con él) y sin escritorio, donde el
@@ -60,6 +71,7 @@ arranque se ve en texto.
 | Calamares | `paquetes/calamares/APKBUILD` | Alpine no lo empaqueta, así que se compila |
 | Perfil de la ISO | `perfil/mkimg.lazaro.sh` | Lo usa `mkimage.sh` de aports |
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
+| Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
 | Pantallas del instalador | `live/etc/calamares/modules/` | Escritorio, oficina, aplicaciones, disco, usuario |
 | Pantalla de arranque | `live/usr/share/plymouth/themes/lazaro/` | El logo con el pulso (Plymouth) |
@@ -132,7 +144,7 @@ siguiente (edge):
 
 | Prueba | Arranque | Escritorio | Internet | Qué comprueba |
 |---|---|---|---|---|
-| Sesión live | BIOS | XFCE | Sí | El instalador se abre, ve el disco y el portapapeles compartido funciona |
+| Sesión live | BIOS | XFCE | Sí | El instalador se abre, ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona |
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |
 | Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo y la pantalla de inicio recuerda la resolución que eligió el usuario |
@@ -142,6 +154,11 @@ siguiente (edge):
 | Instalación | UEFI | LXQt | Sí | La sesión queda en el idioma elegido |
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
+
+Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
+revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que
+simula 13 equipos (el K53SV, PCs con tarjetas de cada generación, dos
+NVIDIA, la elección forzada y el modo gráfico seguro).
 
 ## Versiones probadas
 

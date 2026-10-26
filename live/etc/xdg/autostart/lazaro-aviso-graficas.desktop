@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Aviso de tarjeta gráfica
+Exec=lazaro-graficas --aviso
+Terminal=false
+NoDisplay=true
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

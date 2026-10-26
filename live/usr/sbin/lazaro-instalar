@@ -324,7 +324,18 @@ paso_ajustes() {
 		"$raiz/usr/libexec/lazaro/desktop-postinstall.sh"
 	opt_teclado=no
 	[ "$teclado" = latam ] && opt_teclado=latam
-	args="--minimo --usuario $usuario --idioma $idioma --nvidia optimus --teclado $opt_teclado --con $con"
+	# NVIDIA: "optimus" es el modo automático del script (decide según la
+	# tarjeta, con las mismas reglas que lazaro-graficas en la live). Si
+	# al arrancar la live se eligió lazaro.nvidia=activa o =seguro, se
+	# respeta esa elección.
+	nvidia=optimus
+	if [ -r /run/lazaro/graficas ]; then
+		nv_decision=$(sed -n 's/^DECISION=//p' /run/lazaro/graficas)
+		if grep -qx 'MOTIVO=elegido' /run/lazaro/graficas; then
+			nvidia="$nv_decision"
+		fi
+	fi
+	args="--minimo --usuario $usuario --idioma $idioma --nvidia $nvidia --teclado $opt_teclado --con $con"
 	mkdir -p "$raiz/etc/lazaro"
 	echo "$args" > "$raiz/etc/lazaro/postinstall.args"
 
