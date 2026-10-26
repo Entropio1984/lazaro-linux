@@ -52,10 +52,22 @@ portátiles con dos gráficas (para poder apagar la NVIDIA) y en las
 tarjetas de 2012 (Kepler) en adelante. Con las más antiguas (Tesla y
 Fermi) o una que no reconoce, como gráfica principal, no lo carga:
 algunas dan pantalla negra o bloqueos. La sesión usa entonces la imagen
-básica y muestra un aviso. Para forzar la decisión, en el menú de
-arranque se edita la línea del kernel y se agrega `lazaro.nvidia=activa`
-o `lazaro.nvidia=seguro`; el sistema instalado respeta esa elección. La
-opción "modo gráfico seguro" del menú no carga ningún controlador.
+básica y muestra un aviso. La opción "modo gráfico seguro" del menú no
+carga ningún controlador.
+
+Para forzar la decisión se agrega `lazaro.nvidia=seguro` (no cargar
+nouveau) o `lazaro.nvidia=activa` (cargarlo) en el menú de arranque de
+la ISO, justo al encender desde la memoria USB. El sistema instalado
+respeta esa elección.
+
+- **Equipo con UEFI** (menú de GRUB, espera 5 segundos): detén el menú
+  con las flechas en "Lazaro Linux - Tu hardware aun tiene pulso", pulsa
+  **e**, baja a la línea que empieza con `linux`, ve al final con la
+  tecla Fin, escribe un espacio y `lazaro.nvidia=seguro`, y arranca con
+  **Ctrl+X** o **F10**.
+- **Equipo con BIOS** (aparece `boot:`, espera unos 3 segundos): escribe
+  `lazaro lazaro.nvidia=seguro` y pulsa Enter. `lazaro` es el nombre de
+  la opción normal del menú.
 
 Con el sistema ya instalado, el arranque también muestra el pulso
 (Plymouth). Por ahora no aparece en dos casos: con GNOME (su pantalla de
