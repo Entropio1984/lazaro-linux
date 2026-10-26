@@ -2,7 +2,8 @@
 # Termina la configuración de Lázaro Linux (desktop-postinstall.sh) en
 # cuanto haya internet, si no se pudo durante la instalación. Corre en
 # segundo plano para no retrasar el arranque; al terminar bien enciende
-# la pantalla de inicio y se desactiva. Si no hay red en 30 minutos, lo
+# los servicios nuevos (pantalla de inicio incluida) y se desactiva.
+# Registro: /var/log/lazaro-primer-arranque.log. Si no hay red en 30 minutos, lo
 # intenta en el siguiente arranque.
 
 description="Configuración final de Lázaro Linux"
@@ -27,12 +28,26 @@ start() {
 						cp -p "/etc/lazaro/$f.original" "/etc/$f" \
 							&& rm -f "/etc/lazaro/$f.original"
 					done
-					# El script dejó habilitada la pantalla de inicio,
-					# pero en este arranque aún no corría: se enciende
-					# ya, sin pedir otro reinicio.
-					for dm in lightdm sddm gdm greetd; do
-						[ -e "/etc/runlevels/default/$dm" ] || continue
-						rc-service -q "$dm" status || rc-service "$dm" start
+					# Lo que el script dejó en el arranque (elogind,
+					# polkit, cupsd, la pantalla de inicio...) no corría
+					# en este arranque: se enciende ya, sin pedir otro
+					# reinicio. La pantalla de inicio va al final. Se
+					# llama fuera del entorno de este servicio: con las
+					# variables de OpenRC heredadas, rc-service no
+					# enciende las dependencias ("greetd ... seatd would
+					# not start").
+					limpio="env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin"
+					dms=""
+					for s in /etc/runlevels/default/*; do
+						s="${s##*/}"
+						case "$s" in
+							lazaro-primer-arranque) continue ;;
+							lightdm|sddm|gdm|greetd) dms="$dms $s"; continue ;;
+						esac
+						$limpio rc-service -q "$s" status || $limpio rc-service "$s" start
+					done
+					for s in $dms; do
+						$limpio rc-service -q "$s" status || $limpio rc-service "$s" start
 					done
 				fi
 				exit 0
@@ -40,6 +55,6 @@ start() {
 			i=$((i + 1))
 			sleep 5
 		done
-	) >/dev/null 2>&1 &
+	) >>/var/log/lazaro-primer-arranque.log 2>&1 </dev/null &
 	eend 0
 }

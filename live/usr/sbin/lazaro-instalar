@@ -420,9 +420,9 @@ avisar_primer_arranque() {
 
 No hubo internet al final de la instalación, así que la barra completa, la pantalla de inicio y los programas elegidos se instalarán en el primer arranque.
 
-<b>Qué hacer:</b> al encender el equipo, conéctate a internet y espera unos minutos. Cuando termine, la pantalla de inicio aparece sola; entra desde ella (no desde la consola de texto). Impresoras y bluetooth quedan listos desde el siguiente encendido.
+<b>Qué hacer:</b> al encender el equipo, conéctate a internet y espera unos minutos. Cuando termine, la pantalla de inicio aparece sola; entra desde ella (no desde la consola de texto). No hace falta reiniciar.
 
-<small><b>Explicación técnica:</b> la configuración final la hace desktop-postinstall.sh, que descarga paquetes y por eso necesita red. En el primer arranque un servicio de OpenRC (lazaro-primer-arranque) lo ejecuta en segundo plano en cuanto hay internet. OpenRC enciende los servicios del arranque una sola vez y en orden: lo que el script habilita después, como la pantalla de inicio o cupsd, queda para el siguiente arranque. Por eso, al terminar, ese servicio enciende a mano la pantalla de inicio. La barra, el idioma y los grupos del usuario se leen al iniciar sesión: una sesión abierta por consola antes de terminar sigue con lo anterior. Registro: /var/log/desktop-postinstall.log</small>" \
+<small><b>Explicación técnica:</b> la configuración final la hace desktop-postinstall.sh, que descarga paquetes y por eso necesita red. En el primer arranque un servicio de OpenRC (lazaro-primer-arranque) lo ejecuta en segundo plano en cuanto hay internet. OpenRC enciende los servicios del arranque una sola vez y en orden: lo que el script habilita después (la pantalla de inicio, elogind, polkit, cupsd...) quedaría apagado hasta el siguiente arranque. Por eso, al terminar, ese servicio los enciende él mismo. La barra, el idioma y los grupos del usuario se leen al iniciar sesión: una sesión abierta por consola antes de terminar sigue con lo anterior. Registros: /var/log/desktop-postinstall.log y /var/log/lazaro-primer-arranque.log</small>" \
 		</dev/null >/dev/null 2>&1 &
 }
 
