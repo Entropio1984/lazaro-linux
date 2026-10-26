@@ -53,6 +53,20 @@ hay_red() {
 		"$ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/APKINDEX.tar.gz" 2>/dev/null
 }
 
+# Como hay_red, pero tolera un corte breve (pasos base y ajustes): espera
+# a NetworkManager y prueba hasta 4 veces (unos 45 s como mucho). Si aun
+# así no llega al servidor, anota en el registro el motivo que da wget.
+esperar_red() {
+	command -v nm-online >/dev/null 2>&1 && nm-online -s -q -t 10 || true
+	for _intento in 1 2 3 4; do
+		hay_red && return 0
+		[ "$_intento" = 4 ] || sleep 3
+	done
+	log "Sin respuesta de $ALPINE_MIRROR tras 4 intentos. Motivo:"
+	wget --spider -T 8 "$ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/APKINDEX.tar.gz" >>"$LOG" 2>&1 || true
+	return 1
+}
+
 # escribir_repos ARCHIVO REPO_ISO(vacío=no) RED(si/no)
 escribir_repos() {
 	{
@@ -155,7 +169,7 @@ paso_base() {
 
 	iso="$(repo_iso)"
 	red=no
-	hay_red && red=si
+	esperar_red && red=si
 	log "Lázaro Linux $ISO_VERSION sobre Alpine $ALPINE_BRANCH"
 	log "Repositorio de la ISO: ${iso:-ninguno}; internet: $red"
 	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] && [ "$red" = no ]; then
@@ -329,7 +343,7 @@ paso_ajustes() {
 	echo "$args" > "$raiz/etc/lazaro/postinstall.args"
 
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
-	if hay_red; then
+	if esperar_red; then
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
 		log "Ejecutando desktop-postinstall.sh --destino $raiz $args"
@@ -355,6 +369,61 @@ programar_primer_arranque() {
 		"$1/etc/init.d/lazaro-primer-arranque"
 	mkdir -p "$1/etc/runlevels/default"
 	ln -sf /etc/init.d/lazaro-primer-arranque "$1/etc/runlevels/default/lazaro-primer-arranque"
+	aviso_consola "$1"
+	avisar_primer_arranque
+}
+
+# Mientras falte la configuración final, el sistema arranca a la consola de
+# texto: el aviso va en /etc/issue (se ve sobre "login:") y en /etc/motd
+# (se ve al entrar). lazaro-primer-arranque devuelve los originales al
+# terminar.
+aviso_consola() { # RAIZ
+	mkdir -p "$1/etc/lazaro"
+	if [ -e "$1/etc/lazaro/sin-escritorio" ]; then
+		falta="los programas y ajustes elegidos"
+		luego="se completa solo."
+	else
+		falta="la barra completa, la pantalla de inicio y los programas elegidos"
+		luego="se completa solo y luego aparece la pantalla de inicio."
+	fi
+	for f in issue motd; do
+		[ -e "$1/etc/lazaro/$f.original" ] || cp -p "$1/etc/$f" "$1/etc/lazaro/$f.original" 2>/dev/null \
+			|| : > "$1/etc/lazaro/$f.original"
+		{
+			cat "$1/etc/lazaro/$f.original"
+			cat <<AVISO
+
+  *** Lázaro Linux todavía está terminando de configurarse ***
+  Falta instalar $falta,
+  porque no hubo internet al final de la instalación.
+
+  Conecta el equipo a internet y espera unos minutos:
+  $luego
+  No hace falta reiniciar.
+
+  Sin cable de red, conecta el wifi entrando aquí y escribiendo:
+      nmcli device wifi connect "NOMBRE-DE-LA-RED" --ask
+  Registro: /var/log/desktop-postinstall.log
+
+AVISO
+		} > "$1/etc/$f"
+	done
+}
+
+# Calamares termina igual con o sin la configuración final, así que se
+# avisa aparte de que queda para el primer arranque. La ventana queda
+# abierta junto a "Terminado" (no detiene la instalación). Sin pantalla
+# (pruebas automáticas) no se muestra nada.
+avisar_primer_arranque() {
+	[ -n "${DISPLAY:-}" ] && command -v zenity >/dev/null 2>&1 || return 0
+	setsid zenity --info --title="Lázaro Linux" --width=520 --text="<b>La instalación terminó, pero falta la configuración final.</b>
+
+No hubo internet al final de la instalación, así que la barra completa, la pantalla de inicio y los programas elegidos se instalarán en el primer arranque.
+
+<b>Qué hacer:</b> al encender el equipo, conéctate a internet y espera unos minutos. Cuando termine, la pantalla de inicio aparece sola; entra desde ella (no desde la consola de texto). Impresoras y bluetooth quedan listos desde el siguiente encendido.
+
+<small><b>Explicación técnica:</b> la configuración final la hace desktop-postinstall.sh, que descarga paquetes y por eso necesita red. En el primer arranque un servicio de OpenRC (lazaro-primer-arranque) lo ejecuta en segundo plano en cuanto hay internet. OpenRC enciende los servicios del arranque una sola vez y en orden: lo que el script habilita después, como la pantalla de inicio o cupsd, queda para el siguiente arranque. Por eso, al terminar, ese servicio enciende a mano la pantalla de inicio. La barra, el idioma y los grupos del usuario se leen al iniciar sesión: una sesión abierta por consola antes de terminar sigue con lo anterior. Registro: /var/log/desktop-postinstall.log</small>" \
+		</dev/null >/dev/null 2>&1 &
 }
 
 # --- Instalación desatendida (pruebas automáticas) -----------------------

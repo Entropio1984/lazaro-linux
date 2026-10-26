@@ -1,8 +1,9 @@
 #!/sbin/openrc-run
 # Termina la configuración de Lázaro Linux (desktop-postinstall.sh) en
 # cuanto haya internet, si no se pudo durante la instalación. Corre en
-# segundo plano para no retrasar el arranque y se desactiva al terminar
-# bien; si no hay red en 30 minutos, lo intenta en el siguiente arranque.
+# segundo plano para no retrasar el arranque; al terminar bien enciende
+# la pantalla de inicio y se desactiva. Si no hay red en 30 minutos, lo
+# intenta en el siguiente arranque.
 
 description="Configuración final de Lázaro Linux"
 
@@ -20,6 +21,19 @@ start() {
 			if wget -q --spider -T 8 "$indice"; then
 				if /usr/libexec/lazaro/lazaro-postinstalacion; then
 					rc-update del lazaro-primer-arranque default
+					# Fuera el aviso de la consola (ver lazaro-instalar).
+					for f in issue motd; do
+						[ -e "/etc/lazaro/$f.original" ] || continue
+						cp -p "/etc/lazaro/$f.original" "/etc/$f" \
+							&& rm -f "/etc/lazaro/$f.original"
+					done
+					# El script dejó habilitada la pantalla de inicio,
+					# pero en este arranque aún no corría: se enciende
+					# ya, sin pedir otro reinicio.
+					for dm in lightdm sddm gdm greetd; do
+						[ -e "/etc/runlevels/default/$dm" ] || continue
+						rc-service -q "$dm" status || rc-service "$dm" start
+					done
 				fi
 				exit 0
 			fi
