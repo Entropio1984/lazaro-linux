@@ -36,6 +36,77 @@ ESCRITORIO_OFFLINE="xfce"
 log() { printf '[lazaro] %s\n' "$*" | tee -a "$LOG" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
+# --- Avance visible en Calamares ----------------------------------------
+# Calamares muestra en "Toggle log" lo que este programa escribe, pero la
+# salida completa de setup-disk, setup-desktop y desktop-postinstall.sh va
+# solo a $LOG. Mientras trabajan, un vigía en segundo plano revisa $LOG
+# cada 5 s y escribe un resumen (igual que hace el script en la consola):
+#   - una línea por paquete: "(12/80) Instalando firefox";
+#   - si pasan 20 s sin novedades, "... sigue trabajando (1 min 20 s)".
+# avance_iniciar QUÉ arranca el vigía; avance_parar lo detiene.
+AVANCE_PID=""
+
+# Traduce a español las líneas de apk ("( 1/12) Installing x (1.0-r0)")
+# y deja pasar las que ya trae traducidas desktop-postinstall.sh.
+avance_traducir() {
+	awk '
+		{ sub(/^[ \t]+/, ""); sub(/^\( +/, "(") }
+		/^\([0-9]+\/[0-9]+\) (Installing|Upgrading|Downgrading|Reinstalling) / {
+			print "[lazaro] " $1 " Instalando " $3; next
+		}
+		/^\([0-9]+\/[0-9]+\) Purging / { print "[lazaro] " $1 " Quitando " $3; next }
+		/^\([0-9]+\/[0-9]+\) (Instalando|Quitando|Descargando) / { print "[lazaro] " $0; next }
+		/^\.\.\. sigue trabajando/ { print "[lazaro] " $0 }
+	'
+}
+
+avance_vigia() { # QUÉ
+	leidas=$(wc -l <"$LOG")
+	total=0
+	silencio=0
+	# sleep sin la salida de Calamares: al parar el vigía no la deja abierta.
+	while sleep 5 >/dev/null 2>&1; do
+		total=$((total + 5))
+		silencio=$((silencio + 5))
+		lineas=$(wc -l <"$LOG")
+		if [ "$lineas" -gt "$leidas" ]; then
+			nuevas=$(sed -n "$((leidas + 1)),${lineas}p" "$LOG" | avance_traducir)
+			leidas=$lineas
+			if [ -n "$nuevas" ]; then
+				printf '%s\n' "$nuevas" >&2
+				silencio=0
+				continue
+			fi
+		fi
+		if [ "$silencio" -ge 20 ]; then
+			silencio=0
+			if [ "$total" -ge 60 ]; then
+				printf '[lazaro] ... %s sigue trabajando (%s min %s s)\n' "$1" $((total / 60)) $((total % 60)) >&2
+			else
+				printf '[lazaro] ... %s sigue trabajando (%s s)\n' "$1" "$total" >&2
+			fi
+		fi
+	done
+}
+
+avance_iniciar() { # QUÉ
+	avance_parar
+	touch "$LOG"
+	avance_vigia "$1" </dev/null &
+	AVANCE_PID=$!
+}
+
+avance_parar() {
+	[ -n "$AVANCE_PID" ] || return 0
+	kill "$AVANCE_PID" 2>/dev/null || true
+	wait "$AVANCE_PID" 2>/dev/null || true
+	AVANCE_PID=""
+}
+
+# Si el programa termina por un error (die), el vigía no debe quedar vivo:
+# Calamares espera a que se cierre la salida.
+trap avance_parar EXIT
+
 # Toda llamada a apk del instalador pasa por esta función: si cambia la
 # forma de usar apk (apk v3, por ejemplo), se cambia en un solo sitio.
 lz_apk() {
@@ -209,11 +280,13 @@ paso_base() {
 	#   encender (prueba el modo X, que no está instalado, y se rinde).
 	splash=" splash"
 	case "$de" in ninguno | gnome) splash="" ;; esac
+	avance_iniciar "el sistema base"
 	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}$splash" \
 		setup-disk -v -m sys -o /tmp/lazaro-destino.apkovl.tar.gz "$raiz" \
 		>>"$LOG" 2>&1; then
 		die "setup-disk falló (detalles en $LOG)"
 	fi
+	avance_parar
 	# El tema del pulso no viene en ningún paquete: se copia el de la ISO.
 	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
 	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"
@@ -262,9 +335,11 @@ paso_escritorio() {
 		return 0
 	fi
 	log "Instalando el escritorio '$de' con setup-desktop..."
+	avance_iniciar "el escritorio"
 	if ! en_destino "$raiz" setup-desktop "$de" </dev/null >>"$LOG" 2>&1; then
 		die "setup-desktop $de falló (detalles en $LOG)"
 	fi
+	avance_parar
 	servicios_a_default "$raiz"
 	log "Escritorio '$de' instalado."
 }
@@ -358,9 +433,13 @@ paso_ajustes() {
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
 		log "Ejecutando desktop-postinstall.sh --destino $raiz $args"
+		avance_iniciar "la configuración final"
+		pi=0
 		# shellcheck disable=SC2086
-		if sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
-			</dev/null >>"$LOG" 2>&1; then
+		sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
+			</dev/null >>"$LOG" 2>&1 || pi=$?
+		avance_parar
+		if [ "$pi" = 0 ]; then
 			log "desktop-postinstall.sh terminó bien."
 		else
 			log "Aviso: desktop-postinstall.sh falló; se repetirá en el primer arranque."
