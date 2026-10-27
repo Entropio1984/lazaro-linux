@@ -145,6 +145,9 @@ prueba_live() {
 		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
 			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
 			ok=1
+		elif ! grep -q LAZARO-SALVAPANTALLAS-NO "$serie"; then
+			echo "FALLO: en la sesión live corre el salvapantallas, que apaga la pantalla durante la instalación ($MODO)." >&2
+			ok=1
 		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 		else
