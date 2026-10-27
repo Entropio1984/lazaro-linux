@@ -95,8 +95,10 @@ start() {
 	chmod +x "$escritorio"/lazaro-instalador.desktop
 	chown -R lazaro:lazaro /home/lazaro
 	serie "LAZARO-LIVE-LISTO"
-	# "doas" debe dar root al usuario de la sesión (doas.d/lazaro-live.conf).
-	if su -s /bin/sh lazaro -c 'doas -n true' >/dev/null 2>&1; then
+	# "doas" debe dar root al usuario de la sesión (doas.d/lazaro-live.conf)
+	# para cualquier orden: se pide una que no sea la de Calamares y se
+	# mira que corra como UID 0.
+	if [ "$(su -s /bin/sh lazaro -c 'doas -n /bin/sh -c "id -u"' 2>/dev/null)" = 0 ]; then
 		serie "LAZARO-DOAS-OK"
 	else
 		serie "LAZARO-DOAS-NO"
