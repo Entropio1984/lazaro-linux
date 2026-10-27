@@ -84,6 +84,7 @@ arranque se ve en texto.
 | Perfil de la ISO | `perfil/mkimg.lazaro.sh` | Lo usa `mkimage.sh` de aports |
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
 | Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
+| Recomendación según el equipo | `live/usr/sbin/lazaro-recomendar` | Escritorio y programas preseleccionados en Calamares según memoria, gráfica y disco |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
 | Pantallas del instalador | `live/etc/calamares/modules/` | Escritorio, oficina, aplicaciones, disco, usuario |
 | Pantalla de arranque | `live/usr/share/plymouth/themes/lazaro/` | El logo con el pulso (Plymouth) |
@@ -170,7 +171,9 @@ siguiente (edge):
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
 revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que
 simula 13 equipos (el K53SV, PCs con tarjetas de cada generación, dos
-NVIDIA, la elección forzada y el modo gráfico seguro).
+NVIDIA, la elección forzada y el modo gráfico seguro). Lo mismo pasa con
+la recomendación del instalador: `pruebas/recomendacion.sh` simula
+equipos con distinta memoria, gráfica y disco.
 
 ## Versiones probadas
 

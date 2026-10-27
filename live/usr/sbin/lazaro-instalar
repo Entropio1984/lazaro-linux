@@ -360,6 +360,44 @@ paso_escritorio() {
 	log "Escritorio '$de' instalado."
 }
 
+# Programas adicionales que vienen en la ISO (ver LAZARO_EXTRAS en
+# perfil/mkimg.lazaro.sh): se instalan desde el USB, sin internet y más
+# rápido. desktop-postinstall.sh los encuentra después ya instalados; si
+# algo falla aquí, el script lo intenta de nuevo por internet.
+preinstalar_extras() { # RAIZ IDIOMA EXTRAS
+	pe_iso="$(repo_iso)"
+	[ -n "$pe_iso" ] || return 0
+	pe_grafico=si
+	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || pe_grafico=no
+	pe_paq=""
+	# Las mismas tipografías que el script pone con cualquier escritorio.
+	[ "$pe_grafico" = no ] || pe_paq="font-dejavu font-liberation font-liberation-sans-narrow font-noto font-noto-emoji"
+	for e in $3; do
+		case "$e" in
+			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
+			flatpak) [ "$pe_grafico" = no ] || pe_paq="$pe_paq flatpak" ;;
+			vlc) [ "$pe_grafico" = no ] || pe_paq="$pe_paq vlc vlc-qt" ;;
+			libreoffice)
+				[ "$pe_grafico" = no ] && continue
+				pe_paq="$pe_paq libreoffice"
+				case "$2" in es|es_*|es.*) pe_paq="$pe_paq libreoffice-lang-es" ;; esac ;;
+		esac
+	done
+	[ -n "$pe_paq" ] || return 0
+	log "Instalando desde el USB: $pe_paq"
+	avance_iniciar "los programas adicionales"
+	pe_rc=0
+	# --no-network: solo el repositorio de la ISO, aunque haya internet.
+	# shellcheck disable=SC2086
+	en_destino "$1" apk add --no-network $pe_paq </dev/null >>"$LOG" 2>&1 || pe_rc=$?
+	avance_parar
+	if [ "$pe_rc" = 0 ]; then
+		log "Programas adicionales instalados desde el USB."
+	else
+		log "Aviso: no se pudieron instalar desde el USB (código $pe_rc); se descargarán."
+	fi
+}
+
 # --- Paso 3: ajustes y desktop-postinstall.sh ----------------------------
 paso_ajustes() {
 	raiz="${1%/}"
@@ -416,6 +454,8 @@ paso_ajustes() {
 	mkdir -p "$raiz/etc/doas.d"
 	echo 'permit persist :wheel' > "$raiz/etc/doas.d/20-wheel.conf"
 	chmod 0600 "$raiz/etc/doas.d/20-wheel.conf"
+
+	preinstalar_extras "$raiz" "$idioma" "$extras"
 
 	# Repositorios definitivos: los de internet (el de la ISO deja de
 	# existir al reiniciar), y fuera la llave que solo firmaba la ISO.

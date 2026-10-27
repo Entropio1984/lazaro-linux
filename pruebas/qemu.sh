@@ -142,6 +142,12 @@ prueba_live() {
 			echo "FALLO: la revisión de tarjetas gráficas no corrió o no decidió lo esperado ($MODO)." >&2
 			grep 'LAZARO-GRAFICAS' "$serie" >&2 || true
 			ok=1
+		elif ! grep -q 'LAZARO-RECOMENDACION escritorio=xfce .*disco=20GB flatpak=no' "$serie"; then
+			# 4 GB de RAM y disco de 20 GB: XFCE, y Flatpak sin marcar
+			# por el disco pequeño.
+			echo "FALLO: la recomendación del instalador no corrió o no recomendó lo esperado ($MODO)." >&2
+			grep 'LAZARO-RECOMENDACION' "$serie" >&2 || true
+			ok=1
 		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
 			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
 			ok=1
@@ -224,6 +230,15 @@ prueba_instalar() {
 	if [ "$de" != ninguno ] && ! grep -Eq '^\[lazaro\] \([0-9]+/[0-9]+\) Instalando [^[:space:]]' "$serie"; then
 		terminar "$pid"
 		echo "FALLO: el instalador no mostró el avance por paquete." >&2
+		return 1
+	fi
+	# Los programas adicionales marcados (la prueba marca flatpak y
+	# fastfetch) y las tipografías vienen en la ISO: se instalan desde el
+	# USB, con o sin internet.
+	if ! grep -q '^\[lazaro\] Programas adicionales instalados desde el USB' "$serie"; then
+		terminar "$pid"
+		echo "FALLO: los programas adicionales no se instalaron desde el USB." >&2
+		grep -A 15 'Instalando desde el USB' "$serie" | head -n 30 >&2 || true
 		return 1
 	fi
 	# Flatpak viene por defecto: con red debe quedar Flathub agregado.
