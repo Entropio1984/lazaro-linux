@@ -43,7 +43,9 @@ die() { log "ERROR: $*"; exit 1; }
 # cada 5 s y escribe un resumen (igual que hace el script en la consola):
 #   - una línea por paquete: "(12/80) Instalando firefox";
 #   - si pasan 20 s sin novedades, "... sigue trabajando (1 min 20 s)".
-# avance_iniciar QUÉ arranca el vigía; avance_parar lo detiene.
+# setup-disk llama a apk con --quiet y no escribe una línea por paquete:
+# para ese paso se muestra cuánto ocupa ya el sistema nuevo en el disco.
+# avance_iniciar QUÉ [RAÍZ] arranca el vigía; avance_parar lo detiene.
 AVANCE_PID=""
 AVANCE_LEIDAS=/tmp/lazaro-avance.leidas
 
@@ -74,7 +76,7 @@ avance_leer() {
 	printf '%s\n' "$nuevas" >&2
 }
 
-avance_vigia() { # QUÉ
+avance_vigia() { # QUÉ [RAÍZ]
 	total=0
 	silencio=0
 	# sleep sin la salida de Calamares: al parar el vigía no la deja abierta.
@@ -88,19 +90,23 @@ avance_vigia() { # QUÉ
 		if [ "$silencio" -ge 20 ]; then
 			silencio=0
 			if [ "$total" -ge 60 ]; then
-				printf '[lazaro] ... %s sigue trabajando (%s min %s s)\n' "$1" $((total / 60)) $((total % 60)) >&2
+				tiempo="$((total / 60)) min $((total % 60)) s"
 			else
-				printf '[lazaro] ... %s sigue trabajando (%s s)\n' "$1" "$total" >&2
+				tiempo="$total s"
 			fi
+			if [ -n "${2:-}" ] && mb=$(df -Pm "$2" 2>/dev/null | awk 'NR == 2 { print $3 }') && [ -n "$mb" ]; then
+				tiempo="$tiempo, $mb MB en el disco"
+			fi
+			printf '[lazaro] ... %s sigue trabajando (%s)\n' "$1" "$tiempo" >&2
 		fi
 	done
 }
 
-avance_iniciar() { # QUÉ
+avance_iniciar() { # QUÉ [RAÍZ]
 	avance_parar
 	touch "$LOG"
 	wc -l <"$LOG" >"$AVANCE_LEIDAS"
-	avance_vigia "$1" </dev/null &
+	avance_vigia "$@" </dev/null &
 	AVANCE_PID=$!
 }
 
@@ -290,7 +296,7 @@ paso_base() {
 	#   encender (prueba el modo X, que no está instalado, y se rinde).
 	splash=" splash"
 	case "$de" in ninguno | gnome) splash="" ;; esac
-	avance_iniciar "el sistema base"
+	avance_iniciar "el sistema base" "$raiz"
 	if ! BOOTLOADER=grub KERNELOPTS="${LAZARO_KERNELOPTS:-quiet}$splash" \
 		setup-disk -v -m sys -o /tmp/lazaro-destino.apkovl.tar.gz "$raiz" \
 		>>"$LOG" 2>&1; then
