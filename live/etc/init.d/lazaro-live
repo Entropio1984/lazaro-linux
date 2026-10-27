@@ -95,6 +95,12 @@ start() {
 	chmod +x "$escritorio"/lazaro-instalador.desktop
 	chown -R lazaro:lazaro /home/lazaro
 	serie "LAZARO-LIVE-LISTO"
+	# "doas" debe dar root al usuario de la sesión (doas.d/lazaro-live.conf).
+	if su -s /bin/sh lazaro -c 'doas -n true' >/dev/null 2>&1; then
+		serie "LAZARO-DOAS-OK"
+	else
+		serie "LAZARO-DOAS-NO"
+	fi
 
 	# En una máquina virtual con SPICE (Virt Manager): el agente que
 	# comparte el portapapeles con el equipo anfitrión. En un equipo real

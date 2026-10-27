@@ -142,6 +142,9 @@ prueba_live() {
 			echo "FALLO: la revisión de tarjetas gráficas no corrió o no decidió lo esperado ($MODO)." >&2
 			grep 'LAZARO-GRAFICAS' "$serie" >&2 || true
 			ok=1
+		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
+			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
+			ok=1
 		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 		else
