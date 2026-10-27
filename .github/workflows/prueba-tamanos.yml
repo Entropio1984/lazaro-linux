@@ -1,0 +1,54 @@
+# Experimento (no fusionar): cuánto pesaría meter en la ISO el software
+# adicional. Corre solo al empujar a la rama prueba-tamanos.
+name: Tamaños del software adicional
+on:
+  push:
+    branches: [prueba-tamanos]
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    container: alpine:3.24
+    steps:
+      - name: Medir paquetes de Alpine
+        shell: sh
+        run: |
+          set -eu
+          apk update >/dev/null
+          # Lo que ya trae la ISO, aproximado: XFCE completo y Firefox.
+          apk add -q xorg-server xf86-input-libinput mesa-dri-gallium xfce4 xfce4-terminal \
+            xfce4-screensaver lightdm lightdm-gtk-greeter elogind polkit-elogind gvfs \
+            dbus dbus-x11 font-dejavu firefox networkmanager >/dev/null
+          medir() {
+            nombre="$1"; shift
+            nuevos=$(apk add --simulate "$@" 2>/dev/null | sed -n 's/^([ 0-9]*\/[0-9]*) Installing \([^ ]*\) (\(.*\))$/\1-\2/p')
+            n=$(printf '%s\n' "$nuevos" | grep -c . || true)
+            rm -rf /tmp/m && mkdir -p /tmp/m
+            if [ "$n" -gt 0 ]; then
+              apk fetch -q -o /tmp/m $(printf '%s\n' "$nuevos" | sed 's/-[0-9][^-]*-r[0-9]*$//') >/dev/null 2>&1 || true
+            fi
+            mb=$(du -sm /tmp/m | cut -f1)
+            echo "TAMANO $nombre: $n paquetes nuevos, $mb MB de descarga"
+          }
+          medir "LibreOffice (+ idioma es)" libreoffice libreoffice-lang-es
+          medir "Tipografias del script" font-liberation font-liberation-sans-narrow font-noto font-noto-emoji
+          medir "VLC" vlc vlc-qt
+          medir "Fastfetch + Btop" fastfetch btop
+          medir "Flatpak (programa)" flatpak
+          medir "TODO lo de Alpine junto" libreoffice libreoffice-lang-es font-liberation font-liberation-sans-narrow font-noto font-noto-emoji vlc vlc-qt fastfetch btop flatpak
+  flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Medir aplicaciones de Flathub
+        run: |
+          set -eu
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq flatpak >/dev/null
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          info() { flatpak remote-info --user flathub "$1" 2>/dev/null; }
+          for app in org.onlyoffice.desktopeditors com.google.Chrome com.brave.Browser; do
+            i=$(info "$app")
+            echo "TAMANO $app: $(printf '%s\n' "$i" | grep -E '^ *(Download|Installed|Runtime):' | tr -s ' ' | tr '\n' ' ')"
+            rt=$(printf '%s\n' "$i" | sed -n 's/^ *Runtime: *//p')
+            [ -z "$rt" ] || echo "TAMANO   runtime $rt: $(info "runtime/$rt" | grep -E '^ *(Download|Installed):' | tr -s ' ' | tr '\n' ' ')"
+          done
