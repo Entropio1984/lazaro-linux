@@ -269,6 +269,7 @@ prueba_instalar() {
 		captura "$mon" "$RES/$nombre-instalado"
 		# Peso de las traducciones instaladas (solo informativo).
 		sed -n '/LAZARO-LANG-TAMANO/,+10p' "$serie2" | tr -d '\r'
+		sed -n '/LAZARO-APK-/,+30p' "$serie2" | grep -v '^LAZARO-LANG' | head -n 30 | tr -d '\r'
 		tam=""
 		if [ -f "$RES/$nombre-instalado.png" ]; then
 			tam="$(identify -format '%wx%h' "$RES/$nombre-instalado.png" 2>/dev/null)" || tam=""
