@@ -210,6 +210,15 @@ prueba_instalar() {
 		tail -n 120 "$serie" >&2 || true
 		return 1
 	fi
+	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
+	# verse el avance por paquete mientras setup-desktop instala (sin
+	# escritorio no hay ese paso: setup-disk no escribe una línea por
+	# paquete).
+	if [ "$de" != ninguno ] && ! grep -Eq '^\[lazaro\] \([0-9]+/[0-9]+\) Instalando [^[:space:]]' "$serie"; then
+		terminar "$pid"
+		echo "FALLO: el instalador no mostró el avance por paquete." >&2
+		return 1
+	fi
 	# Flatpak viene por defecto: con red debe quedar Flathub agregado.
 	if [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-OK "$serie"; then
 		terminar "$pid"
