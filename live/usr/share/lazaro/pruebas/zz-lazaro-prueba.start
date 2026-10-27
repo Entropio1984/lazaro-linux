@@ -46,6 +46,17 @@ idioma_sesion() {
 {
 	echo "LAZARO-INSTALADO-ARRANCO"
 	rc-status default
+	# Paquetes que quedaron en error (por ejemplo, su paso final falló):
+	# apk los muestra como "N errors" y "apk fix" los reinstala.
+	errores="$(apk fix --simulate 2>&1 | grep -E 'Reinstalling|ERROR' | head -n 10)"
+	if [ -n "$errores" ]; then
+		echo "LAZARO-APK-ERRORES"
+		echo "$errores"
+		grep -n -i -B3 -A3 -e 'trigger.*error' -e 'exited with error' \
+			/var/log/lazaro-instalar.log /var/log/desktop-postinstall.log 2>/dev/null | head -n 40
+	else
+		echo "LAZARO-APK-SIN-ERRORES"
+	fi
 	# Nada en la carpeta del usuario debe ser de otro dueño (si
 	# no, Plasma y otros no pueden guardar su configuración).
 	if [ ! -d /home/prueba ]; then
