@@ -57,9 +57,11 @@ espera() {
 	[ "$n" = 1 ] || fallo "$n opciones dicen 'recomendado para tu equipo'"
 	awk -v id="$1" '/^    - id:/ { e = ($3 == id) } e && /name\[es\]:.*recomendado para tu equipo/ { f = 1 } END { exit !f }' "$ESC" \
 		|| fallo "la opción $1 no dice 'recomendado para tu equipo'"
-	n=$(grep -c 'No recomendado para este equipo' "$ESC" || true)
+	# Opciones que llevan el aviso de "No recomendado", en orden.
+	avisados=$(awk '/^    - id:/ { id = $3 } /description\[es\]:.*No recomendado para este equipo/ { printf "%s ", id }' "$ESC")
 	if [ "$2" = no ]; then
-		[ "$n" = 4 ] || fallo "sin 3D se esperaban 4 escritorios desaconsejados y hay $n"
+		[ "$avisados" = "xfce-wayland gnome plasma sway " ] \
+			|| fallo "sin 3D se esperaba el aviso en xfce-wayland gnome plasma sway y está en: $avisados"
 	fi
 	sel=$(awk '/- name: "Flatpak/ { f = 1; next } f && /selected:/ { print $2; exit }' "$NET")
 	[ "$sel" = "$3" ] || fallo "Flatpak marcado=$sel, se esperaba $3"
@@ -73,7 +75,13 @@ espera() {
 antes=0
 caso portatil-viejo-1gb 1000 i915 sin-nvidia 120
 espera lxqt si true
-grep -q 'No recomendado para este equipo: necesita 4 GB' "$ESC" || fallo "con 1 GB no se desaconsejan los pesados"
+[ "$avisados" = "xfce-wayland gnome plasma sway " ] \
+	|| fallo "con 1 GB se esperaba el aviso en xfce-wayland gnome plasma sway y está en: $avisados"
+
+caso portatil-2gb 1750 i915 sin-nvidia 160
+espera xfce si true
+[ "$avisados" = "xfce-wayland gnome plasma sway " ] \
+	|| fallo "con 2 GB se esperaba el aviso en xfce-wayland gnome plasma sway y está en: $avisados"
 
 caso k53sv-4gb 3800 i915 activa 500
 espera xfce si true

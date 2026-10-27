@@ -162,12 +162,13 @@ ram="$(memoria_texto "$mb")"
 acel="$(tiene_3d)"
 disco="$(disco_bytes)"
 
-# Memoria: 1900 y 3600 MB dejan pasar equipos de 2 y 4 GB, cuyo MemTotal
-# queda un poco por debajo (la gráfica integrada se queda con una parte).
+# Memoria: 1600 y 3300 MB dejan pasar equipos de 2 y 4 GB, cuyo MemTotal
+# queda por debajo: el núcleo y la gráfica integrada (hasta 256 MB, o más
+# en algunos BIOS) se quedan con una parte.
 # De 2 GB en adelante, XFCE: también con mucha memoria, porque es el
 # único que se instala sin internet.
 escritorio=xfce; nombre=XFCE
-if [ "$mb" -gt 0 ] && [ "$mb" -lt 1900 ]; then
+if [ "$mb" -gt 0 ] && [ "$mb" -lt 1600 ]; then
 	escritorio=lxqt; nombre=LXQt
 fi
 
@@ -181,14 +182,14 @@ fi
 
 frase="Recomendado para tu equipo: $motivo."
 [ "$escritorio" != lxqt ] || frase="$frase Necesita internet."
-if [ "$acel" = si ] && [ "$mb" -ge 3600 ]; then
+if [ "$acel" = si ] && [ "$mb" -ge 3300 ]; then
 	frase="$frase Tu equipo también puede con cualquiera de los demás."
 fi
 
 pesada=""
 if [ "$acel" = no ]; then
 	pesada="No recomendado para este equipo: sin aceleración gráfica 3D irá lento."
-elif [ "$mb" -gt 0 ] && [ "$mb" -lt 3600 ]; then
+elif [ "$mb" -gt 0 ] && [ "$mb" -lt 3300 ]; then
 	pesada="No recomendado para este equipo: necesita 4 GB de RAM o más."
 fi
 

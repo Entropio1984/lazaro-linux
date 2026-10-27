@@ -142,9 +142,9 @@ prueba_live() {
 			echo "FALLO: la revisión de tarjetas gráficas no corrió o no decidió lo esperado ($MODO)." >&2
 			grep 'LAZARO-GRAFICAS' "$serie" >&2 || true
 			ok=1
-		elif ! grep -q 'LAZARO-RECOMENDACION escritorio=xfce .*disco=20GB flatpak=no' "$serie"; then
-			# 4 GB de RAM y disco de 20 GB: XFCE, y Flatpak sin marcar
-			# por el disco pequeño.
+		elif ! grep -q 'LAZARO-RECOMENDACION escritorio=xfce .*disco=21GB flatpak=no' "$serie"; then
+			# 4 GB de RAM y disco de 20 GiB (qemu-img "20G" = 21 GB
+			# decimales): XFCE, y Flatpak sin marcar por el disco pequeño.
 			echo "FALLO: la recomendación del instalador no corrió o no recomendó lo esperado ($MODO)." >&2
 			grep 'LAZARO-RECOMENDACION' "$serie" >&2 || true
 			ok=1
