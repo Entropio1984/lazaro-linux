@@ -79,6 +79,31 @@ revisar_discos() {
 	return 0
 }
 
+# La live no debe apagar la pantalla ni suspenderse: se pregunta a
+# elogind qué hará con la inactividad y la tapa, y se mira en el registro
+# de Xorg que el ahorro de energía del monitor (DPMS) quedó apagado.
+revisar_energia() {
+	energia=""
+	for p in IdleAction HandleLidSwitch HandleSuspendKey; do
+		v=$(dbus-send --system --print-reply --dest=org.freedesktop.login1 \
+			/org/freedesktop/login1 org.freedesktop.DBus.Properties.Get \
+			string:org.freedesktop.login1.Manager "string:$p" 2>/dev/null |
+			sed -n 's/.*string "\(.*\)"/\1/p')
+		energia="$energia $p=${v:-?}"
+	done
+	if [ "$energia" = " IdleAction=ignore HandleLidSwitch=ignore HandleSuspendKey=ignore" ]; then
+		serie "LAZARO-ELOGIND-OK"
+	else
+		serie "LAZARO-ELOGIND-NO$energia"
+	fi
+	if grep -qs 'Extension "DPMS" is disabled' /var/log/Xorg.0.log /var/log/lightdm/x-0.log; then
+		serie "LAZARO-DPMS-OK"
+	else
+		serie "LAZARO-DPMS-NO"
+		serie -- grep -h -i -e dpms -e blank -e 'xorg.conf.d' /var/log/Xorg.0.log /var/log/lightdm/x-0.log
+	fi
+}
+
 start() {
 	ebegin "Preparando la sesión live de Lázaro Linux"
 	if ! id lazaro >/dev/null 2>&1; then
@@ -95,6 +120,27 @@ start() {
 	mkdir -p /home/lazaro/.config/autostart
 	printf '[Desktop Entry]\nType=Application\nName=xfce4-screensaver\nHidden=true\n' \
 		> /home/lazaro/.config/autostart/xfce4-screensaver.desktop
+	# El administrador de energía de XFCE apagaba la pantalla a los 10
+	# minutos por su cuenta: en modo presentación no apaga ni suspende
+	# nada, y deja la tapa a elogind (que en la live la ignora).
+	xfpm=/home/lazaro/.config/xfce4/xfconf/xfce-perchannel-xml
+	mkdir -p "$xfpm"
+	cat > "$xfpm/xfce4-power-manager.xml" <<-'EOF'
+		<?xml version="1.0" encoding="UTF-8"?>
+		<channel name="xfce4-power-manager" version="1.0">
+		  <property name="xfce4-power-manager" type="empty">
+		    <property name="presentation-mode" type="bool" value="true"/>
+		    <property name="dpms-enabled" type="bool" value="false"/>
+		    <property name="blank-on-ac" type="int" value="0"/>
+		    <property name="blank-on-battery" type="int" value="0"/>
+		    <property name="inactivity-on-ac" type="uint" value="14"/>
+		    <property name="inactivity-on-battery" type="uint" value="14"/>
+		    <property name="logind-handle-lid-switch" type="bool" value="true"/>
+		    <property name="sleep-button-action" type="uint" value="0"/>
+		    <property name="hibernate-button-action" type="uint" value="0"/>
+		  </property>
+		</channel>
+	EOF
 	escritorio=/home/lazaro/Escritorio
 	mkdir -p "$escritorio"
 	cp /usr/share/applications/lazaro-instalador.desktop "$escritorio"/
@@ -129,6 +175,7 @@ start() {
 				else
 					serie "LAZARO-SALVAPANTALLAS-NO"
 				fi
+				revisar_energia
 				revisar_discos
 				# Portapapeles compartido: el servicio y el agente de la
 				# sesión del usuario deben estar corriendo.

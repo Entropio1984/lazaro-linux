@@ -148,6 +148,10 @@ prueba_live() {
 		elif ! grep -q LAZARO-SALVAPANTALLAS-NO "$serie"; then
 			echo "FALLO: en la sesión live corre el salvapantallas, que apaga la pantalla durante la instalación ($MODO)." >&2
 			ok=1
+		elif ! grep -q LAZARO-ELOGIND-OK "$serie" || ! grep -q LAZARO-DPMS-OK "$serie"; then
+			echo "FALLO: en la sesión live la pantalla todavía puede apagarse o el equipo suspenderse ($MODO)." >&2
+			grep -A 8 -e LAZARO-ELOGIND- -e LAZARO-DPMS- "$serie" | head -n 20 >&2
+			ok=1
 		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 		else
