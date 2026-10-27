@@ -45,6 +45,7 @@ die() { log "ERROR: $*"; exit 1; }
 #   - si pasan 20 s sin novedades, "... sigue trabajando (1 min 20 s)".
 # avance_iniciar QUÉ arranca el vigía; avance_parar lo detiene.
 AVANCE_PID=""
+AVANCE_LEIDAS=/tmp/lazaro-avance.leidas
 
 # Traduce a español las líneas de apk ("( 1/12) Installing x (1.0-r0)")
 # y deja pasar las que ya trae traducidas desktop-postinstall.sh.
@@ -60,23 +61,29 @@ avance_traducir() {
 	'
 }
 
+# Escribe a la salida de error las líneas de avance que llegaron a $LOG
+# desde la última lectura (cuántas se leyeron queda en $AVANCE_LEIDAS, para
+# que avance_parar muestre también las últimas). Devuelve 1 si no hubo.
+avance_leer() {
+	leidas=$(cat "$AVANCE_LEIDAS" 2>/dev/null || echo 0)
+	lineas=$(wc -l <"$LOG")
+	[ "$lineas" -gt "$leidas" ] || return 1
+	nuevas=$(sed -n "$((leidas + 1)),${lineas}p" "$LOG" | avance_traducir)
+	echo "$lineas" >"$AVANCE_LEIDAS"
+	[ -n "$nuevas" ] || return 1
+	printf '%s\n' "$nuevas" >&2
+}
+
 avance_vigia() { # QUÉ
-	leidas=$(wc -l <"$LOG")
 	total=0
 	silencio=0
 	# sleep sin la salida de Calamares: al parar el vigía no la deja abierta.
 	while sleep 5 >/dev/null 2>&1; do
 		total=$((total + 5))
 		silencio=$((silencio + 5))
-		lineas=$(wc -l <"$LOG")
-		if [ "$lineas" -gt "$leidas" ]; then
-			nuevas=$(sed -n "$((leidas + 1)),${lineas}p" "$LOG" | avance_traducir)
-			leidas=$lineas
-			if [ -n "$nuevas" ]; then
-				printf '%s\n' "$nuevas" >&2
-				silencio=0
-				continue
-			fi
+		if avance_leer; then
+			silencio=0
+			continue
 		fi
 		if [ "$silencio" -ge 20 ]; then
 			silencio=0
@@ -92,6 +99,7 @@ avance_vigia() { # QUÉ
 avance_iniciar() { # QUÉ
 	avance_parar
 	touch "$LOG"
+	wc -l <"$LOG" >"$AVANCE_LEIDAS"
 	avance_vigia "$1" </dev/null &
 	AVANCE_PID=$!
 }
@@ -101,6 +109,8 @@ avance_parar() {
 	kill "$AVANCE_PID" 2>/dev/null || true
 	wait "$AVANCE_PID" 2>/dev/null || true
 	AVANCE_PID=""
+	# Lo que el paso escribió después de la última vuelta del vigía.
+	avance_leer || true
 }
 
 # Si el programa termina por un error (die), el vigía no debe quedar vivo:

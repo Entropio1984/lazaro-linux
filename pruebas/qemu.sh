@@ -209,7 +209,7 @@ prueba_instalar() {
 	fi
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-disk instala.
-	if ! grep -q '^\[lazaro\] ([0-9]*/[0-9]*) Instalando ' "$serie"; then
+	if ! grep -Eq '^\[lazaro\] \([0-9]+/[0-9]+\) Instalando [^[:space:]]' "$serie"; then
 		terminar "$pid"
 		echo "FALLO: el instalador no mostró el avance por paquete." >&2
 		return 1
