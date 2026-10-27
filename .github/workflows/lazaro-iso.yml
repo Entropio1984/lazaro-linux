@@ -55,6 +55,19 @@ jobs:
           ALPINE_BRANCH: ${{ steps.version.outputs.branch }}
         run: ./build.sh
 
+      # La descarga oficial es un archivo de una versión (Release) de
+      # GitHub, que no acepta archivos de 2 GB o más.
+      - name: Tamaño de la ISO (límite de GitHub, 2 GB)
+        run: |
+          for f in salida/*.iso; do
+            b=$(stat -c %s "$f")
+            echo "$f: $((b / 1048576)) MB"
+            if [ "$b" -ge 2147483648 ]; then
+              echo "::error::La ISO pesa 2 GB o más y GitHub no la aceptaría en la descarga."
+              exit 1
+            fi
+          done
+
       - name: Permisos de la caché
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" cache salida || true
@@ -75,6 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: sh pruebas/graficas.sh
+      - run: sh pruebas/recomendacion.sh
 
   pruebas:
     name: Prueba ${{ matrix.prueba }} (${{ matrix.alpine }})

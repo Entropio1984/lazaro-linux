@@ -7,7 +7,8 @@
 #    (escritorio XFCE, red, Calamares). Va en /etc/apk/world del apkovl.
 #  - apks: todo lo que se copia al repositorio de la ISO. Incluye lo
 #    anterior y además lo que necesita el sistema instalado sin internet
-#    (sistema base, XFCE completo, firmware común en portátiles viejos).
+#    (sistema base, XFCE completo, firmware común en portátiles viejos,
+#    programas adicionales de Alpine).
 
 # Escritorio de la sesión live = lo que instala "setup-desktop xfce" en
 # alpine-conf (verificado en la etiqueta 3.22.0, la de Alpine 3.24).
@@ -48,6 +49,15 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	linux-firmware-rtl_nic linux-firmware-rtl_bt linux-firmware-mediatek
 	intel-ucode amd-ucode"
 
+# Programas de "Software adicional" que vienen en la ISO (unos 325 MB):
+# lazaro-instalar los instala desde el USB, sin internet, y
+# desktop-postinstall.sh después los encuentra ya puestos. También van
+# las tipografías que el script instala con cualquier escritorio.
+# libreoffice-lang-es: solo el español; otro idioma se descarga.
+LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
+	flatpak font-liberation font-liberation-sans-narrow font-noto
+	font-noto-emoji"
+
 profile_lazaro() {
 	profile_standard
 	title="Lázaro Linux"
@@ -69,7 +79,7 @@ profile_lazaro() {
 	syslinux_serial="0 115200"
 	boot_addons="amd-ucode intel-ucode"
 	initrd_ucode="/boot/amd-ucode.img /boot/intel-ucode.img"
-	apks="$apks $LAZARO_LIVE $LAZARO_DESTINO"
+	apks="$apks $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS"
 	grub_mod="$grub_mod serial terminal"
 	apkovl="genapkovl-lazaro.sh"
 	# genapkovl-lazaro.sh corre como proceso aparte: recibe la lista así.

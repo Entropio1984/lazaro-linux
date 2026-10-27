@@ -1,6 +1,8 @@
 #!/sbin/openrc-run
 # Revisa las tarjetas gráficas antes de cargar el controlador de una
 # NVIDIA y decide si es seguro cargarlo (ver /usr/sbin/lazaro-graficas).
+# Con eso y la memoria y el disco, lazaro-recomendar deja en Calamares el
+# escritorio y los programas recomendados para el equipo.
 
 description="Revisión de tarjetas gráficas de Lázaro Linux"
 
@@ -13,4 +15,7 @@ start() {
 	ebegin "Revisando las tarjetas gráficas"
 	lazaro-graficas
 	eend 0
+	ebegin "Preparando la recomendación del instalador"
+	lazaro-recomendar
+	eend $?
 }

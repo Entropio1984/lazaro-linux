@@ -1,0 +1,218 @@
+#!/bin/sh
+# lazaro-recomendar: al arrancar la sesión live, mira el equipo y deja
+# en Calamares una recomendación de escritorio y de programas, que la
+# persona puede cambiar:
+#   - memoria: menos de 2 GB, LXQt; de 2 a 4 GB, XFCE; con más, cualquier
+#     escritorio va bien (queda XFCE, que se instala sin internet);
+#   - gráfica: sin aceleración 3D (máquina virtual, controlador básico o
+#     NVIDIA en modo seguro) se desaconsejan GNOME, Plasma, Sway y XFCE
+#     Wayland, que irían lentos;
+#   - disco: con 32 GB o menos se desmarca Flatpak (las aplicaciones de
+#     Flathub ocupan varios cientos de MB cada una).
+#
+# Corre después de lazaro-graficas (usa su decisión) y antes de la
+# pantalla de inicio. Reescribe, a partir de una copia del original:
+#   /etc/calamares/modules/packagechooser-escritorio.conf
+#   /etc/calamares/modules/netinstall.conf
+# El resultado queda en /run/lazaro/recomendacion y, en las pruebas
+# automáticas, en el puerto serie (LAZARO-RECOMENDACION ...).
+#
+# Variables para las pruebas: LAZARO_SYS (en vez de /sys), LAZARO_MEMINFO
+# (en vez de /proc/meminfo), LAZARO_MOUNTS (en vez de /proc/mounts),
+# LAZARO_GRAFICAS (decisión de lazaro-graficas), LAZARO_CALAMARES (en vez
+# de /etc/calamares/modules) y LAZARO_RECOMENDACION (archivo resultado).
+
+set -eu
+
+SYS="${LAZARO_SYS:-/sys}"
+MEMINFO="${LAZARO_MEMINFO:-/proc/meminfo}"
+MOUNTS="${LAZARO_MOUNTS:-/proc/mounts}"
+GRAFICAS="${LAZARO_GRAFICAS:-/run/lazaro/graficas}"
+MODULOS="${LAZARO_CALAMARES:-/etc/calamares/modules}"
+SALIDA="${LAZARO_RECOMENDACION:-/run/lazaro/recomendacion}"
+ORIGINAL="$(dirname "$SALIDA")/calamares-original"
+
+ESCRITORIOS_PESADOS="gnome plasma sway xfce-wayland"
+# 32 GB tal como lo anuncia el fabricante (un disco "de 32 GB" trae algo
+# menos de 32 000 000 000 bytes); se deja margen.
+DISCO_PEQUENO=34000000000
+
+serie() {
+	[ -c /dev/ttyS0 ] || return 0
+	printf '%s\n' "$*" > /dev/ttyS0 2>/dev/null || true
+}
+
+# Memoria en MB (MemTotal: lo que ve el sistema, algo menos que la
+# instalada).
+memoria_mb() {
+	awk '/^MemTotal:/ { print int($2 / 1024); exit }' "$MEMINFO" 2>/dev/null || echo 0
+}
+
+# "4 GB", "1,5 GB" o "512 MB" para los textos. Se redondea hacia arriba
+# al medio GB: MemTotal de un equipo con 4 GB da unos 3,7.
+memoria_texto() {
+	awk -v mb="$1" 'BEGIN {
+		if (mb < 900) { printf "%d MB", mb; exit }
+		m = mb / 512; g = (m == int(m) ? m : int(m) + 1) / 2
+		s = sprintf("%.1f", g); sub(/\.0$/, "", s); sub(/\./, ",", s)
+		printf "%s GB", s
+	}'
+}
+
+# ¿Hay aceleración 3D? Se mira qué controlador maneja cada pantalla
+# (/sys/class/drm/cardN). Los de máquinas virtuales y el básico del
+# firmware no la tienen; i915, amdgpu, radeon y nouveau sí.
+tiene_3d() {
+	if [ -r "$GRAFICAS" ] && grep -qx 'DECISION=seguro' "$GRAFICAS"; then
+		echo no; return 0
+	fi
+	for card in "$SYS"/class/drm/card[0-9]*; do
+		case "${card##*/}" in *-*) continue ;; esac
+		[ -e "$card/device/driver" ] || continue
+		drv="$(basename "$(readlink -f "$card/device/driver")")"
+		case "$drv" in
+			i915|xe|amdgpu|radeon|nouveau) echo si; return 0 ;;
+		esac
+	done
+	echo no
+}
+
+# Tamaño en bytes del disco interno más grande: sin contar los
+# extraíbles ni el que tiene algo montado (el USB de la live).
+disco_bytes() {
+	mayor=0
+	for b in "$SYS"/block/*; do
+		[ -r "$b/size" ] || continue
+		n="${b##*/}"
+		case "$n" in
+			loop*|ram*|zram*|sr*|fd*|dm-*|md*|nbd*|mmcblk*boot*|mmcblk*rpmb) continue ;;
+		esac
+		[ "$(cat "$b/removable" 2>/dev/null || echo 0)" = 0 ] || continue
+		if awk -v d="/dev/$n" 'index($1, d) == 1 && substr($1, length(d) + 1) ~ /^(p?[0-9]+)?$/ { f = 1 } END { exit !f }' "$MOUNTS" 2>/dev/null; then
+			continue
+		fi
+		bytes=$(( $(cat "$b/size") * 512 ))
+		[ "$bytes" -le "$mayor" ] || mayor="$bytes"
+	done
+	echo "$mayor"
+}
+
+disco_texto() {
+	awk -v b="$1" 'BEGIN { printf "%d GB", int(b / 1000000000 + 0.5) }'
+}
+
+# Copia intacta de las configuraciones, para poder repetir sin acumular
+# cambios.
+original() {
+	mkdir -p "$ORIGINAL"
+	[ -e "$ORIGINAL/$1" ] || cp "$MODULOS/$1" "$ORIGINAL/$1"
+	echo "$ORIGINAL/$1"
+}
+
+# Reescribe la pantalla "Escritorio": opción por defecto, nombre con
+# "(recomendado para tu equipo)" y una frase al principio de cada
+# descripción en español (vacía = no se toca).
+escribir_escritorios() { # RECOMENDADO FRASE_RECOMENDADO FRASE_PESADOS
+	conf=packagechooser-escritorio.conf
+	orig="$(original "$conf")"
+	awk -v rec="$1" -v frase="$2" -v pesada="$3" -v pesados=" $ESCRITORIOS_PESADOS " '
+		function anteponer(linea, texto) {
+			if (texto == "") return linea
+			sub(/: "/, ": \"" texto " ", linea)
+			return linea
+		}
+		/^default:/ { print "default: " rec; next }
+		/^    - id:/ { id = $3 }
+		/^      name(\[es\])?:/ {
+			sub(/ \((recomendado|recommended)\)"$/, "\"")
+			if (id == rec) {
+				if ($0 ~ /^      name\[es\]:/) sub(/"$/, " (recomendado para tu equipo)\"")
+				else sub(/"$/, " (recommended)\"")
+			}
+			print; next
+		}
+		/^      description\[es\]:/ {
+			if (id == rec) $0 = anteponer($0, frase)
+			else if (index(pesados, " " id " ")) $0 = anteponer($0, pesada)
+			print; next
+		}
+		{ print }
+	' "$orig" > "$MODULOS/$conf.nuevo"
+	mv "$MODULOS/$conf.nuevo" "$MODULOS/$conf"
+}
+
+# Reescribe "Software adicional": con disco pequeño, Flatpak sin marcar.
+escribir_programas() { # DISCO_PEQUENO(si/no) TEXTO_DISCO
+	conf=netinstall.conf
+	orig="$(original "$conf")"
+	awk -v pequeno="$1" -v disco="$2" '
+		/^          - name: "Flatpak/ { flatpak = 1 }
+		/^          - name:/ && !/"Flatpak/ { flatpak = 0 }
+		flatpak && pequeno == "si" && /^            selected: true/ { sub(/true/, "false") }
+		flatpak && pequeno == "si" && /^            description:/ {
+			sub(/"$/, " Tu disco es pequeño (" disco "): se dejó sin marcar para ahorrar espacio.\"")
+		}
+		{ print }
+	' "$orig" > "$MODULOS/$conf.nuevo"
+	mv "$MODULOS/$conf.nuevo" "$MODULOS/$conf"
+}
+
+mb="$(memoria_mb)"
+ram="$(memoria_texto "$mb")"
+acel="$(tiene_3d)"
+disco="$(disco_bytes)"
+
+# Memoria: 1600 y 3300 MB dejan pasar equipos de 2 y 4 GB, cuyo MemTotal
+# queda por debajo: el núcleo y la gráfica integrada (hasta 256 MB, o más
+# en algunos BIOS) se quedan con una parte.
+# De 2 GB en adelante, XFCE: también con mucha memoria, porque es el
+# único que se instala sin internet.
+escritorio=xfce; nombre=XFCE
+if [ "$mb" -gt 0 ] && [ "$mb" -lt 1600 ]; then
+	escritorio=lxqt; nombre=LXQt
+fi
+
+motivo="$ram de RAM"
+[ "$mb" -gt 0 ] || motivo="memoria desconocida"
+if [ "$acel" = si ]; then
+	motivo="$motivo, gráfica con aceleración 3D"
+else
+	motivo="$motivo, gráfica sin aceleración 3D"
+fi
+
+frase="Recomendado para tu equipo: $motivo."
+[ "$escritorio" != lxqt ] || frase="$frase Necesita internet."
+if [ "$acel" = si ] && [ "$mb" -ge 3300 ]; then
+	frase="$frase Tu equipo también puede con cualquiera de los demás."
+fi
+
+pesada=""
+if [ "$acel" = no ]; then
+	pesada="No recomendado para este equipo: sin aceleración gráfica 3D irá lento."
+elif [ "$mb" -gt 0 ] && [ "$mb" -lt 3300 ]; then
+	pesada="No recomendado para este equipo: necesita 4 GB de RAM o más."
+fi
+
+pequeno=no
+disco_txt=desconocido
+if [ "$disco" -gt 0 ]; then
+	disco_txt="$(disco_texto "$disco")"
+	[ "$disco" -ge "$DISCO_PEQUENO" ] || pequeno=si
+fi
+
+escribir_escritorios "$escritorio" "$frase" "$pesada"
+escribir_programas "$pequeno" "$disco_txt"
+
+mkdir -p "$(dirname "$SALIDA")"
+cat > "$SALIDA" <<EOF
+ESCRITORIO=$escritorio
+NOMBRE="$nombre"
+MEMORIA_MB=$mb
+ACELERACION=$acel
+DISCO="$disco_txt"
+DISCO_PEQUENO=$pequeno
+MOTIVO="$motivo"
+EOF
+resumen="escritorio=$escritorio memoria=${mb}MB 3d=$acel disco=$(echo "$disco_txt" | tr -d ' ') flatpak=$([ "$pequeno" = si ] && echo no || echo si)"
+echo "lazaro-recomendar: $resumen"
+serie "LAZARO-RECOMENDACION $resumen"
