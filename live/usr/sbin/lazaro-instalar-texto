@@ -119,18 +119,26 @@ while :; do
 Conecta el cable de red, o elige XFCE, que se instala sin internet.
 
 Para usar wifi: cancela, escribe
-  nmcli device wifi connect NOMBRE-DE-LA-RED password CLAVE
+  nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"
+(con las comillas)
 y vuelve a abrir el instalador." 14 70
 done
 
 # --- Programas adicionales ------------------------------------------------
 extras="base"
-if [ "$escritorio" != ninguno ]; then
+if [ "$escritorio" = ninguno ]; then
+	# Sin escritorio solo sirven los programas de consola.
+	elegidos=$(pedir --title "Software adicional" --separate-output --checklist \
+"Marca con la barra espaciadora lo que quieras instalar." \
+		11 72 2 \
+		fastfetch "Fastfetch: resumen del equipo en la terminal" off \
+		btop "Btop: monitor de recursos" off) || cancelar
+else
 	flat=on
 	[ -r /run/lazaro/recomendacion ] && grep -qx 'DISCO_PEQUENO=si' /run/lazaro/recomendacion && flat=off
 	elegidos=$(pedir --title "Software adicional" --separate-output --checklist \
 "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre." \
-		18 72 8 \
+		18 76 8 \
 		fastfetch "Fastfetch: resumen del equipo en la terminal" off \
 		btop "Btop: monitor de recursos" off \
 		vlc "VLC: reproductor de video y música" off \
@@ -139,8 +147,8 @@ if [ "$escritorio" != ninguno ]; then
 		onlyoffice "OnlyOffice (Flathub, necesita internet)" off \
 		chrome "Google Chrome (Flathub, necesita internet)" off \
 		brave "Brave (Flathub, necesita internet)" off) || cancelar
-	for e in $elegidos; do extras="$extras $e"; done
 fi
+for e in $elegidos; do extras="$extras $e"; done
 
 # --- Idioma, teclado y zona horaria ----------------------------------------
 idioma=$(pedir --title "Idioma" --default-item es_CO.UTF-8 --menu "Idioma del sistema:" 16 50 8 \

@@ -716,6 +716,11 @@ instalar_disco() { # DISCO ESCRITORIO USUARIO NOMBRE CLAVE EQUIPO IDIOMA TECLADO
 	validar_escritorio "$de"
 	[ -b "$disco" ] || die "$disco no es un disco"
 	raiz=/mnt/lazaro
+	# Antes de borrar el disco: que se puedan conseguir los paquetes.
+	# paso_base lo vuelve a revisar, pero ahí el disco ya está borrado.
+	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] || [ -z "$(repo_iso)" ]; then
+		esperar_red || die "Sin internet: no se puede instalar '$de' (no se cambió nada en el disco). Conéctate a una red o elige XFCE."
+	fi
 	auto_particionar "$disco"
 	paso_base "$raiz" "$de"
 	crear_usuario "$3" "$4" "$5" "$6" "${12}"

@@ -80,7 +80,8 @@ con el teclado (flechas, barra espaciadora y Enter), hace las mismas
 preguntas que el gráfico (disco, escritorio, programas, idioma, teclado,
 zona horaria y usuario) y la misma instalación. No borra nada hasta que
 confirmas el resumen. Para wifi, antes de abrirlo:
-`nmcli device wifi connect NOMBRE-DE-LA-RED password CLAVE`.
+`nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"`
+(con las comillas).
 
 Con el sistema ya instalado, el arranque también muestra el pulso
 (Plymouth). Por ahora no aparece en dos casos: con GNOME (su pantalla de
