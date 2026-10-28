@@ -46,6 +46,20 @@ parametro() {
 	return 1
 }
 
+# Experimento: memoria, programas cerrados por falta de memoria y
+# procesos gráficos vivos.
+diagnostico() {
+	serie -- free -m
+	serie -- df -m /
+	dmesg | grep -i -e 'out of memory' -e oom -e 'killed process' -e 'page allocation' | tail -n 20 | serie
+	for c in /proc/[0-9]*/cmdline; do
+		l=$(tr '\0' ' ' < "$c" 2>/dev/null)
+		case "$l" in *calamares*|*Xorg*|*lightdm*|*xfce4-session*|*xfwm4*) echo "vivo: $l" ;; esac
+	done | serie
+	serie -- tail -n 30 /var/log/lightdm/lightdm.log
+	serie -- tail -n 30 /home/lazaro/.xsession-errors
+}
+
 revisar_discos() {
 	# Calamares escribe en su registro la lista de discos donde se puede
 	# instalar (después de "LIST OF DETECTED DEVICES:"). Si está vacía, la
@@ -63,14 +77,7 @@ revisar_discos() {
 		serie "LAZARO-DISCOS-OK"
 	else
 		serie "LAZARO-DISCOS-FALLO"
-		# Para saber por qué: memoria, si el núcleo cerró algún programa
-		# por falta de memoria, si Calamares sigue abierto y qué escribió.
-		serie -- free -m
-		serie -- df -m /
-		dmesg | grep -i -e 'out of memory' -e oom -e 'killed process' | tail -n 20 | serie
-		for c in /proc/[0-9]*/cmdline; do
-			tr '\0' ' ' < "$c" 2>/dev/null | grep -q 'calamares' && echo "calamares vivo: ${c%/cmdline}"
-		done | serie
+		diagnostico
 		[ -z "$registro" ] && serie "sin session.log" || tail -n 40 "$registro" | serie
 	fi
 	# Todas las pantallas y pasos de settings.conf tienen que cargar (por
@@ -180,6 +187,7 @@ start() {
 		while [ $i -lt 120 ]; do
 			if pidof calamares >/dev/null 2>&1; then
 				serie "LAZARO-CALAMARES-ABIERTO"
+				serie -- free -m
 				# Nada debe apagar la pantalla mientras se instala.
 				if pidof xfce4-screensaver >/dev/null 2>&1; then
 					serie "LAZARO-SALVAPANTALLAS-ACTIVO"
@@ -211,6 +219,7 @@ start() {
 			sleep 5
 		done
 		serie "LAZARO-CALAMARES-NO-ABRIO"
+		diagnostico
 	) &
 
 	# Instalación desatendida, solo para pruebas:
