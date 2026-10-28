@@ -69,7 +69,12 @@ profile_lazaro() {
 	kernel_addons=
 	# console=ttyS0 primero y tty0 al final: la consola principal sigue
 	# siendo la pantalla; el puerto serie solo sirve a las pruebas (QEMU).
-	kernel_cmdline="console=ttyS0,115200 console=tty0"
+	# rootflags=size=85%: la sesión live se instala en la RAM (tmpfs), y
+	# Alpine solo le deja la mitad de la memoria. Con 4 GB o menos (más lo
+	# que se queda la gráfica integrada) no alcanzaba: faltaban paquetes,
+	# no se creaba el usuario y no arrancaba el escritorio. El límite no
+	# reserva memoria: solo se ocupa lo que se usa.
+	kernel_cmdline="console=ttyS0,115200 console=tty0 rootflags=size=85%"
 	# nouveau no se carga solo en la live: lo carga lazaro-graficas
 	# después de revisar la tarjeta, si es seguro.
 	lazaro_nvidia="modprobe.blacklist=nouveau"

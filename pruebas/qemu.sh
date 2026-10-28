@@ -3,9 +3,10 @@
 # también sirven en cualquier Linux con qemu-system-x86_64, xorriso y
 # socat; con OVMF para UEFI e ImageMagick para medir las capturas).
 #
-#   pruebas/qemu.sh live ISO bios|uefi
+#   pruebas/qemu.sh live ISO bios|uefi [MEMORIA_MB]
 #       Arranca la ISO como lo haría un usuario y espera a que Calamares
-#       se abra en el escritorio. Guarda capturas de pantalla.
+#       se abra en el escritorio. Guarda capturas de pantalla. MEMORIA_MB
+#       (por omisión 4096): para probar equipos con poca RAM.
 #
 #   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red
 #       Instala sin interfaz (lazaro-instalar auto) en un disco virtual,
@@ -111,7 +112,7 @@ esperar() {
 terminar() { kill "$1" 2>/dev/null || true; sleep 2; kill -9 "$1" 2>/dev/null || true; }
 
 prueba_live() {
-	nombre="live-$MODO"
+	nombre="live-$MODO-${MEM}mb"
 	serie="$RES/$nombre-serie.log"
 	mon="$SOCK_DIR/$nombre.mon"
 	disco="$RES/$nombre.qcow2"
@@ -147,6 +148,12 @@ prueba_live() {
 			# decimales): XFCE, y Flatpak sin marcar por el disco pequeño.
 			echo "FALLO: la recomendación del instalador no corrió o no recomendó lo esperado ($MODO)." >&2
 			grep 'LAZARO-RECOMENDACION' "$serie" >&2 || true
+			ok=1
+		elif ! grep -q LAZARO-LIVE-LISTO "$serie" || grep -q 'No space left on device' "$serie"; then
+			# La sesión live entera vive en la RAM: no debe quedarse sin
+			# espacio al instalarse ni dejar de preparar su usuario.
+			echo "FALLO: la sesión live no cupo en la memoria ($MEM MB) o no se preparó ($MODO)." >&2
+			grep -e 'No space left' -e LAZARO-RAIZ "$serie" | head -n 10 >&2 || true
 			ok=1
 		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
 			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
@@ -406,7 +413,10 @@ prueba_instalar() {
 }
 
 case "$orden" in
-	live) [ $# -eq 3 ] || uso; prueba_live ;;
+	live)
+		[ $# -eq 3 ] || [ $# -eq 4 ] || uso
+		[ $# -eq 3 ] || MEM="$4"
+		prueba_live ;;
 	instalar)
 		[ $# -eq 5 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac
