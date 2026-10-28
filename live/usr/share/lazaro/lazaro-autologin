@@ -7,13 +7,15 @@
 # (por ejemplo greetd para Sway, en el primer arranque con internet).
 # Para quitarlo: borrar /etc/lazaro/autologin y reiniciar.
 
+# Una sola ejecución a la vez (el servicio y el primer arranque pueden
+# coincidir): las dos escriben los mismos archivos.
+! command -v flock >/dev/null 2>&1 || ! [ -d /run ] || ! [ -w /run ] \
+	|| { exec 9>/run/lazaro-autologin.lock && flock 9; }
+
 u="$(cat /etc/lazaro/autologin 2>/dev/null)" || u=""
-if [ -z "$u" ] || ! id "$u" >/dev/null 2>&1; then
-	# Sin usuario: se quita lo que este programa haya puesto.
-	rm -f /etc/lightdm/lightdm.conf.d/60-lazaro-autologin.conf \
-		/etc/sddm.conf.d/60-lazaro-autologin.conf
-	exit 0
-fi
+[ -n "$u" ] && id "$u" >/dev/null 2>&1 || u=""
+# Si algo no se pudo escribir, se sigue con lo demás y se avisa al final.
+rc=0
 
 # primera_sesion DIR NOMBRE...: el primer NOMBRE.desktop que exista en
 # DIR, o si no hay ninguno, el primer .desktop de DIR.
@@ -32,10 +34,15 @@ primera_sesion() {
 	return 1
 }
 
-if [ -d /etc/lightdm ]; then
+# Sin usuario se quita lo que este programa haya puesto.
+if [ -z "$u" ]; then
+	rm -f /etc/lightdm/lightdm.conf.d/60-lazaro-autologin.conf \
+		/etc/sddm.conf.d/60-lazaro-autologin.conf || rc=1
+elif [ -d /etc/lightdm ]; then
 	# LightDM solo deja entrar sin contraseña a los del grupo autologin.
 	addgroup -S autologin 2>/dev/null || true
-	addgroup "$u" autologin 2>/dev/null || true
+	id -nG "$u" | tr ' ' '\n' | grep -qx autologin \
+		|| addgroup "$u" autologin || rc=1
 	sesion="$(primera_sesion /usr/share/xsessions xfce mate lxqt)" || sesion=""
 	mkdir -p /etc/lightdm/lightdm.conf.d
 	{
@@ -43,10 +50,10 @@ if [ -d /etc/lightdm ]; then
 		echo "autologin-user=$u"
 		echo "autologin-user-timeout=0"
 		[ -z "$sesion" ] || echo "autologin-session=$sesion"
-	} > /etc/lightdm/lightdm.conf.d/60-lazaro-autologin.conf
+	} > /etc/lightdm/lightdm.conf.d/60-lazaro-autologin.conf || rc=1
 fi
 
-if [ -x /usr/bin/sddm ]; then
+if [ -n "$u" ] && [ -x /usr/bin/sddm ]; then
 	# Plasma entra en su sesión Wayland, la predeterminada.
 	sesion="$(primera_sesion /usr/share/wayland-sessions plasma)" \
 		|| sesion="$(primera_sesion /usr/share/xsessions lxqt plasmax11)" || sesion=""
@@ -55,18 +62,19 @@ if [ -x /usr/bin/sddm ]; then
 		echo "[Autologin]"
 		echo "User=$u"
 		[ -z "$sesion" ] || echo "Session=$sesion.desktop"
-	} > /etc/sddm.conf.d/60-lazaro-autologin.conf
+	} > /etc/sddm.conf.d/60-lazaro-autologin.conf || rc=1
 fi
 
 if [ -d /etc/gdm ] && command -v gdm >/dev/null 2>&1; then
 	c=/etc/gdm/custom.conf
 	[ -f "$c" ] || echo "[daemon]" > "$c"
 	grep -q '^\[daemon\]' "$c" || printf '[daemon]\n' >> "$c"
-	awk -v u="$u" '
+	# Sin usuario solo se borran las dos líneas.
+	{ awk -v u="$u" '
 		/^AutomaticLogin(Enable)?=/ { next }
 		{ print }
-		/^\[daemon\]/ { print "AutomaticLoginEnable=True"; print "AutomaticLogin=" u }
-	' "$c" > "$c.lazaro" && mv "$c.lazaro" "$c"
+		/^\[daemon\]/ && u != "" { print "AutomaticLoginEnable=True"; print "AutomaticLogin=" u }
+	' "$c" > "$c.lazaro" && mv "$c.lazaro" "$c"; } || rc=1
 fi
 
 if [ -f /etc/greetd/config.toml ]; then
@@ -74,8 +82,8 @@ if [ -f /etc/greetd/config.toml ]; then
 	# Wayland). initial_session corre una vez por arranque; al cerrar la
 	# sesión vuelve la pantalla de inicio.
 	cmd="$(grep -v -e '^[[:space:]]*$' -e '^#' /etc/greetd/environments 2>/dev/null | tail -n 1)"
-	if [ -n "$cmd" ]; then
-		c=/etc/greetd/config.toml
+	c=/etc/greetd/config.toml
+	if [ -z "$u" ] || [ -n "$cmd" ]; then
 		# Se quita el bloque anterior y las líneas vacías del final.
 		awk '
 			/^\[initial_session\]/ { fuera = 1; next }
@@ -83,9 +91,10 @@ if [ -f /etc/greetd/config.toml ]; then
 			fuera { next }
 			/^[[:space:]]*$/ { vacias++; next }
 			{ for (; vacias > 0; vacias--) print ""; print }
-		' "$c" > "$c.lazaro"
-		printf '\n[initial_session]\ncommand = "%s"\nuser = "%s"\n' "$cmd" "$u" >> "$c.lazaro"
-		mv "$c.lazaro" "$c"
+		' "$c" > "$c.lazaro" \
+		&& { [ -z "$u" ] || printf '\n[initial_session]\ncommand = "%s"\nuser = "%s"\n' "$cmd" "$u" >> "$c.lazaro"; } \
+		&& mv "$c.lazaro" "$c" || rc=1
+		rm -f "$c.lazaro"
 	fi
 fi
-exit 0
+exit "$rc"
