@@ -179,7 +179,7 @@ prueba_live() {
 	fi
 	terminar "$pid"
 	rm -f "$disco"
-	tail -n 80 "$serie" || true
+	tail -n 400 "$serie" || true
 	return $ok
 }
 
