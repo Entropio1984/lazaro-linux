@@ -27,11 +27,17 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # pantalla al probar la ISO en Virt Manager/QEMU con SPICE.
 # pciutils: lspci con la base de datos de nombres, para que
 # lazaro-graficas sepa de qué generación es una NVIDIA.
+# xf86-video-vesa: cuando la única gráfica es una NVIDIA antigua y queda
+# en modo seguro (sin nouveau) y se arranca en modo BIOS, no hay ninguna
+# pantalla para el controlador "modesetting" de Xorg: solo VESA sabe
+# dibujar ahí (Compaq Presario CQ50, GeForce 8200M). Xorg lo usa solo
+# si no hay otro.
 LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
 	gparted xhost zenity spice-vdagent spice-vdagent-openrc pciutils
+	xf86-video-vesa
 	plymouth plymouth-drm plymouth-openrc-plugin"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
