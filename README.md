@@ -43,7 +43,9 @@ instalador (Calamares) pregunta, en este orden:
      instala también Flatpak.
 4. **Disco** y **usuario**.
 
-XFCE y "Sin escritorio" se instalan sin internet, desde la propia ISO.
+XFCE, MATE, LXQt, Sway, XFCE Wayland y "Sin escritorio" se instalan sin
+internet, desde la propia ISO. GNOME y KDE Plasma se descargan (no caben
+en el límite de 2 GB de la ISO).
 Los demás escritorios se descargan, igual que el software adicional.
 
 **Tarjetas NVIDIA.** Antes de cargar el controlador de una NVIDIA
@@ -181,6 +183,7 @@ siguiente (edge):
 | Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos |
 | Instalación | UEFI | LXQt | Sí | La sesión queda en el idioma elegido |
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
+| Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la

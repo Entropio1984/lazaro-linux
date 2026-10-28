@@ -100,7 +100,7 @@ marca() { [ "$1" = "$rec" ] && echo on || echo off; }
 sufijo() { [ "$1" = "$rec" ] && echo " (recomendado)" || true; }
 while :; do
 	escritorio=$(pedir --title "Escritorio" --radiolist \
-"¿Qué escritorio quieres? Solo XFCE se instala sin internet; los demás se descargan." \
+"¿Qué escritorio quieres? GNOME y Plasma se descargan de internet; los demás vienen en el USB." \
 		18 70 8 \
 		xfce "XFCE: liviano y clásico$(sufijo xfce)" "$(marca xfce)" \
 		lxqt "LXQt: el más liviano, para poca memoria$(sufijo lxqt)" "$(marca lxqt)" \
@@ -110,13 +110,14 @@ while :; do
 		sway "Sway: ventanas en mosaico, con teclado$(sufijo sway)" "$(marca sway)" \
 		xfce-wayland "XFCE Wayland (experimental)$(sufijo xfce-wayland)" "$(marca xfce-wayland)" \
 		ninguno "Sin escritorio: solo la consola$(sufijo ninguno)" "$(marca ninguno)") || cancelar
-	case "$escritorio" in xfce|ninguno) break ;; esac
+	case "$escritorio" in xfce|mate|lxqt|sway|xfce-wayland|ninguno) break ;; esac
 	dlg --infobox "Revisando la conexión a internet..." 5 50
 	lazaro-instalar red >/dev/null 2>&1 && break
 	dlg --title "Sin internet" --msgbox \
 "Ese escritorio se descarga de internet y no hay conexión.
 
-Conecta el cable de red, o elige XFCE, que se instala sin internet.
+Conecta el cable de red, o elige otro escritorio: todos menos
+GNOME y Plasma se instalan sin internet.
 
 Para usar wifi: cancela, escribe
   nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"
