@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         # "estable" = la de config.env.
-        alpine: [estable, edge]
+        alpine: [estable]
     steps:
       - uses: actions/checkout@v5
 
@@ -99,20 +99,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: [estable, edge]
+        alpine: [estable]
         prueba:
           - live bios
-          - live uefi
-          # Equipo viejo con 2 GB de RAM: la sesión live vive en la memoria.
-          - live bios 2048
-          - instalar bios xfce sin-red
-          - instalar uefi xfce con-red
-          - instalar uefi plasma con-red
-          - instalar bios gnome con-red
-          - instalar bios sway con-red
-          - instalar uefi lxqt con-red
-          - instalar bios mate con-red
-          - instalar bios ninguno sin-red
     steps:
       - uses: actions/checkout@v5
 

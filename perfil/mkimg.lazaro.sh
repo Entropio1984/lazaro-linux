@@ -77,7 +77,7 @@ profile_lazaro() {
 	kernel_cmdline="console=ttyS0,115200 console=tty0 rootflags=size=85%"
 	# nouveau no se carga solo en la live: lo carga lazaro-graficas
 	# después de revisar la tarjeta, si es seguro.
-	lazaro_nvidia="modprobe.blacklist=nouveau"
+	lazaro_nvidia="modprobe.blacklist=nouveau,bochs,bochs_drm,simpledrm"
 	# Pantalla de arranque con el pulso (Plymouth), salvo en el modo
 	# gráfico seguro. Plymouth no dibuja en el puerto serie.
 	lazaro_splash="splash plymouth.ignore-serial-consoles"
