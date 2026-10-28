@@ -1,0 +1,91 @@
+#!/bin/sh
+# lazaro-autologin: deja que el usuario de /etc/lazaro/autologin entre a
+# su sesión sin escribir la contraseña, en la pantalla de inicio que esté
+# instalada (LightDM, SDDM, GDM o greetd). Lo llama lazaro-instalar al
+# terminar la instalación, y el servicio lazaro-autologin en cada
+# arranque: así también vale si la pantalla de inicio se instala después
+# (por ejemplo greetd para Sway, en el primer arranque con internet).
+# Para quitarlo: borrar /etc/lazaro/autologin y reiniciar.
+
+u="$(cat /etc/lazaro/autologin 2>/dev/null)" || u=""
+if [ -z "$u" ] || ! id "$u" >/dev/null 2>&1; then
+	# Sin usuario: se quita lo que este programa haya puesto.
+	rm -f /etc/lightdm/lightdm.conf.d/60-lazaro-autologin.conf \
+		/etc/sddm.conf.d/60-lazaro-autologin.conf
+	exit 0
+fi
+
+# primera_sesion DIR NOMBRE...: el primer NOMBRE.desktop que exista en
+# DIR, o si no hay ninguno, el primer .desktop de DIR.
+primera_sesion() {
+	ps_dir="$1"
+	shift
+	for ps_n in "$@"; do
+		[ -f "$ps_dir/$ps_n.desktop" ] && { echo "$ps_n"; return 0; }
+	done
+	for ps_f in "$ps_dir"/*.desktop; do
+		[ -f "$ps_f" ] || continue
+		ps_f="${ps_f##*/}"
+		echo "${ps_f%.desktop}"
+		return 0
+	done
+	return 1
+}
+
+if [ -d /etc/lightdm ]; then
+	# LightDM solo deja entrar sin contraseña a los del grupo autologin.
+	addgroup -S autologin 2>/dev/null || true
+	addgroup "$u" autologin 2>/dev/null || true
+	sesion="$(primera_sesion /usr/share/xsessions xfce mate lxqt)" || sesion=""
+	mkdir -p /etc/lightdm/lightdm.conf.d
+	{
+		echo "[Seat:*]"
+		echo "autologin-user=$u"
+		echo "autologin-user-timeout=0"
+		[ -z "$sesion" ] || echo "autologin-session=$sesion"
+	} > /etc/lightdm/lightdm.conf.d/60-lazaro-autologin.conf
+fi
+
+if [ -x /usr/bin/sddm ]; then
+	# Plasma entra en su sesión Wayland, la predeterminada.
+	sesion="$(primera_sesion /usr/share/wayland-sessions plasma)" \
+		|| sesion="$(primera_sesion /usr/share/xsessions lxqt plasmax11)" || sesion=""
+	mkdir -p /etc/sddm.conf.d
+	{
+		echo "[Autologin]"
+		echo "User=$u"
+		[ -z "$sesion" ] || echo "Session=$sesion.desktop"
+	} > /etc/sddm.conf.d/60-lazaro-autologin.conf
+fi
+
+if [ -d /etc/gdm ] && command -v gdm >/dev/null 2>&1; then
+	c=/etc/gdm/custom.conf
+	[ -f "$c" ] || echo "[daemon]" > "$c"
+	grep -q '^\[daemon\]' "$c" || printf '[daemon]\n' >> "$c"
+	awk -v u="$u" '
+		/^AutomaticLogin(Enable)?=/ { next }
+		{ print }
+		/^\[daemon\]/ { print "AutomaticLoginEnable=True"; print "AutomaticLogin=" u }
+	' "$c" > "$c.lazaro" && mv "$c.lazaro" "$c"
+fi
+
+if [ -f /etc/greetd/config.toml ]; then
+	# La sesión es la última de las que ofrece gtkgreet (Sway o XFCE
+	# Wayland). initial_session corre una vez por arranque; al cerrar la
+	# sesión vuelve la pantalla de inicio.
+	cmd="$(grep -v -e '^[[:space:]]*$' -e '^#' /etc/greetd/environments 2>/dev/null | tail -n 1)"
+	if [ -n "$cmd" ]; then
+		c=/etc/greetd/config.toml
+		# Se quita el bloque anterior y las líneas vacías del final.
+		awk '
+			/^\[initial_session\]/ { fuera = 1; next }
+			/^\[/ { fuera = 0 }
+			fuera { next }
+			/^[[:space:]]*$/ { vacias++; next }
+			{ for (; vacias > 0; vacias--) print ""; print }
+		' "$c" > "$c.lazaro"
+		printf '\n[initial_session]\ncommand = "%s"\nuser = "%s"\n' "$cmd" "$u" >> "$c.lazaro"
+		mv "$c.lazaro" "$c"
+	fi
+fi
+exit 0

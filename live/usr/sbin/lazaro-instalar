@@ -18,6 +18,8 @@
 #     EXTRAS: lo marcado en "Software adicional", separado por espacios,
 #     detrás de "base": fastfetch btop vlc libreoffice (Alpine) y
 #     flatpak onlyoffice chrome brave (Flathub). Sin EXTRAS: "base flatpak".
+#   lazaro-instalar autologin RAIZ USUARIO
+#     Inicio de sesión automático para USUARIO (casilla de Calamares).
 #   lazaro-instalar auto DISCO ESCRITORIO     (¡BORRA EL DISCO COMPLETO!)
 #     Solo pruebas: además deja en el disco las comprobaciones de
 #     /usr/share/lazaro/pruebas, que informan por el puerto serie.
@@ -510,6 +512,23 @@ paso_ajustes() {
 	log "Instalación terminada."
 }
 
+# Inicio automático: queda anotado en /etc/lazaro/autologin y el
+# servicio lazaro-autologin lo aplica en cada arranque a la pantalla de
+# inicio que haya (también a una que se instale después).
+paso_autologin() { # RAIZ USUARIO
+	raiz="${1%/}"
+	[ -n "$2" ] || return 0
+	mkdir -p "$raiz/etc/lazaro"
+	echo "$2" > "$raiz/etc/lazaro/autologin"
+	install -Dm755 "$DATOS/lazaro-autologin" "$raiz/usr/libexec/lazaro/lazaro-autologin"
+	install -Dm755 "$DATOS/lazaro-autologin.initd" "$raiz/etc/init.d/lazaro-autologin"
+	mkdir -p "$raiz/etc/runlevels/default"
+	ln -sf /etc/init.d/lazaro-autologin "$raiz/etc/runlevels/default/lazaro-autologin"
+	en_destino "$raiz" /usr/libexec/lazaro/lazaro-autologin >>"$LOG" 2>&1 \
+		|| log "Aviso: no se pudo configurar el inicio automático ahora; se hará al arrancar."
+	log "Inicio automático de la sesión para '$2'."
+}
+
 programar_primer_arranque() {
 	install -Dm755 "$DATOS/lazaro-primer-arranque.initd" \
 		"$1/etc/init.d/lazaro-primer-arranque"
@@ -738,6 +757,7 @@ case "$orden" in
 	base)       [ $# -eq 2 ] || die "uso: lazaro-instalar base RAIZ ESCRITORIO"; paso_base "$@" ;;
 	escritorio) [ $# -eq 2 ] || die "uso: lazaro-instalar escritorio RAIZ ESCRITORIO"; paso_escritorio "$@" ;;
 	ajustes)    [ $# -ge 2 ] || die "uso: lazaro-instalar ajustes RAIZ USUARIO [IDIOMA TECLADO VARIANTE ZONA EXTRAS]"; paso_ajustes "$@" ;;
+	autologin)  [ $# -eq 2 ] || die "uso: lazaro-instalar autologin RAIZ USUARIO"; paso_autologin "$@" ;;
 	auto)       [ $# -eq 2 ] || die "uso: lazaro-instalar auto DISCO ESCRITORIO"; paso_auto "$@" ;;
 	*)
 		sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2

@@ -41,7 +41,10 @@ instalador (Calamares) pregunta, en este orden:
      **OnlyOffice**, **Google Chrome** y **Brave**. Se instalan solas
      después del primer arranque con internet; marcar una de ellas
      instala también Flatpak.
-4. **Disco** y **usuario**.
+4. **Disco** y **usuario**. En la pantalla del usuario, la casilla
+   **Iniciar sesión automáticamente** (desmarcada) hace que el equipo
+   entre directo al escritorio sin pedir la contraseña. Para quitarlo
+   después: borrar `/etc/lazaro/autologin` y reiniciar.
 
 XFCE y "Sin escritorio" se instalan sin internet, desde la propia ISO.
 Los demás escritorios se descargan, igual que el software adicional.

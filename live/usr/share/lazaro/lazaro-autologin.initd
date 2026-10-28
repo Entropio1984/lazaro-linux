@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# Inicio automático de la sesión (casilla de Calamares): antes de la
+# pantalla de inicio, revisa que siga configurado (ver lazaro-autologin).
+
+description="Inicio automático de la sesión de Lázaro Linux"
+
+depend() {
+	need localmount
+	before lightdm sddm gdm greetd
+}
+
+start() {
+	ebegin "Revisando el inicio automático de la sesión"
+	/usr/libexec/lazaro/lazaro-autologin
+	eend $?
+}
