@@ -1,0 +1,51 @@
+# Experimento (no fusionar): cuánto agregaría cada escritorio a la ISO si
+# viniera completo, sin descargar nada al instalar. Corre solo al empujar
+# a la rama prueba-tamanos-escritorios.
+name: Tamaños por escritorio
+on:
+  push:
+    branches: [prueba-tamanos-escritorios]
+permissions:
+  contents: read
+jobs:
+  medir:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        alpine: ["3.24", edge]
+    container: alpine:${{ matrix.alpine }}
+    steps:
+      - name: Medir paquetes de cada escritorio
+        shell: sh
+        run: |
+          set -eu
+          apk update >/dev/null
+          # Lo que ya trae la ISO, aproximado: XFCE completo, Firefox y el
+          # software adicional de Alpine.
+          apk add -q xorg-server xf86-input-libinput mesa-dri-gallium xfce4 xfce4-terminal \
+            xfce4-screensaver lightdm lightdm-gtk-greeter elogind polkit-elogind gvfs \
+            dbus dbus-x11 font-dejavu firefox networkmanager libreoffice libreoffice-lang-es \
+            vlc vlc-qt flatpak font-noto font-liberation >/dev/null
+          medir() {
+            nombre="$1"; shift
+            nuevos=$(apk add --simulate "$@" 2>/dev/null | sed -n 's/^([ 0-9]*\/[0-9]*) Installing \([^ ]*\) (\(.*\))$/\1/p')
+            n=$(printf '%s\n' "$nuevos" | grep -c . || true)
+            rm -rf /tmp/m && mkdir -p /tmp/m
+            if [ "$n" -gt 0 ]; then
+              # shellcheck disable=SC2086
+              apk fetch -q -o /tmp/m $nuevos >/dev/null 2>&1 || true
+            fi
+            mb=$(du -sm /tmp/m | cut -f1)
+            echo "TAMANO $nombre: $n paquetes nuevos, $mb MB"
+          }
+          wl="seatd mesa-egl xwayland"
+          medir "plasma" $wl sddm $(apk info --quiet --depends plasma-desktop-meta kde-applications-base) plasma-nm plasma-pa
+          medir "plasma + traducciones (lang)" $wl sddm $(apk info --quiet --depends plasma-desktop-meta kde-applications-base) plasma-nm plasma-pa lang
+          medir "gnome" $wl $(apk info --quiet --depends gnome gnome-apps-core)
+          medir "gnome + traducciones (lang)" $wl $(apk info --quiet --depends gnome gnome-apps-core) lang
+          medir "mate" mate-desktop-environment polkit
+          medir "lxqt" lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox udisks2 adwaita-qt oxygen
+          medir "sway" $wl brightnessctl foot grim i3status sway swaybg swayidle swaylockd util-linux-login wl-clipboard wmenu waybar
+          medir "xfce-wayland" $wl adwaita-icon-theme greetd-gtkgreet labwc
+          medir "TODOS juntos" $wl sddm $(apk info --quiet --depends plasma-desktop-meta kde-applications-base gnome gnome-apps-core) mate-desktop-environment lxqt-desktop sway foot waybar labwc greetd-gtkgreet lang
