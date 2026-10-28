@@ -113,6 +113,10 @@ jobs:
           - instalar uefi lxqt con-red
           - instalar bios mate con-red
           - instalar bios ninguno sin-red
+          # Escritorios livianos que vienen completos en la ISO.
+          - instalar uefi mate sin-red
+          - instalar bios lxqt sin-red
+          - instalar bios xfce-wayland sin-red
     steps:
       - uses: actions/checkout@v5
 
