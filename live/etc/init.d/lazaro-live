@@ -168,7 +168,7 @@ start() {
 	# Aviso para las pruebas: Calamares llegó a abrirse en pantalla.
 	(
 		i=0
-		while [ $i -lt 120 ]; do
+		while [ $i -lt 30 ]; do
 			if pidof calamares >/dev/null 2>&1; then
 				serie "LAZARO-CALAMARES-ABIERTO"
 				# Nada debe apagar la pantalla mientras se instala.
@@ -202,6 +202,7 @@ start() {
 			sleep 5
 		done
 		serie "LAZARO-CALAMARES-NO-ABRIO"
+		serie -- sh -c 'ls -l /dev/dri /dev/fb* 2>&1; lsmod | head -40; tail -n 80 /var/log/Xorg.0.log; tail -n 40 /var/log/lightdm/lightdm.log; tail -n 40 /var/log/lightdm/x-0.log' 
 	) &
 
 	# Instalación desatendida, solo para pruebas:
