@@ -171,6 +171,10 @@ start() {
 		while [ $i -lt 120 ]; do
 			if pidof calamares >/dev/null 2>&1; then
 				serie "LAZARO-CALAMARES-ABIERTO"
+				# Idioma con el que abrió (su LANG).
+				c=$(pidof calamares | awk '{ print $1 }')
+				idioma=$(tr '\0' '\n' < "/proc/$c/environ" 2>/dev/null | sed -n 's/^LANG=//p')
+				serie "LAZARO-CALAMARES-LANG ${idioma:-sin-LANG}"
 				# Nada debe apagar la pantalla mientras se instala.
 				if pidof xfce4-screensaver >/dev/null 2>&1; then
 					serie "LAZARO-SALVAPANTALLAS-ACTIVO"

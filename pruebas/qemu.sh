@@ -137,6 +137,11 @@ prueba_live() {
 			echo "FALLO: Calamares no pudo cargar alguna de sus pantallas o pasos ($MODO)." >&2
 			sed -n '/LAZARO-MODULOS-FALLO/,+6p' "$serie" >&2
 			ok=1
+		elif ! grep -q '^LAZARO-CALAMARES-LANG es_' "$serie"; then
+			# Calamares abre en español (la sesión live trae LANG=C.UTF-8).
+			echo "FALLO: Calamares no abrió en español ($MODO)." >&2
+			grep 'LAZARO-CALAMARES-LANG' "$serie" >&2 || true
+			ok=1
 		elif ! grep -q 'LAZARO-GRAFICAS decision=sin-nvidia' "$serie"; then
 			# La revisión de gráficas (lazaro-graficas) tiene que haber
 			# corrido; en QEMU no hay NVIDIA.
