@@ -104,6 +104,50 @@ revisar_energia() {
 	fi
 }
 
+AVISO_TEXTO="
+  ==============================================================
+   No se pudo abrir el escritorio de Lázaro Linux.
+
+   Puedes instalar desde esta pantalla, solo con el teclado:
+     1. Donde dice \"login:\", escribe  lazaro  y pulsa Enter
+        (no pide contraseña).
+     2. Escribe  doas lazaro-instalar-texto  y pulsa Enter.
+
+   El instalador hace las mismas preguntas que el gráfico.
+  ==============================================================
+"
+
+hay_sesion() {
+	pidof xfce4-session >/dev/null 2>&1
+}
+
+avisar_texto() {
+	printf '%s\n' "$AVISO_TEXTO" >> /etc/issue
+	printf '\033c%s\n' "$AVISO_TEXTO" > /dev/tty1 2>/dev/null || true
+	chvt 1 2>/dev/null || true
+	serie "LAZARO-AVISO-TEXTO $1"
+}
+
+# Espera hasta 5 minutos a que aparezca la sesión gráfica. Si nunca
+# aparece, o aparece y luego se cae sin volver en un minuto, avisa.
+vigilar_sesion() {
+	i=0
+	while [ "$i" -lt 60 ] && ! hay_sesion; do
+		i=$((i + 1))
+		sleep 5
+	done
+	if ! hay_sesion; then
+		avisar_texto sin-sesion
+		return 0
+	fi
+	caida=0
+	while [ "$caida" -lt 12 ]; do
+		if hay_sesion; then caida=0; else caida=$((caida + 1)); fi
+		sleep 5
+	done
+	avisar_texto sesion-caida
+}
+
 start() {
 	ebegin "Preparando la sesión live de Lázaro Linux"
 	if ! id lazaro >/dev/null 2>&1; then
@@ -207,6 +251,22 @@ start() {
 		done
 		serie "LAZARO-CALAMARES-NO-ABRIO"
 	) &
+
+	# Si la sesión gráfica no abre (poca memoria, gráfica sin controlador),
+	# en la consola aparece un aviso que propone el instalador en modo
+	# texto. No en las pruebas desatendidas, que no usan escritorio.
+	if ! parametro lazaro.autoinstall >/dev/null; then
+		# Prueba del aviso (pruebas/qemu.sh texto): se impide que arranque
+		# Xorg, como pasa en un equipo donde el escritorio no abre.
+		if [ "$(parametro lazaro.prueba)" = sin-escritorio ]; then
+			printf '[Seat:*]\nxserver-command=/bin/false\n' \
+				> /etc/lightdm/lightdm.conf.d/99-prueba-sin-escritorio.conf
+			if command -v dialog >/dev/null && [ -x /usr/sbin/lazaro-instalar-texto ]; then
+				serie "LAZARO-DIALOG-OK"
+			fi
+		fi
+		vigilar_sesion &
+	fi
 
 	# Instalación desatendida, solo para pruebas:
 	#   lazaro.autoinstall=ESCRITORIO lazaro.disco=/dev/vda
