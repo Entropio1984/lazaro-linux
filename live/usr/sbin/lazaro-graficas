@@ -7,12 +7,12 @@
 # cuando es seguro, con las mismas reglas que desktop-postinstall.sh:
 #   - portátil Optimus (pantalla en la integrada y una NVIDIA aparte):
 #     se carga, porque solo nouveau sabe apagar la NVIDIA;
-#   - NVIDIA Tesla (GeForce 8, 9 y 200) o Kepler (2012) y más nuevas: se
-#     carga (con Tesla nouveau anda bien: el Compaq CQ50, con una
-#     GeForce 8200M G, llega al escritorio con él en MX Linux);
-#   - Fermi (GeForce 400 y 500) o una tarjeta que no se pudo identificar,
-#     como gráfica principal: NO se carga (en algunas da pantalla negra o
-#     cuelgues). La sesión usa la imagen básica del firmware y se avisa.
+#   - NVIDIA de cualquier generación reconocida, desde las Tesla
+#     (GeForce 8, 9 y 200, de 2006): se carga (el Compaq CQ50, con una
+#     GeForce 8200M G, llega al escritorio con nouveau en MX Linux);
+#   - una NVIDIA que no se pudo identificar, como gráfica principal: NO se
+#     carga (podría dar pantalla negra o cuelgues). La sesión usa la
+#     imagen básica del firmware y se avisa.
 # Con varias NVIDIA manda la más antigua.
 #
 # Se puede forzar con el parámetro de arranque lazaro.nvidia=activa o
@@ -138,7 +138,7 @@ revisar() {
 		decision=activa; motivo=optimus
 	else
 		case "$gen" in
-			tesla|kepler|maxwell|pascal|volta|moderna) decision=activa; motivo=generacion ;;
+			tesla|fermi|kepler|maxwell|pascal|volta|moderna) decision=activa; motivo=generacion ;;
 			*) decision=seguro; motivo=generacion ;;
 		esac
 	fi
@@ -177,7 +177,7 @@ aviso() {
 	[ "$DECISION" = seguro ] || return 0
 	case "$MOTIVO" in
 		generacion)
-			texto="Este equipo tiene una tarjeta NVIDIA antigua ($CHIPS, generación $GENERACION).
+			texto="Este equipo tiene una tarjeta NVIDIA que no se pudo identificar${CHIPS:+ ($CHIPS)}.
 
 Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.
 

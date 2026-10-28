@@ -64,7 +64,7 @@ caso() {
 N=0x10de; I=0x8086
 caso sin-nvidia          sin-nvidia/sin-nvidia "" 3  "00.02.0:$I:1"
 caso k53sv-optimus-fermi activa/optimus        "" 10 "00.02.0:$I:1" "01.00.0:$N:0:GF108M [GeForce GT 540M]"
-caso pc-solo-fermi       seguro/generacion     "" 3  "01.00.0:$N:1:GF119 [GeForce GT 520]"
+caso pc-solo-fermi       activa/generacion     "" 3  "01.00.0:$N:1:GF119 [GeForce GT 520]"
 caso pc-solo-tesla       activa/generacion     "" 3  "01.00.0:$N:1:GT218 [GeForce 210]"
 caso pc-solo-kepler      activa/generacion     "" 3  "01.00.0:$N:1:GK107 [GeForce GT 640]"
 caso pc-solo-turing      activa/generacion     "" 3  "01.00.0:$N:1:TU116 [GeForce GTX 1660]"
@@ -73,7 +73,7 @@ caso portatil-solo-nv    activa/generacion     "" 10 "01.00.0:$N:1:G86M [GeForce
 caso cq50-8200m          activa/generacion     "" 10 "02.00.0:$N:1:C77 [GeForce 8200M G]"
 caso dos-nvidia-tesla    activa/generacion     "" 3  "01.00.0:$N:1:GA106 [GeForce RTX 3060]" "02.00.0:$N:0:G96 [GeForce 9500 GT]"
 caso dos-nvidia          activa/generacion     "" 3  "01.00.0:$N:1:GK107 [GeForce GT 640]" "02.00.0:$N:0:GA106 [GeForce RTX 3060]"
-caso dos-nvidia-fermi    seguro/generacion     "" 3  "01.00.0:$N:1:GA106 [GeForce RTX 3060]" "02.00.0:$N:0:GF108 [GeForce GT 430]"
+caso dos-nvidia-fermi    activa/generacion     "" 3  "01.00.0:$N:1:GA106 [GeForce RTX 3060]" "02.00.0:$N:0:GF108 [GeForce GT 430]"
 caso forzar-activa       activa/elegido        "quiet lazaro.nvidia=activa" 3 "01.00.0:$N:1:GF119 [GeForce GT 520]"
 caso forzar-seguro       seguro/elegido        "lazaro.nvidia=seguro" 10 "00.02.0:$I:1" "01.00.0:$N:0:TU117M [GeForce GTX 1650 Mobile]"
 caso nomodeset           seguro/nomodeset      "nomodeset lazaro.nvidia=activa" 3 "01.00.0:$N:1:TU116 [GeForce GTX 1660]"
