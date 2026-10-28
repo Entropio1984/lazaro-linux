@@ -105,6 +105,8 @@ jobs:
           - live uefi
           # Equipo viejo con 2 GB de RAM: la sesión live vive en la memoria.
           - live bios 2048
+          # Sin escritorio (Xorg no arranca): aviso del instalador en modo texto.
+          - texto bios
           - instalar bios xfce sin-red
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red

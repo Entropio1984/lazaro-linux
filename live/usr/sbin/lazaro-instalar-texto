@@ -1,0 +1,250 @@
+#!/bin/sh
+# lazaro-instalar-texto: instalador de Lázaro Linux en modo texto, para
+# cuando la sesión gráfica no abre (por ejemplo en equipos con poca
+# memoria o con una tarjeta gráfica sin controlador). Hace las mismas
+# preguntas que Calamares con menús de "dialog" (flechas, espacio y
+# Enter) y luego llama a "lazaro-instalar texto", que borra el disco
+# elegido y hace la misma instalación que el instalador gráfico.
+#
+# Uso (como root, o con doas):
+#   lazaro-instalar-texto
+
+set -eu
+
+if [ "$(id -u)" -ne 0 ]; then
+	exec doas "$0" "$@"
+fi
+
+export LANG="${LANG:-es_ES.UTF-8}"
+case "$LANG" in C|C.*|POSIX) LANG=es_ES.UTF-8 ;; esac
+TITULO="Instalar Lázaro Linux"
+
+# dialog con los botones en español.
+dlg() {
+	dialog --backtitle "$TITULO" --ok-label Aceptar --cancel-label Cancelar \
+		--yes-label Sí --no-label No "$@"
+}
+
+# dialog dibuja en la pantalla y escribe la respuesta en la salida de
+# errores, que aquí pasa a ser la salida normal para guardarla.
+pedir() {
+	# shellcheck disable=SC2069
+	dlg "$@" 2>&1 >/dev/tty
+}
+
+cancelar() {
+	clear
+	echo "Instalación cancelada. No se cambió nada en el disco."
+	echo "Para empezar de nuevo, escribe: doas lazaro-instalar-texto"
+	exit 1
+}
+
+command -v dialog >/dev/null 2>&1 || {
+	echo "Falta el programa 'dialog'; no se puede mostrar el instalador." >&2
+	exit 1
+}
+
+dlg --title "Bienvenida" --msgbox \
+"Este instalador funciona sin escritorio, desde esta pantalla.
+
+Se maneja con el teclado:
+  - flechas arriba y abajo para moverte,
+  - barra espaciadora para marcar o desmarcar,
+  - Tab para pasar a los botones,
+  - Enter para aceptar.
+
+Al final verás un resumen y nada se borra hasta que confirmes." 16 64 || cancelar
+
+# --- Disco ---------------------------------------------------------------
+# Discos donde se puede instalar: ni el USB o DVD de la live (tiene algo
+# montado) ni discos virtuales del sistema.
+discos() {
+	for b in /sys/block/*; do
+		n="${b##*/}"
+		case "$n" in loop*|ram*|zram*|sr*|fd*|dm-*|md*|nbd*|mmcblk*boot*|mmcblk*rpmb) continue ;; esac
+		[ -r "$b/size" ] || continue
+		if awk -v d="/dev/$n" 'index($1, d) == 1 && substr($1, length(d) + 1) ~ /^(p?[0-9]+)?$/ { f = 1 } END { exit !f }' /proc/mounts; then
+			continue
+		fi
+		gb=$(awk -v s="$(cat "$b/size")" 'BEGIN { printf "%d", s * 512 / 1000000000 + 0.5 }')
+		[ "$gb" -ge 8 ] || continue
+		modelo=$(cat "$b/device/model" 2>/dev/null | sed 's/ *$//')
+		printf '/dev/%s\n%s GB %s\n' "$n" "$gb" "${modelo:-disco}"
+	done
+}
+lista=$(discos)
+if [ -z "$lista" ]; then
+	dlg --title "Sin discos" --msgbox \
+"No encontré ningún disco de 8 GB o más donde instalar (el USB de Lázaro no cuenta).
+
+Revisa que el disco esté conectado y vuelve a intentarlo." 10 60
+	cancelar
+fi
+# Una entrada por disco: "/dev/sda" "120 GB modelo".
+set --
+while IFS= read -r dev && IFS= read -r desc; do
+	set -- "$@" "$dev" "$desc"
+done <<EOF
+$lista
+EOF
+disco=$(pedir --title "Disco" --menu \
+"¿En qué disco instalo Lázaro Linux?
+
+ATENCIÓN: se borrará TODO lo que tenga ese disco (otros sistemas, fotos, documentos)." \
+	16 64 6 "$@") || cancelar
+
+# --- Escritorio ------------------------------------------------------------
+rec=xfce
+[ -r /run/lazaro/recomendacion ] && rec=$(sed -n 's/^ESCRITORIO=//p' /run/lazaro/recomendacion)
+marca() { [ "$1" = "$rec" ] && echo on || echo off; }
+sufijo() { [ "$1" = "$rec" ] && echo " (recomendado)" || true; }
+while :; do
+	escritorio=$(pedir --title "Escritorio" --radiolist \
+"¿Qué escritorio quieres? Solo XFCE se instala sin internet; los demás se descargan." \
+		18 70 8 \
+		xfce "XFCE: liviano y clásico$(sufijo xfce)" "$(marca xfce)" \
+		lxqt "LXQt: el más liviano, para poca memoria$(sufijo lxqt)" "$(marca lxqt)" \
+		mate "MATE: clásico, sencillo$(sufijo mate)" "$(marca mate)" \
+		gnome "GNOME: moderno, pide 4 GB y gráfica con 3D$(sufijo gnome)" "$(marca gnome)" \
+		plasma "Plasma (KDE): completo, pide 4 GB$(sufijo plasma)" "$(marca plasma)" \
+		sway "Sway: ventanas en mosaico, con teclado$(sufijo sway)" "$(marca sway)" \
+		xfce-wayland "XFCE Wayland (experimental)$(sufijo xfce-wayland)" "$(marca xfce-wayland)" \
+		ninguno "Sin escritorio: solo la consola$(sufijo ninguno)" "$(marca ninguno)") || cancelar
+	case "$escritorio" in xfce|ninguno) break ;; esac
+	dlg --infobox "Revisando la conexión a internet..." 5 50
+	lazaro-instalar red >/dev/null 2>&1 && break
+	dlg --title "Sin internet" --msgbox \
+"Ese escritorio se descarga de internet y no hay conexión.
+
+Conecta el cable de red, o elige XFCE, que se instala sin internet.
+
+Para usar wifi: cancela, escribe
+  nmcli device wifi connect NOMBRE-DE-LA-RED password CLAVE
+y vuelve a abrir el instalador." 14 70
+done
+
+# --- Programas adicionales ------------------------------------------------
+extras="base"
+if [ "$escritorio" != ninguno ]; then
+	flat=on
+	[ -r /run/lazaro/recomendacion ] && grep -qx 'DISCO_PEQUENO=si' /run/lazaro/recomendacion && flat=off
+	elegidos=$(pedir --title "Software adicional" --separate-output --checklist \
+"Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre." \
+		18 72 8 \
+		fastfetch "Fastfetch: resumen del equipo en la terminal" off \
+		btop "Btop: monitor de recursos" off \
+		vlc "VLC: reproductor de video y música" off \
+		libreoffice "LibreOffice: oficina (documentos, hojas de cálculo)" off \
+		flatpak "Flatpak con Flathub: tienda de aplicaciones" "$flat" \
+		onlyoffice "OnlyOffice (Flathub, necesita internet)" off \
+		chrome "Google Chrome (Flathub, necesita internet)" off \
+		brave "Brave (Flathub, necesita internet)" off) || cancelar
+	for e in $elegidos; do extras="$extras $e"; done
+fi
+
+# --- Idioma, teclado y zona horaria ----------------------------------------
+idioma=$(pedir --title "Idioma" --default-item es_CO.UTF-8 --menu "Idioma del sistema:" 16 50 8 \
+	es_CO.UTF-8 "Español (Colombia)" \
+	es_MX.UTF-8 "Español (México)" \
+	es_AR.UTF-8 "Español (Argentina)" \
+	es_CL.UTF-8 "Español (Chile)" \
+	es_PE.UTF-8 "Español (Perú)" \
+	es_VE.UTF-8 "Español (Venezuela)" \
+	es_ES.UTF-8 "Español (España)" \
+	en_US.UTF-8 "English (US)") || cancelar
+
+tecla=$(pedir --title "Teclado" --menu "Distribución del teclado (la tecla Ñ y los acentos):" 13 60 4 \
+	"latam" "Latinoamericano" \
+	"es" "Español (España)" \
+	"us" "Inglés (EE. UU.)" \
+	"us intl" "Inglés internacional (con acentos)") || cancelar
+teclado="${tecla%% *}"
+variante=""
+[ "$tecla" = "us intl" ] && variante=intl
+
+case "$idioma" in
+	es_CO*) zona_def=America/Bogota ;;
+	es_MX*) zona_def=America/Mexico_City ;;
+	es_AR*) zona_def=America/Argentina/Buenos_Aires ;;
+	es_CL*) zona_def=America/Santiago ;;
+	es_PE*) zona_def=America/Lima ;;
+	es_VE*) zona_def=America/Caracas ;;
+	es_ES*) zona_def=Europe/Madrid ;;
+	*) zona_def=America/New_York ;;
+esac
+while :; do
+	zona=$(pedir --title "Zona horaria" --inputbox \
+"Zona horaria (para la hora del reloj). Si no sabes, deja la propuesta:" 10 64 "$zona_def") || cancelar
+	[ -e "/usr/share/zoneinfo/$zona" ] && break
+	dlg --msgbox "No conozco la zona \"$zona\". Ejemplos: America/Bogota, Europe/Madrid." 8 60
+done
+
+# --- Usuario ----------------------------------------------------------------
+nombre=$(pedir --title "Usuario" --inputbox "Tu nombre (como quieres que aparezca):" 9 60 "") || cancelar
+sugerido=$(printf '%s' "${nombre%% *}" | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')
+while :; do
+	usuario=$(pedir --title "Usuario" --inputbox \
+"Nombre de usuario para entrar (minúsculas y números, sin espacios):" 9 64 "$sugerido") || cancelar
+	case "$usuario" in
+		root|lazaro|"") dlg --msgbox "Ese nombre no se puede usar; elige otro." 7 50 ;;
+		[a-z]*) printf '%s' "$usuario" | grep -qx '[a-z][a-z0-9_-]*' && break
+			dlg --msgbox "Usa solo minúsculas, números, - y _, empezando con una letra." 7 64 ;;
+		*) dlg --msgbox "Debe empezar con una letra minúscula." 7 50 ;;
+	esac
+done
+while :; do
+	clave=$(pedir --title "Contraseña" --insecure --passwordbox \
+"Contraseña de $usuario (mínimo 4 caracteres). También será la de administrador:" 10 64) || cancelar
+	clave2=$(pedir --title "Contraseña" --insecure --passwordbox "Escríbela otra vez:" 9 64) || cancelar
+	if [ "${#clave}" -lt 4 ]; then
+		dlg --msgbox "La contraseña debe tener al menos 4 caracteres." 7 54
+	elif [ "$clave" != "$clave2" ]; then
+		dlg --msgbox "Las dos contraseñas no coinciden. Inténtalo de nuevo." 7 58
+	else
+		break
+	fi
+done
+equipo=$(pedir --title "Nombre del equipo" --inputbox \
+"Nombre del equipo en la red:" 9 60 "lazaro-$usuario") || cancelar
+equipo=$(printf '%s' "$equipo" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-\n' '-' | cut -c1-63)
+[ -n "$equipo" ] || equipo=lazaro
+
+# --- Resumen ----------------------------------------------------------------
+tam=$(printf '%s\n' "$lista" | grep -A1 -x "$disco" | sed -n 2p)
+dlg --title "Resumen" --no-collapse --defaultno --yesno \
+"Revisa antes de instalar:
+
+  Disco:       $disco ($tam)  <- SE BORRA COMPLETO
+  Escritorio:  $escritorio
+  Programas:   ${extras#base}
+  Idioma:      $idioma
+  Teclado:     $tecla
+  Zona:        $zona
+  Usuario:     $usuario ($nombre)
+  Equipo:      $equipo
+
+¿Borro el disco e instalo?" 20 70 || cancelar
+
+clear
+echo "Instalando Lázaro Linux en $disco. Esto puede tardar bastante;"
+echo "no apagues el equipo. El detalle queda en /var/log/lazaro-instalar.log."
+echo
+rc=0
+LAZARO_CLAVE="$clave" lazaro-instalar texto "$disco" "$escritorio" "$usuario" \
+	"${nombre:-$usuario}" "$equipo" "$idioma" "$teclado" "$variante" "$zona" "$extras" || rc=$?
+clave=""; clave2=""
+echo
+if [ "$rc" -eq 0 ]; then
+	if dlg --title "Listo" --yesno \
+"Lázaro Linux quedó instalado.
+
+Saca el USB y reinicia el equipo. ¿Reinicio ahora?" 10 56; then
+		reboot
+	fi
+else
+	echo "La instalación falló (código $rc). Las últimas líneas del registro:"
+	tail -n 20 /var/log/lazaro-instalar.log 2>/dev/null || true
+	echo
+	echo "Puedes sacarle una foto a esta pantalla para pedir ayuda."
+	exit "$rc"
+fi
