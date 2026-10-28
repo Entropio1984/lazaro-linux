@@ -3,7 +3,7 @@
 # en Calamares una recomendación de escritorio y de programas, que la
 # persona puede cambiar:
 #   - memoria: menos de 2 GB, LXQt; de 2 a 4 GB, XFCE; con más, cualquier
-#     escritorio va bien (queda XFCE, que se instala sin internet);
+#     escritorio va bien (queda XFCE);
 #   - gráfica: sin aceleración 3D (máquina virtual, controlador básico o
 #     NVIDIA en modo seguro) se desaconsejan GNOME, Plasma, Sway y XFCE
 #     Wayland, que irían lentos;
@@ -165,8 +165,8 @@ disco="$(disco_bytes)"
 # Memoria: 1600 y 3300 MB dejan pasar equipos de 2 y 4 GB, cuyo MemTotal
 # queda por debajo: el núcleo y la gráfica integrada (hasta 256 MB, o más
 # en algunos BIOS) se quedan con una parte.
-# De 2 GB en adelante, XFCE: también con mucha memoria, porque es el
-# único que se instala sin internet.
+# De 2 GB en adelante, XFCE, también con mucha memoria. Los dos se
+# instalan sin internet.
 escritorio=xfce; nombre=XFCE
 if [ "$mb" -gt 0 ] && [ "$mb" -lt 1600 ]; then
 	escritorio=lxqt; nombre=LXQt
@@ -181,7 +181,6 @@ else
 fi
 
 frase="Recomendado para tu equipo: $motivo."
-[ "$escritorio" != lxqt ] || frase="$frase Necesita internet."
 if [ "$acel" = si ] && [ "$mb" -ge 3300 ]; then
 	frase="$frase Tu equipo también puede con cualquiera de los demás."
 fi

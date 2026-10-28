@@ -39,7 +39,9 @@ DATOS=/usr/share/lazaro
 ARCH="$(apk --print-arch)"
 ESCRITORIOS="xfce xfce-wayland gnome plasma mate sway lxqt ninguno"
 # El único escritorio cuyos paquetes van dentro de la ISO.
-ESCRITORIO_OFFLINE="xfce"
+# Escritorios que vienen completos en la ISO (LAZARO_ESCRITORIOS en
+# perfil/mkimg.lazaro.sh); los demás se descargan.
+ESCRITORIOS_OFFLINE="xfce mate lxqt sway xfce-wayland ninguno"
 
 log() { printf '[lazaro] %s\n' "$*" | tee -a "$LOG" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -174,6 +176,11 @@ escribir_repos() {
 	mv "$1.lazaro-nuevo" "$1"
 }
 
+escritorio_offline() {
+	case " $ESCRITORIOS_OFFLINE " in *" $1 "*) return 0 ;; esac
+	return 1
+}
+
 validar_escritorio() {
 	case " $ESCRITORIOS " in
 		*" $1 "*) ;;
@@ -267,8 +274,8 @@ paso_base() {
 	esperar_red && red=si
 	log "Lázaro Linux $ISO_VERSION sobre Alpine $ALPINE_BRANCH"
 	log "Repositorio de la ISO: ${iso:-ninguno}; internet: $red"
-	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] && [ "$red" = no ]; then
-		die "El escritorio '$de' se descarga de internet y no hay conexión. Conéctate a una red o elige XFCE."
+	if ! escritorio_offline "$de" && [ "$red" = no ]; then
+		die "El escritorio '$de' se descarga de internet y no hay conexión. Conéctate a una red o elige uno de los que vienen en el USB: XFCE, MATE, LXQt, Sway o XFCE Wayland."
 	fi
 	[ -n "$iso" ] || [ "$red" = si ] || die "No se encontró el repositorio de la ISO ni hay internet."
 
@@ -737,8 +744,8 @@ instalar_disco() { # DISCO ESCRITORIO USUARIO NOMBRE CLAVE EQUIPO IDIOMA TECLADO
 	raiz=/mnt/lazaro
 	# Antes de borrar el disco: que se puedan conseguir los paquetes.
 	# paso_base lo vuelve a revisar, pero ahí el disco ya está borrado.
-	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] || [ -z "$(repo_iso)" ]; then
-		esperar_red || die "Sin internet: no se puede instalar '$de' (no se cambió nada en el disco). Conéctate a una red o elige XFCE."
+	if ! escritorio_offline "$de" || [ -z "$(repo_iso)" ]; then
+		esperar_red || die "Sin internet: no se puede instalar '$de' (no se cambió nada en el disco). Conéctate a una red o elige XFCE, MATE, LXQt, Sway o XFCE Wayland."
 	fi
 	auto_particionar "$disco"
 	paso_base "$raiz" "$de"
