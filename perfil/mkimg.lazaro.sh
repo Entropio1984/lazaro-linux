@@ -69,7 +69,7 @@ profile_lazaro() {
 	kernel_addons=
 	# console=ttyS0 primero y tty0 al final: la consola principal sigue
 	# siendo la pantalla; el puerto serie solo sirve a las pruebas (QEMU).
-	kernel_cmdline="console=ttyS0,115200 console=tty0"
+	kernel_cmdline="console=tty0 console=ttyS0,115200"
 	# nouveau no se carga solo en la live: lo carga lazaro-graficas
 	# después de revisar la tarjeta, si es seguro.
 	lazaro_nvidia="modprobe.blacklist=nouveau"

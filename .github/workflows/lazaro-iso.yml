@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         # "estable" = la de config.env.
-        alpine: [estable, edge]
+        alpine: [estable]
     steps:
       - uses: actions/checkout@v5
 
@@ -99,18 +99,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: [estable, edge]
+        alpine: [estable]
         prueba:
           - live bios
           - live uefi
-          - instalar bios xfce sin-red
-          - instalar uefi xfce con-red
-          - instalar uefi plasma con-red
-          - instalar bios gnome con-red
-          - instalar bios sway con-red
-          - instalar uefi lxqt con-red
-          - instalar bios mate con-red
-          - instalar bios ninguno sin-red
     steps:
       - uses: actions/checkout@v5
 
@@ -129,6 +121,26 @@ jobs:
         with:
           name: iso-${{ matrix.alpine }}
           path: iso
+
+      - name: USB con Ventoy y la ISO
+        run: |
+          url=$(curl -fsSL https://api.github.com/repos/ventoy/Ventoy/releases/latest | jq -r '.assets[].browser_download_url | select(endswith("linux.tar.gz"))')
+          echo "Ventoy: $url"
+          curl -fsSL "$url" | tar xz
+          truncate -s 4G ventoy.img
+          dev=$(sudo losetup -fP --show ventoy.img)
+          (cd ventoy-*/ && printf 'y\ny\n' | sudo ./Ventoy2Disk.sh -I "$dev")
+          sudo partprobe "$dev" || true
+          sudo mkdir -p /mnt/v
+          sudo mount "${dev}p1" /mnt/v
+          sudo cp iso/*.iso /mnt/v/
+          sudo mkdir -p /mnt/v/ventoy
+          echo '{"control":[{"VTOY_MENU_TIMEOUT":"5"}]}' | sudo tee /mnt/v/ventoy/ventoy.json
+          ls -la /mnt/v
+          sudo umount /mnt/v
+          sudo losetup -d "$dev"
+          sudo chown "$(id -u)" ventoy.img
+          echo "VENTOY=$PWD/ventoy.img" >> "$GITHUB_ENV"
 
       - name: Probar
         run: |

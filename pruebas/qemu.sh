@@ -118,8 +118,14 @@ prueba_live() {
 	rm -f "$serie" "$mon" "$disco"
 	# Disco vacío: Calamares tiene que verlo para dejar instalar.
 	qemu-img create -q -f qcow2 "$disco" 20G
-	arrancar "$nombre" "$MEM" "$serie" \
-		-cdrom "$ISO" -boot d \
+	# VENTOY=imagen: arranca desde un USB con Ventoy que tiene la ISO.
+	if [ -n "${VENTOY:-}" ]; then
+		set -- -drive "file=$VENTOY,format=raw,if=none,id=usb" \
+			-device qemu-xhci -device usb-storage,drive=usb,bootindex=0
+	else
+		set -- -cdrom "$ISO" -boot d
+	fi
+	arrancar "$nombre" "$MEM" "$serie" "$@" \
 		-drive "file=$disco,if=virtio,format=qcow2" \
 		-nic user,model=virtio-net-pci \
 		-spice "unix=on,addr=$SOCK_DIR/$nombre.spice,disable-ticketing=on" \
