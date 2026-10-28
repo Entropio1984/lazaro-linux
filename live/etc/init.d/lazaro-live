@@ -63,6 +63,15 @@ revisar_discos() {
 		serie "LAZARO-DISCOS-OK"
 	else
 		serie "LAZARO-DISCOS-FALLO"
+		# Para saber por qué: memoria, si el núcleo cerró algún programa
+		# por falta de memoria, si Calamares sigue abierto y qué escribió.
+		serie -- free -m
+		serie -- df -m /
+		dmesg | grep -i -e 'out of memory' -e oom -e 'killed process' | tail -n 20 | serie
+		for c in /proc/[0-9]*/cmdline; do
+			tr '\0' ' ' < "$c" 2>/dev/null | grep -q 'calamares' && echo "calamares vivo: ${c%/cmdline}"
+		done | serie
+		[ -z "$registro" ] && serie "sin session.log" || tail -n 40 "$registro" | serie
 	fi
 	# Todas las pantallas y pasos de settings.conf tienen que cargar (por
 	# ejemplo netinstall y el módulo propio lazaroextras).
