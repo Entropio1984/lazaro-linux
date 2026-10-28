@@ -60,9 +60,12 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 # desktop-postinstall.sh después los encuentra ya puestos. También van
 # las tipografías que el script instala con cualquier escritorio.
 # libreoffice-lang-es: solo el español; otro idioma se descarga.
+# usbutils y xrandr: el script los pide siempre (revisión de hardware y
+# resolución de la pantalla de inicio); si el wifi se corta durante la
+# instalación, salen de la ISO.
 LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 	flatpak font-liberation font-liberation-sans-narrow font-noto
-	font-noto-emoji"
+	font-noto-emoji usbutils xrandr"
 
 profile_lazaro() {
 	profile_standard
