@@ -202,7 +202,7 @@ start() {
 			sleep 5
 		done
 		serie "LAZARO-CALAMARES-NO-ABRIO"
-		serie -- sh -c 'ls -l /dev/dri /dev/fb* 2>&1; lsmod | head -40; tail -n 80 /var/log/Xorg.0.log; tail -n 40 /var/log/lightdm/lightdm.log; tail -n 40 /var/log/lightdm/x-0.log' 
+		serie -- sh -c 'ls /dev/dri /dev/fb0 2>&1; grep -hE "\((EE|WW)\)|vesa|VESA|modeset|fbdev|Load" /var/log/Xorg.0.log /var/log/lightdm/x-0.log 2>&1 | tail -n 40; tail -n 12 /var/log/lightdm/lightdm.log' 
 	) &
 
 	# Instalación desatendida, solo para pruebas:
