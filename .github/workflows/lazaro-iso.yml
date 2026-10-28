@@ -103,6 +103,8 @@ jobs:
         prueba:
           - live bios
           - live uefi
+          # Equipo viejo con 2 GB de RAM: la sesión live vive en la memoria.
+          - live bios 2048
           - instalar bios xfce sin-red
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red

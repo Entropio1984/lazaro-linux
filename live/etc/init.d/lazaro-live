@@ -147,6 +147,8 @@ start() {
 	chmod +x "$escritorio"/lazaro-instalador.desktop
 	chown -R lazaro:lazaro /home/lazaro
 	serie "LAZARO-LIVE-LISTO"
+	# Cuánto ocupa la sesión live en la RAM y cuánto le queda.
+	serie "LAZARO-RAIZ $(df -m / | awk 'NR == 2 { print "usado=" $3 "MB total=" $2 "MB" }')"
 	# "doas" debe dar root al usuario de la sesión (doas.d/lazaro-live.conf)
 	# para cualquier orden: se pide una que no sea la de Calamares y se
 	# mira que corra como UID 0.
