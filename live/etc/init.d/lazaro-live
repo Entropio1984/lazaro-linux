@@ -51,7 +51,16 @@ parametro() {
 diagnostico() {
 	serie -- free -m
 	serie -- df -m /
-	dmesg | grep -i -e 'out of memory' -e oom -e 'killed process' -e 'page allocation' | tail -n 20 | serie
+	dmesg | grep -i -e 'out of memory' -e oom -e 'killed process' -e 'page allocation' -e segfault -e 'general protection' -e trap | tail -n 20 | serie
+	serie "-- lightdm.log (inicio)"
+	serie -- head -n 25 /var/log/lightdm/lightdm.log
+	serie "-- lightdm.log.old (final)"
+	serie -- tail -n 40 /var/log/lightdm/lightdm.log.old
+	serie "-- x-0.log.old (final)"
+	serie -- tail -n 25 /var/log/lightdm/x-0.log.old
+	serie "-- messages"
+	grep -i -e lightdm -e supervise -e elogind -e dbus -e crash /var/log/messages 2>/dev/null | tail -n 30 | serie
+	serie -- rc-status -a
 	for c in /proc/[0-9]*/cmdline; do
 		l=$(tr '\0' ' ' < "$c" 2>/dev/null)
 		case "$l" in *calamares*|*Xorg*|*lightdm*|*xfce4-session*|*xfwm4*) echo "vivo: $l" ;; esac
