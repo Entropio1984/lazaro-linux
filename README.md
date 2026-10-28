@@ -48,10 +48,10 @@ Los demás escritorios se descargan, igual que el software adicional.
 
 **Tarjetas NVIDIA.** Antes de cargar el controlador de una NVIDIA
 (nouveau), la sesión de prueba revisa qué tarjeta es. Lo carga en los
-portátiles con dos gráficas (para poder apagar la NVIDIA) y en las
-tarjetas de 2012 (Kepler) en adelante. Con las más antiguas (Tesla y
-Fermi) o una que no reconoce, como gráfica principal, no lo carga:
-algunas dan pantalla negra o bloqueos. La sesión usa entonces la imagen
+portátiles con dos gráficas (para poder apagar la NVIDIA), en las
+GeForce 8, 9 y 200 (Tesla) y en las tarjetas de 2012 (Kepler) en
+adelante. Con las GeForce 400 y 500 (Fermi) o una que no reconoce, como
+gráfica principal, no lo carga: algunas dan pantalla negra o bloqueos. La sesión usa entonces la imagen
 básica y muestra un aviso. La opción "modo gráfico seguro" del menú no
 carga ningún controlador.
 
