@@ -8,6 +8,10 @@
 #       se abra en el escritorio. Guarda capturas de pantalla. MEMORIA_MB
 #       (por omisión 4096): para probar equipos con poca RAM.
 #
+#   pruebas/qemu.sh texto ISO bios|uefi
+#       Arranca la ISO impidiendo que abra el escritorio y comprueba que
+#       en la consola aparece el aviso del instalador en modo texto.
+#
 #   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red
 #       Instala sin interfaz (lazaro-instalar auto) en un disco virtual,
 #       y luego arranca el disco y comprueba que el sistema instalado
@@ -188,6 +192,54 @@ prueba_live() {
 	return $ok
 }
 
+# Kernel e initramfs de la propia ISO en $k y $i, para pasar parámetros
+# (instalación desatendida, pruebas) sin tocar el menú de arranque.
+extraer_kernel() {
+	k="$RES/vmlinuz-lts"
+	i="$RES/initramfs-lts"
+	xorriso -osirrox on -indev "$ISO" \
+		-extract /boot/vmlinuz-lts "$k" \
+		-extract /boot/initramfs-lts "$i" >/dev/null 2>&1
+	chmod u+w "$k" "$i"
+}
+
+prueba_texto() {
+	nombre="texto-$MODO"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	rm -f "$serie" "$mon" "$RES/$nombre-vars.fd"
+	extraer_kernel
+	mods="loop,squashfs,sd-mod,usb-storage"
+	if [ "$MODO" = uefi ]; then
+		set -- -device virtio-scsi-pci,id=scsi0 \
+			-drive "id=cd0,if=none,media=cdrom,readonly=on,file=$ISO" \
+			-device scsi-cd,drive=cd0,bus=scsi0.0
+		mods="$mods,virtio_scsi,sr-mod"
+	else
+		set -- -cdrom "$ISO"
+	fi
+	arrancar "$nombre" "$MEM" "$serie" \
+		-kernel "$k" -initrd "$i" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.prueba=sin-escritorio" \
+		"$@" -nic none
+	ok=0
+	if ! esperar "$serie" "$pid" 900 LAZARO-AVISO-TEXTO; then
+		echo "FALLO: sin escritorio, no apareció el aviso del instalador en modo texto ($MODO)." >&2
+		ok=1
+	elif ! grep -q LAZARO-DIALOG-OK "$serie"; then
+		echo "FALLO: en la live falta dialog o lazaro-instalar-texto ($MODO)." >&2
+		ok=1
+	else
+		echo "OK: sin escritorio aparece el aviso del instalador en modo texto ($MODO)."
+	fi
+	sleep 5
+	captura "$mon" "$RES/$nombre-aviso"
+	terminar "$pid"
+	[ "$ok" -eq 0 ] || tail -n 80 "$serie" >&2 || true
+	rm -f "$k" "$i"
+	return $ok
+}
+
 prueba_instalar() {
 	de="$1"
 	red="$2"
@@ -201,14 +253,7 @@ prueba_instalar() {
 	nic=user,model=virtio-net-pci
 	[ "$red" = con-red ] || nic=none
 
-	# Kernel e initramfs de la propia ISO, para poder pasar parámetros de
-	# instalación desatendida sin tocar el menú de arranque.
-	k="$RES/vmlinuz-lts"
-	i="$RES/initramfs-lts"
-	xorriso -osirrox on -indev "$ISO" \
-		-extract /boot/vmlinuz-lts "$k" \
-		-extract /boot/initramfs-lts "$i" >/dev/null 2>&1
-	chmod u+w "$k" "$i"
+	extraer_kernel
 
 	# Con OVMF y arranque directo del kernel, el CD por IDE no se detecta a
 	# tiempo y el initramfs no encuentra la ISO; por virtio-scsi sí.
@@ -422,6 +467,9 @@ case "$orden" in
 		[ $# -eq 3 ] || [ $# -eq 4 ] || uso
 		[ $# -eq 3 ] || MEM="$4"
 		prueba_live ;;
+	texto)
+		[ $# -eq 3 ] || uso
+		prueba_texto ;;
 	instalar)
 		[ $# -eq 5 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac

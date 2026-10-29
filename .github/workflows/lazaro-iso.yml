@@ -105,6 +105,8 @@ jobs:
           - live uefi
           # Equipo viejo con 2 GB de RAM: la sesión live vive en la memoria.
           - live bios 2048
+          # Sin escritorio (Xorg no arranca): aviso del instalador en modo texto.
+          - texto bios
           - instalar bios xfce sin-red
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red
@@ -113,6 +115,10 @@ jobs:
           - instalar uefi lxqt con-red
           - instalar bios mate con-red
           - instalar bios ninguno sin-red
+          # Escritorios livianos que vienen completos en la ISO.
+          - instalar uefi mate sin-red
+          - instalar bios lxqt sin-red
+          - instalar bios xfce-wayland sin-red
     steps:
       - uses: actions/checkout@v5
 

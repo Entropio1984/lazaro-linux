@@ -41,9 +41,14 @@ instalador (Calamares) pregunta, en este orden:
      **OnlyOffice**, **Google Chrome** y **Brave**. Se instalan solas
      después del primer arranque con internet; marcar una de ellas
      instala también Flatpak.
-4. **Disco** y **usuario**.
+4. **Disco** y **usuario**. En la pantalla del usuario, la casilla
+   **Iniciar sesión automáticamente** (desmarcada) hace que el equipo
+   entre directo al escritorio sin pedir la contraseña. Para quitarlo
+   después: borrar `/etc/lazaro/autologin` y reiniciar.
 
-XFCE y "Sin escritorio" se instalan sin internet, desde la propia ISO.
+XFCE, MATE, LXQt, Sway, XFCE Wayland y "Sin escritorio" se instalan sin
+internet, desde la propia ISO. GNOME y KDE Plasma se descargan (no caben
+en el límite de 2 GB de la ISO).
 Los demás escritorios se descargan, igual que el software adicional.
 
 **Tarjetas NVIDIA.** Antes de cargar el controlador de una NVIDIA
@@ -68,6 +73,20 @@ respeta esa elección.
 - **Equipo con BIOS** (aparece `boot:`, espera unos 3 segundos): escribe
   `lazaro lazaro.nvidia=seguro` y pulsa Enter. `lazaro` es el nombre de
   la opción normal del menú.
+
+### Si el escritorio no abre
+
+En algunos equipos (poca memoria, o una tarjeta gráfica sin controlador)
+la sesión live puede no llegar al escritorio. Si a los 5 minutos no
+abrió, o se cerró, la pantalla pasa a la consola de texto con un aviso:
+entra como `lazaro` (no pide contraseña) y escribe
+`doas lazaro-instalar-texto`. Es un instalador con menús que se maneja
+con el teclado (flechas, barra espaciadora y Enter), hace las mismas
+preguntas que el gráfico (disco, escritorio, programas, idioma, teclado,
+zona horaria y usuario) y la misma instalación. No borra nada hasta que
+confirmas el resumen. Para wifi, antes de abrirlo:
+`nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"`
+(con las comillas).
 
 Con el sistema ya instalado, el arranque también muestra el pulso
 (Plymouth). Por ahora no aparece en dos casos: con GNOME (su pantalla de
@@ -159,6 +178,7 @@ siguiente (edge):
 |---|---|---|---|---|
 | Sesión live | BIOS | XFCE | Sí | El instalador se abre, ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona |
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
+| Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, y la live trae `dialog` |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |
 | Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo y la pantalla de inicio recuerda la resolución que eligió el usuario |
 | Instalación | UEFI | KDE Plasma | Sí | Lo mismo con Plasma |
@@ -166,6 +186,7 @@ siguiente (edge):
 | Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos |
 | Instalación | UEFI | LXQt | Sí | La sesión queda en el idioma elegido |
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
+| Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la

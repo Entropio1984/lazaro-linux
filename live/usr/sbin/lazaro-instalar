@@ -18,6 +18,14 @@
 #     EXTRAS: lo marcado en "Software adicional", separado por espacios,
 #     detrás de "base": fastfetch btop vlc libreoffice (Alpine) y
 #     flatpak onlyoffice chrome brave (Flathub). Sin EXTRAS: "base flatpak".
+#   lazaro-instalar autologin RAIZ USUARIO
+#     Inicio de sesión automático para USUARIO (casilla de Calamares).
+#   lazaro-instalar texto DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA
+#     TECLADO VARIANTE ZONA [EXTRAS]           (¡BORRA EL DISCO COMPLETO!)
+#     Instalación desde la consola (lazaro-instalar-texto); la contraseña
+#     va en la variable LAZARO_CLAVE.
+#   lazaro-instalar red
+#     Termina bien si hay internet (lo usa lazaro-instalar-texto).
 #   lazaro-instalar auto DISCO ESCRITORIO     (¡BORRA EL DISCO COMPLETO!)
 #     Solo pruebas: además deja en el disco las comprobaciones de
 #     /usr/share/lazaro/pruebas, que informan por el puerto serie.
@@ -31,7 +39,9 @@ DATOS=/usr/share/lazaro
 ARCH="$(apk --print-arch)"
 ESCRITORIOS="xfce xfce-wayland gnome plasma mate sway lxqt ninguno"
 # El único escritorio cuyos paquetes van dentro de la ISO.
-ESCRITORIO_OFFLINE="xfce"
+# Escritorios que vienen completos en la ISO (LAZARO_ESCRITORIOS en
+# perfil/mkimg.lazaro.sh); los demás se descargan.
+ESCRITORIOS_OFFLINE="xfce mate lxqt sway xfce-wayland ninguno"
 
 log() { printf '[lazaro] %s\n' "$*" | tee -a "$LOG" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -166,6 +176,11 @@ escribir_repos() {
 	mv "$1.lazaro-nuevo" "$1"
 }
 
+escritorio_offline() {
+	case " $ESCRITORIOS_OFFLINE " in *" $1 "*) return 0 ;; esac
+	return 1
+}
+
 validar_escritorio() {
 	case " $ESCRITORIOS " in
 		*" $1 "*) ;;
@@ -259,8 +274,8 @@ paso_base() {
 	esperar_red && red=si
 	log "Lázaro Linux $ISO_VERSION sobre Alpine $ALPINE_BRANCH"
 	log "Repositorio de la ISO: ${iso:-ninguno}; internet: $red"
-	if [ "$de" != "$ESCRITORIO_OFFLINE" ] && [ "$de" != ninguno ] && [ "$red" = no ]; then
-		die "El escritorio '$de' se descarga de internet y no hay conexión. Conéctate a una red o elige XFCE."
+	if ! escritorio_offline "$de" && [ "$red" = no ]; then
+		die "El escritorio '$de' se descarga de internet y no hay conexión. Conéctate a una red o elige uno de los que vienen en el USB: XFCE, MATE, LXQt, Sway o XFCE Wayland."
 	fi
 	[ -n "$iso" ] || [ "$red" = si ] || die "No se encontró el repositorio de la ISO ni hay internet."
 
@@ -523,6 +538,23 @@ repos_definitivos() { # RAIZ
 	[ -z "${LAZARO_LLAVE:-}" ] || rm -f "$1/etc/apk/keys/$LAZARO_LLAVE"
 }
 
+# Inicio automático: queda anotado en /etc/lazaro/autologin y el
+# servicio lazaro-autologin lo aplica en cada arranque a la pantalla de
+# inicio que haya (también a una que se instale después).
+paso_autologin() { # RAIZ USUARIO
+	raiz="${1%/}"
+	[ -n "$2" ] || return 0
+	mkdir -p "$raiz/etc/lazaro"
+	echo "$2" > "$raiz/etc/lazaro/autologin"
+	install -Dm755 "$DATOS/lazaro-autologin" "$raiz/usr/libexec/lazaro/lazaro-autologin"
+	install -Dm755 "$DATOS/lazaro-autologin.initd" "$raiz/etc/init.d/lazaro-autologin"
+	mkdir -p "$raiz/etc/runlevels/default"
+	ln -sf /etc/init.d/lazaro-autologin "$raiz/etc/runlevels/default/lazaro-autologin"
+	en_destino "$raiz" /usr/libexec/lazaro/lazaro-autologin >>"$LOG" 2>&1 \
+		|| log "Aviso: no se pudo configurar el inicio automático ahora; se hará al arrancar."
+	log "Inicio automático de la sesión para '$2'."
+}
+
 programar_primer_arranque() {
 	install -Dm755 "$DATOS/lazaro-primer-arranque.initd" \
 		"$1/etc/init.d/lazaro-primer-arranque"
@@ -615,15 +647,22 @@ auto_particionar() { # DISCO
 	fi
 }
 
-# Lo que en Calamares hace el módulo "users": usuario "prueba",
-# contraseña "lazaro".
-auto_usuario() {
-	en_destino "$raiz" adduser -D -g "Prueba" -s /bin/ash prueba >>"$LOG" 2>&1
-	echo 'prueba:lazaro' | en_destino "$raiz" chpasswd >>"$LOG" 2>&1
+# Lo que en Calamares hace el módulo "users" (los mismos grupos que
+# users.conf). Con CLAVE_ROOT=si, root recibe la misma contraseña, como
+# hace Calamares con doReusePassword.
+crear_usuario() { # USUARIO NOMBRE CLAVE EQUIPO [CLAVE_ROOT]
+	en_destino "$raiz" adduser -D -g "$2" -s /bin/ash "$1" >>"$LOG" 2>&1 \
+		|| die "no se pudo crear el usuario $1"
+	printf '%s:%s\n' "$1" "$3" | en_destino "$raiz" chpasswd >>"$LOG" 2>&1 \
+		|| die "no se pudo poner la contraseña de $1"
+	if [ "${5:-no}" = si ]; then
+		printf 'root:%s\n' "$3" | en_destino "$raiz" chpasswd >>"$LOG" 2>&1 || true
+	fi
 	for g in wheel audio video netdev input plugdev lp users; do
-		en_destino "$raiz" addgroup prueba "$g" >>"$LOG" 2>&1 || true
+		en_destino "$raiz" addgroup "$1" "$g" >>"$LOG" 2>&1 || true
 	done
-	echo lazaro-prueba > "$raiz/etc/hostname"
+	echo "$4" > "$raiz/etc/hostname"
+	printf '127.0.0.1\tlocalhost\n127.0.1.1\t%s\n::1\t\tlocalhost\n' "$4" > "$raiz/etc/hosts"
 }
 
 # Flatpak viene por defecto: con red, Flathub debe quedar agregado.
@@ -709,40 +748,69 @@ auto_prueba_arranque() {
 	ln -sf /etc/init.d/local "$raiz/etc/runlevels/default/local"
 }
 
-paso_auto() {
-	disco="$1"
-	de="$2"
+# Instalación completa en un disco entero, sin Calamares (la usan "auto"
+# y "texto"): lo mismo que hace Calamares con particionado automático.
+instalar_disco() { # DISCO ESCRITORIO USUARIO NOMBRE CLAVE EQUIPO IDIOMA TECLADO VARIANTE ZONA EXTRAS CLAVE_ROOT
+	disco="$1"; de="$2"
 	validar_escritorio "$de"
 	[ -b "$disco" ] || die "$disco no es un disco"
-
-	log "Instalación desatendida en $disco con '$de' (se borra el disco)"
 	raiz=/mnt/lazaro
+	# Antes de borrar el disco: que se puedan conseguir los paquetes.
+	# paso_base lo vuelve a revisar, pero ahí el disco ya está borrado.
+	if ! escritorio_offline "$de" || [ -z "$(repo_iso)" ]; then
+		esperar_red || die "Sin internet: no se puede instalar '$de' (no se cambió nada en el disco). Conéctate a una red o elige XFCE, MATE, LXQt, Sway o XFCE Wayland."
+	fi
 	auto_particionar "$disco"
 	paso_base "$raiz" "$de"
-	auto_usuario
+	crear_usuario "$3" "$4" "$5" "$6" "${12}"
 	paso_escritorio "$raiz" "$de"
 	# Si los ajustes se cuelgan, la prueba debe mostrar dónde: cada 4
 	# minutos se informa por el puerto serie qué está corriendo.
-	(
-		while sleep 240; do
-			echo "--- vigilancia $(date +%H:%M:%S) ---"
-			tail -n 12 "$raiz/var/log/desktop-postinstall.log" 2>/dev/null
-			ps -o pid,etime,args 2>/dev/null | grep -v -e '\[' -e 'ps -o' -e 'sleep 240' | tail -n 25
-		done
-	) >&2 &
-	vigia=$!
-	# Fastfetch, el programa adicional más liviano: la prueba comprueba
-	# que lo marcado en "Software adicional" se instala.
-	paso_ajustes "$raiz" prueba es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch"
-	kill "$vigia" 2>/dev/null || true
-	auto_revisar_flatpak
-	auto_prueba_resolucion "$de"
-	auto_prueba_arranque
+	vigia=""
+	if [ "${LAZARO_VIGIA:-no}" = si ]; then
+		(
+			while sleep 240; do
+				echo "--- vigilancia $(date +%H:%M:%S) ---"
+				tail -n 12 "$raiz/var/log/desktop-postinstall.log" 2>/dev/null
+				ps -o pid,etime,args 2>/dev/null | grep -v -e '\[' -e 'ps -o' -e 'sleep 240' | tail -n 25
+			done
+		) >&2 &
+		vigia=$!
+	fi
+	paso_ajustes "$raiz" "$3" "$7" "$8" "$9" "${10}" "${11}"
+	[ -z "$vigia" ] || kill "$vigia" 2>/dev/null || true
+}
 
+desmontar_destino() {
 	sync
 	[ ! -d "$raiz/boot/efi" ] || ! mountpoint -q "$raiz/boot/efi" || umount "$raiz/boot/efi"
 	umount "$raiz"
+}
+
+paso_auto() {
+	log "Instalación desatendida en $1 con '$2' (se borra el disco)"
+	# Usuario "prueba", contraseña "lazaro". Fastfetch, el programa
+	# adicional más liviano: la prueba comprueba que lo marcado en
+	# "Software adicional" se instala.
+	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
+		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch" no
+	auto_revisar_flatpak
+	auto_prueba_resolucion "$2"
+	auto_prueba_arranque
+	desmontar_destino
 	log "Instalación desatendida terminada."
+}
+
+# Instalación desde la consola (lazaro-instalar-texto, cuando la sesión
+# gráfica no abre). La contraseña llega en LAZARO_CLAVE, no como
+# argumento, para que no se vea en la lista de procesos; root recibe la
+# misma, como en Calamares.
+paso_texto() { # DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
+	[ -n "${LAZARO_CLAVE:-}" ] || die "falta la contraseña (LAZARO_CLAVE)"
+	log "Instalación desde la consola en $1 con '$2' (se borra el disco)"
+	instalar_disco "$1" "$2" "$3" "$4" "$LAZARO_CLAVE" "$5" "$6" "$7" "$8" "$9" "${10:-base}" si
+	desmontar_destino
+	log "Instalación terminada."
 }
 
 orden="${1:-}"
@@ -751,7 +819,10 @@ case "$orden" in
 	base)       [ $# -eq 2 ] || die "uso: lazaro-instalar base RAIZ ESCRITORIO"; paso_base "$@" ;;
 	escritorio) [ $# -eq 2 ] || die "uso: lazaro-instalar escritorio RAIZ ESCRITORIO"; paso_escritorio "$@" ;;
 	ajustes)    [ $# -ge 2 ] || die "uso: lazaro-instalar ajustes RAIZ USUARIO [IDIOMA TECLADO VARIANTE ZONA EXTRAS]"; paso_ajustes "$@" ;;
+	autologin)  [ $# -eq 2 ] || die "uso: lazaro-instalar autologin RAIZ USUARIO"; paso_autologin "$@" ;;
 	auto)       [ $# -eq 2 ] || die "uso: lazaro-instalar auto DISCO ESCRITORIO"; paso_auto "$@" ;;
+	red)        esperar_red ;;
+	texto)      [ $# -ge 9 ] || die "uso: lazaro-instalar texto DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]"; paso_texto "$@" ;;
 	*)
 		sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2
 		exit 1
