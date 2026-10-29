@@ -16,7 +16,7 @@
 #   lazaro-instalar escritorio RAIZ ESCRITORIO
 #   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
 #     EXTRAS: lo marcado en "Software adicional", separado por espacios,
-#     detrás de "base": fastfetch btop vlc libreoffice (Alpine) y
+#     detrás de "base": fastfetch btop vlc youtube libreoffice (Alpine) y
 #     flatpak onlyoffice chrome brave (Flathub). Sin EXTRAS: "base flatpak".
 #   lazaro-instalar autologin RAIZ USUARIO
 #     Inicio de sesión automático para USUARIO (casilla de Calamares).
@@ -392,6 +392,9 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
 			flatpak) [ "$pe_grafico" = no ] || pe_paq="$pe_paq flatpak" ;;
 			vlc) [ "$pe_grafico" = no ] || pe_paq="$pe_paq vlc vlc-qt" ;;
+			# YouTube ligero: yt-dlp-ejs-rt-quickjs se pide aparte para que
+			# yt-dlp use QuickJS (1 MB) y no arrastre Deno (41 MB).
+			youtube) [ "$pe_grafico" = no ] || pe_paq="$pe_paq pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs" ;;
 			libreoffice)
 				[ "$pe_grafico" = no ] && continue
 				pe_paq="$pe_paq libreoffice"
@@ -430,7 +433,7 @@ paso_ajustes() {
 	for e in $extras; do
 		case "$e" in
 			base) ;;
-			fastfetch|btop|vlc|libreoffice|flatpak|onlyoffice|chrome|brave)
+			fastfetch|btop|vlc|youtube|libreoffice|flatpak|onlyoffice|chrome|brave)
 				con="$con,$e" ;;
 			*) log "Aviso: programa adicional desconocido '$e'; se omite." ;;
 		esac
@@ -793,7 +796,7 @@ paso_auto() {
 	# adicional más liviano: la prueba comprueba que lo marcado en
 	# "Software adicional" se instala.
 	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
-		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch" no
+		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch youtube" no
 	auto_revisar_flatpak
 	auto_prueba_resolucion "$2"
 	auto_prueba_arranque

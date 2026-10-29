@@ -80,7 +80,10 @@ LAZARO_ESCRITORIOS="
 # usbutils y xrandr: el script los pide siempre (revisión de hardware y
 # resolución de la pantalla de inicio); si el wifi se corta durante la
 # instalación, salen de la ISO.
+# YouTube ligero (~18 MB): pipe-viewer-gtk, mpv y yt-dlp con QuickJS
+# (yt-dlp-ejs-rt-quickjs evita que yt-dlp traiga Deno, 41 MB).
 LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
+	pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs
 	flatpak font-liberation font-liberation-sans-narrow font-noto
 	font-noto-emoji usbutils xrandr"
 

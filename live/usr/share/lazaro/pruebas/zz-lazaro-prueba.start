@@ -64,6 +64,26 @@ idioma_sesion() {
 			echo "LAZARO-EXTRAS-NO"
 		fi
 	fi
+	# YouTube ligero (la prueba lo marca): Pipe Viewer, mpv, yt-dlp con
+	# QuickJS (sin Deno), su configuración y el lanzador del menú.
+	if grep -q -e "--con .*youtube" /etc/lazaro/postinstall.args 2>/dev/null \
+		&& [ ! -e /etc/runlevels/default/lazaro-primer-arranque ] \
+		&& [ ! -e /etc/lazaro/sin-escritorio ]; then
+		falta=""
+		for f in /usr/bin/gtk-pipe-viewer /usr/bin/mpv /usr/bin/yt-dlp /usr/bin/qjs \
+			/etc/yt-dlp.conf /etc/mpv/mpv.conf \
+			/usr/share/applications/lazaro-youtube.desktop \
+			/home/prueba/.config/pipe-viewer/gtk-pipe-viewer.conf; do
+			[ -e "$f" ] || falta="$falta $f"
+		done
+		grep -q '^--js-runtimes quickjs' /etc/yt-dlp.conf 2>/dev/null || falta="$falta quickjs-en-yt-dlp.conf"
+		! command -v deno >/dev/null 2>&1 || falta="$falta (sobra-deno)"
+		if [ -z "$falta" ]; then
+			echo "LAZARO-YOUTUBE-OK"
+		else
+			echo "LAZARO-YOUTUBE-NO$falta"
+		fi
+	fi
 	if [ -z "$ajenos" ]; then
 		echo "LAZARO-HOME-OK"
 	else
