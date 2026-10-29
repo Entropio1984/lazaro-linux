@@ -472,10 +472,6 @@ paso_ajustes() {
 
 	preinstalar_extras "$raiz" "$idioma" "$extras"
 
-	# Repositorios definitivos: los de internet (el de la ISO deja de
-	# existir al reiniciar), y fuera la llave que solo firmaba la ISO.
-	escribir_repos "$raiz/etc/apk/repositories" "" si
-	[ -z "${LAZARO_LLAVE:-}" ] || rm -f "$raiz/etc/apk/keys/$LAZARO_LLAVE"
 
 	# desktop-postinstall.sh sin preguntas: --minimo deja todo en "no" y
 	# --con marca lo elegido en Calamares. Las opciones se guardan para
@@ -501,6 +497,13 @@ paso_ajustes() {
 
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
 	if esperar_red; then
+		# Mientras corre el script, el repositorio de la ISO sigue a mano
+		# junto a los de internet: si la conexión se corta (wifi
+		# inestable), lo que está en la ISO se instala igual.
+		iso="$(repo_iso)"
+		if [ -n "$iso" ] && montar_si_falta bind "$iso" "$raiz$iso"; then
+			escribir_repos "$raiz/etc/apk/repositories" "$iso" si
+		fi
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
 		log "Ejecutando desktop-postinstall.sh --destino $raiz $args"
@@ -510,6 +513,8 @@ paso_ajustes() {
 		sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
 			</dev/null >>"$LOG" 2>&1 || pi=$?
 		avance_parar
+		desmontar_propios
+		repos_definitivos "$raiz"
 		if [ "$pi" = 0 ]; then
 			log "desktop-postinstall.sh terminó bien."
 		else
@@ -517,12 +522,20 @@ paso_ajustes() {
 			programar_primer_arranque "$raiz"
 		fi
 	else
+		repos_definitivos "$raiz"
 		log "Sin internet: desktop-postinstall.sh se ejecutará en el primer arranque con red."
 		programar_primer_arranque "$raiz"
 	fi
 
 	cp "$LOG" "$raiz/var/log/lazaro-instalar.log" 2>/dev/null || true
 	log "Instalación terminada."
+}
+
+# Repositorios definitivos: los de internet (el de la ISO deja de
+# existir al reiniciar), y fuera la llave que solo firmaba la ISO.
+repos_definitivos() { # RAIZ
+	escribir_repos "$1/etc/apk/repositories" "" si
+	[ -z "${LAZARO_LLAVE:-}" ] || rm -f "$1/etc/apk/keys/$LAZARO_LLAVE"
 }
 
 # Inicio automático: queda anotado en /etc/lazaro/autologin y el
