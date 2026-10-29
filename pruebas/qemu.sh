@@ -393,8 +393,8 @@ prueba_instalar() {
 			echo "FALLO: YouTube ligero quedó incompleto:" >&2
 			grep LAZARO-YOUTUBE-NO "$serie2" >&2
 			ok=1
-		elif [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-YOUTUBE-OK "$serie2"; then
-			echo "FALLO: con internet no se confirmó YouTube ligero (Pipe Viewer + mpv + yt-dlp con QuickJS)." >&2
+		elif [ "$de" != ninguno ] && ! grep -q LAZARO-YOUTUBE-OK "$serie2"; then
+			echo "FALLO: no se confirmó YouTube ligero (Pipe Viewer + mpv + yt-dlp con QuickJS)." >&2
 			ok=1
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
