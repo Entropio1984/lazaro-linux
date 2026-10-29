@@ -45,7 +45,7 @@ echo "==== gtk-pipe-viewer.conf por defecto"; cat $HOME/.config/pipe-viewer/gtk-
 # --- Configuración propuesta ----------------------------------------------
 cp pruebas/youtube/yt-dlp.conf /etc/yt-dlp.conf
 mkdir -p /etc/mpv && cp pruebas/youtube/mpv.conf /etc/mpv/mpv.conf
-mkdir -p $HOME/.config/mpv/scripts && cp pruebas/youtube/medir.lua $HOME/.config/mpv/scripts/
+
 
 # Muestreo de CPU y RAM de mpv cada 5 s mientras corra.
 vigilar() {
@@ -65,9 +65,9 @@ probar() { # NOMBRE BUSQUEDA [OPCIONES pipe-viewer]
 	vigilar & v=$!
 	ini=$(date +%s.%N | cut -c1-14)
 	echo "$ini INICIO"
-	timeout 180 pipe-viewer -n --results=1 --player=mpv --resolution=480 --prefer-mp4 --ignore-av1 --no-hfr \
-		--append-arg="--ao=null --vo=x11" "$@" "$busqueda" 2>&1 | sello | tee $R/$nombre.log \
-		| head -40
+	printf '1\n:q\n' | timeout 180 pipe-viewer --results=3 --player=mpv --resolution=480 --prefer-mp4 --ignore-av1 --no-hfr \
+		--append-arg="--ao=null --vo=x11 --script=pruebas/youtube/medir.lua" "$@" "$busqueda" 2>&1 | sello | tee $R/$nombre.log \
+		| grep -vE '^[0-9.]+ .\[1m ?[0-9]' | head -40
 	kill $v 2>/dev/null
 	f=$(grep -m1 MEDIR-INICIO $R/$nombre.log | cut -d' ' -f1)
 	[ -n "$f" ] && echo "RESULTADO $nombre: $(echo "$f - $ini" | bc 2>/dev/null || awk "BEGIN{print $f-$ini}") s desde Enter hasta el video" \
@@ -75,20 +75,32 @@ probar() { # NOMBRE BUSQUEDA [OPCIONES pipe-viewer]
 }
 apk add -q bc >/dev/null 2>&1
 
-# --- Decodificación sin internet: video 480p H.264 de 30 fps -----------
-echo "== Generando video de prueba 480p H.264"
-ffmpeg -loglevel error -f lavfi -i "testsrc2=s=854x480:r=30,noise=alls=25:allf=t" \
-	-f lavfi -i "sine=frequency=440:sample_rate=44100" -t 60 \
+# --- Decodificación sin internet: video 480p/360p H.264 de 30 fps -------
+echo "== Generando videos de prueba"
+ffmpeg -loglevel error -f lavfi -i "testsrc2=s=854x480:r=30,noise=alls=12:allf=t" \
+	-f lavfi -i "sine=frequency=440:sample_rate=44100" -t 70 \
 	-c:v libx264 -preset veryfast -profile:v main -b:v 900k -c:a aac -b:a 128k /tmp/v480.mp4
-ls -la /tmp/v480.mp4
-vigilar & v=$!
-timeout 120 mpv --ao=null --vo=x11 --script=pruebas/youtube/medir.lua /tmp/v480.mp4 2>&1 | sello | head -10
-kill $v 2>/dev/null
-echo "== Igual pero con --vo=x11 y 360p"
 ffmpeg -loglevel error -i /tmp/v480.mp4 -vf scale=-2:360 -c:v libx264 -preset veryfast -b:v 600k -c:a copy /tmp/v360.mp4
-vigilar & v=$!
-timeout 120 mpv --ao=null --vo=x11 --script=pruebas/youtube/medir.lua /tmp/v360.mp4 2>&1 | sello | head -10
-kill $v 2>/dev/null
+# CPU media de mpv entre los segundos 10 y 40 (ticks de /proc), y RAM.
+cpu_mpv() { # VIDEO OPCIONES...
+	v="$1"; shift
+	mpv --ao=null --really-quiet "$@" "$v" >/dev/null 2>&1 &
+	sleep 10
+	p=$(pgrep -x mpv | head -1)
+	[ -n "$p" ] || { echo "MPV no arrancó con $*"; return; }
+	a=$(awk '{print $14+$15}' /proc/$p/stat)
+	sleep 30
+	b=$(awk '{print $14+$15}' /proc/$p/stat)
+	rss=$(awk '/VmRSS/{print int($2/1024)}' /proc/$p/status)
+	kill $p; wait $p 2>/dev/null
+	echo "CPU ${v##*/} $*: $(( (b - a) * 100 / (30 * $(getconf CLK_TCK)) ))% de un núcleo, RAM ${rss} MB"
+}
+for v in /tmp/v480.mp4 /tmp/v360.mp4; do
+	cpu_mpv $v --vo=gpu
+	cpu_mpv $v --vo=x11
+	cpu_mpv $v --vo=gpu --profile=fast
+	cpu_mpv $v --vo=gpu --hwdec=auto-safe --profile=fast --vd-lavc-fast --vd-lavc-skiploopfilter=all
+done
 
 apk add -q deno >/dev/null 2>&1
 for motor in quickjs deno; do
