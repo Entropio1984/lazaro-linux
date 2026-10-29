@@ -16,11 +16,14 @@ medir() {
 	echo "TAMANO $nombre: $(printf '%s\n' "$nuevos" | grep -c .) paquetes nuevos, $(du -sm /tmp/m | cut -f1) MB"
 	echo "  $(echo $nuevos)"
 }
-medir youtube pipe-viewer pipe-viewer-gtk mpv yt-dlp
+medir youtube-solo-yt-dlp pipe-viewer pipe-viewer-gtk mpv yt-dlp
+medir youtube-quickjs pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs
 medir deno deno
+echo "== Qué motor JS elige apk solo con 'yt-dlp':"
+apk add --simulate yt-dlp 2>/dev/null | grep -E "quickjs|nodejs|deno|ejs"
 
 # --- Instalar -------------------------------------------------------------
-apk add -q pipe-viewer pipe-viewer-gtk mpv yt-dlp deno xvfb xdotool coreutils procps \
+apk add -q pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs ffmpeg xvfb xdotool coreutils procps \
 	font-dejavu adwaita-icon-theme mesa-dri-gallium >/dev/null
 apk info -e yt-dlp yt-dlp-ejs yt-dlp-ejs-rt-quickjs yt-dlp-ejs-rt-nodejs quickjs quickjs-ng nodejs deno
 for p in pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs quickjs deno; do echo "VERSION $(apk info -d $p 2>/dev/null | head -1)"; done
@@ -37,7 +40,7 @@ timeout 20 pipe-viewer --version >/dev/null 2>&1
 echo n | timeout 20 pipe-viewer -n --results=1 --novideo prueba >/dev/null 2>&1
 ls -la $HOME/.config/pipe-viewer/
 cp $HOME/.config/pipe-viewer/*.conf $R/ 2>/dev/null
-grep -nE "video_player_selected|resolution|prefer_mp4|ignore_av1|prefer_av1|hfr|split_videos|dash|ytdl|show_thumbs|maxResults" $HOME/.config/pipe-viewer/*.conf
+echo "==== gtk-pipe-viewer.conf por defecto"; cat $HOME/.config/pipe-viewer/gtk-pipe-viewer.conf
 
 # --- Configuración propuesta ----------------------------------------------
 cp pruebas/youtube/yt-dlp.conf /etc/yt-dlp.conf
@@ -64,7 +67,7 @@ probar() { # NOMBRE BUSQUEDA [OPCIONES pipe-viewer]
 	echo "$ini INICIO"
 	timeout 180 pipe-viewer -n --results=1 --player=mpv --resolution=480 --prefer-mp4 --ignore-av1 --no-hfr \
 		--append-arg="--ao=null --vo=x11" "$@" "$busqueda" 2>&1 | sello | tee $R/$nombre.log \
-		| grep -E "INICIO|MEDIR|Error|error|\[!\]|Resolution|itag" | head -20
+		| head -40
 	kill $v 2>/dev/null
 	f=$(grep -m1 MEDIR-INICIO $R/$nombre.log | cut -d' ' -f1)
 	[ -n "$f" ] && echo "RESULTADO $nombre: $(echo "$f - $ini" | bc 2>/dev/null || awk "BEGIN{print $f-$ini}") s desde Enter hasta el video" \
@@ -72,12 +75,28 @@ probar() { # NOMBRE BUSQUEDA [OPCIONES pipe-viewer]
 }
 apk add -q bc >/dev/null 2>&1
 
+# --- Decodificación sin internet: video 480p H.264 de 30 fps -----------
+echo "== Generando video de prueba 480p H.264"
+ffmpeg -loglevel error -f lavfi -i "testsrc2=s=854x480:r=30,noise=alls=25:allf=t" \
+	-f lavfi -i "sine=frequency=440:sample_rate=44100" -t 60 \
+	-c:v libx264 -preset veryfast -profile:v main -b:v 900k -c:a aac -b:a 128k /tmp/v480.mp4
+ls -la /tmp/v480.mp4
+vigilar & v=$!
+timeout 120 mpv --ao=null --vo=x11 --script=pruebas/youtube/medir.lua /tmp/v480.mp4 2>&1 | sello | head -10
+kill $v 2>/dev/null
+echo "== Igual pero con --vo=x11 y 360p"
+ffmpeg -loglevel error -i /tmp/v480.mp4 -vf scale=-2:360 -c:v libx264 -preset veryfast -b:v 600k -c:a copy /tmp/v360.mp4
+vigilar & v=$!
+timeout 120 mpv --ao=null --vo=x11 --script=pruebas/youtube/medir.lua /tmp/v360.mp4 2>&1 | sello | head -10
+kill $v 2>/dev/null
+
+apk add -q deno >/dev/null 2>&1
 for motor in quickjs deno; do
 	sed -i "s/^--js-runtimes .*/--js-runtimes $motor/" /etc/yt-dlp.conf
 	echo "######## Motor JS: $motor"
 	probar "$motor-largo" "documental completo historia" --duration=long
 	probar "$motor-musical" "musica andina video oficial"
-	probar "$motor-envivo" "lofi hip hop radio" --features=live
+	probar "$motor-envivo" "lofi hip hop radio en vivo"
 	echo "== yt-dlp directo ($motor)"
 	/usr/bin/time -f "TIEMPO yt-dlp $motor %e s, %M KB máx" yt-dlp -g \
 		-f 'bestvideo[height<=?480][vcodec^=avc1][fps<=30]+bestaudio/best[height<=?480]' \
