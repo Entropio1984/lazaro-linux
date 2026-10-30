@@ -1,29 +1,31 @@
 #!/bin/sh
-# Experimento (no fusionar): por qué mpv no abre en el sistema instalado.
+# Experimento (no fusionar): mpv se cae en una VM sin 3D
+# ("Assertion failed: !vo->x11"). Probar salidas de video.
 set -u
 apk update >/dev/null
-apk add -q pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs ffmpeg xvfb \
-	font-dejavu adwaita-icon-theme mesa-dri-gallium curl >/dev/null
-curl -fsSL https://raw.githubusercontent.com/Entropio1984/alpine-desktop-setup/youtube-ligero/desktop-postinstall.sh -o /tmp/s.sh
-mkdir -p /etc/mpv
-sed -n "/cat > \/etc\/mpv\/mpv.conf <<'MPV'/,/^MPV\$/p" /tmp/s.sh | sed '1d;$d' > /etc/mpv/mpv.conf
-sed -n "/cat > \/etc\/yt-dlp.conf <<'YTDLP'/,/^YTDLP\$/p" /tmp/s.sh | sed '1d;$d' > /etc/yt-dlp.conf
-echo "==== /etc/mpv/mpv.conf"; cat /etc/mpv/mpv.conf
-echo "==== mpv --version"; mpv --version
-echo "==== mpv.desktop"; grep -E '^(Exec|TryExec)' /usr/share/applications/mpv.desktop
+apk add -q mpv ffmpeg xvfb font-dejavu mesa-dri-gallium mesa-vulkan-swrast \
+	mesa-vulkan-intel mesa-vulkan-ati mesa-gbm mesa-egl vulkan-loader >/dev/null
+apk add -q mesa-vulkan-layers >/dev/null 2>&1
+apk info -e mesa-dri-gallium mesa-vulkan-swrast mesa-vulkan-intel mesa-vulkan-ati
 Xvfb :99 -screen 0 1024x768x24 >/dev/null 2>&1 &
 export DISPLAY=:99 HOME=/tmp/casa; mkdir -p $HOME
 sleep 2
 ffmpeg -loglevel error -f lavfi -i testsrc=size=854x480:rate=30 -f lavfi -i sine -t 20 -c:v libx264 -c:a aac /tmp/v.mp4
-echo "==== 1. con la configuración, archivo local, salida por defecto"
-timeout 8 mpv --length=4 /tmp/v.mp4 2>&1 | tail -n 25; echo "codigo=$?"
-echo "==== 2. sin configuración"
-timeout 8 mpv --no-config --length=4 /tmp/v.mp4 2>&1 | tail -n 15
-echo "==== 3. como el lanzador del menú (sin archivo)"
-timeout 6 mpv --player-operation-mode=pseudo-gui -- 2>&1 | tail -n 25; echo "codigo=$?"
-echo "==== 4. revisar opciones de la configuración"
-for o in ytdl-format hwdec cache demuxer-max-bytes demuxer-max-back-bytes; do
-	mpv --list-options 2>/dev/null | grep -q -- "--$o " && echo "existe $o" || echo "NO EXISTE $o"
-done
-echo "==== 5. YouTube (en CI suele pedir 'no soy un robot')"
-timeout 40 mpv -v --length=3 "https://www.youtube.com/watch?v=jNQXAC9IVRw" 2>&1 | grep -iE 'ytdl|error|fail|format|vo/|Playing' | head -n 40
+p() {
+	echo "==== mpv $*"
+	timeout 10 mpv --ao=null --length=3 --msg-level=all=warn,vo=v "$@" /tmp/v.mp4 >/tmp/o 2>&1
+	echo "codigo=$?"
+	grep -vE '^ *V: |^AV: ' /tmp/o | tail -n 12
+}
+p
+p --vo=gpu
+p --vo=gpu-next,gpu,x11
+p --vo=x11
+p --vo=xv
+p --vo=gpu,x11
+p --vo=gpu-next --opengl-sw=yes
+p --vo=gpu --opengl-sw=yes
+p --vo=gpu --gpu-api=opengl --gpu-context=x11egl
+p --vo=gpu --gpu-context=x11
+p --vo=gpu,x11 --gpu-context=x11egl,x11
+p --vo=gpu-next --gpu-api=vulkan
