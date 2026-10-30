@@ -13,19 +13,15 @@ sleep 2
 ffmpeg -loglevel error -f lavfi -i testsrc=size=854x480:rate=30 -f lavfi -i sine -t 20 -c:v libx264 -c:a aac /tmp/v.mp4
 p() {
 	echo "==== mpv $*"
-	timeout 10 mpv --ao=null --length=3 --msg-level=all=warn,vo=v "$@" /tmp/v.mp4 >/tmp/o 2>&1
+	timeout 10 mpv --ao=null --length=3 -v "$@" /tmp/v.mp4 >/tmp/o 2>&1
 	echo "codigo=$?"
-	grep -vE '^ *V: |^AV: ' /tmp/o | tail -n 12
+	grep -iE 'Suspected|Assertion|Abort|Initializing GPU context|context|Selected|VO:|Error|fail' /tmp/o | grep -v 'Assuming' | head -n 25
 }
 p
-p --vo=gpu
-p --vo=gpu-next,gpu,x11
-p --vo=x11
-p --vo=xv
-p --vo=gpu,x11
-p --vo=gpu-next --opengl-sw=yes
-p --vo=gpu --opengl-sw=yes
-p --vo=gpu --gpu-api=opengl --gpu-context=x11egl
-p --vo=gpu --gpu-context=x11
-p --vo=gpu,x11 --gpu-context=x11egl,x11
-p --vo=gpu-next --gpu-api=vulkan
+p --vo=gpu-next --gpu-api=opengl
+p --vo=gpu-next --gpu-context=x11egl
+p --vo=gpu-next --gpu-context=wayland,x11egl
+p --vo=gpu-next,x11 --gpu-context=wayland,x11egl
+p --vo=gpu --gpu-context=x11egl
+echo "==== mpv --vo=help"; mpv --vo=help | head -30
+echo "==== mpv --gpu-context=help"; mpv --gpu-context=help
