@@ -81,6 +81,8 @@ idioma_sesion() {
 				[ -e "$f" ] || falta="$falta $f"
 			done
 			grep -q '^--js-runtimes quickjs' /etc/yt-dlp.conf 2>/dev/null || falta="$falta quickjs-en-yt-dlp.conf"
+			# Sin 3D (como en estas VM) mpv necesita la salida por procesador.
+			grep -q '^vo=.*x11' /etc/mpv/mpv.conf 2>/dev/null || falta="$falta vo-en-mpv.conf"
 		fi
 		if [ -z "$falta" ]; then
 			echo "LAZARO-YOUTUBE-OK"
