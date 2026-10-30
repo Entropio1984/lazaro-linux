@@ -34,8 +34,9 @@ instalador (Calamares) pregunta, en este orden:
    impresoras; sirve para servidores o personas con experiencia.
 3. **Software adicional**, con casillas. Firefox e impresoras se
    instalan siempre.
-   - Programas de Alpine (desmarcados): **Fastfetch**, **Btop**,
-     **VLC** y **LibreOffice** (en el idioma elegido).
+   - Programas de Alpine: **Fastfetch**, **Btop**, **VLC** y
+     **LibreOffice** (en el idioma elegido), desmarcados, y
+     **YouTube ligero** (marcado, ver abajo).
    - Aplicaciones Flatpak: **Flatpak + tienda Flathub** (marcada por
      defecto, para que la tienda ofrezca miles de programas),
      **OnlyOffice**, **Google Chrome** y **Brave**. Se instalan solas
@@ -73,6 +74,26 @@ respeta esa elección.
 - **Equipo con BIOS** (aparece `boot:`, espera unos 3 segundos): escribe
   `lazaro lazaro.nvidia=seguro` y pulsa Enter. `lazaro` es el nombre de
   la opción normal del menú.
+
+### YouTube ligero
+
+Abre YouTube sin navegador: en el menú, sección Multimedia (Sonido y
+video), aparece **YouTube**. Busca con Pipe Viewer (ventana sencilla) y
+reproduce con mpv en **480p H.264 a 30 cuadros**, el formato que menos
+procesador gasta en equipos viejos (sin VP9, AV1 ni 60 cuadros). Viene
+en el USB (~18 MB) y no necesita Electron, Flatpak ni Node. Detalle de
+los archivos que deja y cómo ajustarlo: sección "YouTube ligero" del
+[README de alpine-desktop-setup](https://github.com/Entropio1984/alpine-desktop-setup#youtube-ligero).
+
+- **Si deja de funcionar** (YouTube cambia seguido): actualizar
+  `doas apk upgrade yt-dlp yt-dlp-ejs pipe-viewer`. Si la versión de
+  Alpine aún no trae el arreglo, se puede tomar la de edge:
+  `doas apk upgrade --repository https://dl-cdn.alpinelinux.org/alpine/edge/community yt-dlp yt-dlp-ejs yt-dlp-ejs-rt-quickjs`.
+  Para ver el error: `yt-dlp -v "DIRECCION-DEL-VIDEO"`.
+- **Si el video se traba** (procesador de un núcleo): bajar a 360p. En
+  Pipe Viewer, menú de preferencias, resolución 360 (se guarda al
+  cerrar la ventana); para mpv solo, cambiar `480` por `360` en
+  `/etc/mpv/mpv.conf`.
 
 ### Si el escritorio no abre
 

@@ -139,10 +139,11 @@ else
 	[ -r /run/lazaro/recomendacion ] && grep -qx 'DISCO_PEQUENO=si' /run/lazaro/recomendacion && flat=off
 	elegidos=$(pedir --title "Software adicional" --separate-output --checklist \
 "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre." \
-		18 76 8 \
+		19 76 9 \
 		fastfetch "Fastfetch: resumen del equipo en la terminal" off \
 		btop "Btop: monitor de recursos" off \
 		vlc "VLC: reproductor de video y música" off \
+		youtube "YouTube ligero: videos sin navegador (480p)" on \
 		libreoffice "LibreOffice: oficina (documentos, hojas de cálculo)" off \
 		flatpak "Flatpak con Flathub: tienda de aplicaciones" "$flat" \
 		onlyoffice "OnlyOffice (Flathub, necesita internet)" off \
