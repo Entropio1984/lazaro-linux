@@ -1,6 +1,5 @@
-# Experimento (no fusionar): YouTube ligero con pipe-viewer + mpv + yt-dlp
-# en Alpine 3.24, limitado a 1 núcleo y 2 GB. Mide tamaño, configuración
-# por defecto de pipe-viewer, tiempos (QuickJS vs Deno), códec, CPU y RAM.
+# Experimento (no fusionar): diagnóstico de mpv en Alpine 3.24 con la
+# configuración de YouTube ligero.
 name: Prueba YouTube ligero
 on:
   push:
@@ -15,11 +14,6 @@ jobs:
       options: --cpus 1 --memory 2g --memory-swap 2g
     steps:
       - uses: actions/checkout@v5
-      - name: Probar
+      - name: Diagnóstico
         shell: sh
-        run: sh pruebas/youtube/medir.sh
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: resultados-youtube
-          path: /tmp/res/
+        run: sh pruebas/youtube/diagnostico.sh
