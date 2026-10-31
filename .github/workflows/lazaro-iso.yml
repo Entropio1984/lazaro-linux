@@ -128,6 +128,10 @@ jobs:
           orden="$1"; shift
           ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
 
+      - name: Experimento sin KMS (registro)
+        if: always()
+        run: grep -a -h -e SINKMS -e gfxpayload -e GRUB_ -e EXPERIMENTO -e load_video -e 'vmlinuz' pruebas/resultados/*.log | cut -c1-400 | head -n 200 || true
+
       - name: Nombre de los resultados
         if: always()
         id: nombre
