@@ -271,7 +271,7 @@ prueba_instalar() {
 	echo "Instalando ($MODO, $de, $red)..."
 	arrancar "$nombre" "$MEM" "$serie" \
 		-kernel "$k" -initrd "$i" \
-		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda lazaro.sinkms=${SINKMS:-}" \
 		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic "$nic"
 	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
 		captura "$mon" "$RES/$nombre-instalacion-fallo"
@@ -478,8 +478,8 @@ case "$orden" in
 		[ $# -eq 3 ] || uso
 		prueba_texto ;;
 	instalar)
-		[ $# -eq 5 ] || uso
+		[ $# -eq 5 ] || [ $# -eq 6 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac
-		prueba_instalar "$4" "$5" ;;
+		SINKMS="${6:-}" prueba_instalar "$4" "$5" ;;
 	*) uso ;;
 esac

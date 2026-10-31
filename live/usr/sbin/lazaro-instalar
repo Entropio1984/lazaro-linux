@@ -742,6 +742,41 @@ auto_prueba_resolucion() { # ESCRITORIO
 # mientras está en pie (lazaro-prueba-plymouth, en el nivel boot: al
 # llegar a "local" puede haberla cerrado ya la pantalla de inicio) y
 # luego informar por el puerto serie y apagar (zz-lazaro-prueba.start).
+# EXPERIMENTO (no fusionar): simula una NVIDIA sin controlador en modo
+# BIOS (sin KMS) con SDDM. lazaro.sinkms=arreglo|control en la línea del
+# kernel de la live.
+auto_prueba_sin_kms() {
+	v="$(sed -n 's/.*lazaro\.sinkms=\([a-z]*\).*/\1/p' /proc/cmdline)"
+	[ -n "$v" ] || return 0
+	log "EXPERIMENTO sin KMS: variante $v"
+	en_destino "$raiz" apk add xf86-video-vesa >>"$LOG" 2>&1 || log "no se pudo instalar vesa"
+	g="$raiz/etc/default/grub"
+	grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=" "$g" || log "AVISO: sin GRUB_CMDLINE_LINUX_DEFAULT"
+	sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="/&modprobe.blacklist=bochs,bochs_drm /' "$g"
+	if [ "$v" = arreglo ]; then
+		sed -i '/^GRUB_GFXPAYLOAD_LINUX=/d' "$g"
+		echo 'GRUB_GFXPAYLOAD_LINUX=keep' >> "$g"
+	fi
+	cat "$g" >&2
+	en_destino "$raiz" grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1 || log "grub-mkconfig falló"
+	grep -n -e gfxpayload -e 'linux\s' -e load_video -e gfxmode "$raiz/boot/grub/grub.cfg" >&2 || true
+	cat > "$raiz/etc/local.d/zy-lazaro-sinkms.start" <<-'EOS'
+	#!/bin/sh
+	sleep 25
+	echo "LAZARO-SINKMS cmdline: $(cat /proc/cmdline)"
+	echo "LAZARO-SINKMS dri: $(ls /dev/dri 2>&1 | tr '\n' ' ') fb: $(ls /dev/fb* 2>&1 | tr '\n' ' ')"
+	echo "LAZARO-SINKMS modulos: $(lsmod | awk '{print $1}' | grep -e bochs -e drm -e fb | tr '\n' ' ')"
+	loginctl show-seat seat0 2>&1 | sed 's/^/LAZARO-SINKMS seat0 /'
+	dmesg | grep -i -e simpledrm -e simplefb -e 'fb0' -e vesafb -e efifb -e bochs | sed 's/^/LAZARO-SINKMS dmesg /'
+	for c in /proc/[0-9]*/cmdline; do
+		case "$(tr '\0' ' ' < "$c")" in *Xorg*|*sddm*) echo "LAZARO-SINKMS proc $(tr '\0' ' ' < "$c")" ;; esac
+	done 2>/dev/null
+	grep -e '(EE)' -e 'LoadModule' -e 'driver' /var/log/Xorg.0.log 2>/dev/null | head -n 40 | sed 's/^/LAZARO-SINKMS xorg /'
+	grep -i sddm /var/log/messages 2>/dev/null | tail -n 25 | sed 's/^/LAZARO-SINKMS log /'
+	EOS
+	chmod 755 "$raiz/etc/local.d/zy-lazaro-sinkms.start"
+}
+
 auto_prueba_arranque() {
 	install -m 755 "$PRUEBAS/lazaro-prueba-plymouth" "$raiz/etc/init.d/lazaro-prueba-plymouth"
 	mkdir -p "$raiz/etc/runlevels/boot"
@@ -800,6 +835,7 @@ paso_auto() {
 	auto_revisar_flatpak
 	auto_prueba_resolucion "$2"
 	auto_prueba_arranque
+	auto_prueba_sin_kms
 	desmontar_destino
 	log "Instalación desatendida terminada."
 }
