@@ -184,7 +184,12 @@ aviso() {
 	[ "$DECISION" = seguro ] || return 0
 	case "$MOTIVO" in
 		generacion)
-			texto="Este equipo tiene una tarjeta NVIDIA que no se pudo identificar${CHIPS:+ ($CHIPS)}.
+			if [ "$GENERACION" = anterior ]; then
+				texto="Este equipo tiene una tarjeta NVIDIA anterior a las GeForce 8 ($CHIPS), que no se probó con su controlador libre."
+			else
+				texto="Este equipo tiene una tarjeta NVIDIA que no se pudo identificar${CHIPS:+ ($CHIPS)}."
+			fi
+			texto="$texto
 
 Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.
 
