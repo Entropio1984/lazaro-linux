@@ -761,7 +761,7 @@ auto_prueba_sin_kms() {
 	vesa)
 		echo 'GRUB_GFXPAYLOAD_LINUX=auto' >> "$g"
 		mkdir -p "$raiz/etc/X11/xorg.conf.d"
-		printf 'Section "Device"\n\tIdentifier "vesa"\n\tDriver "vesa"\nEndSection\n' \
+		printf 'Section "Device"\n\tIdentifier "vesa"\n\tDriver "vesa"\n\tBusID "PCI:0:2:0"\nEndSection\n' \
 			> "$raiz/etc/X11/xorg.conf.d/30-vesa.conf" ;;
 	x24) echo 'GRUB_GFXPAYLOAD_LINUX=1024x768x24' >> "$g" ;;
 	x32) echo 'GRUB_GFXPAYLOAD_LINUX=1024x768x32' >> "$g" ;;

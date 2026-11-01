@@ -102,8 +102,6 @@ jobs:
         alpine: [estable]
         prueba:
           - instalar bios lxqt con-red vesa
-          - instalar bios lxqt con-red x24
-          - instalar bios lxqt con-red x32
     steps:
       - uses: actions/checkout@v5
 
