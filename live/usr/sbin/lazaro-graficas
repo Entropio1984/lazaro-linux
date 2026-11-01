@@ -60,7 +60,12 @@ generacion_de_chip() {
 		GM*) echo maxwell ;;
 		GK*) echo kepler ;;
 		GF*) echo fermi ;;
-		NV*|G[0-9]*|GT2*|MCP*|C[0-9]*) echo tesla ;;
+		# Anteriores a Tesla (GeForce FX, 6 y 7, 2003-2006, y sus graficas
+		# integradas): nouveau no se probo en ellas, quedan como antes en modo
+		# seguro. Van antes que Tesla porque sus nombres tambien empiezan con
+		# NV, G o C.
+		NV*|G7[0-9]*|C5[0-9]*|C6[0-9]*|C73*) echo anterior ;;
+		G[0-9]*|GT2*|MCP*|C[0-9]*) echo tesla ;;
 		*) echo desconocida ;;
 	esac
 }
