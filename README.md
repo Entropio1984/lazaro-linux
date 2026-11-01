@@ -57,7 +57,7 @@ Los demás escritorios se descargan, igual que el software adicional.
 portátiles con dos gráficas (para poder apagar la NVIDIA) y en todas
 las tarjetas que reconoce, desde las GeForce 8, 9 y 200 (Tesla, de
 2006). Con una NVIDIA que no reconoce, como gráfica principal, no lo
-carga: podría dar pantalla negra o bloqueos. La sesión usa entonces la imagen
+carga (tampoco en las anteriores a las GeForce 8: GeForce FX, 6 y 7): podría dar pantalla negra o bloqueos. La sesión usa entonces la imagen
 básica y muestra un aviso. La opción "modo gráfico seguro" del menú no
 carga ningún controlador.
 

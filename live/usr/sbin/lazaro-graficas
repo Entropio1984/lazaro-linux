@@ -60,6 +60,13 @@ generacion_de_chip() {
 		GM*) echo maxwell ;;
 		GK*) echo kepler ;;
 		GF*) echo fermi ;;
+		# Anteriores a Tesla (GeForce FX, 6 y 7, 2003-2006, y sus graficas
+		# integradas): nouveau no se probo en ellas, quedan como antes en modo
+		# seguro. Van antes que Tesla porque sus nombres tambien empiezan con
+		# NV, G o C.
+		# NV50 en adelante (NV84, NVAA...) es Tesla. nouveau llama MCP61, MCP67,
+		# MCP68 y MCP73 a las integradas antiguas.
+		NV[0-4]*|G7[0-9]*|C5[0-9]*|C6[0-9]*|C73*|MCP5[0-9]*|MCP6[0-9]*|MCP73*) echo anterior ;;
 		NV*|G[0-9]*|GT2*|MCP*|C[0-9]*) echo tesla ;;
 		*) echo desconocida ;;
 	esac
@@ -134,7 +141,9 @@ revisar() {
 		decision=seguro; motivo=nomodeset
 	elif [ "$forzado" = activa ] || [ "$forzado" = seguro ]; then
 		decision="$forzado"; motivo=elegido
-	elif [ "$optimus" = si ]; then
+	elif [ "$optimus" = si ] && [ "$gen" != anterior ]; then
+		# Las híbridas anteriores a las GeForce 8 (raras, como la GeForce
+		# Go 7400 de algunos Sony VAIO) siguen abajo, en modo seguro.
 		decision=activa; motivo=optimus
 	else
 		case "$gen" in
@@ -177,7 +186,12 @@ aviso() {
 	[ "$DECISION" = seguro ] || return 0
 	case "$MOTIVO" in
 		generacion)
-			texto="Este equipo tiene una tarjeta NVIDIA que no se pudo identificar${CHIPS:+ ($CHIPS)}.
+			if [ "$GENERACION" = anterior ]; then
+				texto="Este equipo tiene una tarjeta NVIDIA anterior a las GeForce 8 ($CHIPS), que no se probó con su controlador libre."
+			else
+				texto="Este equipo tiene una tarjeta NVIDIA que no se pudo identificar${CHIPS:+ ($CHIPS)}."
+			fi
+			texto="$texto
 
 Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.
 
