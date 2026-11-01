@@ -27,11 +27,19 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # pantalla al probar la ISO en Virt Manager/QEMU con SPICE.
 # pciutils: lspci con la base de datos de nombres, para que
 # lazaro-graficas sepa de qué generación es una NVIDIA.
+# xf86-video-vesa: cuando la única gráfica es una NVIDIA antigua y queda
+# en modo seguro (sin nouveau) y se arranca en modo BIOS, no hay ninguna
+# pantalla para el controlador "modesetting" de Xorg: solo VESA sabe
+# dibujar ahí (Compaq Presario CQ50, GeForce 8200M). Xorg lo usa solo
+# si no hay otro.
+# dialog: menús en modo texto de lazaro-instalar-texto, el instalador
+# para cuando la sesión gráfica no abre.
 LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
 	gparted xhost zenity spice-vdagent spice-vdagent-openrc pciutils
+	xf86-video-vesa dialog
 	plymouth plymouth-drm plymouth-openrc-plugin"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
@@ -49,14 +57,35 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	linux-firmware-rtl_nic linux-firmware-rtl_bt linux-firmware-mediatek
 	intel-ucode amd-ucode"
 
+# Escritorios livianos completos en la ISO, para instalarlos sin
+# internet como XFCE: lo que instala "setup-desktop" para cada uno
+# (alpine-conf 3.22.0) más lo que desktop-postinstall.sh agrega en ese
+# escritorio (applets de red y sonido, barra de Sway, agente de
+# contraseñas). GNOME y Plasma no caben (más de 2 GB) y se descargan.
+# Unos 240 MB en total.
+LAZARO_ESCRITORIOS="
+	mate-desktop-environment polkit mate-media mate-polkit
+	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
+	udisks2 adwaita-qt oxygen lxqt-policykit xdg-desktop-portal-lxqt
+	sway swaybg swayidle swaylockd foot grim i3status brightnessctl
+	util-linux-login wl-clipboard wmenu xwayland waybar font-awesome fuzzel
+	pavucontrol polkit-gnome greetd-gtkgreet seatd
+	labwc adwaita-icon-theme network-manager-applet"
+
 # Programas de "Software adicional" que vienen en la ISO (unos 325 MB):
 # lazaro-instalar los instala desde el USB, sin internet, y
 # desktop-postinstall.sh después los encuentra ya puestos. También van
 # las tipografías que el script instala con cualquier escritorio.
 # libreoffice-lang-es: solo el español; otro idioma se descarga.
+# usbutils y xrandr: el script los pide siempre (revisión de hardware y
+# resolución de la pantalla de inicio); si el wifi se corta durante la
+# instalación, salen de la ISO.
+# YouTube ligero (~18 MB): pipe-viewer-gtk, mpv y yt-dlp con QuickJS
+# (yt-dlp-ejs-rt-quickjs evita que yt-dlp traiga Deno, 41 MB).
 LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
+	pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs
 	flatpak font-liberation font-liberation-sans-narrow font-noto
-	font-noto-emoji"
+	font-noto-emoji usbutils xrandr"
 
 profile_lazaro() {
 	profile_standard
@@ -84,7 +113,7 @@ profile_lazaro() {
 	syslinux_serial="0 115200"
 	boot_addons="amd-ucode intel-ucode"
 	initrd_ucode="/boot/amd-ucode.img /boot/intel-ucode.img"
-	apks="$apks $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS"
+	apks="$apks $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS $LAZARO_ESCRITORIOS"
 	grub_mod="$grub_mod serial terminal"
 	apkovl="genapkovl-lazaro.sh"
 	# genapkovl-lazaro.sh corre como proceso aparte: recibe la lista así.

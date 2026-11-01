@@ -3,7 +3,8 @@
 # El candado se mantiene mientras Calamares está abierto: si el inicio
 # automático y un clic coinciden, solo se abre uno.
 # Sin LANG Calamares arranca en inglés; el usuario puede cambiarlo en la
-# primera pantalla.
+# primera pantalla. Alpine pone LANG=C.UTF-8 en todas las sesiones
+# (/etc/profile.d/locale.sh), y eso también es inglés: se reemplaza.
 # Al abrirse solo al iniciar la sesión, espera a que NetworkManager termine
 # de conectarse (como mucho 30 s): Calamares revisa internet una sola vez,
 # al abrir, y si la red aún no estaba lista decía que no había conexión.
@@ -26,8 +27,11 @@ if pgrep -x gpartedbin >/dev/null 2>&1; then
 		2>/dev/null
 	exit 0
 fi
-LANG="${LANG:-es_ES.UTF-8}"
+case "${LANG:-}" in
+	""|C|C.*|POSIX) LANG=es_ES.UTF-8 ;;
+esac
 export LANG
+case "${LC_ALL:-}" in C|C.*|POSIX) unset LC_ALL ;; esac
 # -D 6: guarda en el registro (/root/.cache/.../session.log) los discos
 # que Calamares encuentra; la prueba automática lo revisa.
 exec flock -n /tmp/lazaro-instalador.lock doas -n /usr/bin/calamares -D 6 "$@"

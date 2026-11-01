@@ -46,6 +46,10 @@ start() {
 						esac
 						$limpio rc-service -q "$s" status || $limpio rc-service "$s" start
 					done
+					# Si se pidió el inicio automático, también para
+					# la pantalla de inicio que el script acaba de poner.
+					[ ! -x /usr/libexec/lazaro/lazaro-autologin ] \
+						|| /usr/libexec/lazaro/lazaro-autologin
 					for s in $dms; do
 						$limpio rc-service -q "$s" status || $limpio rc-service "$s" start
 					done
