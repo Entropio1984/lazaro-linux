@@ -75,6 +75,7 @@ caso pc-geforce6150      seguro/generacion     "" 3  "00.0d.0:$N:1:C61 [GeForce 
 caso pc-geforce9400m     activa/generacion     "" 10 "02.00.0:$N:1:C79 [GeForce 9400M]"
 caso pc-nvaa-tesla       activa/generacion     "" 3  "01.00.0:$N:1:NVAA"
 caso pc-mcp61           seguro/generacion     "" 3  "00.0d.0:$N:1:MCP61"
+caso vaio-hibrida-go7400 seguro/generacion     "" 10 "00.02.0:$I:1" "01.00.0:$N:0:G72M [GeForce Go 7400]"
 caso portatil-solo-nv    activa/generacion     "" 10 "01.00.0:$N:1:G86M [GeForce 8400M GS]"
 caso cq50-8200m          activa/generacion     "" 10 "02.00.0:$N:1:C77 [GeForce 8200M G]"
 caso dos-nvidia-tesla    activa/generacion     "" 3  "01.00.0:$N:1:GA106 [GeForce RTX 3060]" "02.00.0:$N:0:G96 [GeForce 9500 GT]"

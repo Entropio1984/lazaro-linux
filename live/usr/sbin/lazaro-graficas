@@ -141,7 +141,9 @@ revisar() {
 		decision=seguro; motivo=nomodeset
 	elif [ "$forzado" = activa ] || [ "$forzado" = seguro ]; then
 		decision="$forzado"; motivo=elegido
-	elif [ "$optimus" = si ]; then
+	elif [ "$optimus" = si ] && [ "$gen" != anterior ]; then
+		# Las híbridas anteriores a las GeForce 8 (raras, como la GeForce
+		# Go 7400 de algunos Sony VAIO) siguen abajo, en modo seguro.
 		decision=activa; motivo=optimus
 	else
 		case "$gen" in
