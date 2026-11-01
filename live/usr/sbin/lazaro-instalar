@@ -742,6 +742,65 @@ auto_prueba_resolucion() { # ESCRITORIO
 # mientras está en pie (lazaro-prueba-plymouth, en el nivel boot: al
 # llegar a "local" puede haberla cerrado ya la pantalla de inicio) y
 # luego informar por el puerto serie y apagar (zz-lazaro-prueba.start).
+# EXPERIMENTO (no fusionar): NVIDIA sin controlador en modo BIOS con
+# SDDM y GRUB gfxpayload. lazaro.sinkms=vesa|x24|x32 en la línea del
+# kernel de la live:
+#   vesa: gfxpayload=auto + Xorg con el controlador vesa (¿xrandr ofrece
+#         todos los modos VBE y se puede cambiar sin reiniciar?)
+#   x24 : gfxpayload=1024x768x24 (¿Xorg modesetting falla con 24 bits?)
+#   x32 : gfxpayload=1024x768x32 (control)
+auto_prueba_sin_kms() {
+	v="$(sed -n 's/.*lazaro\.sinkms=\([a-z0-9]*\).*/\1/p' /proc/cmdline)"
+	[ -n "$v" ] || return 0
+	log "EXPERIMENTO sin KMS: variante $v"
+	en_destino "$raiz" apk add xf86-video-vesa xrandr >>"$LOG" 2>&1 || log "no se pudo instalar vesa"
+	g="$raiz/etc/default/grub"
+	sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="/&modprobe.blacklist=bochs,bochs_drm /' "$g"
+	sed -i '/^GRUB_GFXPAYLOAD_LINUX=/d' "$g"
+	case "$v" in
+	vesa)
+		echo 'GRUB_GFXPAYLOAD_LINUX=auto' >> "$g"
+		mkdir -p "$raiz/etc/X11/xorg.conf.d"
+		printf 'Section "Device"\n\tIdentifier "vesa"\n\tDriver "vesa"\nEndSection\n' \
+			> "$raiz/etc/X11/xorg.conf.d/30-vesa.conf" ;;
+	x24) echo 'GRUB_GFXPAYLOAD_LINUX=1024x768x24' >> "$g" ;;
+	x32) echo 'GRUB_GFXPAYLOAD_LINUX=1024x768x32' >> "$g" ;;
+	esac
+	en_destino "$raiz" grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1 || log "grub-mkconfig falló"
+	grep -n -e gfxpayload "$raiz/boot/grub/grub.cfg" | sed 's/^/LAZARO-SINKMS grubcfg /' >&2 || true
+	cat > "$raiz/etc/local.d/zy-lazaro-sinkms.start" <<-'EOS'
+	#!/bin/sh
+	exec >/dev/ttyS0 2>&1
+	sleep 40
+	echo "LAZARO-SINKMS cmdline: $(cat /proc/cmdline)"
+	echo "LAZARO-SINKMS dri: $(ls /dev/dri 2>&1 | tr '\n' ' ') fb: $(ls /dev/fb* 2>&1 | tr '\n' ' ')"
+	cat /sys/class/graphics/fb0/virtual_size /sys/class/graphics/fb0/bits_per_pixel 2>&1 | sed 's/^/LAZARO-SINKMS fb0 /'
+	loginctl show-seat seat0 2>&1 | grep -i graph | sed 's/^/LAZARO-SINKMS seat0 /'
+	for c in /proc/[0-9]*/cmdline; do
+		l="$(tr '\0' ' ' < "$c")"
+		case "$l" in
+		*bin/Xorg*|*bin/X\ *)
+			echo "LAZARO-SINKMS proc $l"
+			d="$(echo "$l" | grep -o ' :[0-9]*' | head -n1 | tr -d ' ')"
+			a="$(echo "$l" | sed -n 's/.*-auth \([^ ]*\).*/\1/p')"
+			DISPLAY="$d" XAUTHORITY="$a" xrandr 2>&1 | head -n 30 | sed 's/^/LAZARO-SINKMS xrandr /'
+			m="$(DISPLAY="$d" XAUTHORITY="$a" xrandr 2>/dev/null | awk '/^ +[0-9]+x[0-9]+/ {print $1}' | grep -v '^640x480$' | head -n1)"
+			if [ -n "$m" ]; then
+				DISPLAY="$d" XAUTHORITY="$a" xrandr -s "$m" 2>&1 | sed 's/^/LAZARO-SINKMS cambio /'
+				sleep 3
+				echo "LAZARO-SINKMS tras cambio a $m: $(DISPLAY="$d" XAUTHORITY="$a" xrandr 2>/dev/null | grep -o 'current [0-9]* x [0-9]*')"
+			fi ;;
+		*sddm*|*lxqt-session*) echo "LAZARO-SINKMS proc $l" ;;
+		esac
+	done 2>/dev/null
+	for f in /var/log/Xorg.*.log /home/*/.local/share/xorg/Xorg.*.log; do
+		[ -f "$f" ] || continue
+		grep -e '(EE)' -e 'LoadModule' -e 'VESA(0)' -e 'modeset(0)' -e 'Virtual' -e 'depth' "$f" | head -n 60 | sed "s|^|LAZARO-SINKMS $f |"
+	done
+	EOS
+	chmod 755 "$raiz/etc/local.d/zy-lazaro-sinkms.start"
+}
+
 auto_prueba_arranque() {
 	install -m 755 "$PRUEBAS/lazaro-prueba-plymouth" "$raiz/etc/init.d/lazaro-prueba-plymouth"
 	mkdir -p "$raiz/etc/runlevels/boot"
@@ -800,6 +859,7 @@ paso_auto() {
 	auto_revisar_flatpak
 	auto_prueba_resolucion "$2"
 	auto_prueba_arranque
+	auto_prueba_sin_kms
 	desmontar_destino
 	log "Instalación desatendida terminada."
 }

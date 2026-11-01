@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         # "estable" = la de config.env.
-        alpine: [estable, edge]
+        alpine: [estable]
     steps:
       - uses: actions/checkout@v5
 
@@ -99,26 +99,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: [estable, edge]
+        alpine: [estable]
         prueba:
-          - live bios
-          - live uefi
-          # Equipo viejo con 2 GB de RAM: la sesión live vive en la memoria.
-          - live bios 2048
-          # Sin escritorio (Xorg no arranca): aviso del instalador en modo texto.
-          - texto bios
-          - instalar bios xfce sin-red
-          - instalar uefi xfce con-red
-          - instalar uefi plasma con-red
-          - instalar bios gnome con-red
-          - instalar bios sway con-red
-          - instalar uefi lxqt con-red
-          - instalar bios mate con-red
-          - instalar bios ninguno sin-red
-          # Escritorios livianos que vienen completos en la ISO.
-          - instalar uefi mate sin-red
-          - instalar bios lxqt sin-red
-          - instalar bios xfce-wayland sin-red
+          - instalar bios lxqt con-red vesa
+          - instalar bios lxqt con-red x24
+          - instalar bios lxqt con-red x32
     steps:
       - uses: actions/checkout@v5
 
@@ -143,6 +128,10 @@ jobs:
           set -- ${{ matrix.prueba }}
           orden="$1"; shift
           ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
+
+      - name: Experimento sin KMS (registro)
+        if: always()
+        run: grep -a -h -e SINKMS -e EXPERIMENTO pruebas/resultados/*.log | cut -c1-400 | head -n 200 || true
 
       - name: Nombre de los resultados
         if: always()
