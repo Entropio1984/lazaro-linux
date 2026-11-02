@@ -107,6 +107,9 @@ avance_vigia() { # QUÉ [RAÍZ]
 		silencio=$((silencio + 5))
 		if avance_leer; then
 			silencio=0
+			# El siguiente aviso mide solo lo descargado durante el silencio.
+			red_antes=$(red_bytes)
+			sin_red=0
 			continue
 		fi
 		if [ "$silencio" -ge 20 ]; then
@@ -124,9 +127,12 @@ avance_vigia() { # QUÉ [RAÍZ]
 			if [ -n "$red_ahora" ] && [ -n "$red_antes" ]; then
 				kb=$(((red_ahora - red_antes) / 1024))
 				red_antes=$red_ahora
-				if [ "$kb" -ge 100 ]; then
+				if [ "$kb" -ge 1024 ]; then
 					sin_red=0
 					detalle=" | internet: $(awk -v k="$kb" 'BEGIN { printf "%.1f", k / 1024 }') MB en 20 s"
+				elif [ "$kb" -ge 10 ]; then
+					sin_red=0
+					detalle=" | internet: lento, $kb KB en 20 s"
 				else
 					sin_red=$((sin_red + 20))
 					if [ "$sin_red" -ge 60 ]; then
@@ -136,7 +142,7 @@ avance_vigia() { # QUÉ [RAÍZ]
 					fi
 				fi
 			fi
-			ultimo=$(grep -v '^[[:space:]]*$' "$LOG" 2>/dev/null | tail -n 1 | tr -s ' \t' ' ' | sed 's/^ //' | cut -c1-90)
+			ultimo=$(tr -d '\000-\010\013-\037\177' <"$LOG" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -n 1 | tr -s ' \t' ' ' | sed 's/^ //' | cut -c1-90)
 			[ -z "$ultimo" ] || detalle="$detalle | último mensaje: $ultimo"
 			printf '[lazaro] ... %s sigue trabajando (%s)%s\n' "$1" "$tiempo" "$detalle" >&2
 		fi
