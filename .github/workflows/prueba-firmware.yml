@@ -1,0 +1,30 @@
+# Experimento (no fusionar): cuánto ocupa linux-firmware completo frente
+# a los subpaquetes que ya trae la ISO.
+name: Prueba tamaño firmware
+on:
+  push:
+    branches: [prueba-firmware]
+jobs:
+  medir:
+    runs-on: ubuntu-24.04
+    container: alpine:3.24
+    steps:
+      - name: Medir
+        run: |
+          apk update >/dev/null
+          mkdir /todo && cd /todo
+          apk fetch -q --recursive linux-firmware linux-firmware-none
+          ISO="amdgpu ath10k ath9k_htc brcm cypress dell hp i915 intel lenovo mediatek none nvidia other radeon rtl_bt rtl_nic rtlwifi rtw88 synaptics"
+          total=0; eniso=0
+          for f in linux-firmware-*.apk; do
+            n=${f#linux-firmware-}; n=${n%-2[0-9]*}
+            b=$(stat -c %s "$f"); total=$((total+b))
+            esta=no; for i in $ISO; do [ "$i" = "$n" ] && esta=si; done
+            [ $esta = si ] && eniso=$((eniso+b))
+            echo "$((b/1048576)) MB $n iso=$esta"
+          done | sort -n
+          for f in linux-firmware-*.apk; do b=$(stat -c %s "$f"); total=$((total+b)); done
+          ls linux-firmware-*.apk | wc -l
+          echo "TOTAL MB: $(du -cm linux-firmware-*.apk | tail -1)"
+          s=0; for i in $ISO; do f=$(ls linux-firmware-$i-2*.apk); s=$((s+$(stat -c %s $f))); done
+          echo "EN ISO MB: $((s/1048576))"
