@@ -42,6 +42,34 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	xf86-video-vesa dialog
 	plymouth plymouth-drm plymouth-openrc-plugin"
 
+# Firmware de los demás adaptadores de red (wifi, cable, bluetooth, USB y
+# PCMCIA) y lo que faltaba de Intel y AMD, que no venía en la ISO, para que el sistema instalado sin
+# internet tenga red con cualquier tarjeta que Alpine reconozca. La sesión
+# live ya traía todo el firmware (va en el modloop). Medido con Alpine
+# 3.24: unos 150 MB (mrvl, de Marvell, es casi la mitad).
+# Quedan fuera, a propósito: qcom (163 MB, equipos ARM con Qualcomm),
+# mellanox (101 MB, switches de centro de datos) y dpaa2 (equipos ARM de
+# NXP): ninguno es un adaptador de red de un PC o portátil x86.
+# Wifi: ath6k ath11k ath12k atmel libertas mrvl (mwifiex) mwl8k mwlwifi
+# rsi rtw89 ti-connectivity wfx; bluetooth: ar3k qca (también wifi);
+# cable: 3com bnx2 bnx2x cxgb3 cxgb4 e100 kaweth (USB) liquidio
+# netronome qed qlogic realtek slicoss sxg tehuti tigon vxge airoha;
+# módems ADSL USB: ueagle-atm; tarjetas PCMCIA: cis ositech.
+# Intel, AMD y NVIDIA quedan completos: intel, i915, nvidia, amdgpu,
+# radeon y los microcódigos ya venían; se agregan xe (gráficas Intel
+# nuevas), isci (discos SAS Intel), amd (procesadores AMD: SEV, PMF),
+# amdnpu (NPU de los Ryzen AI) y amdtee (seguridad de AMD), todos
+# pequeños (menos de 4 MB). También cirrus (sonido de portátiles, 2 MB).
+LAZARO_FIRMWARE_RED=""
+for _fw in ath6k ath11k ath12k atmel libertas mrvl mwl8k mwlwifi rsi rtw89 \
+		ti-connectivity wfx ar3k qca 3com bnx2 bnx2x cxgb3 cxgb4 e100 \
+		kaweth liquidio netronome qed qlogic realtek slicoss sxg tehuti \
+		tigon vxge airoha ueagle-atm cis ositech xe isci amd amdnpu \
+		amdtee cirrus; do
+	LAZARO_FIRMWARE_RED="$LAZARO_FIRMWARE_RED linux-firmware-$_fw"
+done
+unset _fw
+
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
 # el mismo archivo que usa lazaro-instalar) más kernel, GRUB y firmware
@@ -55,6 +83,7 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	linux-firmware-nvidia linux-firmware-ath9k_htc linux-firmware-ath10k
 	linux-firmware-brcm linux-firmware-rtlwifi linux-firmware-rtw88
 	linux-firmware-rtl_nic linux-firmware-rtl_bt linux-firmware-mediatek
+	$LAZARO_FIRMWARE_RED
 	intel-ucode amd-ucode"
 
 # Escritorios livianos completos en la ISO, para instalarlos sin
