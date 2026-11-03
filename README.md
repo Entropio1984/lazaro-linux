@@ -16,16 +16,18 @@ imprimir.
 
 - **Hecho para equipos viejos.** Está basado en
   [Alpine Linux](https://alpinelinux.org), uno de los sistemas más
-  livianos que existen. Al arrancar mira tu equipo (memoria, tarjeta
-  gráfica y disco) y te recomienda el escritorio que mejor le va: con
-  menos de 2 GB de memoria, LXQt; de 2 a 4 GB, XFCE.
+  livianos que existen. Al arrancar mira tu equipo y te recomienda el
+  escritorio que mejor le va según la memoria (con menos de 2 GB, LXQt;
+  de 2 a 4 GB, XFCE) y la tarjeta gráfica. Si el disco es pequeño,
+  desmarca la tienda Flathub para no llenarlo.
 - **Sin pasos técnicos.** No hay que escribir comandos ni configurar nada
   a mano: idioma, teclado, sonido, wifi, impresoras y controladores de
-  video quedan listos solos. Firefox viene siempre.
+  video quedan listos solos. Firefox viene siempre (salvo si eliges
+  "Sin escritorio").
 - **Funciona sin internet.** La edición Completa trae todo dentro del USB
   y se instala en un equipo que no tiene red. Si instalas sin internet
-  con la edición Ligera, lo que falta se completa solo la primera vez que
-  el equipo se conecte.
+  con la edición Ligera, lo que falta se completa la primera vez que el
+  equipo se conecte (ver el [paso 7](#paso-7-el-primer-arranque)).
 - **YouTube ligero.** Un reproductor de YouTube que no usa el navegador y
   gasta mucho menos procesador, para que los videos no se traben en
   equipos viejos.
@@ -84,7 +86,8 @@ de Lázaro: un solo archivo con todo el sistema adentro.
 ### Paso 2: comprobar que la descarga llegó entera (recomendado)
 
 Una descarga cortada o dañada es la causa más común de que un USB no
-arranque. Abre una terminal en la carpeta de la descarga y escribe:
+arranque. Hazlo **antes** de grabar el USB. Abre una terminal en la
+carpeta de la descarga y escribe:
 
 - **En Linux:** `sha256sum -c lazaro-linux-*.sha256`
   (debe decir `La suma coincide` o `OK`).
@@ -104,8 +107,9 @@ programas gratuitos:
 - **[Ventoy](https://www.ventoy.net)**: deja copiar varias ISO en el mismo
   USB. Después de copiar la ISO, usa siempre **"Quitar el dispositivo de
   forma segura"** antes de sacar el USB: si lo sacas de golpe, la copia
-  puede quedar dañada y el equipo no arranca. Si dudas, vuelve a hacer el
-  paso 2 sobre el archivo que quedó en el USB.
+  puede quedar dañada y el equipo no arranca. Copia también el archivo
+  `.sha256` al USB: así puedes repetir el paso 2 sobre la copia que quedó
+  en él.
 
 ### Paso 4: arrancar el equipo desde el USB
 
@@ -191,8 +195,13 @@ Al terminar, reinicia y saca el USB.
 
 - Si marcaste aplicaciones de Flathub, se instalan solas en segundo plano
   cuando haya internet. Dales unos minutos.
-- Si instalaste sin internet con la Ligera, la configuración final se
-  completa sola la primera vez que el equipo se conecte a una red.
+- Si instalaste **sin internet con la Ligera**, falta la configuración
+  final, y el equipo arranca en una **pantalla de texto** con un aviso
+  (no es un error). Conecta el cable de red, o entra con tu usuario y
+  contraseña y conecta el wifi escribiendo
+  `nmcli device wifi connect "NOMBRE DE LA RED" --ask` (te pide la
+  clave). En unos minutos termina sola y aparece la pantalla de inicio;
+  entra desde ahí. No hace falta reiniciar.
 - Para instalar más programas, abre la **tienda de aplicaciones** desde
   el menú (Discover en Plasma y LXQt, GNOME Software en los demás).
 - Cuando haya actualizaciones, un icono en la barra te avisa; al hacer
@@ -219,10 +228,11 @@ Detalles: sección "YouTube ligero" del
 ## Problemas comunes
 
 **El equipo no arranca desde el USB, o se detiene con un error.**
-Vuelve a hacer el [paso 2](#paso-2-comprobar-que-la-descarga-llegó-entera-recomendado)
-con el archivo que quedó en el USB. Si dice que no coincide o da "error
-de entrada/salida", la copia está dañada: graba el USB otra vez (o usa
-otro USB).
+Revisa que la descarga esté bien con el
+[paso 2](#paso-2-comprobar-que-la-descarga-llegó-entera-recomendado) y
+graba el USB otra vez (o usa otro USB). Con Ventoy, repite el paso 2
+sobre la copia del USB: si no coincide o da "error de entrada/salida",
+esa copia está dañada.
 
 **La pantalla se queda en negro.** Reinicia y elige **modo gráfico
 seguro** en el menú del paso 4. Pasa sobre todo con tarjetas NVIDIA
@@ -250,10 +260,11 @@ NVIDIA no ofrece su controlador oficial para este sistema, así que
 Lázaro usa el controlador libre (nouveau). Antes de activarlo revisa qué
 tarjeta es:
 
-- **GeForce 8 o más nuevas**, y portátiles con dos gráficas (Intel +
-  NVIDIA): lo activa.
-- **Más antiguas** (GeForce FX, 6 y 7) **o desconocidas**: usa una imagen
-  básica y muestra un aviso, para evitar pantalla negra o bloqueos.
+- **GeForce 8 o más nuevas**: lo activa. También en los portátiles con
+  dos gráficas (Intel o AMD + NVIDIA), para poder apagar la NVIDIA.
+- **Más antiguas** (GeForce FX, 6 y 7), o una **desconocida** que maneja
+  la pantalla sola: usa una imagen básica y muestra un aviso, para
+  evitar pantalla negra o bloqueos.
 
 Si aun así falla, puedes forzar la decisión al arrancar desde el USB:
 
@@ -288,7 +299,10 @@ otro USB o envíalo antes.
 
 Para avisar de un problema, abre un reporte en
 [Issues](https://github.com/Entropio1984/lazaro-linux/issues) (necesitas
-una cuenta de GitHub, que es gratis) y adjunta el informe.
+una cuenta de GitHub, que es gratis) y adjunta el informe. **Los reportes
+son públicos**: el informe trae datos de la red (como las direcciones IP
+y los nombres de las redes guardadas) y registros del sistema. Ábrelo
+antes con un editor de texto y borra lo que no quieras mostrar.
 
 ## Palabras que aparecen en esta guía
 
