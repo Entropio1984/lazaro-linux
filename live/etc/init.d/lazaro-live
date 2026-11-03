@@ -201,6 +201,13 @@ start() {
 	else
 		serie "LAZARO-DOAS-NO"
 	fi
+	# Y conservar el idioma (setenv): sin LANG, "doas btop" no ve el
+	# UTF-8. Se pasa un valor conocido y se mira que llegue a root.
+	if [ "$(su -s /bin/sh lazaro -c 'LANG=es_CO.UTF-8 doas -n /bin/sh -c "echo \$LANG"' 2>/dev/null)" = es_CO.UTF-8 ]; then
+		serie "LAZARO-DOAS-LANG-OK"
+	else
+		serie "LAZARO-DOAS-LANG-NO"
+	fi
 
 	# En una máquina virtual con SPICE (Virt Manager): el agente que
 	# comparte el portapapeles con el equipo anfitrión. En un equipo real

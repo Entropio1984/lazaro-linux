@@ -64,6 +64,15 @@ idioma_sesion() {
 			echo "LAZARO-EXTRAS-NO"
 		fi
 	fi
+	# btop (la prueba lo marca) con el permiso para medir la GPU sin
+	# doas, que le pone el gancho de apk.
+	if command -v btop >/dev/null 2>&1; then
+		if setcap -v cap_perfmon=+ep /usr/bin/btop >/dev/null 2>&1; then
+			echo "LAZARO-BTOP-GPU-OK"
+		else
+			echo "LAZARO-BTOP-GPU-NO $(ls -l /etc/apk/commit_hooks.d/ 2>&1 | tr '\n' ' ')"
+		fi
+	fi
 	# YouTube ligero (la prueba lo marca): los programas vienen del USB y
 	# se instalan aun sin internet; la configuración y el lanzador los
 	# pone desktop-postinstall.sh (solo se miran cuando ya corrió).
@@ -431,6 +440,17 @@ idioma_sesion() {
 		else
 			echo "LAZARO-DIAGNOSTICO-NO ${diag_sal:-sin archivo}"
 		fi
+	fi
+	# doas: la regla de administradores es válida, se aplica al usuario
+	# y conserva el idioma (LANG). doas -C lee el archivo como el
+	# usuario, así que se revisa una copia legible.
+	install -m644 /etc/doas.d/20-wheel.conf /tmp/doas-prueba.conf 2>/dev/null
+	doas_c="$(su prueba -c 'doas -C /tmp/doas-prueba.conf true' 2>&1)"
+	rm -f /tmp/doas-prueba.conf
+	if [ "$doas_c" = permit ] && grep -q 'setenv { LANG' /etc/doas.d/20-wheel.conf 2>/dev/null; then
+		echo "LAZARO-DOAS-OK"
+	else
+		echo "LAZARO-DOAS-NO $(printf '%s' "$doas_c" | head -n 2 | tr '\n' ' ')"
 	fi
 	# Idioma de la sesión (si no se miró antes de cerrarla).
 	[ -n "$reiniciar" ] || idioma_sesion

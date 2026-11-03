@@ -114,7 +114,7 @@ LAZARO_ESCRITORIOS="
 LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 	pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs
 	flatpak font-liberation font-liberation-sans-narrow font-noto
-	font-noto-emoji usbutils xrandr"
+	font-noto-emoji usbutils xrandr libcap-setcap"
 
 # Edición Completa (LAZARO_EDICION=completa): además, GNOME y Plasma tal
 # como los instala setup-desktop (alpine-conf 3.22.0) y lo que les agrega

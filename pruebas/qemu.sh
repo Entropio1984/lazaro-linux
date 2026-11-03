@@ -169,6 +169,9 @@ prueba_live() {
 		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
 			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
 			ok=1
+		elif ! grep -q LAZARO-DOAS-LANG-OK "$serie"; then
+			echo "FALLO: en la sesión live, doas no conserva el idioma (LANG) ($MODO)." >&2
+			ok=1
 		elif ! grep -q LAZARO-SALVAPANTALLAS-NO "$serie"; then
 			echo "FALLO: en la sesión live corre el salvapantallas, que apaga la pantalla durante la instalación ($MODO)." >&2
 			ok=1
@@ -424,6 +427,14 @@ prueba_instalar() {
 		elif ! grep -q LAZARO-DIAGNOSTICO-OK "$serie2"; then
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
+			ok=1
+		elif grep -q LAZARO-BTOP-GPU-NO "$serie2"; then
+			echo "FALLO: btop quedó sin el permiso para medir la GPU sin doas:" >&2
+			grep LAZARO-BTOP-GPU-NO "$serie2" >&2
+			ok=1
+		elif ! grep -q LAZARO-DOAS-OK "$serie2"; then
+			echo "FALLO: la regla de doas del sistema instalado no es válida o no conserva el idioma." >&2
+			grep LAZARO-DOAS "$serie2" >&2 || true
 			ok=1
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
