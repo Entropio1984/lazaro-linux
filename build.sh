@@ -10,6 +10,11 @@
 # Caché (Calamares ya compilado y su llave de firma): cache/
 #
 # Para otra versión de Alpine: ALPINE_BRANCH=edge ./build.sh
+# Edición Completa (todo para instalar sin internet, unos 4,5 GB):
+#   LAZARO_EDICION=completa LAZARO_FLATPAK_USB=/ruta/flatpak-usb ./build.sh
+#   LAZARO_FLATPAK_USB: repositorio de Flatpak con OnlyOffice y Brave (lo
+#   prepara el flujo de GitHub Actions). Sin él, esas aplicaciones se
+#   descargan de Flathub después del primer arranque, como en la Ligera.
 # Con una copia local de desktop-postinstall.sh:
 #   LAZARO_SCRIPT=../alpine-desktop-setup/desktop-postinstall.sh ./build.sh
 
@@ -32,9 +37,12 @@ if [ "${1:-}" != "--dentro" ]; then
 	if [ -n "${LAZARO_SCRIPT:-}" ]; then
 		set -- -v "$(realpath "$LAZARO_SCRIPT"):/postinstall.sh:ro" -e LAZARO_SCRIPT=/postinstall.sh
 	fi
+	if [ -n "${LAZARO_FLATPAK_USB:-}" ]; then
+		set -- "$@" -v "$(realpath "$LAZARO_FLATPAK_USB"):/flatpak-usb:ro" -e LAZARO_FLATPAK_USB=/flatpak-usb
+	fi
 	exec docker run --rm "$@" \
 		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR \
-		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL \
+		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL -e LAZARO_EDICION \
 		-e SALIDA=/salida -e CACHE=/cache \
 		-v "$LAZARO_DIR:/src:ro" \
 		-v "$SALIDA:/salida" \
@@ -135,6 +143,7 @@ ALPINE_MIRROR="$ALPINE_MIRROR"
 ISO_VERSION="$ISO_VERSION"
 CALAMARES_VERSION="$CALAMARES_VERSION"
 LAZARO_LLAVE="$(basename "$LLAVE").pub"
+LAZARO_EDICION="$LAZARO_EDICION"
 EOF
 chown -R constructor:abuild "$CONSTRUCTOR_HOME"
 
@@ -150,6 +159,30 @@ fi
 sh -n "$SCRIPT" || die "desktop-postinstall.sh tiene errores de sintaxis"
 chown constructor:abuild "$SCRIPT"
 
+# --- Edición Completa ----------------------------------------------------
+PAQUETES_COMPLETA="$CONSTRUCTOR_HOME/paquetes-completa.txt"
+rm -f "$PAQUETES_COMPLETA"
+if [ "$LAZARO_EDICION" = completa ]; then
+	msg "Edición Completa: lista de paquetes para instalar sin internet"
+	INDICES="$CONSTRUCTOR_HOME/indices"
+	mkdir -p "$INDICES"
+	curl -fsSL --retry 3 -o "$INDICES/main.tar.gz" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz"
+	curl -fsSL --retry 3 -o "$INDICES/community.tar.gz" "$ALPINE_REPO_COMMUNITY/$ALPINE_ARCH/APKINDEX.tar.gz"
+	# Las listas del perfil (LAZARO_LIVE, LAZARO_DESTINO...).
+	perfil_paquetes=$(LAZARO_DIR="$LAZARO_DIR" sh -c '. "$LAZARO_DIR/perfil/mkimg.lazaro.sh"
+		echo $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS $LAZARO_ESCRITORIOS $LAZARO_COMPLETA')
+	# shellcheck disable=SC2086
+	sh "$LAZARO_DIR/perfil/paquetes-completa.sh" "$PAQUETES_COMPLETA" "$SCRIPT" \
+		"$INDICES/main.tar.gz" "$INDICES/community.tar.gz" \
+		"$REPO_PROPIO/paquetes/$ALPINE_ARCH/APKINDEX.tar.gz" -- $perfil_paquetes
+	chown constructor:abuild "$PAQUETES_COMPLETA"
+	if [ -d "${LAZARO_FLATPAK_USB:-}/repo" ]; then
+		msg "Aplicaciones de Flathub para el USB: $(du -sh "$LAZARO_FLATPAK_USB" | cut -f1) ($(cat "$LAZARO_FLATPAK_USB/aplicaciones" 2>/dev/null | tr '\n' ' '))"
+	else
+		echo "AVISO: sin LAZARO_FLATPAK_USB; OnlyOffice y Brave se descargarán después del primer arranque."
+	fi
+fi
+
 # --- ISO ----------------------------------------------------------------
 msg "Generando la ISO"
 mkdir -p "$SALIDA"
@@ -160,6 +193,9 @@ su constructor -c "cd $CONSTRUCTOR_HOME && \
 	LAZARO_SCRIPT='$SCRIPT' \
 	LAZARO_VERSION_ENV='$CONSTRUCTOR_HOME/version.env' \
 	LAZARO_PUBKEY='$LLAVE.pub' \
+	LAZARO_EDICION='$LAZARO_EDICION' \
+	LAZARO_PAQUETES_COMPLETA='$PAQUETES_COMPLETA' \
+	LAZARO_FLATPAK_USB='${LAZARO_FLATPAK_USB:-}' \
 	sh $APORTS/scripts/mkimage.sh \
 		--tag '$ISO_VERSION' \
 		--outdir '$SALIDA' \

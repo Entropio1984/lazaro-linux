@@ -116,6 +116,20 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 	flatpak font-liberation font-liberation-sans-narrow font-noto
 	font-noto-emoji usbutils xrandr"
 
+# Edición Completa (LAZARO_EDICION=completa): además, GNOME y Plasma tal
+# como los instala setup-desktop (alpine-conf 3.22.0) y lo que les agrega
+# desktop-postinstall.sh, todo el firmware (linux-firmware trae los 113
+# subpaquetes) y las traducciones ("lang"). build.sh completa la lista con
+# perfil/paquetes-completa.sh (todo lo que instala el script y lo que apk
+# agrega solo, como las traducciones de cada programa) y la deja en
+# $LAZARO_PAQUETES_COMPLETA. Las aplicaciones de Flathub van aparte, en la
+# carpeta flatpak/ de la ISO (section_lazaro_flatpak).
+LAZARO_COMPLETA="gnome gnome-apps-core gdm
+	plasma-desktop-meta kde-applications-base sddm plasma-nm plasma-pa
+	plasma-desktop-lang kdeplasma-addons-lang xdg-desktop-portal-kde
+	seatd mesa-egl xwayland
+	linux-firmware lang"
+
 profile_lazaro() {
 	profile_standard
 	title="Lázaro Linux"
@@ -143,6 +157,17 @@ profile_lazaro() {
 	boot_addons="amd-ucode intel-ucode"
 	initrd_ucode="/boot/amd-ucode.img /boot/intel-ucode.img"
 	apks="$apks $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS $LAZARO_ESCRITORIOS"
+	if [ "${LAZARO_EDICION:-ligera}" = completa ]; then
+		title="Lázaro Linux Completa"
+		desc="Tu hardware aún tiene pulso.
+		Edición completa: se instala sin internet con cualquier escritorio."
+		apks="$apks $(cat "${LAZARO_PAQUETES_COMPLETA:?falta la lista de la edición Completa}")"
+		lazaro_edicion=" Completa"
+		# Los objetos del repositorio de Flatpak tienen nombres de 68
+		# letras: Joliet solo admite 64 sin esta opción (Linux lee los de
+		# Rock Ridge, completos).
+		iso_opts="$iso_opts -joliet-long"
+	fi
 	grub_mod="$grub_mod serial terminal"
 	apkovl="genapkovl-lazaro.sh"
 	# genapkovl-lazaro.sh corre como proceso aparte: recibe la lista así.
@@ -158,14 +183,14 @@ gen_volid() {
 
 syslinux_gen_config() {
 	[ -z "$syslinux_serial" ] || echo "SERIAL $syslinux_serial"
-	echo "SAY Lazaro Linux - Tu hardware aun tiene pulso"
+	echo "SAY Lazaro Linux$lazaro_edicion - Tu hardware aun tiene pulso"
 	echo "TIMEOUT ${syslinux_timeout:-30}"
 	echo "PROMPT 1"
 	echo "DEFAULT lazaro"
 	cat <<- EOF
 
 	LABEL lazaro
-		MENU LABEL Lazaro Linux (sesion live)
+		MENU LABEL Lazaro Linux$lazaro_edicion (sesion live)
 		KERNEL /boot/vmlinuz-lts
 		INITRD /boot/amd-ucode.img,/boot/intel-ucode.img,/boot/initramfs-lts
 		APPEND $initfs_cmdline $kernel_cmdline $lazaro_nvidia $lazaro_splash
@@ -185,7 +210,7 @@ grub_gen_config() {
 	terminal_input console serial
 	terminal_output console serial
 
-	menuentry "Lazaro Linux - Tu hardware aun tiene pulso" {
+	menuentry "Lazaro Linux$lazaro_edicion - Tu hardware aun tiene pulso" {
 		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline $lazaro_nvidia $lazaro_splash
 		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
 	}
@@ -195,4 +220,20 @@ grub_gen_config() {
 		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
 	}
 	EOF
+}
+
+# Edición Completa: OnlyOffice y Brave de Flathub, con su runtime, en la
+# carpeta flatpak/ de la ISO. La prepara el flujo de GitHub Actions (paso
+# "Aplicaciones de Flathub para el USB") como un repositorio de Flatpak
+# local; lazaro-instalar las instala desde ahí en el sistema nuevo. Solo
+# si build.sh recibió la carpeta (LAZARO_FLATPAK_USB).
+section_lazaro_flatpak() {
+	[ "${LAZARO_EDICION:-ligera}" = completa ] || return 0
+	[ -d "${LAZARO_FLATPAK_USB:-}/repo" ] || return 0
+	build_section lazaro_flatpak $(cd "$LAZARO_FLATPAK_USB" && find . -type f | sort | checksum)
+}
+
+build_lazaro_flatpak() {
+	mkdir -p "$DESTDIR/flatpak"
+	cp -R "$LAZARO_FLATPAK_USB"/. "$DESTDIR/flatpak/"
 }

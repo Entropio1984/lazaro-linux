@@ -29,6 +29,51 @@ cp -a "$LAZARO_LIVE_DIR"/. "$tmp"/
 chown -R root:root "$tmp"
 chmod 0755 "$tmp"/usr/sbin/* "$tmp"/etc/init.d/*
 
+# Edición Completa: todo viene en el USB. Se corrigen los textos que
+# dicen que GNOME, Plasma, las traducciones o las aplicaciones de Flathub
+# se descargan. Cada cambio se comprueba: si un texto original cambió, la
+# compilación avisa en vez de dejar el mensaje viejo.
+textos_completa() {
+	tc_cal="$tmp/etc/calamares/modules"
+	tc_qml="$tmp/usr/share/calamares/branding/lazaro/show.qml"
+	tc_cambiar() { # ARCHIVO TEXTO_VIEJO TEXTO_NUEVO
+		grep -qF -- "$2" "$1" || { echo "genapkovl-lazaro: no está el texto '$2' en $1" >&2; exit 1; }
+		awk -v viejo="$2" -v nuevo="$3" '{
+			resto = $0; hecho = ""
+			while ((i = index(resto, viejo)) > 0) {
+				hecho = hecho substr(resto, 1, i - 1) nuevo
+				resto = substr(resto, i + length(viejo))
+			}
+			print hecho resto
+		}' "$1" > "$1.nuevo"
+		mv "$1.nuevo" "$1"
+	}
+	tc_cambiar "$tc_cal/packagechooser-escritorio.conf" "Needs internet." "Installs without internet."
+	tc_cambiar "$tc_cal/packagechooser-escritorio.conf" "Necesita internet." "Se instala sin internet desde el USB."
+	tc_cambiar "$tc_cal/packagechooser-escritorio.conf" \
+		"Installs without internet; its bar and graphical login arrive once online." "Installs without internet."
+	tc_cambiar "$tc_cal/packagechooser-escritorio.conf" \
+		"desde el USB; la barra y la pantalla de inicio gráfica llegan al conectarse a internet." "desde el USB."
+	tc_cambiar "$tc_cal/netinstall.conf" \
+		"Viene en el USB (en español; otro idioma se descarga)." "Viene en el USB, en todos los idiomas."
+	tc_cambiar "$tc_cal/netinstall.conf" \
+		"Aplicaciones Flatpak (se instalan solas después del primer arranque, con internet)" \
+		"Aplicaciones Flatpak (OnlyOffice y Brave vienen en el USB)"
+	tc_cambiar "$tc_cal/netinstall.conf" \
+		"Vienen de Flathub. Se descargan en segundo plano unos minutos después de encender el equipo conectado a internet." \
+		"Vienen de Flathub. OnlyOffice y Brave se instalan desde el USB, sin internet. Google Chrome no se puede incluir: se descarga solo después del primer arranque, con internet."
+	tc_cambiar "$tc_cal/netinstall.conf" \
+		"(paquete comunitario de Flathub, no oficial de Google)." \
+		"(paquete comunitario de Flathub, no oficial de Google). Necesita internet."
+	tc_cambiar "$tc_qml" \
+		"Las aplicaciones de Flathub que marcaste (OnlyOffice, Chrome, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet." \
+		"OnlyOffice y Brave se instalan desde el USB. Google Chrome, si lo marcaste, se instala solo en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet."
+	tc_cambiar "$tc_qml" \
+		"Si instalaste sin internet, la configuración final se completa sola la primera vez que el equipo se conecte a una red." \
+		"Esta edición trae todo en el USB: el sistema queda completo aunque no haya internet. Solo Google Chrome espera a que el equipo se conecte."
+}
+[ "${LAZARO_EDICION:-ligera}" != completa ] || textos_completa
+
 # El script del usuario se copia a la ISO desde la raíz del repositorio:
 # así hay una sola copia que mantener.
 install -Dm755 "$LAZARO_SCRIPT" "$tmp"/usr/share/lazaro/desktop-postinstall.sh

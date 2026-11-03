@@ -42,6 +42,10 @@ ESCRITORIOS="xfce xfce-wayland gnome plasma mate sway lxqt ninguno"
 # Escritorios que vienen completos en la ISO (LAZARO_ESCRITORIOS en
 # perfil/mkimg.lazaro.sh); los demás se descargan.
 ESCRITORIOS_OFFLINE="xfce mate lxqt sway xfce-wayland ninguno"
+# Edición Completa: todos vienen en la ISO, y también todo lo que instala
+# desktop-postinstall.sh, que entonces corre aunque no haya internet.
+LAZARO_EDICION="${LAZARO_EDICION:-ligera}"
+[ "$LAZARO_EDICION" != completa ] || ESCRITORIOS_OFFLINE="$ESCRITORIOS"
 
 log() { printf '[lazaro] %s\n' "$*" | tee -a "$LOG" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -536,13 +540,23 @@ paso_ajustes() {
 	echo "$args" > "$raiz/etc/lazaro/postinstall.args"
 
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
-	if esperar_red; then
+	red_ajustes=no
+	esperar_red && red_ajustes=si
+	# Edición Completa sin internet: el script corre igual, solo con el
+	# repositorio de la ISO (sin repositorios de internet, el script no
+	# espera la red y todo lo que instala viene en la ISO).
+	sin_red_completa=no
+	if [ "$red_ajustes" = no ] && [ "$LAZARO_EDICION" = completa ] && [ -n "$(repo_iso)" ]; then
+		sin_red_completa=si
+		log "Sin internet: la configuración final se hace con lo que trae el USB (edición Completa)."
+	fi
+	if [ "$red_ajustes" = si ] || [ "$sin_red_completa" = si ]; then
 		# Mientras corre el script, el repositorio de la ISO sigue a mano
 		# junto a los de internet: si la conexión se corta (wifi
 		# inestable), lo que está en la ISO se instala igual.
 		iso="$(repo_iso)"
 		if [ -n "$iso" ] && montar_si_falta bind "$iso" "$raiz$iso"; then
-			escribir_repos "$raiz/etc/apk/repositories" "$iso" si
+			escribir_repos "$raiz/etc/apk/repositories" "$iso" "$red_ajustes"
 		fi
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
@@ -555,6 +569,7 @@ paso_ajustes() {
 		avance_parar
 		desmontar_propios
 		repos_definitivos "$raiz"
+		flatpak_desde_usb "$raiz" "$extras"
 		if [ "$pi" = 0 ]; then
 			log "desktop-postinstall.sh terminó bien."
 		else
@@ -569,6 +584,80 @@ paso_ajustes() {
 
 	cp "$LOG" "$raiz/var/log/lazaro-instalar.log" 2>/dev/null || true
 	log "Instalación terminada."
+}
+
+# --- Aplicaciones de Flathub desde el USB (edición Completa) -------------
+# La ISO trae en flatpak/ un repositorio de Flatpak con OnlyOffice, Brave
+# y su runtime (lo arma el flujo de GitHub Actions con las mismas
+# versiones de Flathub). Se instalan con el flatpak de la sesión live
+# directamente en /var/lib/flatpak del sistema nuevo: dentro del sistema
+# montado flatpak no funciona bien (falta /proc/sys/kernel/random/boot_id).
+# El repositorio del USB se agrega con el nombre "flathub" y, al terminar,
+# se cambia por el Flathub de verdad (la descripción viene en la ISO):
+# así las aplicaciones se actualizan desde Flathub como si se hubieran
+# descargado de ahí. Lo que se instala sale de la lista de pendientes que
+# deja desktop-postinstall.sh (/etc/flatpak-pendientes), para que el
+# primer arranque no las descargue otra vez. Si algo falla, quedan
+# pendientes como en la edición Ligera.
+FP_INSTALACION=lazarodestino
+flatpak_desde_usb() { # RAIZ EXTRAS
+	fu_iso="$(repo_iso)"
+	fu_dir="${fu_iso%/apks}/flatpak"
+	[ -n "$fu_iso" ] && [ -d "$fu_dir/repo" ] || return 0
+	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || return 0
+	fu_apps=""
+	for e in $2; do
+		case "$e" in
+			onlyoffice) fu_app=org.onlyoffice.desktopeditors ;;
+			brave) fu_app=com.brave.Browser ;;
+			*) continue ;;
+		esac
+		grep -qx "$fu_app" "$fu_dir/aplicaciones" 2>/dev/null && fu_apps="$fu_apps $fu_app"
+	done
+	[ -n "$fu_apps" ] || return 0
+	log "Instalando desde el USB (Flathub):$fu_apps"
+	if ! command -v flatpak >/dev/null 2>&1 &&
+		! lz_apk add --no-network flatpak >>"$LOG" 2>&1; then
+		log "Aviso: no se pudo preparar Flatpak en la sesión live; las aplicaciones se descargarán después del primer arranque."
+		return 0
+	fi
+	mkdir -p "$1/var/lib/flatpak" /etc/flatpak/installations.d
+	cat > "/etc/flatpak/installations.d/$FP_INSTALACION.conf" <<-EOF
+	[Installation "$FP_INSTALACION"]
+	Path=$1/var/lib/flatpak
+	DisplayName=Sistema nuevo
+	StorageType=harddisk
+	EOF
+	fp() { flatpak --installation="$FP_INSTALACION" "$@" </dev/null >>"$LOG" 2>&1; }
+	fp remote-delete --force flathub || true
+	if ! fp remote-add --no-gpg-verify flathub "file://$fu_dir/repo"; then
+		log "Aviso: no se pudo abrir el repositorio de Flatpak del USB."
+		fu_apps=""
+	fi
+	avance_iniciar "las aplicaciones de Flathub" "$1"
+	fu_ok=""
+	for a in $fu_apps; do
+		if fp install -y --noninteractive flathub "$a"; then
+			fu_ok="$fu_ok $a"
+		else
+			log "Aviso: $a no se pudo instalar desde el USB; se descargará después del primer arranque."
+		fi
+	done
+	avance_parar
+	fp remote-delete --force flathub || true
+	fp remote-add --if-not-exists --from flathub "$fu_dir/flathub.flatpakrepo" \
+		|| log "Aviso: no se pudo dejar Flathub configurado; se agregará después del primer arranque."
+	rm -f "/etc/flatpak/installations.d/$FP_INSTALACION.conf"
+	pend="$1/etc/flatpak-pendientes"
+	for a in $fu_ok; do
+		[ -e "$pend" ] || break
+		{ grep -vx "$a" "$pend" || true; } > "$pend.nuevo"
+		mv "$pend.nuevo" "$pend"
+	done
+	if [ -e "$pend" ] && [ ! -s "$pend" ]; then
+		rm -f "$pend" "$1/etc/local.d/flatpak-pendientes.start"
+	fi
+	[ -z "$fu_ok" ] || log "Instaladas desde el USB:$fu_ok"
 }
 
 # Repositorios definitivos: los de internet (el de la ISO deja de
@@ -827,14 +916,38 @@ desmontar_destino() {
 	umount "$raiz"
 }
 
+# Edición Completa: OnlyOffice y Brave deben quedar instalados desde el
+# USB (también sin internet), con Flathub como origen.
+auto_flathub=""
+[ "$LAZARO_EDICION" != completa ] || auto_flathub=" onlyoffice brave"
+auto_revisar_flatpak_usb() {
+	[ "$LAZARO_EDICION" = completa ] || return 0
+	for a in org.onlyoffice.desktopeditors com.brave.Browser; do
+		if [ -d "$raiz/var/lib/flatpak/app/$a/current" ] && ! grep -qx "$a" "$raiz/etc/flatpak-pendientes" 2>/dev/null; then
+			echo "LAZARO-FLATPAK-USB-OK $a"
+		else
+			echo "LAZARO-FLATPAK-USB-NO $a"
+			grep -n -i -B2 -A8 "$a" "$LOG" 2>&1 | tail -n 40
+		fi
+	done
+	if grep -q '^\[remote "flathub"\]' "$raiz/var/lib/flatpak/repo/config" 2>/dev/null &&
+		grep -A3 '^\[remote "flathub"\]' "$raiz/var/lib/flatpak/repo/config" | grep -q 'dl.flathub.org'; then
+		echo "LAZARO-FLATHUB-ORIGEN-OK"
+	else
+		echo "LAZARO-FLATHUB-ORIGEN-NO"
+		cat "$raiz/var/lib/flatpak/repo/config" 2>&1 | head -n 30
+	fi
+}
+
 paso_auto() {
 	log "Instalación desatendida en $1 con '$2' (se borra el disco)"
 	# Usuario "prueba", contraseña "lazaro". Fastfetch, el programa
 	# adicional más liviano: la prueba comprueba que lo marcado en
 	# "Software adicional" se instala.
 	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
-		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch youtube" no
+		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch youtube$auto_flathub" no
 	auto_revisar_flatpak
+	auto_revisar_flatpak_usb
 	auto_prueba_resolucion "$2"
 	auto_prueba_arranque
 	desmontar_destino
