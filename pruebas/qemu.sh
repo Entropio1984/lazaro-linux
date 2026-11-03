@@ -169,6 +169,9 @@ prueba_live() {
 		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
 			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
 			ok=1
+		elif ! grep -q LAZARO-DOAS-LANG-OK "$serie"; then
+			echo "FALLO: en la sesión live, doas no conserva el idioma (LANG) ($MODO)." >&2
+			ok=1
 		elif ! grep -q LAZARO-SALVAPANTALLAS-NO "$serie"; then
 			echo "FALLO: en la sesión live corre el salvapantallas, que apaga la pantalla durante la instalación ($MODO)." >&2
 			ok=1
