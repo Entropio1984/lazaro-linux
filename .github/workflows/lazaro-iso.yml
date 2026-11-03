@@ -1,7 +1,8 @@
 # Compila la ISO de Lázaro Linux y la prueba en QEMU (BIOS y UEFI).
-# Corre con la versión estable de Alpine de config.env y con edge, para
-# enterarse a tiempo de lo que rompería la siguiente versión. El cron
-# semanal también recoge los cambios de desktop-postinstall.sh.
+# Corre con la versión estable de Alpine de config.env. Los lunes (cron) y
+# al lanzarla a mano, también con edge, para enterarse a tiempo de lo que
+# rompería la siguiente versión. El cron semanal también recoge los
+# cambios de desktop-postinstall.sh.
 name: Lázaro Linux ISO
 
 on:
@@ -35,8 +36,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # "estable" = la de config.env.
-        alpine: [estable, edge]
+        # "estable" = la de config.env. Edge (la próxima versión de
+        # Alpine) solo en la compilación de los lunes y al lanzarla a mano:
+        # avisa con tiempo qué se romperá al cambiar de versión, sin
+        # demorar ni ensuciar cada PR (decisión de Julián, 2026-11-03).
+        alpine: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["estable", "edge"]' || '["estable"]') }}
     steps:
       - uses: actions/checkout@v5
 
@@ -258,7 +262,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: [estable, edge]
+        alpine: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["estable", "edge"]' || '["estable"]') }}
         prueba:
           - live bios
           - live uefi

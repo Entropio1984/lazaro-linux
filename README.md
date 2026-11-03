@@ -143,7 +143,7 @@ arranque se ve en texto.
 | Pantalla de arranque | `live/usr/share/plymouth/themes/lazaro/` | El logo con el pulso (Plymouth) |
 | Pruebas | `pruebas/qemu.sh` | Arranque live e instalación en QEMU, BIOS y UEFI |
 | Comprobaciones dentro del sistema de prueba | `live/usr/share/lazaro/pruebas/` | Solo las usa la instalación desatendida |
-| Compilación automática | `.github/workflows/lazaro-iso.yml` | Estable + edge, en cada cambio y cada lunes |
+| Compilación automática | `.github/workflows/lazaro-iso.yml` | Estable en cada cambio; edge solo los lunes y a mano |
 
 ### Qué pasa al instalar
 
@@ -205,8 +205,8 @@ Las capturas de pantalla y los registros quedan en
 ### Pruebas automáticas
 
 En cada cambio, GitHub compila la ISO y la prueba en máquinas virtuales
-(QEMU). Cada prueba corre con la versión estable de Alpine y con la
-siguiente (edge):
+(QEMU) con la versión estable de Alpine. Los lunes, y al lanzarla a
+mano, también con la siguiente (edge):
 
 | Prueba | Arranque | Escritorio | Internet | Qué comprueba |
 |---|---|---|---|---|
@@ -235,7 +235,7 @@ equipos con distinta memoria, gráfica y disco.
 | Alpine | Calamares | Estado |
 |---|---|---|
 | v3.24 | 3.4.3 | Se prueba en QEMU con las pruebas de la tabla de arriba |
-| edge | 3.4.3 | Las mismas pruebas, como aviso temprano (no bloquean) |
+| edge | 3.4.3 | Las mismas pruebas, los lunes y a mano, como aviso temprano (no bloquean) |
 
 ## Pendiente
 
