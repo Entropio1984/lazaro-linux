@@ -17,6 +17,12 @@ concurrency:
   group: lazaro-iso-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Proyecto de SourceForge donde se publican las dos ediciones
+  # (sourceforge.net/projects/lazaro-linux, carpetas Ligera y Completa).
+  SF_USUARIO: entropio
+  SF_PROYECTO: lazaro-linux
+
 jobs:
   iso:
     # Los PR que vienen de forks no compilan: la caché guarda la llave que
@@ -78,6 +84,159 @@ jobs:
           path: salida/*.iso*
           retention-days: 7
           compression-level: 0
+
+  # Edición Completa (unos 4,5 GB, solo en SourceForge): los 7
+  # escritorios, todo el firmware y OnlyOffice y Brave de Flathub, para
+  # instalar sin internet. Va en trabajos aparte: si falla, la edición
+  # Ligera se prueba y se publica igual. Solo con la versión estable de
+  # Alpine (edge ya se revisa con la Ligera).
+  iso-completa:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    name: ISO Completa (estable)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+
+      # La Completa necesita unos 15 GB libres; el equipo de GitHub trae
+      # herramientas que aquí no se usan.
+      - name: Liberar espacio en disco
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - name: Versión de Alpine
+        id: version
+        run: |
+          . config.env
+          echo "branch=$ALPINE_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Caché de Calamares compilado
+        uses: actions/cache@v5
+        with:
+          path: cache
+          key: calamares-${{ steps.version.outputs.branch }}-${{ hashFiles('paquetes/**', 'config.env', 'build.sh') }}
+
+      # Repositorio de Flatpak local con OnlyOffice, Brave y su runtime,
+      # copiados tal cual de Flathub (mismas versiones y commits). En la
+      # ISO va en flatpak/ y lazaro-instalar instala desde ahí. Sin las
+      # traducciones (.Locale), que Flatpak guarda solo en parte.
+      - name: Aplicaciones de Flathub para el USB
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q flatpak ostree
+          fp="$RUNNER_TEMP/flatpak"
+          mkdir -p "$fp/disparadores"
+          # Sin disparadores (actualizan cachés de iconos con bubblewrap):
+          # aquí no hacen falta, se rehacen en el sistema instalado.
+          export FLATPAK_USER_DIR="$fp/usuario" FLATPAK_TRIGGERSDIR="$fp/disparadores"
+          apps="org.onlyoffice.desktopeditors com.brave.Browser"
+          flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y --noninteractive flathub $apps
+          flatpak --user list
+          usb="$GITHUB_WORKSPACE/flatpak-usb"
+          rm -rf "$usb"
+          mkdir -p "$usb"
+          ostree init --repo="$usb/repo" --mode=archive
+          origen="$FLATPAK_USER_DIR/repo"
+          for ref in $(ostree refs --repo="$origen" | grep -E '^flathub:(app|runtime)/' | grep -vE '\.(Locale|Debug|Sources)/'); do
+            commit=$(ostree rev-parse --repo="$origen" "$ref")
+            echo "${ref#flathub:} $commit"
+            ostree pull-local --repo="$usb/repo" "$origen" "$commit"
+            ostree refs --repo="$usb/repo" --create="${ref#flathub:}" "$commit"
+          done
+          flatpak build-update-repo "$usb/repo"
+          curl -fsSL --retry 3 -o "$usb/flathub.flatpakrepo" https://dl.flathub.org/repo/flathub.flatpakrepo
+          printf '%s\n' $apps > "$usb/aplicaciones"
+          rm -rf "$fp"
+          chmod -R a+rX "$usb"
+          du -sh "$usb"
+          df -h /
+
+      - name: Compilar la ISO Completa
+        env:
+          ALPINE_BRANCH: ${{ steps.version.outputs.branch }}
+          LAZARO_EDICION: completa
+          LAZARO_FLATPAK_USB: ${{ github.workspace }}/flatpak-usb
+        run: ./build.sh
+
+      - name: Tamaño de la ISO
+        run: |
+          for f in salida/*.iso; do
+            echo "$f: $(($(stat -c %s "$f") / 1048576)) MB"
+          done
+          df -h /
+
+      - name: Permisos de la caché
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" cache salida || true
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: iso-completa
+          path: salida/*.iso*
+          retention-days: 7
+          compression-level: 0
+
+  pruebas-completa:
+    name: Prueba Completa ${{ matrix.prueba }}
+    needs: iso-completa
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        prueba:
+          - live bios
+          - live uefi
+          # Sin red: todo sale del USB, incluidos OnlyOffice y Brave.
+          - instalar uefi plasma sin-red
+          - instalar bios gnome sin-red
+          - instalar bios xfce sin-red
+          - instalar uefi lxqt con-red
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Liberar espacio en disco
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+
+      - name: Activar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instalar QEMU
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf xorriso socat imagemagick
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-completa
+          path: iso
+
+      - name: Probar
+        run: |
+          set -- ${{ matrix.prueba }}
+          orden="$1"; shift
+          ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
+
+      - name: Nombre de los resultados
+        if: always()
+        id: nombre
+        run: echo "valor=$(echo 'completa-${{ matrix.prueba }}' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: resultados-${{ steps.nombre.outputs.valor }}
+          path: |
+            pruebas/resultados/*.log
+            pruebas/resultados/*.png
+            pruebas/resultados/*.ppm
+          retention-days: 14
 
   # Decisiones de la revisión de tarjetas gráficas de la live con un /sys
   # simulado: las máquinas virtuales no tienen NVIDIA.
@@ -173,6 +332,10 @@ jobs:
       group: lazaro-publicar
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
       - uses: actions/download-artifact@v7
         with:
           name: iso-estable
@@ -184,7 +347,9 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           etiqueta=en-desarrollo
-          notas="ISO de prueba compilada desde main ($GITHUB_SHA) y verificada en QEMU (BIOS y UEFI). No es una versión final: pruébala solo en una máquina virtual o en un equipo de sobra."
+          notas="ISO de prueba compilada desde main ($GITHUB_SHA) y verificada en QEMU (BIOS y UEFI). No es una versión final: pruébala solo en una máquina virtual o en un equipo de sobra.
+
+          Esta es la edición Ligera. La edición Completa (unos 4,5 GB, se instala sin internet con cualquiera de los 7 escritorios) está en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Completa/"
           if gh release view "$etiqueta" >/dev/null 2>&1; then
             gh release edit "$etiqueta" --prerelease --notes "$notas"
           else
@@ -195,3 +360,39 @@ jobs:
           git_ref="refs/tags/$etiqueta"
           gh api -X PATCH "repos/$GH_REPO/git/$git_ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
           gh release upload "$etiqueta" iso/* --clobber
+
+      # Copia en SourceForge (carpeta Ligera). Si falla, la Release de
+      # GitHub ya quedó publicada: solo se avisa.
+      - name: Subir a SourceForge
+        continue-on-error: true
+        env:
+          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
+        run: sh .github/subir-sourceforge.sh Ligera iso
+
+  # La Completa no cabe en una Release de GitHub (2 GB por archivo): se
+  # publica solo en SourceForge, carpeta Completa.
+  publicar-completa:
+    name: Publicar ISO Completa en SourceForge
+    needs: [pruebas-completa, graficas]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: lazaro-publicar-completa
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
+      - name: Liberar espacio en disco
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-completa
+          path: iso
+
+      - name: Subir a SourceForge
+        env:
+          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
+        run: sh .github/subir-sourceforge.sh Completa iso

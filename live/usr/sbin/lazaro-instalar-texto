@@ -18,6 +18,9 @@ fi
 export LANG="${LANG:-es_ES.UTF-8}"
 case "$LANG" in C|C.*|POSIX) LANG=es_ES.UTF-8 ;; esac
 TITULO="Instalar Lázaro Linux"
+# Edición de la ISO (ligera o completa), que deja build.sh.
+LAZARO_EDICION=ligera
+. /usr/share/lazaro/version.env 2>/dev/null || true
 
 # dialog con los botones en español.
 dlg() {
@@ -98,9 +101,10 @@ rec=xfce
 [ -r /run/lazaro/recomendacion ] && rec=$(sed -n 's/^ESCRITORIO=//p' /run/lazaro/recomendacion)
 marca() { [ "$1" = "$rec" ] && echo on || echo off; }
 sufijo() { [ "$1" = "$rec" ] && echo " (recomendado)" || true; }
+pregunta="¿Qué escritorio quieres? GNOME y Plasma se descargan de internet; los demás vienen en el USB."
+[ "$LAZARO_EDICION" != completa ] || pregunta="¿Qué escritorio quieres? Todos vienen en el USB: no hace falta internet."
 while :; do
-	escritorio=$(pedir --title "Escritorio" --radiolist \
-"¿Qué escritorio quieres? GNOME y Plasma se descargan de internet; los demás vienen en el USB." \
+	escritorio=$(pedir --title "Escritorio" --radiolist "$pregunta" \
 		18 70 8 \
 		xfce "XFCE: liviano y clásico$(sufijo xfce)" "$(marca xfce)" \
 		lxqt "LXQt: el más liviano, para poca memoria$(sufijo lxqt)" "$(marca lxqt)" \
@@ -111,6 +115,7 @@ while :; do
 		xfce-wayland "XFCE Wayland (experimental)$(sufijo xfce-wayland)" "$(marca xfce-wayland)" \
 		ninguno "Sin escritorio: solo la consola$(sufijo ninguno)" "$(marca ninguno)") || cancelar
 	case "$escritorio" in xfce|mate|lxqt|sway|xfce-wayland|ninguno) break ;; esac
+	[ "$LAZARO_EDICION" != completa ] || break
 	dlg --infobox "Revisando la conexión a internet..." 5 50
 	lazaro-instalar red >/dev/null 2>&1 && break
 	dlg --title "Sin internet" --msgbox \
@@ -136,6 +141,8 @@ if [ "$escritorio" = ninguno ]; then
 		btop "Btop: monitor de recursos" off) || cancelar
 else
 	flat=on
+	fp_usb=", necesita internet"
+	[ "$LAZARO_EDICION" != completa ] || fp_usb=", viene en el USB"
 	[ -r /run/lazaro/recomendacion ] && grep -qx 'DISCO_PEQUENO=si' /run/lazaro/recomendacion && flat=off
 	elegidos=$(pedir --title "Software adicional" --separate-output --checklist \
 "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre." \
@@ -146,9 +153,9 @@ else
 		youtube "YouTube ligero: videos sin navegador (480p)" on \
 		libreoffice "LibreOffice: oficina (documentos, hojas de cálculo)" off \
 		flatpak "Flatpak con Flathub: tienda de aplicaciones" "$flat" \
-		onlyoffice "OnlyOffice (Flathub, necesita internet)" off \
+		onlyoffice "OnlyOffice (Flathub$fp_usb)" off \
 		chrome "Google Chrome (Flathub, necesita internet)" off \
-		brave "Brave (Flathub, necesita internet)" off) || cancelar
+		brave "Brave (Flathub$fp_usb)" off) || cancelar
 fi
 for e in $elegidos; do extras="$extras $e"; done
 

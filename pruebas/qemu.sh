@@ -15,7 +15,9 @@
 #   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red
 #       Instala sin interfaz (lazaro-instalar auto) en un disco virtual,
 #       y luego arranca el disco y comprueba que el sistema instalado
-#       inicia con su gestor de sesión.
+#       inicia con su gestor de sesión. Con la ISO de la edición Completa
+#       (nombre *-completa-*), también sin red se revisa la configuración
+#       final y que OnlyOffice y Brave se instalaron desde el USB.
 #
 # Resultados (registro del puerto serie y capturas) en pruebas/resultados/.
 # Nunca toca discos reales: todo ocurre en archivos dentro de esa carpeta.
@@ -252,6 +254,12 @@ prueba_instalar() {
 
 	nic=user,model=virtio-net-pci
 	[ "$red" = con-red ] || nic=none
+	# configurado=si: desktop-postinstall.sh corre durante la instalación
+	# (con red, o sin red en la edición Completa, que trae todo).
+	completa=no
+	case "$(basename "$ISO")" in *-completa-*) completa=si ;; esac
+	configurado=no
+	{ [ "$red" = con-red ] || [ "$completa" = si ]; } && configurado=si
 
 	extraer_kernel
 
@@ -305,6 +313,23 @@ prueba_instalar() {
 		sed -n '/LAZARO-FLATPAK-NO/,$p' "$serie" | head -n 60 >&2 || true
 		return 1
 	fi
+	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
+		if ! grep -q '^\[lazaro\] desktop-postinstall.sh terminó bien' "$serie"; then
+			terminar "$pid"
+			echo "FALLO: en la edición Completa la configuración final debe terminar durante la instalación (también sin red)." >&2
+			grep -E 'desktop-postinstall|ERROR|Aviso' "$serie" | tail -n 30 >&2 || true
+			return 1
+		fi
+		if ! grep -q 'LAZARO-FLATPAK-USB-OK org.onlyoffice.desktopeditors' "$serie" \
+			|| ! grep -q 'LAZARO-FLATPAK-USB-OK com.brave.Browser' "$serie" \
+			|| ! grep -q LAZARO-FLATHUB-ORIGEN-OK "$serie"; then
+			terminar "$pid"
+			echo "FALLO: OnlyOffice y Brave no quedaron instalados desde el USB con Flathub como origen." >&2
+			sed -n '/LAZARO-FLATPAK-USB-NO\|LAZARO-FLATHUB-ORIGEN-NO/,+30p' "$serie" | head -n 80 >&2 || true
+			grep -E 'LAZARO-FLATPAK-USB|LAZARO-FLATHUB-ORIGEN' "$serie" >&2 || true
+			return 1
+		fi
+	fi
 	# La instalación apaga la máquina sola.
 	t=0
 	while kill -0 "$pid" 2>/dev/null && [ $t -lt 120 ]; do sleep 2; t=$((t + 2)); done
@@ -330,7 +355,7 @@ prueba_instalar() {
 	#   dm   LightDM o SDDM: la pantalla de inicio tras cerrar la sesión
 	#   gdm  GNOME: la pantalla de inicio tras reiniciar
 	resolucion=""
-	if [ "$red" = con-red ]; then
+	if [ "$configurado" = si ]; then
 		case "$de" in
 			xfce | mate | plasma) resolucion=dm ;;
 			gnome) resolucion=gdm ;;
@@ -386,7 +411,7 @@ prueba_instalar() {
 		elif grep -q LAZARO-EXTRAS-NO "$serie2"; then
 			echo "FALLO: no se instaló el programa adicional marcado (fastfetch)." >&2
 			ok=1
-		elif [ "$red" = con-red ] && ! grep -q LAZARO-EXTRAS-OK "$serie2"; then
+		elif [ "$configurado" = si ] && ! grep -q LAZARO-EXTRAS-OK "$serie2"; then
 			echo "FALLO: con internet no se confirmó la instalación del programa adicional marcado (fastfetch)." >&2
 			ok=1
 		elif grep -q LAZARO-YOUTUBE-NO "$serie2"; then
@@ -418,7 +443,7 @@ prueba_instalar() {
 			grep -E 'LAZARO-SALUDO|LAZARO-GDM-MODO' "$serie2" >&2 || true
 			tramo "$serie2" '--- datos de GDM' '--- fin de los datos'
 			ok=1
-		elif [ "$red" = con-red ] && [ "$de" != ninguno ] && { ! grep -q 'LAZARO-IDIOMA-SESION ' "$serie2" \
+		elif [ "$configurado" = si ] && [ "$de" != ninguno ] && { ! grep -q 'LAZARO-IDIOMA-SESION ' "$serie2" \
 			|| grep 'LAZARO-IDIOMA-SESION ' "$serie2" | tr -d '\r' | grep -qv ' es_CO\.UTF-8$'; }; then
 			echo "FALLO: la sesión del usuario no quedó en el idioma elegido (es_CO.UTF-8)." >&2
 			grep LAZARO-IDIOMA-SESION "$serie2" >&2 || echo "(no se encontró el panel de la sesión)" >&2
@@ -430,7 +455,7 @@ prueba_instalar() {
 		elif [ "$de" = sway ] && [ ! -s "$RES/$nombre-pantalla-inicio.png" ]; then
 			echo "FALLO: no se pudo capturar la pantalla de inicio de Sway." >&2
 			ok=1
-		elif [ "$de" = sway ] && [ "$red" = con-red ] && ! grep -q LAZARO-GREETD-IDIOMA-OK "$serie2"; then
+		elif [ "$de" = sway ] && [ "$configurado" = si ] && ! grep -q LAZARO-GREETD-IDIOMA-OK "$serie2"; then
 			echo "FALLO: la pantalla de inicio de Sway no quedó en el idioma elegido." >&2
 			grep -E '^command|LAZARO-GTKGREET-LANG' "$serie2" >&2 || true
 			ok=1
