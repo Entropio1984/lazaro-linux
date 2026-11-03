@@ -359,6 +359,10 @@ paso_base() {
 		die "setup-disk falló (detalles en $LOG)"
 	fi
 	avance_parar
+	# Comando lazaro-diagnostico (informe para pedir ayuda) y la versión
+	# de la ISO con que se instaló, que el informe muestra.
+	install -Dm755 /usr/sbin/lazaro-diagnostico "$raiz/usr/local/sbin/lazaro-diagnostico"
+	install -Dm644 "$DATOS/version.env" "$raiz/usr/share/lazaro/version.env"
 	# El tema del pulso no viene en ningún paquete: se copia el de la ISO.
 	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
 	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"

@@ -421,6 +421,17 @@ idioma_sesion() {
 	for s in lightdm sddm gdm greetd; do
 		cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 	done
+	# Informe de diagnóstico (lazaro-diagnostico, como root): debe dejar
+	# un archivo con sus secciones.
+	if [ -z "$reiniciar" ]; then
+		diag_sal="$(timeout 300 /usr/local/sbin/lazaro-diagnostico 2>&1 | sed -n 's/^Listo: //p')"
+		if [ -n "$diag_sal" ] && grep -q '==== Servicios (OpenRC)' "$diag_sal" 2>/dev/null; then
+			echo "LAZARO-DIAGNOSTICO-OK $(wc -l < "$diag_sal") líneas"
+			rm -f "$diag_sal"
+		else
+			echo "LAZARO-DIAGNOSTICO-NO ${diag_sal:-sin archivo}"
+		fi
+	fi
 	# Idioma de la sesión (si no se miró antes de cerrarla).
 	[ -n "$reiniciar" ] || idioma_sesion
 	[ -n "$reiniciar" ] || echo "LAZARO-PRUEBA-FIN"

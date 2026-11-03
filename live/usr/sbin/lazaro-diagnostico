@@ -1,0 +1,180 @@
+#!/bin/sh
+# lazaro-diagnostico: junta en un archivo de texto la información de un
+# equipo con Lázaro Linux (instalación, hardware, estado actual y errores
+# del arranque) para compartirla al pedir ayuda.
+#
+# Uso, en una terminal (en la sesión live o en el sistema instalado):
+#   lazaro-diagnostico
+# En el sistema instalado pide la contraseña (doas) porque varios
+# registros solo los lee root; en la sesión live no la pide.
+#
+# Resultado: ~/lazaro-diagnostico-AAAAMMDD-HHMMSS.txt, en la carpeta
+# personal de quien lo ejecuta: fácil de encontrar y de adjuntar, y de esa
+# persona (no de root). En la sesión live esa carpeta vive en la memoria y
+# se pierde al apagar: copia el archivo a otro USB o envíalo antes.
+# No guarda contraseñas: no lee /etc/shadow ni las claves del wifi.
+
+if [ "$(id -u)" -ne 0 ]; then
+	exec doas sh "$0" "$@"
+fi
+
+usuario="${DOAS_USER:-${SUDO_USER:-}}"
+casa="/root"
+if [ -n "$usuario" ]; then
+	casa="$(getent passwd "$usuario" 2>/dev/null | cut -d: -f6)"
+	[ -n "$casa" ] || casa="/home/$usuario"
+fi
+salida="$casa/lazaro-diagnostico-$(date +%Y%m%d-%H%M%S).txt"
+# El informe se arma en un archivo temporal de root (solo legible por
+# root) y al final lo escribe la propia persona en su carpeta: así root
+# nunca abre nada dentro de una carpeta ajena (un enlace puesto ahí no
+# puede hacerle pisar un archivo del sistema).
+umask 077
+tmp="$(mktemp)" || { echo "No se pudo crear un archivo temporal." >&2; exit 1; }
+trap 'rm -f "$tmp"' EXIT
+
+# Cada comando se corta a los 30 s para que nada deje el script colgado.
+corre() {
+	if command -v "$1" >/dev/null 2>&1; then
+		timeout 30 "$@" 2>&1
+	else
+		echo "(no está instalado: $1)"
+	fi
+}
+seccion() { printf '\n==================== %s ====================\n' "$*"; }
+archivo() { # RUTA [LÍNEAS]
+	if [ -r "$1" ]; then
+		echo "--- $1"
+		if [ -n "${2:-}" ]; then tail -n "$2" "$1"; else cat "$1"; fi
+	else
+		echo "--- $1 (no existe)"
+	fi
+}
+errores() { # RUTA: solo las líneas con errores o avisos (últimas 80)
+	if [ -r "$1" ]; then
+		echo "--- errores y avisos en $1"
+		grep -iE 'error|fail|fall[oó]|warn|aviso|cannot|could not|no se pudo|denied|segfault|\(EE\)' "$1" | tail -n 80
+	fi
+}
+
+echo "Reuniendo información... (suele tardar menos de un minuto)"
+{
+	seccion "Resumen"
+	echo "Fecha: $(date)"
+	echo "Equipo: $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null) $(cat /sys/class/dmi/id/product_version 2>/dev/null)"
+	echo "BIOS: $(cat /sys/class/dmi/id/bios_version 2>/dev/null) ($(cat /sys/class/dmi/id/bios_date 2>/dev/null))"
+	echo "Arranque: $([ -d /sys/firmware/efi ] && echo UEFI || echo BIOS)"
+	echo "Alpine: $(cat /etc/alpine-release 2>/dev/null)"
+	echo "Núcleo: $(uname -a)"
+	echo "Tiempo encendido: $(uptime)"
+	echo "Procesador: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2) ($(grep -c ^processor /proc/cpuinfo) núcleos)"
+	archivo /proc/cmdline
+
+	seccion "Instalación de Lázaro"
+	archivo /usr/share/lazaro/version.env
+	for f in /run/lazaro/*; do [ -f "$f" ] && archivo "$f"; done
+	for f in /etc/lazaro/*; do [ -f "$f" ] && archivo "$f"; done
+	archivo /etc/apk/repositories
+	archivo /etc/apk/world
+	archivo /etc/flatpak-pendientes
+	errores /var/log/lazaro-instalar.log
+	archivo /var/log/lazaro-instalar.log 60
+	errores /var/log/desktop-postinstall.log
+	archivo /var/log/desktop-postinstall.log 60
+	archivo /var/log/lazaro-primer-arranque.log 60
+	archivo /var/log/flatpak-pendientes.log 40
+
+	seccion "Memoria y discos"
+	corre free -m
+	corre df -h
+	corre lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL
+	dmesg | grep -iE "not properly unmounted|I/O error|exfat|fat-fs" | tail -n 20
+	archivo /etc/fstab
+	cat /proc/swaps
+
+	seccion "Hardware (PCI y USB)"
+	if command -v lspci >/dev/null 2>&1; then
+		corre lspci -nnk
+	else
+		# Sin pciutils: lo mismo, más escueto, desde /sys.
+		for d in /sys/bus/pci/devices/*; do
+			[ -e "$d/vendor" ] || continue
+			ctl=""; [ -e "$d/driver" ] && ctl="$(basename "$(readlink "$d/driver")")"
+			echo "$(basename "$d") clase=$(cat "$d/class") id=$(cat "$d/vendor"):$(cat "$d/device") controlador=${ctl:-ninguno}"
+		done
+	fi
+	if command -v lsusb >/dev/null 2>&1; then
+		corre lsusb
+	else
+		for d in /sys/bus/usb/devices/*; do
+			[ -e "$d/idVendor" ] && echo "USB $(cat "$d/idVendor"):$(cat "$d/idProduct") $(cat "$d/product" 2>/dev/null)"
+		done
+	fi
+
+	seccion "Gráfica y pantalla"
+	lsmod | grep -E '^(nouveau|i915|xe|amdgpu|radeon|simpledrm|bochs|qxl|virtio_gpu|vboxvideo|drm) ' || echo "(ningún controlador gráfico conocido cargado)"
+	ls -l /dev/dri 2>&1
+	for c in /sys/class/drm/card*-*; do
+		[ -e "$c/status" ] && echo "$(basename "$c"): $(cat "$c/status")"
+	done
+	archivo /etc/modprobe.d/blacklist-nouveau.conf
+	if [ -n "$usuario" ] && command -v glxinfo >/dev/null 2>&1; then
+		su "$usuario" -c 'DISPLAY=:0 timeout 15 glxinfo -B' 2>&1 | head -n 25
+	fi
+	for x in /var/log/Xorg.0.log "$casa/.local/share/xorg/Xorg.0.log"; do
+		[ -r "$x" ] && { echo "--- $x"; grep -E '\((EE|WW)\)|Loading|driver' "$x" | tail -n 40; }
+	done
+
+	seccion "Red"
+	corre nmcli device status
+	corre nmcli -f NAME,TYPE,DEVICE connection show
+	corre ip addr
+	corre rfkill list
+
+	seccion "Sonido"
+	archivo /proc/asound/cards
+	corre aplay -l
+	if [ -n "$usuario" ]; then
+		su "$usuario" -c 'timeout 10 wpctl status 2>/dev/null || timeout 10 pactl info 2>/dev/null' 2>&1 | head -n 60
+	fi
+
+	seccion "Servicios (OpenRC)"
+	corre rc-status -a
+	corre rc-status --crashed
+
+	seccion "Errores del arranque (núcleo)"
+	dmesg | grep -iE 'error|fail|warn|firmware|bug|timeout|nouveau|i915|amdgpu|radeon|drm' | tail -n 120
+	seccion "Últimas líneas del núcleo"
+	dmesg | tail -n 60
+
+	seccion "Registro del sistema"
+	errores /var/log/messages
+	archivo /var/log/rc.log 80
+	for d in /var/log/lightdm/lightdm.log /var/log/lightdm/x-0.log /var/log/sddm.log /var/log/gdm/greeter.log /var/log/greetd.log; do
+		[ -r "$d" ] && { errores "$d"; archivo "$d" 30; }
+	done
+
+	seccion "Aplicaciones"
+	corre flatpak list --columns=application,version,origin
+	echo "Paquetes instalados: $(apk info 2>/dev/null | wc -l)"
+	echo "Actualizaciones pendientes: $(apk list -u 2>/dev/null | wc -l)"
+
+	seccion "Temperatura y batería"
+	corre sensors
+	for b in /sys/class/power_supply/BAT*; do
+		[ -d "$b" ] && echo "$(basename "$b"): $(cat "$b/status" 2>/dev/null), $(cat "$b/capacity" 2>/dev/null)%"
+	done
+} > "$tmp" 2>&1
+
+if [ -n "$usuario" ]; then
+	su -s /bin/sh "$usuario" -c 'umask 077; cat > "$1"' sh "$salida" < "$tmp"
+else
+	cat "$tmp" > "$salida"
+fi
+if [ $? -ne 0 ] || [ ! -s "$salida" ]; then
+	echo "No se pudo guardar el informe en $salida (¿carpeta llena o sin permiso?)." >&2
+	exit 1
+fi
+echo "Listo: $salida"
+echo "Compártelo en el chat (no contiene contraseñas)."
+[ ! -d /media/cdrom ] || ! grep -q ' /media/cdrom ' /proc/mounts || echo "Estás en la sesión live: copia el archivo a otro USB o envíalo antes de apagar."
