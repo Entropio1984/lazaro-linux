@@ -425,6 +425,10 @@ prueba_instalar() {
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
 			ok=1
+		elif ! grep -q LAZARO-DOAS-OK "$serie2"; then
+			echo "FALLO: la regla de doas del sistema instalado no es válida o no conserva el idioma." >&2
+			grep LAZARO-DOAS "$serie2" >&2 || true
+			ok=1
 		elif grep -q LAZARO-HOME-AJENO "$serie2"; then
 			echo "FALLO: falta la carpeta del usuario o tiene archivos de otro dueño (no podrá guardar su configuración)." >&2
 			ok=1

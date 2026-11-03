@@ -515,7 +515,10 @@ paso_ajustes() {
 	fi
 
 	mkdir -p "$raiz/etc/doas.d"
-	echo 'permit persist :wheel' > "$raiz/etc/doas.d/20-wheel.conf"
+	# setenv: doas borra el entorno, y sin LANG los programas de
+	# terminal abiertos con doas (btop, por ejemplo) no ven el UTF-8 ni
+	# el idioma elegido.
+	echo 'permit persist setenv { LANG LC_ALL } :wheel' > "$raiz/etc/doas.d/20-wheel.conf"
 	chmod 0600 "$raiz/etc/doas.d/20-wheel.conf"
 
 	preinstalar_extras "$raiz" "$idioma" "$extras"
