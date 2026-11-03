@@ -5,9 +5,10 @@
 #
 # Uso, en una terminal (en la sesión live o en el sistema instalado):
 #   lazaro-diagnostico
-# Pide la contraseña (doas) porque varios registros solo los lee root.
+# En el sistema instalado pide la contraseña (doas) porque varios
+# registros solo los lee root; en la sesión live no la pide.
 #
-# Resultado: ~/lazaro-diagnostico-AAAAMMDD-HHMM.txt, en la carpeta
+# Resultado: ~/lazaro-diagnostico-AAAAMMDD-HHMMSS.txt, en la carpeta
 # personal de quien lo ejecuta: fácil de encontrar y de adjuntar, y de esa
 # persona (no de root). En la sesión live esa carpeta vive en la memoria y
 # se pierde al apagar: copia el archivo a otro USB o envíalo antes.
@@ -23,7 +24,14 @@ if [ -n "$usuario" ]; then
 	casa="$(getent passwd "$usuario" 2>/dev/null | cut -d: -f6)"
 	[ -n "$casa" ] || casa="/home/$usuario"
 fi
-salida="$casa/lazaro-diagnostico-$(date +%Y%m%d-%H%M).txt"
+salida="$casa/lazaro-diagnostico-$(date +%Y%m%d-%H%M%S).txt"
+# El informe se arma en un archivo temporal de root (solo legible por
+# root) y al final lo escribe la propia persona en su carpeta: así root
+# nunca abre nada dentro de una carpeta ajena (un enlace puesto ahí no
+# puede hacerle pisar un archivo del sistema).
+umask 077
+tmp="$(mktemp)" || { echo "No se pudo crear un archivo temporal." >&2; exit 1; }
+trap 'rm -f "$tmp"' EXIT
 
 # Cada comando se corta a los 30 s para que nada deje el script colgado.
 corre() {
@@ -49,7 +57,7 @@ errores() { # RUTA: solo las líneas con errores o avisos (últimas 80)
 	fi
 }
 
-echo "Reuniendo información... (tarda menos de un minuto)"
+echo "Reuniendo información... (suele tardar menos de un minuto)"
 {
 	seccion "Resumen"
 	echo "Fecha: $(date)"
@@ -85,8 +93,23 @@ echo "Reuniendo información... (tarda menos de un minuto)"
 	cat /proc/swaps
 
 	seccion "Hardware (PCI y USB)"
-	corre lspci -nnk
-	corre lsusb
+	if command -v lspci >/dev/null 2>&1; then
+		corre lspci -nnk
+	else
+		# Sin pciutils: lo mismo, más escueto, desde /sys.
+		for d in /sys/bus/pci/devices/*; do
+			[ -e "$d/vendor" ] || continue
+			ctl=""; [ -e "$d/driver" ] && ctl="$(basename "$(readlink "$d/driver")")"
+			echo "$(basename "$d") clase=$(cat "$d/class") id=$(cat "$d/vendor"):$(cat "$d/device") controlador=${ctl:-ninguno}"
+		done
+	fi
+	if command -v lsusb >/dev/null 2>&1; then
+		corre lsusb
+	else
+		for d in /sys/bus/usb/devices/*; do
+			[ -e "$d/idVendor" ] && echo "USB $(cat "$d/idVendor"):$(cat "$d/idProduct") $(cat "$d/product" 2>/dev/null)"
+		done
+	fi
 
 	seccion "Gráfica y pantalla"
 	lsmod | grep -E '^(nouveau|i915|xe|amdgpu|radeon|simpledrm|bochs|qxl|virtio_gpu|vboxvideo|drm) ' || echo "(ningún controlador gráfico conocido cargado)"
@@ -109,6 +132,7 @@ echo "Reuniendo información... (tarda menos de un minuto)"
 	corre rfkill list
 
 	seccion "Sonido"
+	archivo /proc/asound/cards
 	corre aplay -l
 	if [ -n "$usuario" ]; then
 		su "$usuario" -c 'timeout 10 wpctl status 2>/dev/null || timeout 10 pactl info 2>/dev/null' 2>&1 | head -n 60
@@ -140,9 +164,17 @@ echo "Reuniendo información... (tarda menos de un minuto)"
 	for b in /sys/class/power_supply/BAT*; do
 		[ -d "$b" ] && echo "$(basename "$b"): $(cat "$b/status" 2>/dev/null), $(cat "$b/capacity" 2>/dev/null)%"
 	done
-} > "$salida" 2>&1
+} > "$tmp" 2>&1
 
-[ -z "$usuario" ] || chown "$usuario" "$salida"
+if [ -n "$usuario" ]; then
+	su -s /bin/sh "$usuario" -c 'umask 077; cat > "$1"' sh "$salida" < "$tmp"
+else
+	cat "$tmp" > "$salida"
+fi
+if [ $? -ne 0 ] || [ ! -s "$salida" ]; then
+	echo "No se pudo guardar el informe en $salida (¿carpeta llena o sin permiso?)." >&2
+	exit 1
+fi
 echo "Listo: $salida"
 echo "Compártelo en el chat (no contiene contraseñas)."
 [ ! -d /media/cdrom ] || ! grep -q ' /media/cdrom ' /proc/mounts || echo "Estás en la sesión live: copia el archivo a otro USB o envíalo antes de apagar."
