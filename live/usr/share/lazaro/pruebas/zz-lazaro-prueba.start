@@ -64,6 +64,15 @@ idioma_sesion() {
 			echo "LAZARO-EXTRAS-NO"
 		fi
 	fi
+	# btop (la prueba lo marca) con el permiso para medir la GPU sin
+	# doas, que le pone el gancho de apk.
+	if command -v btop >/dev/null 2>&1; then
+		if setcap -v cap_perfmon=+ep /usr/bin/btop >/dev/null 2>&1; then
+			echo "LAZARO-BTOP-GPU-OK"
+		else
+			echo "LAZARO-BTOP-GPU-NO $(ls -l /etc/apk/commit_hooks.d/ 2>&1 | tr '\n' ' ')"
+		fi
+	fi
 	# YouTube ligero (la prueba lo marca): los programas vienen del USB y
 	# se instalan aun sin internet; la configuración y el lanzador los
 	# pone desktop-postinstall.sh (solo se miran cuando ya corrió).

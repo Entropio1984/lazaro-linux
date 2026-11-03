@@ -1,0 +1,15 @@
+#!/bin/sh
+# Lázaro Linux: btop mide la gráfica Intel sin doas.
+#
+# btop lee el uso de la GPU Intel con los contadores de rendimiento del
+# núcleo (perf), que solo puede abrir root o un programa con el permiso
+# CAP_PERFMON. Se le da solo ese permiso al programa btop: no lo vuelve
+# administrador. apk lo borra cada vez que actualiza btop, así que este
+# gancho de apk (/etc/apk/commit_hooks.d) lo vuelve a poner después de
+# cada instalación o actualización. Necesita libcap-setcap.
+[ "${1:-}" = post-commit ] || exit 0
+[ -x /usr/bin/btop ] || exit 0
+command -v setcap >/dev/null 2>&1 || exit 0
+setcap -v cap_perfmon=+ep /usr/bin/btop >/dev/null 2>&1 \
+	|| setcap cap_perfmon=+ep /usr/bin/btop 2>/dev/null || true
+exit 0

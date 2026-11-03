@@ -425,6 +425,10 @@ prueba_instalar() {
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
 			ok=1
+		elif grep -q LAZARO-BTOP-GPU-NO "$serie2"; then
+			echo "FALLO: btop quedó sin el permiso para medir la GPU sin doas:" >&2
+			grep LAZARO-BTOP-GPU-NO "$serie2" >&2
+			ok=1
 		elif ! grep -q LAZARO-DOAS-OK "$serie2"; then
 			echo "FALLO: la regla de doas del sistema instalado no es válida o no conserva el idioma." >&2
 			grep LAZARO-DOAS "$serie2" >&2 || true

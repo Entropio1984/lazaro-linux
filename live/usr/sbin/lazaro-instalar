@@ -363,6 +363,10 @@ paso_base() {
 	# de la ISO con que se instaló, que el informe muestra.
 	install -Dm755 /usr/sbin/lazaro-diagnostico "$raiz/usr/local/sbin/lazaro-diagnostico"
 	install -Dm644 "$DATOS/version.env" "$raiz/usr/share/lazaro/version.env"
+	# btop mide la GPU Intel sin doas: un gancho de apk le da el permiso
+	# CAP_PERFMON cada vez que se instala o actualiza (libcap-setcap se
+	# instala siempre con los programas adicionales).
+	install -Dm755 "$DATOS/btop-gpu.hook" "$raiz/etc/apk/commit_hooks.d/lazaro-btop-gpu.hook"
 	# El tema del pulso no viene en ningún paquete: se copia el de la ISO.
 	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
 	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"
@@ -429,9 +433,10 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 	[ -n "$pe_iso" ] || return 0
 	pe_grafico=si
 	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || pe_grafico=no
-	pe_paq=""
+	# libcap-setcap (40 kB): lo usa el gancho de btop (paso_base).
+	pe_paq="libcap-setcap"
 	# Las mismas tipografías que el script pone con cualquier escritorio.
-	[ "$pe_grafico" = no ] || pe_paq="font-dejavu font-liberation font-liberation-sans-narrow font-noto font-noto-emoji"
+	[ "$pe_grafico" = no ] || pe_paq="$pe_paq font-dejavu font-liberation font-liberation-sans-narrow font-noto font-noto-emoji"
 	for e in $3; do
 		case "$e" in
 			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
@@ -952,7 +957,7 @@ paso_auto() {
 	# adicional más liviano: la prueba comprueba que lo marcado en
 	# "Software adicional" se instala.
 	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
-		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch youtube$auto_flathub" no
+		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch btop youtube$auto_flathub" no
 	auto_revisar_flatpak
 	auto_revisar_flatpak_usb
 	auto_prueba_resolucion "$2"
