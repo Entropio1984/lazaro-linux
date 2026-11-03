@@ -127,6 +127,16 @@ Con el sistema ya instalado, el arranque también muestra el pulso
 inicio todavía no se lleva bien con él) y sin escritorio, donde el
 arranque se ve en texto.
 
+## Pedir ayuda: informe de diagnóstico
+
+Si algo no funciona, abre una terminal y escribe `lazaro-diagnostico`
+(pide la contraseña). Sirve en la sesión live y en el sistema instalado.
+En menos de un minuto deja en tu carpeta personal un archivo
+`lazaro-diagnostico-AAAAMMDD-HHMM.txt` con el equipo, el hardware y su
+controlador, la red, el sonido, los servicios, los errores del arranque y
+los registros de la instalación. No guarda contraseñas. En la sesión live
+esa carpeta se borra al apagar: copia el archivo antes.
+
 ## Cómo está armada
 
 | Pieza | Dónde | Qué hace |
