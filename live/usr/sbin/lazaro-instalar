@@ -56,7 +56,11 @@ die() { log "ERROR: $*"; exit 1; }
 # solo a $LOG. Mientras trabajan, un vigía en segundo plano revisa $LOG
 # cada 5 s y escribe un resumen (igual que hace el script en la consola):
 #   - una línea por paquete: "(12/80) Instalando firefox";
-#   - si pasan 20 s sin novedades, "... sigue trabajando (1 min 20 s)".
+#   - si pasan 20 s sin novedades, "... sigue trabajando (1 min 20 s)",
+#     con cuánto se descargó de internet en esos 20 s y el último mensaje
+#     del registro, para distinguir un paso largo que avanza de uno que
+#     espera a una red que no responde. desktop-postinstall.sh escribe su
+#     propio "sigue trabajando" con el mismo detalle y aquí se deja pasar.
 # setup-disk llama a apk con --quiet y no escribe una línea por paquete:
 # para ese paso se muestra cuánto ocupa ya el sistema nuevo en el disco.
 # avance_iniciar QUÉ [RAÍZ] arranca el vigía; avance_parar lo detiene.
@@ -90,15 +94,26 @@ avance_leer() {
 	printf '%s\n' "$nuevas" >&2
 }
 
+# Bytes recibidos hasta ahora por las interfaces de red salvo lo.
+red_bytes() {
+	awk 'NR > 2 { sub(/^[ \t]+/, ""); split($0, a, ":"); if (a[1] != "lo") { split(a[2], f, " "); s += f[1] } }
+		END { if (NR > 2) printf "%.0f\n", s }' /proc/net/dev 2>/dev/null || true
+}
+
 avance_vigia() { # QUÉ [RAÍZ]
 	total=0
 	silencio=0
+	red_antes=$(red_bytes)
+	sin_red=0
 	# sleep sin la salida de Calamares: al parar el vigía no la deja abierta.
 	while sleep 5 >/dev/null 2>&1; do
 		total=$((total + 5))
 		silencio=$((silencio + 5))
 		if avance_leer; then
 			silencio=0
+			# El siguiente aviso mide solo lo descargado durante el silencio.
+			red_antes=$(red_bytes)
+			sin_red=0
 			continue
 		fi
 		if [ "$silencio" -ge 20 ]; then
@@ -111,7 +126,29 @@ avance_vigia() { # QUÉ [RAÍZ]
 			if [ -n "${2:-}" ] && mb=$(df -Pm "$2" 2>/dev/null | awk 'NR == 2 { print $3 }') && [ -n "$mb" ]; then
 				tiempo="$tiempo, $mb MB en el disco"
 			fi
-			printf '[lazaro] ... %s sigue trabajando (%s)\n' "$1" "$tiempo" >&2
+			detalle=""
+			red_ahora=$(red_bytes)
+			if [ -n "$red_ahora" ] && [ -n "$red_antes" ]; then
+				kb=$(((red_ahora - red_antes) / 1024))
+				red_antes=$red_ahora
+				if [ "$kb" -ge 1024 ]; then
+					sin_red=0
+					detalle=" | internet: $(awk -v k="$kb" 'BEGIN { printf "%.1f", k / 1024 }') MB en 20 s"
+				elif [ "$kb" -ge 10 ]; then
+					sin_red=0
+					detalle=" | internet: lento, $kb KB en 20 s"
+				else
+					sin_red=$((sin_red + 20))
+					if [ "$sin_red" -ge 60 ]; then
+						detalle=" | internet: sin descargar nada desde hace $((sin_red / 60)) min"
+					else
+						detalle=" | internet: casi nada en 20 s"
+					fi
+				fi
+			fi
+			ultimo=$(tr -d '\000-\010\013-\037\177' <"$LOG" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -n 1 | tr -s ' \t' ' ' | sed 's/^ //' | cut -c1-90)
+			[ -z "$ultimo" ] || detalle="$detalle | último mensaje: $ultimo"
+			printf '[lazaro] ... %s sigue trabajando (%s)%s\n' "$1" "$tiempo" "$detalle" >&2
 		fi
 	done
 }
