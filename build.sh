@@ -126,6 +126,32 @@ else
 	tail -n 5 "$REGISTRO"
 fi
 
+# --- broadcom-wl (driver wifi privativo de Broadcom) --------------------
+# Va como código (broadcom-wl-src) y lo compila akms en el equipo que lo
+# necesita. Ver paquetes/broadcom-wl/APKBUILD.
+WL_VER=$(sed -n 's/^pkgver=//p' "$LAZARO_DIR/paquetes/broadcom-wl/APKBUILD")
+WL_REL=$(sed -n 's/^pkgrel=//p' "$LAZARO_DIR/paquetes/broadcom-wl/APKBUILD")
+if ls "$REPO_PROPIO/paquetes/$ALPINE_ARCH/broadcom-wl-src-$WL_VER-r$WL_REL.apk" >/dev/null 2>&1; then
+	msg "broadcom-wl $WL_VER ya está empaquetado (caché)"
+else
+	msg "Empaquetando broadcom-wl $WL_VER"
+	rm -f "$REPO_PROPIO/paquetes/$ALPINE_ARCH"/broadcom-wl-src-*.apk
+	cd "$TRABAJO/paquetes/broadcom-wl"
+	if grep -q '^sha512sums=""' APKBUILD; then
+		su constructor -c "abuild checksum"
+		echo "AVISO: fija esta suma en paquetes/broadcom-wl/APKBUILD:"
+		grep -A2 '^sha512sums' APKBUILD
+	fi
+	REGISTRO="$CACHE/abuild-broadcom-wl.log"
+	if ! su constructor -c "REPODEST=$REPO_PROPIO abuild -r" > "$REGISTRO" 2>&1; then
+		echo "Últimas líneas útiles de $REGISTRO:" >&2
+		sed -n '/Uninstalling dependencies/q;p' "$REGISTRO" | tail -n 60 >&2
+		die "falló el empaquetado de broadcom-wl"
+	fi
+	tail -n 5 "$REGISTRO"
+fi
+cd "$LAZARO_DIR"
+
 # --- aports/scripts (mkimage.sh) ---------------------------------------
 msg "Descargando aports/scripts de la rama $APORTS_BRANCH"
 APORTS="$CONSTRUCTOR_HOME/aports"

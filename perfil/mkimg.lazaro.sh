@@ -34,13 +34,29 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # si no hay otro.
 # dialog: menús en modo texto de lazaro-instalar-texto, el instalador
 # para cuando la sesión gráfica no abre.
+# Red más allá del wifi y el cable, en la live y en el sistema instalado
+# (la lista del instalado está en live/usr/share/lazaro/paquetes-base):
+# - modemmanager + networkmanager-wwan + usb-modeswitch: módems USB 3G/4G
+#   ("pendrives de internet") y módems internos.
+# - networkmanager-ppp y -adsl: PPPoE, usuario y contraseña directo a un
+#   módem ADSL en modo puente.
+# - networkmanager-bluetooth: internet del celular por Bluetooth.
+# - usbmuxd: internet del iPhone por cable USB (Android no lo necesita).
+# - zd1211-firmware (memorias wifi USB ZyDAS ZD1211) y bluez-firmware
+#   (Bluetooth USB Broadcom BCM203x): no son parte de linux-firmware.
+LAZARO_RED_EXTRA="modemmanager modemmanager-openrc networkmanager-wwan
+	usb-modeswitch usb-modeswitch-udev networkmanager-ppp networkmanager-adsl
+	networkmanager-bluetooth usbmuxd usbmuxd-udev zd1211-firmware
+	bluez-firmware"
+
 LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
 	gparted xhost zenity spice-vdagent spice-vdagent-openrc pciutils
 	xf86-video-vesa dialog
-	plymouth plymouth-drm plymouth-openrc-plugin"
+	plymouth plymouth-drm plymouth-openrc-plugin
+	$LAZARO_RED_EXTRA"
 
 # Firmware de los demás adaptadores de red (wifi, cable, bluetooth, USB y
 # PCMCIA) y lo que faltaba de Intel y AMD, que no venía en la ISO, para que el sistema instalado sin
@@ -60,15 +76,26 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 # nuevas), isci (discos SAS Intel), amd (procesadores AMD: SEV, PMF),
 # amdnpu (NPU de los Ryzen AI) y amdtee (seguridad de AMD), todos
 # pequeños (menos de 4 MB). También cirrus (sonido de portátiles, 2 MB).
+# Los últimos, diminutos (menos de 1,5 MB juntos, revisión de drivers de
+# red del 2026-11-04): acenic, adaptec, sun y myricom (tarjetas de cable
+# antiguas o de servidor), microchip y aeonsemi (chips de cable), nxp
+# (Bluetooth NXP) y atusb (radio USB 802.15.4).
 LAZARO_FIRMWARE_RED=""
 for _fw in ath6k ath11k ath12k atmel libertas mrvl mwl8k mwlwifi rsi rtw89 \
 		ti-connectivity wfx ar3k qca 3com bnx2 bnx2x cxgb3 cxgb4 e100 \
 		kaweth liquidio netronome qed qlogic realtek slicoss sxg tehuti \
 		tigon vxge airoha ueagle-atm cis ositech xe isci amd amdnpu \
-		amdtee cirrus; do
+		amdtee cirrus acenic adaptec sun microchip myricom aeonsemi nxp \
+		atusb; do
 	LAZARO_FIRMWARE_RED="$LAZARO_FIRMWARE_RED linux-firmware-$_fw"
 done
 unset _fw
+
+# broadcom-wl (paquetes/broadcom-wl): driver wifi privativo para las
+# Broadcom sin driver libre. lazaro-instalar lo instala solo si encuentra
+# una; akms lo compila en el equipo. Para poder hacerlo sin internet van
+# también las cabeceras del kernel y el compilador (build-base).
+LAZARO_BROADCOM="broadcom-wl-src akms linux-lts-dev build-base"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
@@ -84,7 +111,8 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	linux-firmware-brcm linux-firmware-rtlwifi linux-firmware-rtw88
 	linux-firmware-rtl_nic linux-firmware-rtl_bt linux-firmware-mediatek
 	$LAZARO_FIRMWARE_RED
-	intel-ucode amd-ucode"
+	intel-ucode amd-ucode
+	$LAZARO_BROADCOM"
 
 # Escritorios livianos completos en la ISO, para instalarlos sin
 # internet como XFCE: lo que instala "setup-desktop" para cada uno

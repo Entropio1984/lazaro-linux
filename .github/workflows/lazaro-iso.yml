@@ -270,7 +270,9 @@ jobs:
           - live bios 2048
           # Sin escritorio (Xorg no arranca): aviso del instalador en modo texto.
           - texto bios
-          - instalar bios xfce sin-red
+          # Sin red y con una wifi Broadcom simulada: broadcom-wl se compila
+          # con lo que trae la ISO.
+          - instalar bios xfce sin-red broadcom
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red
           - instalar bios gnome con-red

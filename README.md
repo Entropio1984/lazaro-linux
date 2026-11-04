@@ -69,6 +69,7 @@ varias épocas.
 | ¿Necesita internet al instalar? | Para GNOME, KDE Plasma y las aplicaciones de Flathub, sí | No, nunca (solo Google Chrome) |
 | Escritorios sin internet | XFCE, MATE, LXQt, Sway, XFCE Wayland | Los 7, en todos los idiomas |
 | Firmware (controladores de wifi y otros) | El de red, completo | Todo |
+| Módems USB 3G/4G, ADSL (PPPoE), internet del celular por cable o Bluetooth | Sí | Sí |
 | Descargar | [GitHub](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo) o [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/Ligera/) | [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/Completa/) |
 
 **Si dudas, elige la Ligera**: descarga más rápido y alcanza para la
@@ -250,6 +251,14 @@ conectar el wifi antes, escribe (con las comillas):
 teclas (por ejemplo Fn + F2) para encender el wifi; revisa que esté
 encendido. Si sigue sin aparecer ninguna red, pide ayuda con el
 [informe de diagnóstico](#pedir-ayuda-informe-de-diagnóstico).
+
+**Wifi Broadcom en la sesión de prueba.** Muchos portátiles de 2008 a
+2015 traen una tarjeta Broadcom que solo funciona con el controlador de
+Broadcom, que es cerrado. En la sesión de prueba (antes de instalar) ese
+wifi no aparece: conéctate por cable o comparte el internet del celular
+por USB. Al instalar, Lázaro detecta la tarjeta y deja puesto ese
+controlador (tarda unos minutos más); en el sistema instalado el wifi
+ya funciona.
 
 **La hora está mal en el primer arranque.** Se corrige sola en unos
 minutos al conectarse a internet.

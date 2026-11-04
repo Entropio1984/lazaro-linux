@@ -303,6 +303,106 @@ matar_restos() {
 	done
 }
 
+# --- Wifi Broadcom con driver privativo -----------------------------------
+# Tarjetas Broadcom (fabricante 14e4) que con el kernel no tienen un
+# driver libre que funcione: b43 necesitaría un firmware que no se puede
+# repartir y brcmsmac no las conoce. Funcionan con broadcom-wl (wl).
+# BCM4311/4312 (4311 4312 4313 4315), BCM4321 (4328 4329 432a),
+# BCM4322 (432b 432c 432d), BCM4331 (4331), BCM43227 (4358), BCM43228
+# (4359), BCM43142 (4365), BCM4360 (43a0) y BCM4352 (43b1). Quedan fuera
+# las que brcmsmac sí maneja (BCM4313 = 4727, BCM43224 = 4353, BCM43225 =
+# 4357) y las de brcmfmac.
+BROADCOM_WL_IDS="4311 4312 4313 4315 4328 4329 432a 432b 432c 432d 4331 4358 4359 4365 43a0 43b1"
+
+broadcom_wl_tarjeta() {
+	# Las pruebas (QEMU no tiene una Broadcom) lo fuerzan desde el menú.
+	if grep -qw 'lazaro.broadcom=forzar' /proc/cmdline 2>/dev/null; then
+		echo "prueba"
+		return 0
+	fi
+	for bw_d in /sys/bus/pci/devices/*; do
+		[ "$(cat "$bw_d/vendor" 2>/dev/null)" = 0x14e4 ] || continue
+		bw_id="$(cat "$bw_d/device" 2>/dev/null)"
+		bw_id="${bw_id#0x}"
+		case " $BROADCOM_WL_IDS " in
+			*" $bw_id "*) echo "14e4:$bw_id"; return 0 ;;
+		esac
+	done
+	return 1
+}
+
+# Instala broadcom-wl en el sistema instalado y lo compila con akms para
+# su kernel. Sin internet usa las cabeceras del kernel y el compilador que
+# vienen en la ISO. Si falla, la instalación sigue: el equipo queda sin
+# wifi pero con cable, y akms lo vuelve a intentar con cada kernel nuevo.
+paso_broadcom() { # RAIZ
+	bw_tarjeta="$(broadcom_wl_tarjeta)" || return 0
+	log "Wifi Broadcom $bw_tarjeta: se instala el driver broadcom-wl (se compila, tarda unos minutos)..."
+	avance_iniciar "el driver wifi Broadcom" "$1"
+	bw_rc=0
+	en_destino "$1" apk add --no-progress broadcom-wl-src </dev/null >>"$LOG" 2>&1 || bw_rc=$?
+	# El disparador de akms compila para el kernel que corre ahora (el de
+	# la live). Se pide además para el kernel instalado en el disco, que
+	# puede ser más nuevo si setup-disk lo bajó de internet.
+	bw_src=""
+	for bw_s in "$1"/usr/src/broadcom-wl-*/AKMBUILD; do
+		[ -f "$bw_s" ] && bw_src="${bw_s%/AKMBUILD}" && bw_src="${bw_src#"$1"}"
+	done
+	[ -n "$bw_src" ] || [ "$bw_rc" != 0 ] || bw_rc=1
+	if [ "$bw_rc" = 0 ]; then
+		en_destino "$1" akms install -k all "$bw_src" </dev/null >>"$LOG" 2>&1 || bw_rc=$?
+		# akms arma un entorno aparte (overlay) para compilar; si eso no se
+		# puede dentro del chroot, se compila directo en el sistema.
+		if [ "$bw_rc" != 0 ]; then
+			log "Aviso: akms falló con overlay (código $bw_rc); se intenta sin overlay."
+			bw_rc=0
+			en_destino "$1" akms install --no-overlay -k all "$bw_src" </dev/null >>"$LOG" 2>&1 || bw_rc=$?
+		fi
+	fi
+	avance_parar
+	bw_ko=""
+	for bw_k in "$1"/lib/modules/*; do
+		[ -d "$bw_k" ] || continue
+		bw_ko="$(find "$bw_k" -name 'wl.ko*' 2>/dev/null | head -n 1)"
+		[ -n "$bw_ko" ] && break
+	done
+	if [ -z "$bw_ko" ]; then
+		log "Aviso: no se pudo compilar broadcom-wl (código $bw_rc, detalles en $LOG). El wifi Broadcom no funcionará hasta conectarse por cable y ejecutar: doas akms install -k all ${bw_src:-/usr/src/broadcom-wl-*}"
+		echo "LAZARO-BROADCOM-NO"
+		grep -i -E 'akms|error|broadcom' "$LOG" | tail -n 40
+		return 0
+	fi
+	log "broadcom-wl listo: ${bw_ko#"$1"}"
+	# Los drivers libres que reclaman estas tarjetas se apartan para que
+	# las tome wl. ssb también lo usa b44 (cable Broadcom antiguo): si hay
+	# una de esas, ssb se deja y se avisa.
+	bw_ssb="blacklist ssb"
+	for bw_d in /sys/bus/pci/devices/*; do
+		[ "$(cat "$bw_d/vendor" 2>/dev/null)" = 0x14e4 ] || continue
+		case "$(cat "$bw_d/device" 2>/dev/null)" in
+			0x4401|0x4402|0x170c)
+				bw_ssb="# ssb no se aparta: lo usa la tarjeta de cable b44"
+				log "Aviso: hay una tarjeta de cable Broadcom b44; ssb no se aparta y el wifi podría no tomar el driver wl." ;;
+		esac
+	done
+	mkdir -p "$1/etc/modprobe.d"
+	cat > "$1/etc/modprobe.d/lazaro-broadcom-wl.conf" <<-EOF
+	# Lázaro Linux: esta tarjeta wifi Broadcom ($bw_tarjeta) funciona con
+	# el driver privativo wl (paquete broadcom-wl-src, compilado con akms).
+	# Se apartan los drivers libres que la reclamarían. Para volver a
+	# ellos, borra este archivo y reinicia.
+	blacklist b43
+	blacklist b43legacy
+	blacklist bcma
+	blacklist brcmsmac
+	$bw_ssb
+	EOF
+	# wl se carga solo por el tipo de tarjeta; se pide también al arrancar.
+	mkdir -p "$1/etc/modules-load.d"
+	echo wl > "$1/etc/modules-load.d/lazaro-broadcom-wl.conf"
+	echo "LAZARO-BROADCOM-OK ${bw_ko#"$1"}"
+}
+
 # --- Paso 1: sistema base -------------------------------------------------
 paso_base() {
 	raiz="${1%/}"
@@ -334,7 +434,7 @@ paso_base() {
 	echo lazaro > "$ovl/etc/hostname"
 	for s in devfs:sysinit dmesg:sysinit mdev:sysinit hwdrivers:sysinit \
 		hwclock:boot modules:boot sysctl:boot hostname:boot bootmisc:boot \
-		syslog:boot networkmanager:default chronyd:default acpid:default \
+		syslog:boot networkmanager:default modemmanager:default chronyd:default acpid:default \
 		crond:default mount-ro:shutdown killprocs:shutdown savecache:shutdown; do
 		mkdir -p "$ovl/etc/runlevels/${s#*:}"
 		ln -s "/etc/init.d/${s%:*}" "$ovl/etc/runlevels/${s#*:}/${s%:*}"
@@ -376,6 +476,7 @@ paso_base() {
 		mkdir -p "$raiz/etc/runlevels/default"
 		ln -sf /etc/init.d/plymouth-salir "$raiz/etc/runlevels/default/plymouth-salir"
 	fi
+	paso_broadcom "$raiz"
 	log "Sistema base instalado."
 }
 
