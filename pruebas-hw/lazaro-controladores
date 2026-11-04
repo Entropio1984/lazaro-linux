@@ -1,0 +1,689 @@
+#!/bin/sh
+# lazaro-controladores: busca el hardware del equipo que todavía no tiene
+# lo que necesita (firmware, controladores o programas) y lo instala.
+#
+# Corre en tres momentos con las mismas reglas:
+#   - al instalar (lazaro-instalar): instala lo de Alpine desde el USB o
+#     internet y deja anotado lo que necesita permiso o internet;
+#   - en el primer arranque y en cada arranque (servicio
+#     lazaro-controladores): instala lo de Alpine que falte, en cuanto hay
+#     internet si hace falta;
+#   - en la sesión (menú "Controladores" y aviso automático): muestra lo
+#     que falta y pide permiso para lo que lo necesita.
+#
+# Tres clases de cosas:
+#   alpine    paquetes de Alpine: se instalan sin preguntar al instalar y
+#             en el arranque; desde el menú se muestran antes.
+#   licencia  firmware de Intel PRO/Wireless 2100 y 2200: hay que aceptar
+#             su licencia antes de copiarlo.
+#   descarga  firmware que no se puede repartir (Broadcom b43, Prism54,
+#             video de las NVIDIA viejas): se descarga del sitio que lo
+#             conserva, con permiso.
+#   menu      programas que solo se ofrecen desde el menú (actualizar el
+#             firmware, braille), nunca automáticos.
+#
+# Cómo detecta:
+#   - el controlador del kernel que corresponde a cada pieza (el "alias"
+#     de cada dispositivo, igual que hace el sistema para cargarlos);
+#   - las clases USB (impresoras, lectores de tarjetas), la batería, el
+#     Thunderbolt y los sensores;
+#   - los avisos del kernel cuando un controlador no encuentra su firmware
+#     ("Direct firmware load for X failed"): el archivo se busca en la
+#     lista de linux-firmware (firmware-paquetes.tsv).
+#
+# Uso:
+#   lazaro-controladores --revisar [--raiz R]   lista lo que falta (una
+#        línea por cosa: CLASE<TAB>CLAVE<TAB>PAQUETES<TAB>DESCRIPCIÓN)
+#   lazaro-controladores --instalar-alpine [--raiz R]   instala lo de
+#        Alpine que falte (como root; con --raiz, en ese sistema)
+#   lazaro-controladores --instalar CLAVE... [--raiz R]  instala esas
+#        cosas (licencia: solo si ya se aceptó; ver --aceptar)
+#   lazaro-controladores --aceptar CLAVE         anota la licencia aceptada
+#   lazaro-controladores --ventana    ventana para elegir (en la sesión)
+#   lazaro-controladores --vigilar    en la sesión: avisa cuando se
+#        conecta algo que necesita controlador
+#   lazaro-controladores --arranque   servicio de arranque
+#
+# Variables para las pruebas: LAZARO_SYS (en vez de /sys), LAZARO_CMDLINE,
+# LAZARO_DMESG (archivo en vez de dmesg), LAZARO_MODULOS (en vez de
+# modules.alias del kernel), LAZARO_DATOS (carpeta de datos).
+# Parámetro de arranque para las pruebas en QEMU (no tiene ese hardware):
+#   lazaro.controladores=b43,ipw2200,sof...  simula esos controladores.
+
+set -eu
+
+SYS="${LAZARO_SYS:-/sys}"
+CMDLINE="${LAZARO_CMDLINE:-/proc/cmdline}"
+DATOS="${LAZARO_DATOS:-/usr/share/lazaro}"
+RAIZ=""
+CONF_REL="etc/lazaro/controladores.conf"
+LOG="${LAZARO_CONTROLADORES_LOG:-/var/log/lazaro-controladores.log}"
+
+# Tarjetas Broadcom que usan el driver wl (lazaro-instalar). Para esas no
+# hace falta el firmware de b43.
+BROADCOM_WL_IDS="4311 4312 4313 4315 4328 4329 432a 432b 432c 432d 4331 4358 4359 4365 43a0 43b1"
+
+# Descargas (comprobadas el 2026-11-04 desde los servidores de GitHub).
+B43_URL="https://downloads.openwrt.org/sources/broadcom-wl-5.100.138.tar.bz2"
+B43_SHA256="f1e7067aac5b62b67b8b6e4c517990277804339ac16065eb13c731ff909ae46f"
+B43LEGACY_URL="https://downloads.openwrt.org/sources/wl_apsta-3.130.20.0.o"
+B43LEGACY_SHA256="7dba610b1d96dd14e901bcbce14cd6ecd1b1ac6f5c0035b0d6b6dc46a7c3ef90"
+P54_BASE="https://daemonizer.de/prism54/prism54-fw"
+NOUVEAU_RUN_URL="https://download.nvidia.com/XFree86/Linux-x86/325.15/NVIDIA-Linux-x86-325.15.run"
+NOUVEAU_EXTRACTOR_URL="https://raw.githubusercontent.com/envytools/firmware/master/extract_firmware.py"
+IPW_DEB_POOL="https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree"
+
+registrar() {
+	printf '%s %s\n' "$(date '+%F %T' 2>/dev/null)" "$*" >>"$LOG" 2>/dev/null || true
+}
+aviso() { printf '[lazaro-controladores] %s\n' "$*" >&2; registrar "$*"; }
+
+parametro() {
+	for p in $(cat "$CMDLINE" 2>/dev/null); do
+		case "$p" in "$1"=*) echo "${p#*=}"; return 0 ;; esac
+	done
+	return 1
+}
+
+# --- Lo que hay en el equipo ---------------------------------------------
+
+# awk: lee modules.alias y dice el controlador de cada modalias.
+AWK_ALIAS='BEGIN { n = 0 }
+FNR == NR {
+	if ($1 != "alias") next
+	pat = $2; mod = $3
+	# Prefijo literal (hasta el primer comodín) para descartar rápido.
+	i = match(pat, /[*?[]/)
+	pre[n] = (i ? substr(pat, 1, i - 1) : pat)
+	re = pat
+	gsub(/[.+^$(){}|\\]/, "\\\\&", re)
+	gsub(/\*/, ".*", re); gsub(/\?/, ".", re)
+	rx[n] = "^" re "$"; md[n] = mod; n++
+	next
+}
+{
+	for (k = 0; k < n; k++)
+		if (substr($0, 1, length(pre[k])) == pre[k] && $0 ~ rx[k]) print md[k]
+}
+'
+
+# Controladores que piden las piezas del equipo, uno por línea.
+modulos_del_equipo() {
+	{
+		# Cada pieza dice su "modalias"; modules.alias del kernel dice qué
+		# controlador le corresponde (patrones con * y ?). Se resuelve con
+		# awk porque el modprobe de busybox no tiene -R.
+		al="${LAZARO_MODULOS:-/lib/modules/$(uname -r)/modules.alias}"
+		if [ -r "$al" ]; then
+			cat "$SYS"/bus/*/devices/*/modalias 2>/dev/null | sort -u |
+				awk "$AWK_ALIAS" "$al" -
+		fi
+		# Los que ya están en uso (por si modules.alias no los nombra).
+		for d in "$SYS"/bus/*/devices/*/driver; do
+			[ -L "$d" ] || continue
+			basename "$(readlink "$d")"
+		done
+		# Pruebas en QEMU.
+		parametro lazaro.controladores 2>/dev/null | tr ',' '\n'
+	} | tr '-' '_' | sort -u
+}
+
+tiene_modulo() { # PATRÓN (con comodines de case)
+	for _m in $MODULOS; do
+		# shellcheck disable=SC2254
+		case "$_m" in $1) return 0 ;; esac
+	done
+	return 1
+}
+
+simulado() {
+	case ",$(parametro lazaro.controladores 2>/dev/null || true)," in
+		*",$1,"*) return 0 ;;
+	esac
+	return 1
+}
+
+# Fabricantes (idVendor) de los dispositivos USB que tienen una interfaz
+# de la clase dada (07 impresora, 0b lector de tarjetas).
+usb_con_clase() {
+	for i in "$SYS"/bus/usb/devices/*:*; do
+		[ "$(cat "$i/bInterfaceClass" 2>/dev/null)" = "$1" ] || continue
+		cat "${i%:*}/idVendor" 2>/dev/null || cat "$i/../idVendor" 2>/dev/null || true
+	done | sort -u
+}
+
+usb_ids() {
+	for d in "$SYS"/bus/usb/devices/*; do
+		[ -r "$d/idVendor" ] || continue
+		echo "$(cat "$d/idVendor"):$(cat "$d/idProduct" 2>/dev/null)"
+	done | sort -u
+}
+
+pci_broadcom_wl() {
+	for d in "$SYS"/bus/pci/devices/*; do
+		[ "$(cat "$d/vendor" 2>/dev/null)" = 0x14e4 ] || continue
+		id="$(cat "$d/device" 2>/dev/null)"; id="${id#0x}"
+		case " $BROADCOM_WL_IDS " in *" $id "*) return 0 ;; esac
+	done
+	return 1
+}
+
+hay_bateria() {
+	for b in "$SYS"/class/power_supply/*; do
+		[ "$(cat "$b/type" 2>/dev/null)" = Battery ] && return 0
+	done
+	return 1
+}
+
+hay_sensores_movimiento() {
+	for s in "$SYS"/bus/iio/devices/iio:device*; do
+		case "$(cat "$s/name" 2>/dev/null)" in
+			*accel*|*als*|*incli*|*gyro*|*light*) return 0 ;;
+		esac
+	done
+	return 1
+}
+
+hay_thunderbolt() {
+	for t in "$SYS"/bus/thunderbolt/devices/domain*; do
+		[ -e "$t" ] && return 0
+	done
+	return 1
+}
+
+hay_escritorio() {
+	[ -e "$RAIZ/etc/lazaro/sin-escritorio" ] && return 1
+	return 0
+}
+
+# Firmware que el kernel buscó y no encontró (avisos del arranque).
+firmware_faltante() {
+	if [ -n "${LAZARO_DMESG:-}" ]; then
+		cat "$LAZARO_DMESG"
+	else
+		dmesg 2>/dev/null || true
+	fi | sed -n \
+		-e 's/.*Direct firmware load for \([^ ]*\) failed.*/\1/p' \
+		-e 's/.*firmware: failed to load \([^ ]*\) .*/\1/p' | sort -u
+}
+
+# --- Lo que ya está instalado --------------------------------------------
+
+instalado() { # PAQUETE
+	if [ -n "$RAIZ" ]; then
+		apk --root "$RAIZ" info -e "$1" >/dev/null 2>&1
+	else
+		apk info -e "$1" >/dev/null 2>&1
+	fi
+}
+
+hay_firmware() { # RUTA relativa a /lib/firmware (con comodines)
+	for _f in "$RAIZ"/lib/firmware/$1 "$RAIZ"/lib/firmware/$1.zst "$RAIZ"/lib/firmware/$1.xz; do
+		[ -e "$_f" ] && return 0
+	done
+	return 1
+}
+
+conf() { # CLAVE: valor en controladores.conf (aceptado, rechazado, hecho)
+	sed -n "s/^$1=//p" "$RAIZ/$CONF_REL" 2>/dev/null | tail -n 1
+}
+
+conf_poner() { # CLAVE VALOR
+	mkdir -p "$RAIZ/etc/lazaro"
+	touch "$RAIZ/$CONF_REL"
+	_tmp="$RAIZ/$CONF_REL.tmp"
+	grep -v "^$1=" "$RAIZ/$CONF_REL" >"$_tmp" 2>/dev/null || true
+	echo "$1=$2" >>"$_tmp"
+	mv "$_tmp" "$RAIZ/$CONF_REL"
+}
+
+# --- Reglas --------------------------------------------------------------
+
+# falta CLASE CLAVE "PAQUETES" "DESCRIPCIÓN"
+# Lo de Alpine solo se anota si falta alguno de los paquetes.
+falta() {
+	if [ "$1" = alpine ] || [ "$1" = menu ]; then
+		_falta=""
+		for _p in $3; do
+			instalado "$_p" || _falta="$_falta $_p"
+		done
+		[ -n "$_falta" ] || return 0
+		printf '%s\t%s\t%s\t%s\n' "$1" "$2" "${_falta# }" "$4"
+	else
+		[ "$(conf "$2")" != rechazado ] || return 0
+		printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4"
+	fi
+}
+
+revisar() {
+	MODULOS="$(modulos_del_equipo | tr '\n' ' ')"
+
+	# Sonido de los portátiles Intel con "Smart Sound" (SOF).
+	if tiene_modulo 'snd_sof*'; then
+		falta alpine sonido-sof "sof-firmware alsa-ucm-conf" \
+			"Sonido del portátil (Intel Smart Sound): sin esto puede no sonar o no andar el micrófono"
+	fi
+
+	# Impresoras USB, según la marca.
+	for v in $(usb_con_clase 07); do
+		case "$v" in
+			03f0) falta alpine impresora-hp "hplip" "Impresora HP" ;;
+			04b8) falta alpine impresora-epson "epson-inkjet-printer-escpr gutenprint-cups" "Impresora Epson" ;;
+			04f9) falta alpine impresora-brother "brlaser gutenprint-cups" "Impresora Brother" ;;
+			04e8|0924) falta alpine impresora-samsung "splix" "Impresora Samsung o Xerox" ;;
+			*) falta alpine impresora-otra "gutenprint-cups" "Impresora ($v)" ;;
+		esac
+	done
+
+	# Lectores de huellas reconocidos por libfprint.
+	if [ -r "$DATOS/huellas.ids" ]; then
+		for id in $(usb_ids); do
+			if grep -qix "$id" "$DATOS/huellas.ids"; then
+				falta alpine huellas "fprintd fprintd-pam" "Lector de huellas ($id)"
+				break
+			fi
+		done
+	fi
+	simulado huellas && falta alpine huellas "fprintd fprintd-pam" "Lector de huellas (prueba)"
+
+	# Lectores de tarjetas (DNI electrónico, firma digital).
+	if [ -n "$(usb_con_clase 0b)" ] || simulado tarjetas; then
+		falta alpine tarjetas "pcsc-lite pcsc-lite-openrc ccid opensc" "Lector de tarjetas (DNI electrónico, firma digital)"
+	fi
+
+	# Pantalla que gira y sensor de luz (2 en 1, tabletas).
+	if hay_sensores_movimiento || simulado sensores; then
+		falta alpine sensores "iio-sensor-proxy" "Sensores de giro y de luz (equipos 2 en 1)"
+	fi
+
+	if hay_thunderbolt || simulado thunderbolt; then
+		falta alpine thunderbolt "bolt" "Thunderbolt (bases y discos)"
+	fi
+
+	# Ahorro de batería (Julián, 2026-11-04: power-profiles-daemon).
+	if hay_bateria || simulado bateria; then
+		falta alpine bateria "power-profiles-daemon" "Modos de ahorro de batería"
+	fi
+
+	# Con escritorio, siempre: escáneres, celulares y cámaras de fotos,
+	# tabletas de dibujo. Son livianos (unos 3 MB).
+	if hay_escritorio; then
+		falta alpine escaneres "sane sane-airscan simple-scan" "Escáneres (USB y de red)"
+		falta alpine celulares "gvfs-mtp gvfs-gphoto2 gvfs-afc" "Ver los archivos del celular y de cámaras de fotos"
+		falta alpine tabletas "xf86-input-wacom libwacom" "Tabletas de dibujo y lápices Wacom"
+	fi
+	falta alpine discos "ntfs-3g exfatprogs mtools" "Discos y memorias de Windows (NTFS, exFAT)"
+	falta alpine temperatura "lm-sensors" "Temperatura y ventiladores"
+
+	# Wifi Broadcom antiguo con el controlador libre b43 (las que usan wl
+	# no lo necesitan).
+	if { tiene_modulo b43 && ! pci_broadcom_wl; } || simulado b43; then
+		hay_firmware 'b43/ucode*.fw' || falta descarga b43 "b43-fwcutter" \
+			"Wifi Broadcom antiguo (b43): el firmware se descarga del espejo de OpenWrt (13,5 MB)"
+	fi
+	if tiene_modulo b43legacy || simulado b43legacy; then
+		hay_firmware 'b43legacy/ucode*.fw' || falta descarga b43legacy "b43-fwcutter" \
+			"Wifi Broadcom muy antiguo (b43legacy): el firmware se descarga del espejo de OpenWrt (0,6 MB)"
+	fi
+
+	# Intel PRO/Wireless 2100 y 2200/2915 (Centrino).
+	if tiene_modulo ipw2100 || simulado ipw2100; then
+		hay_firmware 'ipw2100-1.3*.fw' || falta licencia ipw2100 "" \
+			"Wifi Intel PRO/Wireless 2100: firmware de Intel, hay que aceptar su licencia"
+	fi
+	if tiene_modulo ipw2200 || simulado ipw2200; then
+		hay_firmware 'ipw2200-*.fw' || falta licencia ipw2200 "" \
+			"Wifi Intel PRO/Wireless 2200/2915: firmware de Intel, hay que aceptar su licencia"
+	fi
+
+	# Prism54 (Intersil).
+	if tiene_modulo 'p54pci' || simulado p54pci; then
+		hay_firmware isl3886pci || falta descarga p54pci "" "Wifi Prism54 PCI: el firmware se descarga de daemonizer.de (30 KB)"
+	fi
+	if tiene_modulo 'p54usb' || simulado p54usb; then
+		hay_firmware isl3886usb || falta descarga p54usb "" "Wifi Prism54 USB: el firmware se descarga de daemonizer.de (60 KB)"
+	fi
+
+	# Firmware que el kernel pidió y no encontró.
+	for f in $(firmware_faltante); do
+		f="${f#/}"; f="${f#lib/firmware/}"
+		hay_firmware "$f" && continue
+		case "$f" in
+			b43/*|b43legacy/*|ipw2*|isl38*|nouveau/*) continue ;; # reglas de arriba
+		esac
+		p="$(awk -F'\t' -v f="$f" '$1 == f { print $2; exit }' "$DATOS/firmware-paquetes.tsv" 2>/dev/null)"
+		[ -n "$p" ] && falta alpine "firmware-$p" "$p" "Firmware $f"
+	done
+
+	# Solo desde el menú.
+	if [ "${SOLO_AUTOMATICO:-no}" = no ]; then
+		if tiene_modulo nouveau && ! hay_firmware 'nouveau/nv*_fuc*'; then
+			falta descarga nouveau-video "python3" "Video acelerado en tarjetas NVIDIA viejas (nouveau): se descarga el driver de NVIDIA (27 MB) y se extrae su firmware"
+		fi
+		falta menu firmware "fwupd" "Actualizar el firmware del equipo (BIOS, discos, bases), si el fabricante lo ofrece"
+		falta menu braille "brltty orca" "Líneas braille y lector de pantalla"
+	fi
+}
+
+# Elimina repeticiones (dos impresoras de la misma marca, etc.).
+revisar_sin_repetir() {
+	revisar | awk -F'\t' '!visto[$2]++'
+}
+
+# Saca data.tar.* de un .deb (es un archivo "ar"; busybox no trae ar).
+# Cabecera de cada parte: 60 bytes, nombre en 1-16 y tamaño en 49-58.
+sacar_data_tar() { # DEB (deja data.tar.* en la carpeta actual)
+	sd_pos=8
+	sd_total="$(wc -c <"$1")"
+	while [ "$sd_pos" -lt "$sd_total" ]; do
+		sd_cab="$(dd if="$1" bs=1 skip="$sd_pos" count=60 2>/dev/null)"
+		sd_nombre="$(printf '%s' "$sd_cab" | cut -c1-16 | tr -d ' /')"
+		sd_tam="$(printf '%s' "$sd_cab" | cut -c49-58 | tr -d ' ')"
+		case "$sd_tam" in ''|*[!0-9]*) return 1 ;; esac
+		sd_pos=$((sd_pos + 60))
+		case "$sd_nombre" in
+			data.tar*)
+				tail -c +"$((sd_pos + 1))" "$1" | head -c "$sd_tam" >"$sd_nombre"
+				return 0 ;;
+		esac
+		sd_pos=$((sd_pos + sd_tam + sd_tam % 2))
+	done
+	return 1
+}
+
+# --- Instalar ------------------------------------------------------------
+
+apk_add() {
+	if [ -n "$RAIZ" ]; then
+		apk --root "$RAIZ" add --no-progress "$@"
+	else
+		apk add --no-progress "$@"
+	fi
+}
+
+servicio() { # NOMBRE: lo deja encendido al arrancar (y ya, sin raíz)
+	[ -e "$RAIZ/etc/init.d/$1" ] || return 0
+	mkdir -p "$RAIZ/etc/runlevels/default"
+	ln -sf "/etc/init.d/$1" "$RAIZ/etc/runlevels/default/$1"
+	[ -n "$RAIZ" ] || rc-service "$1" start >/dev/null 2>&1 || true
+}
+
+descargar() { # URL DESTINO [SHA256]
+	rm -f "$2"
+	wget -q -T 30 -O "$2" "$1" 2>/dev/null || curl -fsSL --max-time 300 -o "$2" "$1" || return 1
+	if [ -n "${3:-}" ]; then
+		[ "$(sha256sum "$2" | cut -c1-64)" = "$3" ] || { aviso "Suma de $1 distinta a la esperada"; return 1; }
+	fi
+}
+
+recargar() { # MÓDULO: para que tome el firmware nuevo, sin raíz aparte
+	[ -z "$RAIZ" ] || return 0
+	modprobe -r "$1" 2>/dev/null && modprobe "$1" 2>/dev/null || true
+}
+
+instalar_b43() { # b43|b43legacy
+	command -v b43-fwcutter >/dev/null 2>&1 || apk add --no-progress b43-fwcutter >/dev/null 2>&1 \
+		|| { aviso "Falta b43-fwcutter"; return 1; }
+	t="$(mktemp -d)"
+	if [ "$1" = b43 ]; then
+		descargar "$B43_URL" "$t/wl.tar.bz2" "$B43_SHA256" || { rm -rf "$t"; return 1; }
+		tar -xjf "$t/wl.tar.bz2" -C "$t"
+		obj="$(find "$t" -name 'wl_apsta.o' | head -n 1)"
+	else
+		descargar "$B43LEGACY_URL" "$t/wl_apsta.o" "$B43LEGACY_SHA256" || { rm -rf "$t"; return 1; }
+		obj="$t/wl_apsta.o"
+	fi
+	mkdir -p "$RAIZ/lib/firmware"
+	rc=0
+	b43-fwcutter -w "$RAIZ/lib/firmware" "$obj" >/dev/null || rc=$?
+	rm -rf "$t"
+	[ "$rc" = 0 ] && recargar "$1"
+	return "$rc"
+}
+
+instalar_p54() { # p54pci|p54usb
+	mkdir -p "$RAIZ/lib/firmware"
+	if [ "$1" = p54pci ]; then
+		descargar "$P54_BASE/fw-softmac/2.13.12.0.arm" "$RAIZ/lib/firmware/isl3886pci" || return 1
+	else
+		descargar "$P54_BASE/fw-usb/2.5.8.0.arm" "$RAIZ/lib/firmware/isl3886usb" || return 1
+		descargar "$P54_BASE/fw-usb/2.13.25.0.lm87.arm" "$RAIZ/lib/firmware/isl3887usb" \
+			|| descargar "$P54_BASE/fw-usb/2.13.25.0.lm86.arm" "$RAIZ/lib/firmware/isl3887usb" || true
+	fi
+	recargar "$1"
+}
+
+# Firmware de Intel 2100/2200: viene en la ISO (Completa y Ligera, en
+# /usr/share/lazaro/firmware-licencia/ipw2x00) o se descarga el paquete de
+# Debian. Solo después de aceptar la licencia.
+instalar_ipw() { # ipw2100|ipw2200
+	[ "$(conf "$1")" = aceptado ] || [ "$(conf ipw2x00)" = aceptado ] || { aviso "Licencia de $1 sin aceptar"; return 1; }
+	origen="$DATOS/firmware-licencia/ipw2x00"
+	t=""
+	if ! ls "$origen"/"$1"*.fw >/dev/null 2>&1; then
+		t="$(mktemp -d)"
+		deb="$(wget -q -O - "$IPW_DEB_POOL/" 2>/dev/null | grep -o 'firmware-ipw2x00_[^"]*_all\.deb' | sort -u | tail -n 1)"
+		[ -n "$deb" ] || { rm -rf "$t"; return 1; }
+		descargar "$IPW_DEB_POOL/$deb" "$t/ipw.deb" || { rm -rf "$t"; return 1; }
+		(cd "$t" && sacar_data_tar ipw.deb && tar -xf data.tar.*) || { rm -rf "$t"; return 1; }
+		origen="$t/usr/lib/firmware"
+		[ -d "$origen" ] || origen="$t/lib/firmware"
+	fi
+	mkdir -p "$RAIZ/lib/firmware"
+	cp "$origen"/"$1"*.fw "$RAIZ/lib/firmware/"
+	mkdir -p "$RAIZ/usr/share/licenses/ipw2x00"
+	cp "$DATOS/firmware-licencia/LICENSE.ipw2x00" "$RAIZ/usr/share/licenses/ipw2x00/" 2>/dev/null || true
+	[ -z "$t" ] || rm -rf "$t"
+	recargar "$1"
+}
+
+instalar_nouveau_video() {
+	t="$(mktemp -d)"
+	apk_add python3 >/dev/null 2>&1 || true
+	descargar "$NOUVEAU_RUN_URL" "$t/nvidia.run" || { rm -rf "$t"; return 1; }
+	descargar "$NOUVEAU_EXTRACTOR_URL" "$t/extract_firmware.py" || { rm -rf "$t"; return 1; }
+	(cd "$t" && sh nvidia.run --extract-only >/dev/null && python3 extract_firmware.py >/dev/null) \
+		|| { rm -rf "$t"; return 1; }
+	mkdir -p "$RAIZ/lib/firmware/nouveau"
+	cp "$t"/nv* "$RAIZ/lib/firmware/nouveau/" 2>/dev/null || true
+	cp "$t"/vuc-* "$RAIZ/lib/firmware/nouveau/" 2>/dev/null || true
+	rm -rf "$t"
+	ls "$RAIZ"/lib/firmware/nouveau/nv* >/dev/null 2>&1
+}
+
+# instalar_una CLAVE: instala una cosa de la lista de --revisar.
+instalar_una() {
+	linea="$(revisar_sin_repetir | awk -F'\t' -v c="$1" '$2 == c')"
+	[ -n "$linea" ] || { aviso "$1: no hace falta"; return 0; }
+	clase="$(printf '%s' "$linea" | cut -f1)"
+	paquetes="$(printf '%s' "$linea" | cut -f3)"
+	rc=0
+	case "$clase" in
+		alpine|menu)
+			# shellcheck disable=SC2086
+			apk_add $paquetes >>"$LOG" 2>&1 || rc=$?
+			case "$1" in
+				tarjetas) servicio pcscd ;;
+				sensores) servicio iio-sensor-proxy ;;
+				thunderbolt) servicio boltd ;;
+				bateria) servicio power-profiles-daemon ;;
+				firmware) servicio fwupd ;;
+				braille) servicio brltty ;;
+			esac ;;
+		licencia) instalar_ipw "$1" >>"$LOG" 2>&1 || rc=$? ;;
+		descarga)
+			case "$1" in
+				b43|b43legacy) instalar_b43 "$1" >>"$LOG" 2>&1 || rc=$? ;;
+				p54pci|p54usb) instalar_p54 "$1" >>"$LOG" 2>&1 || rc=$? ;;
+				nouveau-video) instalar_nouveau_video >>"$LOG" 2>&1 || rc=$? ;;
+			esac ;;
+	esac
+	if [ "$rc" = 0 ]; then
+		aviso "$1: listo"
+		echo "LAZARO-CONTROLADOR-OK $1"
+	else
+		aviso "$1: no se pudo (código $rc)"
+		echo "LAZARO-CONTROLADOR-NO $1"
+	fi
+	return "$rc"
+}
+
+instalar_alpine() {
+	SOLO_AUTOMATICO=si
+	err=0
+	for c in $(revisar_sin_repetir | awk -F'\t' '$1 == "alpine" { print $2 }'); do
+		instalar_una "$c" || err=1
+	done
+	return "$err"
+}
+
+# --- En la sesión --------------------------------------------------------
+
+como_root() { # COMANDO...
+	if [ "$(id -u)" = 0 ]; then
+		"$@"
+	elif command -v pkexec >/dev/null 2>&1; then
+		pkexec "$@"
+	else
+		doas "$@"
+	fi
+}
+
+licencia_texto() {
+	cat "$DATOS/firmware-licencia/LICENSE.ipw2x00" 2>/dev/null \
+		|| echo "No se encontró el texto de la licencia de Intel."
+}
+
+# Pide aceptar la licencia de Intel. 0 si se aceptó.
+pedir_licencia() { # CLAVE
+	zenity --text-info --width=640 --height=520 --title="Licencia de Intel ($1)" \
+		--checkbox="Acepto la licencia de Intel para el firmware de mi tarjeta wifi" \
+		--filename=/dev/stdin <<-EOF
+	$(licencia_texto)
+	EOF
+}
+
+ventana() {
+	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	lista="$(revisar_sin_repetir)"
+	if [ -z "$lista" ]; then
+		zenity --info --width=380 --title="Controladores" \
+			--text="No falta nada: todo el hardware que se pudo revisar tiene lo que necesita." >/dev/null 2>&1 || true
+		return 0
+	fi
+	# Marcado de entrada todo, salvo lo que solo está en el menú.
+	elegidos="$(printf '%s\n' "$lista" | awk -F'\t' '{
+		marca = ($1 == "menu" || $2 == "nouveau-video") ? "FALSE" : "TRUE"
+		print marca; print $2; print $4 }' | zenity --list --checklist --width=720 --height=420 --title="Controladores" \
+		--text="Esto es lo que le falta a tu equipo. Marca lo que quieras instalar.\nLo que se descarga necesita internet." \
+		--column="" --column="Clave" --column="Qué es" --hide-column=2 --print-column=2 --separator=' ' 2>/dev/null)" || return 0
+	[ -n "$elegidos" ] || return 0
+	for c in $elegidos; do
+		case "$c" in
+			ipw2100|ipw2200)
+				if pedir_licencia "$c"; then
+					como_root "$0" --aceptar "$c"
+				else
+					elegidos="$(echo " $elegidos " | sed "s/ $c / /")"
+				fi ;;
+		esac
+	done
+	[ -n "$(printf '%s' "$elegidos" | tr -d ' ')" ] || return 0
+	# shellcheck disable=SC2086
+	salida="$(como_root "$0" --instalar $elegidos 2>&1)" || true
+	ok="$(printf '%s\n' "$salida" | grep -c 'LAZARO-CONTROLADOR-OK' || true)"
+	no="$(printf '%s\n' "$salida" | grep 'LAZARO-CONTROLADOR-NO' | sed 's/.*-NO //' | tr '\n' ' ')"
+	if [ -n "$no" ]; then
+		zenity --warning --width=420 --title="Controladores" \
+			--text="Instalados: $ok. No se pudo: $no\n\nRevisa la conexión a internet. Detalles en $LOG" >/dev/null 2>&1 || true
+	else
+		zenity --info --width=380 --title="Controladores" \
+			--text="Listo. Si algo no anda todavía, reinicia el equipo." >/dev/null 2>&1 || true
+	fi
+}
+
+# Aviso cuando falta algo: al iniciar la sesión y cada vez que se conecta
+# un dispositivo. Solo avisa de lo nuevo, y no de lo que solo está en el
+# menú (Julián, 2026-11-04: "avisar cuando falte algo").
+vigilar() {
+	visto="${XDG_RUNTIME_DIR:-/tmp}/lazaro-controladores.visto"
+	: >"$visto"
+	revisar_avisar() {
+		SOLO_AUTOMATICO=si
+		nuevos="$(revisar_sin_repetir | awk -F'\t' '{ print $2 "\t" $4 }' | while IFS="$(printf '\t')" read -r c d; do
+			grep -qx "$c" "$visto" && continue
+			echo "$c" >>"$visto"
+			echo "$d"
+		done)"
+		[ -n "$nuevos" ] || return 0
+		texto="Falta algo para tu hardware:
+$(printf '%s\n' "$nuevos" | sed 's/^/• /' | head -n 5)"
+		# En segundo plano: el aviso espera a que se lo cierre.
+		(
+			if command -v notify-send >/dev/null 2>&1; then
+				accion="$(notify-send -a Lázaro -i system-software-install -A abrir=Instalar \
+					"Controladores" "$texto" 2>/dev/null || true)"
+				[ "$accion" != abrir ] || "$0" --ventana
+			else
+				zenity --question --width=420 --title="Controladores" --ok-label="Instalar" \
+					--text="$texto" >/dev/null 2>&1 && "$0" --ventana
+			fi
+		) &
+	}
+	sleep 20
+	revisar_avisar
+	command -v udevadm >/dev/null 2>&1 || return 0
+	udevadm monitor --udev --subsystem-match=usb --subsystem-match=pci 2>/dev/null | while read -r l; do
+		case "$l" in *" add "*|*"add "*) ;; *) continue ;; esac
+		# Varios eventos por dispositivo: se espera a que lleguen todos.
+		sleep 3
+		revisar_avisar
+	done
+}
+
+# Servicio de arranque: instala lo de Alpine que falte, esperando internet
+# si hace falta (hasta 30 minutos), sin molestar.
+arranque() {
+	instalar_alpine && return 0
+	i=0
+	while [ $i -lt 360 ]; do
+		if wget -q --spider -T 8 "$(grep -m1 '^http' /etc/apk/repositories)/" 2>/dev/null; then
+			apk update -q >/dev/null 2>&1 || true
+			instalar_alpine || true
+			return 0
+		fi
+		i=$((i + 1))
+		sleep 5
+	done
+}
+
+# --- Opciones ------------------------------------------------------------
+
+orden=""
+claves=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--raiz) RAIZ="${2%/}"; shift ;;
+		--revisar|--instalar-alpine|--instalar|--aceptar|--rechazar|--ventana|--vigilar|--arranque) orden="$1" ;;
+		-*) echo "Opción desconocida: $1" >&2; exit 2 ;;
+		*) claves="$claves $1" ;;
+	esac
+	shift
+done
+[ -z "$RAIZ" ] || LOG="$RAIZ$LOG"
+mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
+
+case "$orden" in
+	--revisar) revisar_sin_repetir ;;
+	--instalar-alpine) instalar_alpine ;;
+	--instalar)
+		err=0
+		for c in $claves; do instalar_una "$c" || err=1; done
+		exit "$err" ;;
+	--aceptar) for c in $claves; do conf_poner "$c" aceptado; registrar "Licencia aceptada: $c"; done ;;
+	--rechazar) for c in $claves; do conf_poner "$c" rechazado; done ;;
+	--ventana) ventana ;;
+	--vigilar) vigilar ;;
+	--arranque) arranque ;;
+	*) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+esac

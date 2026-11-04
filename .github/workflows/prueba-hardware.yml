@@ -1,5 +1,5 @@
-# EXPERIMENTO (rama prueba-hardware, no fusionar): nombres y pesos de los
-# paquetes para lazaro-controladores; ar de busybox; huellas de libfprint.
+# EXPERIMENTO (rama prueba-hardware, no fusionar): servicios, herramienta
+# con busybox real, nouveau y p54.
 name: Prueba hardware
 
 on:
@@ -12,30 +12,35 @@ jobs:
     runs-on: ubuntu-24.04
     container: alpine:3.24
     steps:
-      - run: |
+      - uses: actions/checkout@v4
+      - name: servicios
+        run: |
           apk update -q
-          for p in sof-firmware alsa-ucm-conf hplip epson-inkjet-printer-escpr gutenprint-cups brlaser splix sane sane-airscan simple-scan \
-                   gvfs-mtp gvfs-gphoto2 gvfs-afc xf86-input-wacom libwacom ntfs-3g exfatprogs mtools lm-sensors fprintd fprintd-pam \
-                   pcsc-lite pcsc-lite-openrc ccid opensc iio-sensor-proxy iio-sensor-proxy-openrc bolt bolt-openrc \
-                   power-profiles-daemon power-profiles-daemon-openrc fwupd fwupd-openrc brltty brltty-openrc orca b43-fwcutter python3 kmod; do
-            if apk search -q -x "$p" | grep -qx "$p"; then echo "EXISTE $p $(apk info -s "$p" 2>/dev/null | sed -n 2p)"; else echo "NO-EXISTE $p"; fi
+          for p in bolt power-profiles-daemon brltty fwupd iio-sensor-proxy-openrc pcsc-lite-openrc fwupd-openrc; do
+            echo "$p: $(apk info -L $p 2>/dev/null | grep -E 'init.d|polkit|autostart|\.desktop' | tr '\n' ' ')"
           done
-          echo "deps de power-profiles-daemon: $(apk info -R power-profiles-daemon | tail -n +2 | tr '\n' ' ')"
-          echo "deps de sof-firmware: $(apk info -R sof-firmware | tail -n +2 | tr '\n' ' ')"
-          echo "install_if openrc: $(apk info -a pcsc-lite-openrc 2>/dev/null | grep -A2 -i 'install if' | tr '\n' ' ')"
-          echo "busybox ar: $(busybox ar 2>&1 | head -1)"
-          echo "modprobe: $(readlink -f /sbin/modprobe)"
-          mkdir -p /tmp/fp && cd /tmp/fp && apk fetch -q --stdout libfprint | tar -xz 2>/dev/null; find . -path '*udev*' -type f
-          grep -rhoiE 'idVendor}=="[0-9a-f]{4}", *ATTRS\{idProduct}=="[0-9a-f]{4}"|usb:v[0-9a-f]{4}p[0-9a-f]{4}' . | head -3
-          echo "IDS: $(grep -rhoiE 'idVendor}=="[0-9a-f]{4}", *ATTRS\{idProduct}=="[0-9a-f]{4}"|usb:v[0-9a-f]{4}p[0-9a-f]{4}' . | sort -u | wc -l)"
-          mkdir -p /tmp/ipw && cd /tmp/ipw && wget -q https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/firmware-ipw2x00_20260916-1~bpo13+1_all.deb -O i.deb && busybox ar x i.deb && ls && tar -tf data.tar.* | grep fw
+          apk search -q 'linux-lts' | head
+      - name: herramienta con busybox
+        run: |
+          apk add -q linux-lts >/dev/null 2>&1 || true
+          kv=$(ls /lib/modules | head -1); echo "kernel $kv"; wc -l /lib/modules/$kv/modules.alias
+          f=/tmp/sys; mkdir -p $f/bus/pci/devices/0000:00:01.0 $f/bus/usb/devices/1-1:1.0
+          echo pci:v000014E4d00004311sv00001028sd00000007bc02sc80i00 > $f/bus/pci/devices/0000:00:01.0/modalias
+          echo usb:v0CF3p9271d0108dcFFdscFFdpFFicFFiscFFipFFin00 > $f/bus/usb/devices/1-1:1.0/modalias
+          time env LAZARO_SYS=$f LAZARO_MODULOS=/lib/modules/$kv/modules.alias LAZARO_DMESG=/dev/null LAZARO_CMDLINE=/dev/null \
+            sh -x pruebas-hw/lazaro-controladores --revisar 2>/tmp/traza || { tail -40 /tmp/traza; exit 1; }
+          mkdir -p /tmp/ipw && cd /tmp/ipw && wget -q https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/firmware-ipw2x00_20260916-1~bpo13+1_all.deb -O ipw.deb
+          sh -c ". /dev/stdin; sacar_data_tar ipw.deb && tar -xf data.tar.* && find . -name '*.fw'" <<EOS
+          $(sed -n '/^sacar_data_tar()/,/^}/p' $GITHUB_WORKSPACE/pruebas-hw/lazaro-controladores)
+          EOS
       - name: nouveau extractor
         run: |
           apk add -q python3 >/dev/null
           cd /tmp && wget -q https://download.nvidia.com/XFree86/Linux-x86/325.15/NVIDIA-Linux-x86-325.15.run && wget -q https://raw.githubusercontent.com/envytools/firmware/master/extract_firmware.py
-          sh NVIDIA-Linux-x86-325.15.run --extract-only >/dev/null 2>&1; ls -d NVIDIA*
-          python3 extract_firmware.py; ls nv* vuc* 2>/dev/null | tr '\n' ' '
+          sh NVIDIA-Linux-x86-325.15.run --extract-only >/dev/null 2>&1 || echo "extract rc=$?"; ls -d NVIDIA* || true
+          python3 extract_firmware.py || echo "py rc=$?"; ls | grep -E '^(nv|vuc)' | tr '\n' ' '
       - name: p54 lm87
+        if: always()
         run: |
           for u in https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.25.0.lm87.arm https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.24.0.lm87.arm https://daemonizer.de/prism54/prism54-fw/fw-usb/; do
             rc=0; wget -q -O /tmp/f "$u" || rc=$?; echo "URL $u rc=$rc tam=$(stat -c %s /tmp/f 2>/dev/null)"
