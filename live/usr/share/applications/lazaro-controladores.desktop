@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Controladores
+GenericName=Controladores del hardware
+Comment=Revisa el equipo e instala lo que le falta (wifi, impresoras, sonido, huellas...)
+Exec=lazaro-controladores --ventana
+Icon=system-software-install
+Terminal=false
+Categories=System;Settings;HardwareSettings;
+Keywords=drivers;controladores;firmware;wifi;impresora;hardware;

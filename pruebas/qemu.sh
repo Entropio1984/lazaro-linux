@@ -288,7 +288,7 @@ prueba_instalar() {
 	echo "Instalando ($MODO, $de, $red)..."
 	arrancar "$nombre" "$MEM" "$serie" \
 		-kernel "$k" -initrd "$i" \
-		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda${broadcom:+ lazaro.broadcom=forzar}" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda lazaro.controladores=huellas,tarjetas${broadcom:+ lazaro.broadcom=forzar}" \
 		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic "$nic"
 	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
 		captura "$mon" "$RES/$nombre-instalacion-fallo"
@@ -305,6 +305,18 @@ prueba_instalar() {
 		return 1
 	fi
 	[ -z "$broadcom" ] || echo "OK: broadcom-wl compilado ($(grep -m1 -o 'LAZARO-BROADCOM-OK.*' "$serie"))."
+	# lazaro-controladores: la prueba simula un lector de huellas y uno de
+	# tarjetas (lazaro.controladores=...); sus paquetes vienen en la ISO,
+	# así que se instalan también sin internet.
+	for c in huellas tarjetas; do
+		if ! grep -q "LAZARO-CONTROLADOR-OK $c" "$serie"; then
+			terminar "$pid"
+			echo "FALLO: lazaro-controladores no instaló '$c'." >&2
+			grep -E 'LAZARO-CONTROLADOR|[Cc]ontroladores' "$serie" | tail -n 20 >&2 || true
+			return 1
+		fi
+	done
+	echo "OK: controladores simulados instalados (huellas, tarjetas)."
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-desktop instala (sin
 	# escritorio no hay ese paso: setup-disk no escribe una línea por

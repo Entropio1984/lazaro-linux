@@ -3,6 +3,7 @@
 # Lo ejecuta mkimage.sh bajo fakeroot, con el nombre de host como $1.
 # Variables que deja build.sh / el perfil:
 #   LAZARO_LIVE_DIR  carpeta live/ (archivos a copiar tal cual)
+#   LAZARO_DATOS_HW  datos generados al compilar (huellas, firmware Intel)
 #   LAZARO_SCRIPT    ruta a desktop-postinstall.sh
 #   LAZARO_VERSION_ENV  archivo con la versión de Alpine y de la ISO
 #   LAZARO_WORLD     paquetes de la sesión live
@@ -26,6 +27,7 @@ rc_add() {
 
 # Archivos fijos de la sesión live (Calamares, servicios, accesos).
 cp -a "$LAZARO_LIVE_DIR"/. "$tmp"/
+[ ! -d "${LAZARO_DATOS_HW:-}" ] || cp -a "$LAZARO_DATOS_HW"/. "$tmp"/
 chown -R root:root "$tmp"
 chmod 0755 "$tmp"/usr/sbin/* "$tmp"/etc/init.d/*
 

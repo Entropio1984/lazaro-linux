@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Aviso de controladores
+Comment=Avisa si al hardware le falta un controlador
+Exec=lazaro-controladores --vigilar
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
