@@ -335,6 +335,29 @@ broadcom_wl_tarjeta() {
 # su kernel. Sin internet usa las cabeceras del kernel y el compilador que
 # vienen en la ISO. Si falla, la instalación sigue: el equipo queda sin
 # wifi pero con cable, y akms lo vuelve a intentar con cada kernel nuevo.
+# Como en_destino, pero con bwrap en vez de chroot. Dentro de un chroot el
+# kernel no deja crear espacios de usuario, y akms los usa para compilar
+# aislado; bwrap cambia la raíz de otra forma (pivot_root) y ahí sí se
+# puede. Si la live no tiene bwrap, se usa chroot.
+en_destino_aislado() {
+	raiz="$1"
+	shift
+	command -v bwrap >/dev/null 2>&1 || { en_destino "$raiz" "$@"; return; }
+	if ! montar_destino "$raiz"; then
+		desmontar_propios
+		return 1
+	fi
+	cp /etc/resolv.conf "$raiz/etc/resolv.conf" 2>/dev/null || true
+	rc=0
+	bwrap --bind "$raiz" / --dev-bind /dev /dev --proc /proc \
+		--die-with-parent --chdir / \
+		/usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root TERM=linux \
+		"$@" || rc=$?
+	matar_restos "$raiz"
+	desmontar_propios
+	return $rc
+}
+
 paso_broadcom() { # RAIZ
 	bw_tarjeta="$(broadcom_wl_tarjeta)" || return 0
 	log "Wifi Broadcom $bw_tarjeta: se instala el driver broadcom-wl (se compila, tarda unos minutos)..."
@@ -350,13 +373,15 @@ paso_broadcom() { # RAIZ
 	done
 	[ -n "$bw_src" ] || [ "$bw_rc" != 0 ] || bw_rc=1
 	if [ "$bw_rc" = 0 ]; then
-		en_destino "$1" akms install -k all "$bw_src" </dev/null >>"$LOG" 2>&1 || bw_rc=$?
-		# akms arma un entorno aparte (overlay) para compilar; si eso no se
-		# puede dentro del chroot, se compila directo en el sistema.
+		# El disparador de apk ya lo intentó dentro del chroot, donde akms
+		# no puede aislar la compilación; se repite fuera del chroot.
+		en_destino_aislado "$1" akms install -k all "$bw_src" </dev/null >>"$LOG" 2>&1 || bw_rc=$?
+		# akms arma un entorno aparte (overlay) para compilar; si eso no
+		# anda, se compila directo en el sistema.
 		if [ "$bw_rc" != 0 ]; then
 			log "Aviso: akms falló con overlay (código $bw_rc); se intenta sin overlay."
 			bw_rc=0
-			en_destino "$1" akms install --no-overlay -k all "$bw_src" </dev/null >>"$LOG" 2>&1 || bw_rc=$?
+			en_destino_aislado "$1" akms install --no-overlay -k all "$bw_src" </dev/null >>"$LOG" 2>&1 || bw_rc=$?
 		fi
 	fi
 	avance_parar
@@ -369,6 +394,16 @@ paso_broadcom() { # RAIZ
 	if [ -z "$bw_ko" ]; then
 		log "Aviso: no se pudo compilar broadcom-wl (código $bw_rc, detalles en $LOG). El wifi Broadcom no funcionará hasta conectarse por cable y ejecutar: doas akms install -k all ${bw_src:-/usr/src/broadcom-wl-*}"
 		echo "LAZARO-BROADCOM-NO"
+		# ¿Se pueden crear espacios de usuario? (akms los necesita)
+		for bw_m in chroot aislado; do
+			bw_p=0
+			if [ "$bw_m" = chroot ]; then
+				en_destino "$1" bwrap --unshare-user --ro-bind / / true >>"$LOG" 2>&1 || bw_p=$?
+			else
+				en_destino_aislado "$1" bwrap --unshare-user --ro-bind / / true >>"$LOG" 2>&1 || bw_p=$?
+			fi
+			echo "bwrap en modo $bw_m: código $bw_p" | tee -a "$LOG"
+		done
 		grep -i -E 'akms|error|broadcom' "$LOG" | tail -n 40
 		# Lo que dijo el compilador, para saber por qué falló.
 		for bw_b in "$1"/var/lib/akms/*/broadcom-wl/*/build; do
