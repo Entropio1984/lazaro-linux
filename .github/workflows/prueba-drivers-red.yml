@@ -1,0 +1,108 @@
+# EXPERIMENTO (rama prueba-drivers-red, no fusionar): revisa qué
+# controladores de red trae el kernel de Alpine, qué firmware piden y si
+# los controladores de fuera del kernel se pueden compilar.
+name: Prueba drivers de red
+
+on:
+  push:
+    branches: [prueba-drivers-red]
+  workflow_dispatch:
+
+jobs:
+  auditoria:
+    runs-on: ubuntu-24.04
+    container: alpine:3.24
+    steps:
+      - name: Instalar kernel y todo el firmware
+        run: |
+          apk add -q linux-lts linux-firmware kmod zd1211-firmware bluez-firmware b43-fwcutter >/dev/null
+          ls /lib/modules
+          apk list -I 'linux-lts' 'linux-firmware' 2>/dev/null
+      - name: Configuración del kernel (gzip+base64)
+        run: |
+          echo "=====INICIO-CONFIG====="
+          gzip -9c /boot/config-lts | base64
+          echo "=====FIN-CONFIG====="
+      - name: Módulos de red y el firmware que piden
+        run: |
+          K=$(ls /lib/modules | head -1)
+          cd /lib/modules/$K/kernel
+          out=/tmp/fw.tsv; : > $out
+          find drivers/net drivers/bluetooth drivers/staging drivers/usb/atm drivers/atm drivers/usb/net drivers/ssb drivers/bcma drivers/nfc net -name '*.ko*' 2>/dev/null | sort > /tmp/mods.txt
+          wc -l < /tmp/mods.txt
+          while read -r m; do
+            fws=$(modinfo -F firmware "$m" 2>/dev/null)
+            [ -n "$fws" ] || { printf '%s\t-\t-\n' "$m" >> $out; continue; }
+            for f in $fws; do
+              hit=""
+              for c in "" .zst .xz .gz; do
+                [ -e "/lib/firmware/$f$c" ] && { hit="/lib/firmware/$f$c"; break; }
+              done
+              if [ -z "$hit" ]; then
+                g=$(ls /lib/firmware/$f* 2>/dev/null | head -1)   # comodines (*.bin)
+                [ -n "$g" ] && hit="$g"
+              fi
+              if [ -n "$hit" ]; then
+                r=$(readlink -f "$hit")
+                o=$(apk info -q --who-owns "$r" 2>/dev/null | head -1)
+                printf '%s\t%s\t%s\n' "$m" "$f" "${o:-SIN-DUENO}" >> $out
+              else
+                printf '%s\t%s\tFALTA\n' "$m" "$f" >> $out
+              fi
+            done
+          done < /tmp/mods.txt
+          echo "Firmware que falta en todo linux-firmware:"
+          awk -F'\t' '$3=="FALTA"' $out
+          echo "=====INICIO-FW====="
+          gzip -9c $out | base64
+          echo "=====FIN-FW====="
+          echo "=====INICIO-MODS====="
+          gzip -9c /tmp/mods.txt | base64
+          echo "=====FIN-MODS====="
+      - name: Tamaño de los paquetes de firmware extra
+        run: apk info -s zd1211-firmware bluez-firmware b43-fwcutter linux-lts linux-lts-dev 2>/dev/null || true
+
+  fuera-del-kernel:
+    # Controladores que no vienen en el kernel: los de Alpine "testing"
+    # (solo edge) y broadcom-wl (privativo, tomado de Arch). ¿Compilan
+    # con el kernel de la estable?
+    runs-on: ubuntu-24.04
+    container:
+      image: alpine:3.24
+      options: --privileged
+    steps:
+      - name: Preparar compilación
+        run: |
+          apk add -q linux-lts linux-lts-dev akms build-base curl zstd tar >/dev/null
+          echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+          apk update -q
+          ls /lib/modules
+      - name: Paquetes -src de testing con akms
+        run: |
+          K=$(ls /lib/modules | head -1)
+          for p in rtl8821ce-src rtl8812au-src rtl88x2bu-src rtl8192eu-src rtw89-src; do
+            echo "::group::$p"
+            rc=0; apk add "$p@testing" 2>&1 | tail -n 15 || rc=$?
+            akms status 2>&1 | tail -n 5 || true
+            ls /lib/modules/$K/ -R 2>/dev/null | grep -iE '8821ce|8812au|88x2bu|8192eu|rtw89' | head || true
+            echo "::endgroup::"
+            echo "RESULTADO $p rc=$rc"
+          done
+          find /lib/modules/$K -path '*akms*' -name '*.ko*' -exec ls -la {} \; || true
+          find / -name '*.ko*' -newer /etc/apk/repositories -not -path '/proc/*' 2>/dev/null | head -50
+          tail -n 40 /var/lib/akms/*/*/*/build/make.log 2>/dev/null || true
+          ls -R /var/lib/akms 2>/dev/null | head -60 || true
+      - name: broadcom-wl (privativo) desde Arch
+        run: |
+          K=$(ls /lib/modules | head -1)
+          base=https://geo.mirror.pkgbuild.com/extra/os/x86_64
+          f=$(curl -fsSL $base/ | grep -o 'broadcom-wl-dkms-[^"]*\.pkg\.tar\.zst' | grep -v sig | sort -u | tail -1)
+          echo "Paquete: $f"
+          mkdir -p /tmp/wl && cd /tmp/wl
+          curl -fsSL "$base/$f" | zstd -d | tar x
+          src=$(ls -d usr/src/broadcom-wl-* | head -1)
+          echo "Fuente: $src"; ls -la "$src" "$src/lib" 2>/dev/null | head -20
+          cat "$src/dkms.conf" 2>/dev/null | head -30
+          rc=0; make -C /lib/modules/$K/build M=/tmp/wl/$src 2>&1 | tail -n 30 || rc=$?
+          ls -la /tmp/wl/$src/*.ko 2>/dev/null && modinfo /tmp/wl/$src/wl.ko | head -15
+          echo "RESULTADO broadcom-wl rc=$rc"
