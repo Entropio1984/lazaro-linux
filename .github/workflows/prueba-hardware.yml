@@ -1,0 +1,99 @@
+# EXPERIMENTO (rama prueba-hardware, no fusionar): qué paquetes de Alpine
+# 3.24 cubren más hardware (sonido, impresoras, escáneres, huellas...),
+# cuánto pesan, y de dónde salen b43 e ipw2x00.
+name: Prueba hardware
+
+on:
+  push:
+    branches: [prueba-hardware]
+  workflow_dispatch:
+
+jobs:
+  paquetes:
+    runs-on: ubuntu-24.04
+    container: alpine:3.24
+    steps:
+      - name: Base (lo que ya trae Lázaro con XFCE)
+        run: |
+          apk add -q alpine-base xorg-server xf86-input-libinput eudev mesa-dri-gallium xfce4 elogind gvfs lightdm polkit-elogind dbus firefox \
+            networkmanager pipewire wireplumber pipewire-pulse pipewire-alsa cups cups-filters system-config-printer bluez >/dev/null
+          echo "base instalada"
+      - name: Existencia y peso de cada grupo
+        run: |
+          grupo() {
+            nombre="$1"; shift
+            faltan=""; hay=""
+            for p in "$@"; do
+              if apk search -q -x "$p" | grep -qx "$p"; then hay="$hay $p"; else faltan="$faltan $p"; fi
+            done
+            nuevos=$(apk add --simulate $hay 2>/dev/null | sed -n 's/^([0-9]*\/[0-9]*) Installing \([^ ]*\) (\(.*\))$/\1/p')
+            kb=0
+            for n in $nuevos; do
+              s=$(apk info -s "$n" 2>/dev/null | sed -n '2p')
+              v=${s% *}; u=${s#* }
+              case "$u" in KiB) kb=$((kb + v));; MiB) kb=$((kb + v*1024));; B) kb=$((kb + v/1024));; esac
+            done
+            echo "GRUPO $nombre | ${kb} KiB con dependencias ($(echo $nuevos | wc -w) paquetes) | existen:$hay | NO existen:$faltan"
+          }
+          grupo sonido-sof sof-firmware alsa-ucm-conf alsa-utils
+          grupo impresoras-hp hplip
+          grupo impresoras-varias gutenprint gutenprint-cups foomatic-db foomatic-db-ppds foomatic-db-engine splix brlaser epson-inkjet-printer-escpr ipp-usb cups-pdf
+          grupo escaneres sane sane-backends sane-airscan simple-scan xsane
+          grupo huellas fprintd libfprint
+          grupo sensores-rotacion iio-sensor-proxy
+          grupo tabletas xf86-input-wacom libwacom
+          grupo thunderbolt bolt
+          grupo firmware-actualizar fwupd
+          grupo energia tlp power-profiles-daemon thermald
+          grupo tarjetas-inteligentes pcsc-lite ccid opensc
+          grupo accesibilidad brltty orca espeak-ng
+          grupo celulares-camaras gvfs-mtp gvfs-gphoto2 gvfs-afc libmtp
+          grupo camaras-web v4l-utils guvcview snapshot cheese
+          grupo discos ntfs-3g exfatprogs mtools
+          grupo mandos game-devices-udev
+          grupo sensores-pc lm-sensors
+          grupo b43 b43-fwcutter
+          grupo video-va intel-media-driver libva-intel-driver mesa-va-gallium mesa-vdpau-gallium
+          echo "--- búsquedas"
+          for q in 'sane-backend*' '*printer*' 'cups-*' 'hplip*' '*fprint*' '*firmware*' '*ucode*' '*-src'; do echo "== $q"; apk search -q "$q" | tr '\n' ' '; echo; done
+      - name: Cobertura (cuántos equipos reconoce cada uno)
+        run: |
+          apk add -q libfprint sane-backends hplip sof-firmware iio-sensor-proxy >/dev/null 2>&1 || true
+          echo "libfprint IDs USB: $(cat /usr/lib/udev/rules.d/*fprint* /usr/lib/udev/hwdb.d/*fprint* 2>/dev/null | grep -o -i 'usb:v[0-9a-f]*p[0-9a-f]*\|idProduct}=="[0-9a-f]*' | sort -u | wc -l)"
+          ls /usr/lib/udev/rules.d /usr/lib/udev/hwdb.d 2>/dev/null | grep -i -E 'fprint|sane|hpmud|hplip' || true
+          echo "sane backends: $(ls /etc/sane.d/*.conf 2>/dev/null | wc -l); IDs USB: $(cat /usr/lib/udev/rules.d/*sane* /usr/lib/udev/hwdb.d/*sane* 2>/dev/null | grep -o -i 'usb:v[0-9a-f]*p[0-9a-f]*' | sort -u | wc -l)"
+          echo "hplip modelos: $(grep -c '^\[' /usr/share/hplip/data/models/models.dat 2>/dev/null)"
+          echo "sof-firmware: $(find /lib/firmware/intel/sof* /usr/lib/firmware/intel/sof* -type f 2>/dev/null | wc -l) archivos"
+          apk info -L hplip 2>/dev/null | grep -i plugin | head
+  descargas:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: b43 (firmware de Broadcom para b43-fwcutter)
+        run: |
+          for u in https://www.lwfinger.com/b43-firmware/broadcom-wl-6.30.163.46.tar.bz2 \
+                   https://www.lwfinger.com/b43-firmware/broadcom-wl-5.100.138.tar.bz2 \
+                   https://downloads.openwrt.org/sources/broadcom-wl-4.150.10.5.tar.bz2 \
+                   https://downloads.openwrt.org/sources/wl_apsta-3.130.20.0.o \
+                   https://downloads.openwrt.org/sources/broadcom-wl-5.100.138.tar.bz2; do
+            rc=0; curl -fsSL -o /tmp/f "$u" || rc=$?
+            echo "URL $u rc=$rc tam=$(stat -c %s /tmp/f 2>/dev/null) sha256=$(sha256sum /tmp/f 2>/dev/null | cut -c1-64)"
+            rm -f /tmp/f
+          done
+      - name: ipw2100/2200 (paquete de Debian y su licencia)
+        run: |
+          set -x
+          f=$(curl -fsSL https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/ | grep -o 'firmware-ipw2x00_[^"]*_all.deb' | sort -u | tail -1)
+          echo "Paquete: $f"
+          curl -fsSL -o /tmp/ipw.deb "https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/$f"
+          sha256sum /tmp/ipw.deb; ls -la /tmp/ipw.deb
+          mkdir -p /tmp/ipw && cd /tmp/ipw && ar x /tmp/ipw.deb && tar xf data.tar.* && tar xf control.tar.* 
+          find . -type f | grep -v -E '^\./(control|data)' | head -40
+          for l in $(find . -iname '*licen*' -o -iname 'copyright' -o -iname 'templates'); do echo "=== $l"; cat "$l"; done
+      - name: p54 (Intersil Prism54)
+        run: |
+          for u in https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.25.0.lm86.arm \
+                   https://daemonizer.de/prism54/prism54-fw/fw-softmac/2.13.12.0.arm \
+                   https://daemonizer.de/prism54/prism54-fw/fw-usb/2.5.8.0.arm; do
+            rc=0; curl -fsSL -o /tmp/f "$u" || rc=$?; echo "URL $u rc=$rc tam=$(stat -c %s /tmp/f 2>/dev/null)"; rm -f /tmp/f
+          done
+          curl -fsSL https://daemonizer.de/prism54/ 2>/dev/null | sed 's/<[^>]*>//g' | grep -i -E 'licen|copyright|distribut' | head
