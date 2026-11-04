@@ -23,7 +23,7 @@ jobs:
           apk list -I 'linux-lts' 'linux-firmware' 2>/dev/null
       - name: Configuración del kernel (gzip+base64)
         run: |
-          grep -c . /boot/config-lts
+          ls /boot; cp /boot/config* /tmp/config-lts 2>/dev/null || zcat /proc/config.gz > /tmp/config-lts || find / -name "config-6*" -not -path "/proc/*" 2>/dev/null; grep -c . /tmp/config-lts
       - name: Módulos de red y el firmware que piden
         run: |
           K=$(ls /lib/modules | head -1)
@@ -54,7 +54,7 @@ jobs:
           done < /tmp/mods.txt
           echo "Firmware que falta en todo linux-firmware:"
           awk -F'\t' '$3=="FALTA"' $out
-          mkdir -p /tmp/res && cp $out /tmp/mods.txt /tmp/res/ && cp /boot/config-lts /tmp/res/config-lts
+          mkdir -p /tmp/res && cp $out /tmp/mods.txt /tmp/res/ && cp /tmp/config-lts /tmp/res/config-lts
           for m in $(cat /tmp/mods.txt); do printf '%s\t%s\n' "$m" "$(modinfo -F description $m | head -1)"; done > /tmp/res/descripciones.tsv
           apk info -s $(apk search -q 'linux-firmware*') 2>/dev/null | paste - - - | awk '{print $1"\t"$(NF-1)$NF}' > /tmp/res/firmware-tamanos.tsv || true
       - name: Tamaño de los paquetes de firmware extra
