@@ -54,7 +54,10 @@ jobs:
           done < /tmp/mods.txt
           echo "Firmware que falta en todo linux-firmware:"
           awk -F'\t' '$3=="FALTA"' $out
-          mkdir -p /tmp/res && cp $out /tmp/mods.txt /tmp/res/ && cp /tmp/config-lts /tmp/res/config-lts
+          mkdir -p /tmp/res
+          (cd /lib/firmware && find . -type f -o -type l | sed 's#^\./##' | sort) > /tmp/res/fwfiles.txt
+          for p in $(apk info -q | grep '^linux-firmware-'); do apk info -qL $p | sed "s#^#$p\t#"; done > /tmp/res/fw-paquetes.tsv
+          cp $out /tmp/mods.txt /tmp/res/ && cp /tmp/config-lts /tmp/res/config-lts
           for m in $(cat /tmp/mods.txt); do printf '%s\t%s\n' "$m" "$(modinfo -F description $m | head -1)"; done > /tmp/res/descripciones.tsv
           apk info -s $(apk search -q 'linux-firmware*') 2>/dev/null | paste - - - | awk '{print $1"\t"$(NF-1)$NF}' > /tmp/res/firmware-tamanos.tsv || true
       - name: Tamaño de los paquetes de firmware extra
