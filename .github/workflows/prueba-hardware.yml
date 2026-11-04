@@ -65,6 +65,14 @@ jobs:
           echo "hplip modelos: $(grep -c '^\[' /usr/share/hplip/data/models/models.dat 2>/dev/null)"
           echo "sof-firmware: $(find /lib/firmware/intel/sof* /usr/lib/firmware/intel/sof* -type f 2>/dev/null | wc -l) archivos"
           apk info -L hplip 2>/dev/null | grep -i plugin | head
+  resumen-b43:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          for u in https://www.lwfinger.com/b43-firmware/broadcom-wl-6.30.163.46.tar.bz2 https://www.lwfinger.com/b43-firmware/broadcom-wl-5.100.138.tar.bz2 https://downloads.openwrt.org/sources/wl_apsta-3.130.20.0.o https://downloads.openwrt.org/sources/broadcom-wl-5.100.138.tar.bz2; do
+            rc=0; curl -fsSL --max-time 60 -o /tmp/f "$u" || rc=$?
+            echo "RESUMEN b43 $u rc=$rc tam=$(stat -c %s /tmp/f 2>/dev/null) sha256=$(sha256sum /tmp/f 2>/dev/null | cut -c1-64)"; rm -f /tmp/f
+          done
   descargas:
     runs-on: ubuntu-24.04
     steps:
@@ -88,7 +96,13 @@ jobs:
           sha256sum /tmp/ipw.deb; ls -la /tmp/ipw.deb
           mkdir -p /tmp/ipw && cd /tmp/ipw && ar x /tmp/ipw.deb && tar xf data.tar.* && tar xf control.tar.* 
           find . -type f | grep -v -E '^\./(control|data)' | head -40
-          for l in $(find . -iname '*licen*' -o -iname 'copyright' -o -iname 'templates'); do echo "=== $l"; cat "$l"; done
+          echo "RESUMEN ipw: $f $(stat -c %s /tmp/ipw.deb) bytes"; find . -path ./control -prune -o -type f -name '*.fw' -print | xargs -r ls -la
+      - name: Firmware de video de nouveau (tarjetas NVIDIA viejas)
+        run: |
+          for u in https://download.nvidia.com/XFree86/Linux-x86/325.15/NVIDIA-Linux-x86-325.15.run \
+                   https://raw.githubusercontent.com/envytools/firmware/master/extract_firmware.py; do
+            rc=0; curl -fsSLI "$u" >/tmp/h || rc=$?; echo "URL $u rc=$rc $(grep -i content-length /tmp/h | tail -1)"
+          done
       - name: p54 (Intersil Prism54)
         run: |
           for u in https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.25.0.lm86.arm \
