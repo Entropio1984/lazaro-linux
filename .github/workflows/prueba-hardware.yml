@@ -17,7 +17,7 @@ jobs:
         run: |
           apk update -q
           for p in bolt power-profiles-daemon brltty fwupd iio-sensor-proxy-openrc pcsc-lite-openrc fwupd-openrc; do
-            echo "$p: $(apk info -L $p 2>/dev/null | grep -E 'init.d|polkit|autostart|\.desktop' | tr '\n' ' ')"
+            echo "SERVICIO $p: $(apk info -L $p 2>/dev/null | grep -E 'init.d|polkit|autostart|\.desktop' | tr '\n' ' ')"
           done
           apk search -q 'linux-lts' | head
       - name: herramienta con busybox
@@ -35,14 +35,13 @@ jobs:
           EOS
       - name: nouveau extractor
         run: |
-          apk add -q python3 >/dev/null
+          apk add -q python3 bash >/dev/null
           cd /tmp && wget -q https://download.nvidia.com/XFree86/Linux-x86/325.15/NVIDIA-Linux-x86-325.15.run && wget -q https://raw.githubusercontent.com/envytools/firmware/master/extract_firmware.py
-          sh NVIDIA-Linux-x86-325.15.run --extract-only >/dev/null 2>&1 || echo "extract rc=$?"; ls -d NVIDIA* || true
+          bash NVIDIA-Linux-x86-325.15.run --extract-only 2>&1 | tail -5 || echo "extract rc=$?"; ls -d NVIDIA* || true
           python3 extract_firmware.py || echo "py rc=$?"; ls | grep -E '^(nv|vuc)' | tr '\n' ' '
       - name: p54 lm87
-        if: always()
+        if: false
         run: |
           for u in https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.25.0.lm87.arm https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.24.0.lm87.arm https://daemonizer.de/prism54/prism54-fw/fw-usb/; do
             rc=0; wget -q -O /tmp/f "$u" || rc=$?; echo "URL $u rc=$rc tam=$(stat -c %s /tmp/f 2>/dev/null)"
           done
-          sed 's/<[^>]*>/ /g' /tmp/f | tr -s ' ' | head -20
