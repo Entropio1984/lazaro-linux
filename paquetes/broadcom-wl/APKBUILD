@@ -31,7 +31,9 @@ source="$_archpkg::https://archive.archlinux.org/packages/b/broadcom-wl-dkms/$_a
 
 unpack() {
 	mkdir -p "$srcdir/arch"
-	zstd -dc "$srcdir/$_archpkg" | tar -x -C "$srcdir/arch"
+	# abuild deja la descarga como enlace simbólico, y zstd no lee enlaces
+	# por nombre: se le pasa por la entrada.
+	zstd -dc < "$srcdir/$_archpkg" | tar -x -C "$srcdir/arch"
 }
 
 prepare() {
@@ -60,4 +62,6 @@ package() {
 	ls "$pkgdir"/usr/share/licenses/$pkgname/* >/dev/null
 }
 
-sha512sums=""
+sha512sums="
+7d496017d03e8ba23bf316ac2d186bd06364f7f183eb60806843731ec0fe61264745d508e91db5ee5e2d46a77f4a6f68b62a8da1e478c0ae650315aac8081f37  broadcom-wl-dkms-6.30.223.271-50-x86_64.pkg.tar.zst
+"
