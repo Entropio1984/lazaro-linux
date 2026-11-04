@@ -8,6 +8,9 @@ on:
     branches: [prueba-drivers-red]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   auditoria:
     runs-on: ubuntu-24.04
@@ -20,9 +23,7 @@ jobs:
           apk list -I 'linux-lts' 'linux-firmware' 2>/dev/null
       - name: Configuración del kernel (gzip+base64)
         run: |
-          echo "=====INICIO-CONFIG====="
-          gzip -9c /boot/config-lts | base64
-          echo "=====FIN-CONFIG====="
+          grep -c . /boot/config-lts
       - name: Módulos de red y el firmware que piden
         run: |
           K=$(ls /lib/modules | head -1)
@@ -53,14 +54,18 @@ jobs:
           done < /tmp/mods.txt
           echo "Firmware que falta en todo linux-firmware:"
           awk -F'\t' '$3=="FALTA"' $out
-          echo "=====INICIO-FW====="
-          gzip -9c $out | base64
-          echo "=====FIN-FW====="
-          echo "=====INICIO-MODS====="
-          gzip -9c /tmp/mods.txt | base64
-          echo "=====FIN-MODS====="
+          mkdir -p /tmp/res && cp $out /tmp/mods.txt /tmp/res/ && cp /boot/config-lts /tmp/res/config-lts
+          for m in $(cat /tmp/mods.txt); do printf '%s\t%s\n' "$m" "$(modinfo -F description $m | head -1)"; done > /tmp/res/descripciones.tsv
+          apk info -s $(apk search -q 'linux-firmware*') 2>/dev/null | paste - - - | awk '{print $1"\t"$(NF-1)$NF}' > /tmp/res/firmware-tamanos.tsv || true
       - name: Tamaño de los paquetes de firmware extra
-        run: apk info -s zd1211-firmware bluez-firmware b43-fwcutter linux-lts linux-lts-dev 2>/dev/null || true
+        run: apk info -s zd1211-firmware bluez-firmware b43-fwcutter linux-lts linux-lts-dev 2>/dev/null | tee /tmp/res/extras.txt || true
+      - name: Guardar resultados en la rama
+        run: |
+          apk add -q git >/dev/null
+          git config --global --add safe.directory '*'
+          git clone -q --depth 1 -b ${{ github.ref_name }} https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} /tmp/repo
+          mkdir -p /tmp/repo/resultados && cp /tmp/res/* /tmp/repo/resultados/
+          cd /tmp/repo && git add resultados && git -c user.name=ci -c user.email=ci@localhost commit -qm "Resultados de la auditoría [skip ci]" && git push -q
 
   fuera-del-kernel:
     # Controladores que no vienen en el kernel: los de Alpine "testing"
