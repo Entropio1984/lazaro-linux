@@ -44,10 +44,15 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # - usbmuxd: internet del iPhone por cable USB (Android no lo necesita).
 # - zd1211-firmware (memorias wifi USB ZyDAS ZD1211) y bluez-firmware
 #   (Bluetooth USB Broadcom BCM203x): no son parte de linux-firmware.
-LAZARO_RED_EXTRA="modemmanager modemmanager-openrc networkmanager-wwan
-	usb-modeswitch usb-modeswitch-udev networkmanager-ppp networkmanager-adsl
-	networkmanager-bluetooth usbmuxd usbmuxd-udev zd1211-firmware
-	bluez-firmware"
+# En la live va solo lo liviano (LAZARO_RED_LIVE): con 2 GB de RAM la
+# sesión live entera vive en la memoria y ModemManager con Bluetooth
+# dejaba sin lugar al instalador (Calamares no abría). Los módems 3G/4G y
+# el internet del celular por Bluetooth funcionan en el sistema instalado;
+# para instalar con internet sirven el cable, el wifi o el celular por USB.
+LAZARO_RED_LIVE="usb-modeswitch usb-modeswitch-udev networkmanager-ppp
+	networkmanager-adsl usbmuxd usbmuxd-udev zd1211-firmware bluez-firmware"
+LAZARO_RED_EXTRA="$LAZARO_RED_LIVE modemmanager modemmanager-openrc
+	networkmanager-wwan networkmanager-bluetooth"
 
 LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	networkmanager networkmanager-wifi networkmanager-cli network-manager-applet
@@ -56,7 +61,7 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	gparted xhost zenity spice-vdagent spice-vdagent-openrc pciutils
 	xf86-video-vesa dialog
 	plymouth plymouth-drm plymouth-openrc-plugin
-	$LAZARO_RED_EXTRA"
+	$LAZARO_RED_LIVE"
 
 # Firmware de los demás adaptadores de red (wifi, cable, bluetooth, USB y
 # PCMCIA) y lo que faltaba de Intel y AMD, que no venía en la ISO, para que el sistema instalado sin
@@ -115,6 +120,7 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	linux-firmware-rtl_nic linux-firmware-rtl_bt linux-firmware-mediatek
 	$LAZARO_FIRMWARE_RED
 	intel-ucode amd-ucode
+	$LAZARO_RED_EXTRA
 	$LAZARO_BROADCOM"
 
 # Escritorios livianos completos en la ISO, para instalarlos sin

@@ -108,8 +108,6 @@ rc_add udev-postmount default
 rc_add dbus default
 rc_add elogind default
 rc_add networkmanager default
-# Módems USB 3G/4G (NetworkManager los maneja a través de ModemManager).
-rc_add modemmanager default
 rc_add lazaro-live default
 rc_add lightdm default
 
