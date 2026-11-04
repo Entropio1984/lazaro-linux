@@ -370,6 +370,17 @@ paso_broadcom() { # RAIZ
 		log "Aviso: no se pudo compilar broadcom-wl (código $bw_rc, detalles en $LOG). El wifi Broadcom no funcionará hasta conectarse por cable y ejecutar: doas akms install -k all ${bw_src:-/usr/src/broadcom-wl-*}"
 		echo "LAZARO-BROADCOM-NO"
 		grep -i -E 'akms|error|broadcom' "$LOG" | tail -n 40
+		# Lo que dijo el compilador, para saber por qué falló.
+		for bw_b in "$1"/var/lib/akms/*/broadcom-wl/*/build; do
+			[ -d "$bw_b" ] || continue
+			echo "--- ${bw_b#"$1"}"
+			ls -la "$bw_b" 2>/dev/null | head -n 30
+			for bw_l in "$bw_b"/*.log "$bw_b"/../*.log; do
+				[ -f "$bw_l" ] || continue
+				echo "--- $bw_l"
+				tail -n 60 "$bw_l"
+			done
+		done 2>/dev/null | tee -a "$LOG"
 		return 0
 	fi
 	log "broadcom-wl listo: ${bw_ko#"$1"}"
