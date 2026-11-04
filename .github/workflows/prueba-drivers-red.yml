@@ -87,8 +87,12 @@ jobs:
           K=$(ls /lib/modules | head -1)
           for p in rtl8821ce-src rtl8812au-src rtl88x2bu-src rtl8192eu-src rtw89-src; do
             echo "::group::$p"
-            rc=0; apk add "$p@testing" 2>&1 | tail -n 15 || rc=$?
-            akms status 2>&1 | tail -n 5 || true
+            apk add -q "$p@testing" >/dev/null 2>&1 || true
+            m=$(ls /usr/src | grep -v linux-headers | while read d; do [ -f /usr/src/$d/AKMBUILD ] && grep -q "$(echo $p | sed 's/-src//')" /usr/src/$d/AKMBUILD 2>/dev/null && echo $d; done | head -1)
+            echo "fuente: $m"; grep -E '^(modname|modver|built_modules)=' /usr/src/$m/AKMBUILD 2>/dev/null || true
+            n=$(sed -n 's/^modname=//p' /usr/src/$m/AKMBUILD | tr -d '"')
+            rc=0; akms build -k "$K" "$n" 2>&1 | tail -n 25 || rc=$?
+            tail -n 25 /var/lib/akms/$K/$n/*/build/make.log 2>/dev/null || true
             ls /lib/modules/$K/ -R 2>/dev/null | grep -iE '8821ce|8812au|88x2bu|8192eu|rtw89' | head || true
             echo "::endgroup::"
             echo "RESULTADO $p rc=$rc"
@@ -105,9 +109,11 @@ jobs:
           echo "Paquete: $f"
           mkdir -p /tmp/wl && cd /tmp/wl
           curl -fsSL "$base/$f" | zstd -d | tar x
+          cp -a usr/lib/broadcom-wl-dkms /usr/lib/ 2>/dev/null; ls -la /usr/lib/broadcom-wl-dkms || true
           src=$(ls -d usr/src/broadcom-wl-* | head -1)
           echo "Fuente: $src"; ls -la "$src" "$src/lib" 2>/dev/null | head -20
           cat "$src/dkms.conf" 2>/dev/null | head -30
           rc=0; make -C /lib/modules/$K/build M=/tmp/wl/$src 2>&1 | tail -n 30 || rc=$?
-          ls -la /tmp/wl/$src/*.ko 2>/dev/null && modinfo /tmp/wl/$src/wl.ko | head -15
+          ls -la /tmp/wl/$src/*.ko 2>/dev/null && modinfo /tmp/wl/$src/wl.ko | grep -vE '^(alias|srcversion|sig)' | head -15
+          modinfo -F alias /tmp/wl/$src/wl.ko 2>/dev/null | sort -u | tr '\n' ' '; echo
           echo "RESULTADO broadcom-wl rc=$rc"
