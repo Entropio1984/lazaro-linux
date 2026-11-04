@@ -1,0 +1,55 @@
+# EXPERIMENTO (rama prueba-akms, no fusionar): por qué akms no compila
+# broadcom-wl dentro del instalador.
+name: Prueba akms
+
+on:
+  push:
+    branches: [prueba-akms]
+  workflow_dispatch:
+
+jobs:
+  akms:
+    runs-on: ubuntu-24.04
+    container:
+      image: alpine:3.24
+      options: --privileged
+    steps:
+      - name: Código de akms
+        run: |
+          apk add -q akms bubblewrap curl zstd tar >/dev/null
+          apk info -L akms
+          for f in $(apk info -L akms | grep -E 'bin/|libexec|share/akms' ); do echo "=== /$f"; cat "/$f" 2>/dev/null | head -n 400; done
+      - name: Raíz de prueba (como el disco instalado)
+        run: |
+          set -x
+          mkdir -p /r/etc/apk && cp -a /etc/apk/keys /r/etc/apk/ && cp /etc/apk/repositories /r/etc/apk/
+          apk add -q --root /r --initdb alpine-base linux-lts akms >/dev/null
+          ls /r/lib/modules
+          mkdir -p /tmp/wl && cd /tmp/wl
+          curl -fsSL https://archive.archlinux.org/packages/b/broadcom-wl-dkms/broadcom-wl-dkms-6.30.223.271-50-x86_64.pkg.tar.zst | zstd -d | tar x
+          d=/r/usr/src/broadcom-wl-6.30.223.271
+          mkdir -p $d && cp -a usr/src/broadcom-wl-*/. $d/ && rm -f $d/dkms.conf
+          printf 'modname=broadcom-wl\nmodver=6.30.223.271-r0\nbuilt_modules=wl.ko\n' > $d/AKMBUILD
+          mkdir -p /r/usr/lib/broadcom-wl-dkms && cp usr/lib/broadcom-wl-dkms/* /r/usr/lib/broadcom-wl-dkms/
+          cat $d/Makefile
+          cp /etc/resolv.conf /r/etc/
+          mount -t proc proc /r/proc; mount -t sysfs sys /r/sys; mount --bind /dev /r/dev
+      - name: akms en chroot
+        run: |
+          rc=0; chroot /r akms install -k all /usr/src/broadcom-wl-6.30.223.271 || rc=$?; echo "rc=$rc"
+          find /r/var/lib/akms -maxdepth 6 | head -50
+          for f in $(find /r/var/lib/akms -name '*.log'); do echo "=== $f"; tail -n 80 $f; done
+          chroot /r bwrap --unshare-user --ro-bind / / true; echo "bwrap userns en chroot rc=$?"
+      - name: akms con bwrap
+        run: |
+          rc=0; bwrap --bind /r / --dev-bind /dev /dev --proc /proc /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root akms install -k all /usr/src/broadcom-wl-6.30.223.271 || rc=$?; echo "rc=$rc"
+          for f in $(find /r/var/lib/akms -name '*.log'); do echo "=== $f"; tail -n 80 $f; done
+          find /r/lib/modules -name 'wl.ko*'
+      - name: akms sin overlay en chroot (con dependencias)
+        run: |
+          chroot /r apk add -q build-base linux-lts-dev >/dev/null
+          rc=0; chroot /r akms install --no-overlay -k all /usr/src/broadcom-wl-6.30.223.271 || rc=$?; echo "rc=$rc"
+          for f in $(find /r/var/lib/akms -name '*.log'); do echo "=== $f"; tail -n 80 $f; done
+          find /r/lib/modules -name 'wl.ko*'
+          K=$(ls /r/lib/modules | head -1)
+          chroot /r sh -c "cp -a /usr/src/broadcom-wl-6.30.223.271 /tmp/b && make -C /lib/modules/$K/build M=/tmp/b 2>&1 | tail -n 40"
