@@ -19,7 +19,8 @@ jobs:
           for p in bolt power-profiles-daemon brltty fwupd iio-sensor-proxy-openrc pcsc-lite-openrc fwupd-openrc; do
             echo "SERVICIO $p: $(apk fetch -q --stdout $p | tar -tz 2>/dev/null | grep -E 'init.d|autostart|\.desktop|\.rules' | tr '\n' ' ')"
           done
-          apk search -q 'linux-lts' | head
+          for p in power-profiles-daemon bolt brltty; do echo "LISTA $p:"; apk fetch -q --stdout $p | tar -tz 2>/dev/null | grep -v '/$' | grep -vE 'man/|doc/|locale/' | head -30; done
+          apk fetch -q --stdout power-profiles-daemon | tar -xzO --wildcards '*dbus-1/system-services/*' 2>/dev/null || apk fetch -q --stdout power-profiles-daemon | tar -xzO 'usr/share/dbus-1/system-services/org.freedesktop.UPower.PowerProfiles.service' 2>&1 | head
       - name: herramienta con busybox
         run: |
           apk add -q linux-lts >/dev/null 2>&1 || true
