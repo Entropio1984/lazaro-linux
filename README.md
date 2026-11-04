@@ -258,7 +258,9 @@ Broadcom, que es cerrado. En la sesión de prueba (antes de instalar) ese
 wifi no aparece: conéctate por cable o comparte el internet del celular
 por USB. Al instalar, Lázaro detecta la tarjeta y deja puesto ese
 controlador (tarda unos minutos más); en el sistema instalado el wifi
-ya funciona.
+ya funciona. Con la edición Ligera, para esto hace falta internet
+durante la instalación (por cable o el celular por USB); la Completa
+trae todo lo necesario.
 
 **La hora está mal en el primer arranque.** Se corrige sola en unos
 minutos al conectarse a internet.

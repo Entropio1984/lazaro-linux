@@ -93,9 +93,12 @@ unset _fw
 
 # broadcom-wl (paquetes/broadcom-wl): driver wifi privativo para las
 # Broadcom sin driver libre. lazaro-instalar lo instala solo si encuentra
-# una; akms lo compila en el equipo. Para poder hacerlo sin internet van
-# también las cabeceras del kernel y el compilador (build-base).
-LAZARO_BROADCOM="broadcom-wl-src akms linux-lts-dev build-base"
+# una; akms lo compila en el equipo. Para eso necesita las cabeceras del
+# kernel y el compilador (linux-lts-dev y build-base, unos 120 MB en la
+# ISO): solo caben en la Completa (LAZARO_COMPLETA). En la Ligera se
+# descargan, así que con esas tarjetas hace falta internet al instalar
+# (cable o el celular por USB).
+LAZARO_BROADCOM="broadcom-wl-src akms"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
@@ -156,7 +159,8 @@ LAZARO_COMPLETA="gnome gnome-apps-core gdm
 	plasma-desktop-meta kde-applications-base sddm plasma-nm plasma-pa
 	plasma-desktop-lang kdeplasma-addons-lang xdg-desktop-portal-kde
 	seatd mesa-egl xwayland
-	linux-firmware lang"
+	linux-firmware lang
+	linux-lts-dev build-base"
 
 profile_lazaro() {
 	profile_standard

@@ -197,7 +197,8 @@ jobs:
           # Sin red: todo sale del USB, incluidos OnlyOffice y Brave.
           - instalar uefi plasma sin-red
           - instalar bios gnome sin-red
-          - instalar bios xfce sin-red
+          # Wifi Broadcom simulada: broadcom-wl se compila sin internet.
+          - instalar bios xfce sin-red broadcom
           - instalar uefi lxqt con-red
     steps:
       - uses: actions/checkout@v5
@@ -270,15 +271,15 @@ jobs:
           - live bios 2048
           # Sin escritorio (Xorg no arranca): aviso del instalador en modo texto.
           - texto bios
-          # Sin red y con una wifi Broadcom simulada: broadcom-wl se compila
-          # con lo que trae la ISO.
-          - instalar bios xfce sin-red broadcom
+          - instalar bios xfce sin-red
           - instalar uefi xfce con-red
           - instalar uefi plasma con-red
           - instalar bios gnome con-red
           - instalar bios sway con-red
           - instalar uefi lxqt con-red
-          - instalar bios mate con-red
+          # Con una wifi Broadcom simulada: broadcom-wl se compila con lo
+          # que se descarga (la Ligera no trae el compilador).
+          - instalar bios mate con-red broadcom
           - instalar bios ninguno sin-red
           # Escritorios livianos que vienen completos en la ISO.
           - instalar uefi mate sin-red
