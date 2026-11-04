@@ -1,0 +1,15 @@
+b43-fwcutter-019-r3 installed size:
+39 KiB
+
+bluez-firmware-1.2-r2 installed size:
+120 KiB
+
+linux-lts-6.18.60-r0 installed size:
+152 MiB
+
+linux-lts-dev-6.18.60-r0 installed size:
+80 MiB
+
+zd1211-firmware-1.5-r2 installed size:
+24 KiB
+
