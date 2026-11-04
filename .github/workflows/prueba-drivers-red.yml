@@ -82,25 +82,20 @@ jobs:
           echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
           apk update -q
           ls /lib/modules
-      - name: Paquetes -src de testing con akms
+      - name: Paquetes -src de testing (compilación directa, bwrap no anda en el contenedor)
         run: |
           K=$(ls /lib/modules | head -1)
           for p in rtl8821ce-src rtl8812au-src rtl88x2bu-src rtl8192eu-src rtw89-src; do
-            echo "::group::$p"
             apk add -q "$p@testing" >/dev/null 2>&1 || true
-            m=$(ls /usr/src | grep -v linux-headers | while read d; do [ -f /usr/src/$d/AKMBUILD ] && grep -q "$(echo $p | sed 's/-src//')" /usr/src/$d/AKMBUILD 2>/dev/null && echo $d; done | head -1)
-            echo "fuente: $m"; grep -E '^(modname|modver|built_modules)=' /usr/src/$m/AKMBUILD 2>/dev/null || true
-            n=$(sed -n 's/^modname=//p' /usr/src/$m/AKMBUILD | tr -d '"')
-            rc=0; akms build -k "$K" "$n" 2>&1 | tail -n 25 || rc=$?
-            tail -n 25 /var/lib/akms/$K/$n/*/build/make.log 2>/dev/null || true
-            ls /lib/modules/$K/ -R 2>/dev/null | grep -iE '8821ce|8812au|88x2bu|8192eu|rtw89' | head || true
-            echo "::endgroup::"
-            echo "RESULTADO $p rc=$rc"
           done
-          find /lib/modules/$K -path '*akms*' -name '*.ko*' -exec ls -la {} \; || true
-          find / -name '*.ko*' -newer /etc/apk/repositories -not -path '/proc/*' 2>/dev/null | head -50
-          tail -n 40 /var/lib/akms/*/*/*/build/make.log 2>/dev/null || true
-          ls -R /var/lib/akms 2>/dev/null | head -60 || true
+          for d in /usr/src/*; do
+            case $d in *linux-headers*) continue;; esac
+            echo "::group::$d"
+            rc=0; ( cd $d && make -j4 -C /lib/modules/$K/build M=$d modules ) > /tmp/log 2>&1 || rc=$?
+            grep -E 'error|Error' /tmp/log | head -8; tail -n 3 /tmp/log
+            echo "::endgroup::"
+            echo "RESULTADO $d rc=$rc ko: $(find $d -name '*.ko' | xargs -r ls -la | awk '{print $5, $9}' | tr '\n' ' ')"
+          done
       - name: broadcom-wl (privativo) desde Arch
         run: |
           K=$(ls /lib/modules | head -1)
