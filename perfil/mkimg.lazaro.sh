@@ -105,6 +105,26 @@ unset _fw
 # (cable o el celular por USB).
 LAZARO_BROADCOM="broadcom-wl-src akms"
 
+# Controladores de más hardware (lazaro-controladores los instala solo si
+# el equipo los necesita; ver la revisión del 2026-11-04). En las dos
+# ediciones lo liviano (unos 10 MB): escáneres, celulares y cámaras,
+# tabletas Wacom, discos de Windows, temperatura, lectores de huellas y
+# de tarjetas (DNI electrónico), sensores de giro de los 2 en 1,
+# Thunderbolt, perfiles de sonido de portátiles nuevos y b43-fwcutter
+# (firmware del wifi Broadcom b43, que se descarga con permiso).
+LAZARO_HARDWARE="sane sane-airscan simple-scan gvfs-mtp gvfs-gphoto2 gvfs-afc
+	xf86-input-wacom libwacom ntfs-3g exfatprogs mtools lm-sensors
+	fprintd fprintd-pam pcsc-lite pcsc-lite-openrc ccid opensc
+	iio-sensor-proxy iio-sensor-proxy-openrc bolt alsa-ucm-conf b43-fwcutter"
+# Solo en la Completa, lo pesado (en la Ligera se descarga si hace falta):
+# sonido Intel Smart Sound de portátiles nuevos (sof-firmware, 42 MB),
+# impresoras HP, Epson, Brother, Samsung y otras (unos 120 MB), ahorro de
+# batería (power-profiles-daemon, trae Python), actualizar firmware
+# (fwupd) y braille con lector de pantalla (brltty, orca).
+LAZARO_HARDWARE_COMPLETA="sof-firmware hplip epson-inkjet-printer-escpr
+	gutenprint-cups brlaser splix power-profiles-daemon fwupd fwupd-openrc
+	brltty orca"
+
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
 # el mismo archivo que usa lazaro-instalar) más kernel, GRUB y firmware
@@ -121,7 +141,8 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	$LAZARO_FIRMWARE_RED
 	intel-ucode amd-ucode
 	$LAZARO_RED_EXTRA
-	$LAZARO_BROADCOM"
+	$LAZARO_BROADCOM
+	$LAZARO_HARDWARE"
 
 # Escritorios livianos completos en la ISO, para instalarlos sin
 # internet como XFCE: lo que instala "setup-desktop" para cada uno
@@ -166,7 +187,8 @@ LAZARO_COMPLETA="gnome gnome-apps-core gdm
 	plasma-desktop-lang kdeplasma-addons-lang xdg-desktop-portal-kde
 	seatd mesa-egl xwayland
 	linux-firmware lang
-	linux-lts-dev build-base"
+	linux-lts-dev build-base
+	$LAZARO_HARDWARE_COMPLETA"
 
 profile_lazaro() {
 	profile_standard

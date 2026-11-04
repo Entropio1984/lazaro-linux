@@ -209,6 +209,45 @@ if [ "$LAZARO_EDICION" = completa ]; then
 	fi
 fi
 
+# --- Datos de hardware para lazaro-controladores -------------------------
+# Se generan al compilar y entran en la sesión live (genapkovl los copia).
+DATOS_HW="$CONSTRUCTOR_HOME/datos-hardware"
+rm -rf "$DATOS_HW"
+mkdir -p "$DATOS_HW/usr/share/lazaro/firmware-licencia/ipw2x00"
+msg "Datos de hardware: lectores de huellas y firmware de Intel 2100/2200"
+# Lectores de huellas que reconoce libfprint (de su tabla de udev), como
+# "vvvv:pppp" para compararlos con los USB conectados.
+t_hw="$(mktemp -d)"
+apk fetch -q --stdout libfprint | tar -xz -C "$t_hw"
+grep -rhoiE 'usb:v[0-9a-f]{4}p[0-9a-f]{4}' "$t_hw" | tr 'A-F' 'a-f' |
+	sed 's/^usb:v\(....\)p\(....\)$/\1:\2/' | sort -u \
+	> "$DATOS_HW/usr/share/lazaro/huellas.ids"
+rm -rf "$t_hw"
+[ -s "$DATOS_HW/usr/share/lazaro/huellas.ids" ] || die "no se encontraron lectores de huellas en libfprint"
+echo "  lectores de huellas: $(wc -l < "$DATOS_HW/usr/share/lazaro/huellas.ids")"
+# Firmware de Intel PRO/Wireless 2100/2200 (paquete de Debian). Su licencia
+# permite repartirlo junto con ella; se instala solo si el usuario la acepta.
+IPW_POOL="https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree"
+t_hw="$(mktemp -d)"
+ipw_deb="$(curl -fsSL --retry 3 "$IPW_POOL/" | grep -o 'firmware-ipw2x00_[^"]*_all\.deb' | sort -u | tail -n 1)" || true
+if [ -n "$ipw_deb" ] && curl -fsSL --retry 3 -o "$t_hw/ipw.deb" "$IPW_POOL/$ipw_deb" &&
+	(cd "$t_hw" && ar x ipw.deb && mkdir d && tar -xf data.tar.* -C d); then
+	ipw_d="$DATOS_HW/usr/share/lazaro/firmware-licencia"
+	find "$t_hw/d" -name 'ipw2[12]00*.fw' -exec cp {} "$ipw_d/ipw2x00/" \;
+	if cp "$t_hw/d/usr/share/doc/firmware-ipw2x00/copyright" "$ipw_d/LICENSE.ipw2x00"; then
+		echo "  firmware de Intel: $ipw_deb ($(ls "$ipw_d/ipw2x00" | wc -l) archivos)"
+	else
+		# Sin el texto de la licencia no se puede repartir.
+		echo "AVISO: $ipw_deb no trae la licencia; Lázaro lo descargará si hace falta."
+		rm -rf "$ipw_d"
+	fi
+else
+	echo "AVISO: no se pudo descargar $ipw_deb; Lázaro lo descargará si hace falta."
+	rm -rf "$DATOS_HW/usr/share/lazaro/firmware-licencia"
+fi
+rm -rf "$t_hw"
+chown -R constructor:abuild "$DATOS_HW"
+
 # --- ISO ----------------------------------------------------------------
 msg "Generando la ISO"
 mkdir -p "$SALIDA"
@@ -216,6 +255,7 @@ chown constructor:abuild "$SALIDA"
 su constructor -c "cd $CONSTRUCTOR_HOME && \
 	LAZARO_DIR='$LAZARO_DIR' \
 	LAZARO_LIVE_DIR='$LAZARO_DIR/live' \
+	LAZARO_DATOS_HW='$DATOS_HW' \
 	LAZARO_SCRIPT='$SCRIPT' \
 	LAZARO_VERSION_ENV='$CONSTRUCTOR_HOME/version.env' \
 	LAZARO_PUBKEY='$LLAVE.pub' \

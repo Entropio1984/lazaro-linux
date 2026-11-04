@@ -582,6 +582,65 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 	fi
 }
 
+# Controladores que le faltan al hardware (lazaro-controladores): se deja
+# la herramienta en el sistema (menú "Controladores", aviso en la sesión
+# y servicio de arranque) y se instala ya lo de Alpine: desde el USB o, si
+# no está ahí, por internet; si no hay, lo hace el servicio al arrancar.
+# Lo que se instaló en la live con permiso del usuario (firmware de b43,
+# Prism54 o Intel 2100/2200 con su licencia aceptada) pasa al sistema.
+paso_controladores() { # RAIZ
+	pc_lc=/usr/sbin/lazaro-controladores
+	[ -x "$pc_lc" ] || return 0
+	install -Dm755 "$pc_lc" "$1/usr/local/sbin/lazaro-controladores"
+	for pc_f in huellas.ids firmware-paquetes.tsv; do
+		[ ! -e "$DATOS/$pc_f" ] || install -Dm644 "$DATOS/$pc_f" "$1/usr/share/lazaro/$pc_f"
+	done
+	if [ -d "$DATOS/firmware-licencia" ]; then
+		mkdir -p "$1/usr/share/lazaro"
+		cp -a "$DATOS/firmware-licencia" "$1/usr/share/lazaro/"
+	fi
+	install -Dm755 "$DATOS/lazaro-controladores.initd" "$1/etc/init.d/lazaro-controladores"
+	mkdir -p "$1/etc/runlevels/default"
+	ln -sf /etc/init.d/lazaro-controladores "$1/etc/runlevels/default/lazaro-controladores"
+	if [ ! -e "$1/etc/lazaro/sin-escritorio" ]; then
+		install -Dm644 /usr/share/applications/lazaro-controladores.desktop \
+			"$1/usr/share/applications/lazaro-controladores.desktop"
+		install -Dm644 /etc/xdg/autostart/lazaro-controladores.desktop \
+			"$1/etc/xdg/autostart/lazaro-controladores.desktop"
+	fi
+	# Decisiones y firmware de la live.
+	if [ -e /etc/lazaro/controladores.conf ]; then
+		install -Dm644 /etc/lazaro/controladores.conf "$1/etc/lazaro/controladores.conf"
+	fi
+	for pc_f in b43 b43legacy; do
+		[ ! -d "/lib/firmware/$pc_f" ] || { mkdir -p "$1/lib/firmware"; cp -a "/lib/firmware/$pc_f" "$1/lib/firmware/"; }
+	done
+	for pc_f in /lib/firmware/isl38* /lib/firmware/ipw2[12]00*.fw; do
+		[ -f "$pc_f" ] || continue
+		mkdir -p "$1/lib/firmware"
+		cp -a "$pc_f" "$1/lib/firmware/"
+	done
+	[ ! -d /usr/share/licenses/ipw2x00 ] || { mkdir -p "$1/usr/share/licenses"; cp -a /usr/share/licenses/ipw2x00 "$1/usr/share/licenses/"; }
+	log "Controladores: revisando el hardware..."
+	pc_lista="$(en_destino "$1" /usr/local/sbin/lazaro-controladores --revisar 2>>"$LOG")" || true
+	printf '%s\n' "$pc_lista" | sed '/^$/d; s/^/  /' >>"$LOG"
+	avance_iniciar "los controladores"
+	pc_rc=0
+	pc_salida="$(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar-alpine </dev/null 2>&1)" || pc_rc=$?
+	# Licencia aceptada en la live pero el firmware no alcanzó a copiarse.
+	for pc_c in ipw2100 ipw2200; do
+		printf '%s\n' "$pc_lista" | grep -q "	$pc_c	" || continue
+		grep -qx "$pc_c=aceptado" "$1/etc/lazaro/controladores.conf" 2>/dev/null || continue
+		pc_salida="$pc_salida
+$(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar "$pc_c" </dev/null 2>&1)" || pc_rc=1
+	done
+	avance_parar
+	printf '%s\n' "$pc_salida" >>"$LOG"
+	# Las pruebas en QEMU buscan estas líneas en la consola.
+	printf '%s\n' "$pc_salida" | grep '^LAZARO-CONTROLADOR-' | while read -r pc_l; do log "$pc_l"; done
+	[ "$pc_rc" = 0 ] || log "Aviso: faltaron controladores; se instalarán al arrancar con internet."
+}
+
 # --- Paso 3: ajustes y desktop-postinstall.sh ----------------------------
 paso_ajustes() {
 	raiz="${1%/}"
@@ -643,6 +702,7 @@ paso_ajustes() {
 	chmod 0600 "$raiz/etc/doas.d/20-wheel.conf"
 
 	preinstalar_extras "$raiz" "$idioma" "$extras"
+	paso_controladores "$raiz"
 
 
 	# desktop-postinstall.sh sin preguntas: --minimo deja todo en "no" y

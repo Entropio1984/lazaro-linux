@@ -1,0 +1,20 @@
+#!/sbin/openrc-run
+# Instala los controladores de Alpine que le falten al hardware (por
+# ejemplo, una impresora o un lector de huellas conectados después de
+# instalar). En segundo plano: si no hay internet, espera hasta 30
+# minutos sin retrasar el arranque. Lo que necesita permiso (firmware
+# con licencia o descargas de fuera de Alpine) no se instala solo: lo
+# ofrece el aviso de la sesión o el menú "Controladores".
+# Registro: /var/log/lazaro-controladores.log
+
+description="Controladores que le faltan al hardware"
+
+depend() {
+	after networkmanager
+}
+
+start() {
+	ebegin "Lázaro Linux: revisando los controladores del hardware"
+	(/usr/local/sbin/lazaro-controladores --arranque </dev/null >/dev/null 2>&1 &)
+	eend 0
+}
