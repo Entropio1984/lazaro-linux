@@ -1,0 +1,67 @@
+# Maintainer: Julián <173747797+Entropio1984@users.noreply.github.com>
+#
+# broadcom-wl: el driver privativo "wl" de Broadcom para tarjetas wifi
+# BCM4311, 4312, 4321, 4322, 43227, 43228, 43142, 4331, 4352 y 4360, que
+# con el kernel no tienen un driver libre que funcione (b43 necesita un
+# firmware que no se puede repartir; brcmsmac no las conoce).
+#
+# No está en Alpine. Se toma de Arch Linux, que lo mantiene al día con los
+# parches para kernels nuevos: el paquete trae el código de Broadcom ya
+# parcheado y la parte cerrada (wlc_hybrid.o_shipped). Probado: compila
+# con linux-lts 6.18.60 de Alpine 3.24 (2026-11-04).
+#
+# Se reparte como código y lo compila akms en el equipo del usuario, como
+# hacen Debian (broadcom-sta-dkms) y Ubuntu (bcmwl-kernel-source). akms lo
+# vuelve a compilar solo cada vez que se actualiza el kernel.
+# lazaro-instalar lo instala únicamente si encuentra una de esas tarjetas.
+pkgname=broadcom-wl-src
+_modname=broadcom-wl
+pkgver=6.30.223.271
+_archrel=50
+pkgrel=0
+pkgdesc="Driver wifi privativo de Broadcom (wl), en código para akms"
+url="https://archlinux.org/packages/extra/x86_64/broadcom-wl-dkms/"
+arch="x86_64"
+license="custom:Broadcom"
+depends="akms"
+makedepends="zstd tar"
+options="!check !strip !tracedeps"
+_archpkg="broadcom-wl-dkms-$pkgver-$_archrel-x86_64.pkg.tar.zst"
+source="$_archpkg::https://archive.archlinux.org/packages/b/broadcom-wl-dkms/$_archpkg"
+
+unpack() {
+	mkdir -p "$srcdir/arch"
+	# abuild deja la descarga como enlace simbólico, y zstd no lee enlaces
+	# por nombre: se le pasa por la entrada.
+	zstd -dc < "$srcdir/$_archpkg" | tar -x -C "$srcdir/arch"
+}
+
+prepare() {
+	default_prepare
+	# El Makefile de Arch enlaza la parte cerrada desde esta ruta fija.
+	grep -q /usr/lib/broadcom-wl-dkms "$srcdir"/arch/usr/src/broadcom-wl-*/Makefile
+}
+
+package() {
+	local destdir="$pkgdir/usr/src/$_modname-$pkgver"
+	mkdir -p "$destdir"
+	cp -a "$srcdir"/arch/usr/src/broadcom-wl-*/. "$destdir"/
+	rm -f "$destdir"/dkms.conf
+	cat > "$destdir"/AKMBUILD <<-EOT
+	modname=$_modname
+	modver=$pkgver-r$pkgrel
+	built_modules=wl.ko
+	EOT
+
+	install -Dm644 -t "$pkgdir"/usr/lib/broadcom-wl-dkms \
+		"$srcdir"/arch/usr/lib/broadcom-wl-dkms/wlc_hybrid.o_shipped
+
+	# Licencia de Broadcom (Arch la deja en usr/share/licenses).
+	mkdir -p "$pkgdir"/usr/share/licenses/$pkgname
+	find "$srcdir"/arch/usr/share/licenses -type f -exec cp {} "$pkgdir"/usr/share/licenses/$pkgname/ \; 2>/dev/null || true
+	ls "$pkgdir"/usr/share/licenses/$pkgname/* >/dev/null
+}
+
+sha512sums="
+7d496017d03e8ba23bf316ac2d186bd06364f7f183eb60806843731ec0fe61264745d508e91db5ee5e2d46a77f4a6f68b62a8da1e478c0ae650315aac8081f37  broadcom-wl-dkms-6.30.223.271-50-x86_64.pkg.tar.zst
+"

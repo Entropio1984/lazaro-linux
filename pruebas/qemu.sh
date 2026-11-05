@@ -18,6 +18,9 @@
 #       inicia con su gestor de sesión. Con la ISO de la edición Completa
 #       (nombre *-completa-*), también sin red se revisa la configuración
 #       final y que OnlyOffice y Brave se instalaron desde el USB.
+#   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red broadcom
+#       Igual, haciendo como si hubiera una wifi Broadcom que necesita
+#       broadcom-wl: el driver debe quedar compilado en el disco.
 #
 # Resultados (registro del puerto serie y capturas) en pruebas/resultados/.
 # Nunca toca discos reales: todo ocurre en archivos dentro de esa carpeta.
@@ -248,7 +251,10 @@ prueba_texto() {
 prueba_instalar() {
 	de="$1"
 	red="$2"
-	nombre="instalar-$MODO-$de-$red"
+	# broadcom: el instalador hace como si hubiera una wifi Broadcom que
+	# necesita broadcom-wl y debe dejarlo compilado (QEMU no tiene una).
+	broadcom="${3:-}"
+	nombre="instalar-$MODO-$de-$red${broadcom:+-$broadcom}"
 	disco="$RES/$nombre.qcow2"
 	serie="$RES/$nombre-instalacion.log"
 	mon="$SOCK_DIR/$nombre.mon"
@@ -282,7 +288,7 @@ prueba_instalar() {
 	echo "Instalando ($MODO, $de, $red)..."
 	arrancar "$nombre" "$MEM" "$serie" \
 		-kernel "$k" -initrd "$i" \
-		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda${broadcom:+ lazaro.broadcom=forzar}" \
 		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic "$nic"
 	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
 		captura "$mon" "$RES/$nombre-instalacion-fallo"
@@ -291,6 +297,14 @@ prueba_instalar() {
 		tail -n 120 "$serie" >&2 || true
 		return 1
 	fi
+	if [ -n "$broadcom" ] && ! grep -q LAZARO-BROADCOM-OK "$serie"; then
+		terminar "$pid"
+		echo "FALLO: broadcom-wl no quedó compilado en el sistema instalado." >&2
+		sed -n '/LAZARO-BROADCOM-NO/,+45p' "$serie" | head -n 60 >&2 || true
+		grep -iE 'broadcom|akms' "$serie" | tail -n 30 >&2 || true
+		return 1
+	fi
+	[ -z "$broadcom" ] || echo "OK: broadcom-wl compilado ($(grep -m1 -o 'LAZARO-BROADCOM-OK.*' "$serie"))."
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-desktop instala (sin
 	# escritorio no hay ese paso: setup-disk no escribe una línea por
@@ -518,8 +532,9 @@ case "$orden" in
 		[ $# -eq 3 ] || uso
 		prueba_texto ;;
 	instalar)
-		[ $# -eq 5 ] || uso
+		[ $# -eq 5 ] || [ $# -eq 6 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac
-		prueba_instalar "$4" "$5" ;;
+		case "${6:-}" in "" | broadcom) ;; *) uso ;; esac
+		prueba_instalar "$4" "$5" "${6:-}" ;;
 	*) uso ;;
 esac

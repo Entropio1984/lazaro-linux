@@ -16,6 +16,21 @@ networkmanager-wifi
 networkmanager-cli
 wpa_supplicant
 wireless-regdb
+# Módems 3G/4G, PPPoE, internet del celular por Bluetooth o del iPhone
+# por cable, y firmware wifi/Bluetooth USB que no está en linux-firmware
+# (ver LAZARO_RED_EXTRA en perfil/mkimg.lazaro.sh).
+modemmanager
+modemmanager-openrc
+networkmanager-wwan
+usb-modeswitch
+usb-modeswitch-udev
+networkmanager-ppp
+networkmanager-adsl
+networkmanager-bluetooth
+usbmuxd
+usbmuxd-udev
+zd1211-firmware
+bluez-firmware
 chrony
 acpid
 util-linux
