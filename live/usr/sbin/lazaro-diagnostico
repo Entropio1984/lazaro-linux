@@ -111,6 +111,15 @@ echo "Reuniendo información... (suele tardar menos de un minuto)"
 		done
 	fi
 
+	seccion "Controladores que faltan (lazaro-controladores)"
+	for lc in /usr/local/sbin/lazaro-controladores /usr/sbin/lazaro-controladores; do
+		[ -x "$lc" ] || continue
+		corre "$lc" --revisar
+		break
+	done
+	archivo /etc/lazaro/controladores.conf 20
+	archivo /var/log/lazaro-controladores.log 40
+
 	seccion "Gráfica y pantalla"
 	lsmod | grep -E '^(nouveau|i915|xe|amdgpu|radeon|simpledrm|bochs|qxl|virtio_gpu|vboxvideo|drm) ' || echo "(ningún controlador gráfico conocido cargado)"
 	ls -l /dev/dri 2>&1

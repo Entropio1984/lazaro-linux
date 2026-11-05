@@ -85,6 +85,12 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 # red del 2026-11-04): acenic, adaptec, sun y myricom (tarjetas de cable
 # antiguas o de servidor), microchip y aeonsemi (chips de cable), nxp
 # (Bluetooth NXP) y atusb (radio USB 802.15.4).
+# linux-firmware de Alpine va quitando firmware viejo (edge, nov. 2026,
+# ya no trae acenic, myricom ni sun): lo que no exista en la versión que
+# se compila se salta con un aviso, en vez de romper la compilación. Solo
+# si apk puede consultar los repositorios (si no, va la lista entera).
+_fw_revisar=no
+apk search -q -x linux-firmware-none 2>/dev/null | grep -q . && _fw_revisar=si
 LAZARO_FIRMWARE_RED=""
 for _fw in ath6k ath11k ath12k atmel libertas mrvl mwl8k mwlwifi rsi rtw89 \
 		ti-connectivity wfx ar3k qca 3com bnx2 bnx2x cxgb3 cxgb4 e100 \
@@ -92,9 +98,13 @@ for _fw in ath6k ath11k ath12k atmel libertas mrvl mwl8k mwlwifi rsi rtw89 \
 		tigon vxge airoha ueagle-atm cis ositech xe isci amd amdnpu \
 		amdtee cirrus acenic adaptec sun microchip myricom aeonsemi nxp \
 		atusb; do
+	if [ "$_fw_revisar" = si ] && ! apk search -q -x "linux-firmware-$_fw" 2>/dev/null | grep -q .; then
+		echo "AVISO: no existe linux-firmware-$_fw en esta versión de Alpine; se omite." >&2
+		continue
+	fi
 	LAZARO_FIRMWARE_RED="$LAZARO_FIRMWARE_RED linux-firmware-$_fw"
 done
-unset _fw
+unset _fw _fw_revisar
 
 # broadcom-wl (paquetes/broadcom-wl): driver wifi privativo para las
 # Broadcom sin driver libre. lazaro-instalar lo instala solo si encuentra
@@ -104,6 +114,26 @@ unset _fw
 # descargan, así que con esas tarjetas hace falta internet al instalar
 # (cable o el celular por USB).
 LAZARO_BROADCOM="broadcom-wl-src akms"
+
+# Controladores de más hardware (lazaro-controladores los instala solo si
+# el equipo los necesita; ver la revisión del 2026-11-04). En las dos
+# ediciones lo liviano (unos 10 MB): escáneres, celulares y cámaras,
+# tabletas Wacom, discos de Windows, temperatura, lectores de huellas y
+# de tarjetas (DNI electrónico), sensores de giro de los 2 en 1,
+# Thunderbolt, perfiles de sonido de portátiles nuevos y b43-fwcutter
+# (firmware del wifi Broadcom b43, que se descarga con permiso).
+LAZARO_HARDWARE="sane sane-airscan simple-scan gvfs-mtp gvfs-gphoto2 gvfs-afc
+	xf86-input-wacom libwacom ntfs-3g exfatprogs mtools lm-sensors
+	fprintd fprintd-pam pcsc-lite pcsc-lite-openrc ccid opensc
+	iio-sensor-proxy iio-sensor-proxy-openrc bolt alsa-ucm-conf b43-fwcutter"
+# Solo en la Completa, lo pesado (en la Ligera se descarga si hace falta):
+# sonido Intel Smart Sound de portátiles nuevos (sof-firmware, 42 MB),
+# impresoras HP, Epson, Brother, Samsung y otras (unos 120 MB), ahorro de
+# batería (power-profiles-daemon, trae Python), actualizar firmware
+# (fwupd) y braille con lector de pantalla (brltty, orca).
+LAZARO_HARDWARE_COMPLETA="sof-firmware hplip epson-inkjet-printer-escpr
+	gutenprint-cups brlaser splix power-profiles-daemon fwupd fwupd-openrc
+	brltty orca"
 
 # Lo que necesitan setup-disk y el sistema instalado, para instalar sin
 # internet: el world del destino (live/usr/share/lazaro/paquetes-base,
@@ -121,7 +151,8 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 	$LAZARO_FIRMWARE_RED
 	intel-ucode amd-ucode
 	$LAZARO_RED_EXTRA
-	$LAZARO_BROADCOM"
+	$LAZARO_BROADCOM
+	$LAZARO_HARDWARE"
 
 # Escritorios livianos completos en la ISO, para instalarlos sin
 # internet como XFCE: lo que instala "setup-desktop" para cada uno
@@ -166,7 +197,8 @@ LAZARO_COMPLETA="gnome gnome-apps-core gdm
 	plasma-desktop-lang kdeplasma-addons-lang xdg-desktop-portal-kde
 	seatd mesa-egl xwayland
 	linux-firmware lang
-	linux-lts-dev build-base"
+	linux-lts-dev build-base
+	$LAZARO_HARDWARE_COMPLETA"
 
 profile_lazaro() {
 	profile_standard

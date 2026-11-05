@@ -262,6 +262,20 @@ ya funciona. Con la edición Ligera, para esto hace falta internet
 durante la instalación (por cable o el celular por USB); la Completa
 trae todo lo necesario.
 
+**Falta un controlador (impresora, huellas, wifi viejo...).** Lázaro
+revisa el equipo al instalar y deja puesto lo que necesita: impresoras
+HP, Epson, Brother y Samsung, escáneres, lectores de huellas y de
+tarjetas (DNI electrónico), el sonido de los portátiles Intel nuevos,
+el ahorro de batería y el firmware que le falte a cualquier pieza. Si
+después conectas algo que necesita un controlador, aparece un aviso; el
+programa **Controladores** del menú hace la misma revisión cuando
+quieras. Algunos wifi muy viejos (Broadcom b43, Intel PRO/Wireless
+2100/2200, Prism54) necesitan un firmware que no se puede incluir sin
+más: el aviso te pide permiso para descargarlo o, en el caso de Intel
+(que viene en el USB), que aceptes su licencia. En la sesión de prueba
+el aviso solo ofrece eso, para que el wifi funcione antes de instalar;
+lo demás (impresoras, huellas...) se instala solo al instalar.
+
 **La hora está mal en el primer arranque.** Se corrige sola en unos
 minutos al conectarse a internet.
 
@@ -355,6 +369,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Perfil de la ISO | `perfil/mkimg.lazaro.sh` | Lo usa `mkimage.sh` de aports |
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
 | Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
+| Controladores que faltan | `live/usr/sbin/lazaro-controladores` | Revisa el hardware e instala lo que le falta (al instalar, al arrancar, con aviso en la sesión y desde el menú) |
 | Recomendación según el equipo | `live/usr/sbin/lazaro-recomendar` | Escritorio y programas preseleccionados en Calamares según memoria, gráfica y disco |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
 | Pantallas del instalador | `live/etc/calamares/modules/` | Escritorio, oficina, aplicaciones, disco, usuario |
@@ -446,7 +461,11 @@ revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que
 simula 13 equipos (el K53SV, PCs con tarjetas de cada generación, dos
 NVIDIA, la elección forzada y el modo gráfico seguro). Lo mismo pasa con
 la recomendación del instalador: `pruebas/recomendacion.sh` simula
-equipos con distinta memoria, gráfica y disco.
+equipos con distinta memoria, gráfica y disco. Y las reglas de
+`lazaro-controladores` (impresoras, huellas, wifi viejo, firmware que
+falta) las recorre `pruebas/controladores.sh` con equipos simulados; en
+las instalaciones de QEMU, además, se simulan un lector de huellas y uno
+de tarjetas para comprobar que se instalan desde el USB.
 
 ## Versiones probadas
 

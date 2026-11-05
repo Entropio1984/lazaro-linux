@@ -209,6 +209,50 @@ if [ "$LAZARO_EDICION" = completa ]; then
 	fi
 fi
 
+# --- Datos de hardware para lazaro-controladores -------------------------
+# Se generan al compilar y entran en la sesión live (genapkovl los copia).
+DATOS_HW="$CONSTRUCTOR_HOME/datos-hardware"
+rm -rf "$DATOS_HW"
+mkdir -p "$DATOS_HW/usr/share/lazaro/firmware-licencia/ipw2x00"
+msg "Datos de hardware: lectores de huellas y firmware de Intel 2100/2200"
+# Lectores de huellas que reconoce libfprint (de su tabla de udev), como
+# "vvvv:pppp" para compararlos con los USB conectados.
+t_hw="$(mktemp -d)"
+apk fetch -q --stdout libfprint | tar -xz -C "$t_hw"
+grep -rhoiE 'usb:v[0-9a-f]{4}p[0-9a-f]{4}' "$t_hw" | tr 'A-F' 'a-f' |
+	sed 's/^usb:v\(....\)p\(....\)$/\1:\2/' | sort -u \
+	> "$DATOS_HW/usr/share/lazaro/huellas.ids"
+rm -rf "$t_hw"
+[ -s "$DATOS_HW/usr/share/lazaro/huellas.ids" ] || die "no se encontraron lectores de huellas en libfprint"
+echo "  lectores de huellas: $(wc -l < "$DATOS_HW/usr/share/lazaro/huellas.ids")"
+# Firmware de Intel PRO/Wireless 2100/2200 (paquete de Debian). Su licencia
+# permite repartirlo junto con ella; se instala solo si el usuario la acepta.
+# Versión fija de Debian 13 (estable; queda en el servidor por años) con su
+# suma: si el archivo no es exactamente ese, no se usa. Se sacan del
+# paquete solo los 6 firmware y la licencia.
+IPW_DEB="https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/firmware-ipw2x00_20250410-2_all.deb"
+IPW_SHA256="a0351412176598056d18982d905aa9605b6250bfb16c316fa773c6716868db56"
+IPW_ARCHIVOS="./usr/lib/firmware/ipw2100-1.3.fw ./usr/lib/firmware/ipw2100-1.3-i.fw
+	./usr/lib/firmware/ipw2100-1.3-p.fw ./usr/lib/firmware/ipw2200-bss.fw
+	./usr/lib/firmware/ipw2200-ibss.fw ./usr/lib/firmware/ipw2200-sniffer.fw
+	./usr/share/doc/firmware-ipw2x00/copyright"
+t_hw="$(mktemp -d)"
+ipw_d="$DATOS_HW/usr/share/lazaro/firmware-licencia"
+# shellcheck disable=SC2086
+if curl -fsSL --retry 3 --connect-timeout 20 --max-time 300 -o "$t_hw/ipw.deb" "$IPW_DEB" &&
+	[ "$(sha256sum "$t_hw/ipw.deb" | cut -c1-64)" = "$IPW_SHA256" ] &&
+	(cd "$t_hw" && ar x ipw.deb && mkdir d && tar -xf data.tar.* -C d $IPW_ARCHIVOS); then
+	cp "$t_hw"/d/usr/lib/firmware/ipw2*.fw "$ipw_d/ipw2x00/"
+	cp "$t_hw/d/usr/share/doc/firmware-ipw2x00/copyright" "$ipw_d/LICENSE.ipw2x00"
+	echo "  firmware de Intel: $(basename "$IPW_DEB") ($(ls "$ipw_d/ipw2x00" | wc -l) archivos)"
+else
+	# Sin firmware ni licencia, lazaro-controladores no ofrece estas tarjetas.
+	echo "AVISO: no se pudo obtener $(basename "$IPW_DEB") (o su suma no coincide); la ISO va sin el firmware de Intel 2100/2200."
+	rm -rf "$ipw_d"
+fi
+rm -rf "$t_hw"
+chown -R constructor:abuild "$DATOS_HW"
+
 # --- ISO ----------------------------------------------------------------
 msg "Generando la ISO"
 mkdir -p "$SALIDA"
@@ -216,6 +260,7 @@ chown constructor:abuild "$SALIDA"
 su constructor -c "cd $CONSTRUCTOR_HOME && \
 	LAZARO_DIR='$LAZARO_DIR' \
 	LAZARO_LIVE_DIR='$LAZARO_DIR/live' \
+	LAZARO_DATOS_HW='$DATOS_HW' \
 	LAZARO_SCRIPT='$SCRIPT' \
 	LAZARO_VERSION_ENV='$CONSTRUCTOR_HOME/version.env' \
 	LAZARO_PUBKEY='$LLAVE.pub' \
