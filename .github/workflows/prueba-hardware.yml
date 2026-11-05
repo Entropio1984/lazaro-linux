@@ -1,5 +1,5 @@
-# EXPERIMENTO (rama prueba-hardware, no fusionar): servicios, herramienta
-# con busybox real, nouveau y p54.
+# EXPERIMENTO (rama prueba-hardware, no fusionar): versiones del paquete
+# firmware-ipw2x00 en Debian y sus sumas.
 name: Prueba hardware
 
 on:
@@ -8,42 +8,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  nombres:
+  ipw:
     runs-on: ubuntu-24.04
-    container: alpine:3.24
     steps:
-      - uses: actions/checkout@v4
-      - name: servicios
-        run: |
-          apk update -q
-          for p in bolt power-profiles-daemon brltty fwupd iio-sensor-proxy-openrc pcsc-lite-openrc fwupd-openrc; do
-            echo "SERVICIO $p: $(apk fetch -q --stdout $p | tar -tz 2>/dev/null | grep -E 'init.d|autostart|\.desktop|\.rules' | tr '\n' ' ')"
+      - run: |
+          pool=https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree
+          for d in $(curl -fsSL "$pool/" | grep -o 'firmware-ipw2x00_[^"]*_all\.deb' | sort -u); do
+            curl -fsSL -o /tmp/p.deb "$pool/$d"
+            echo "DEB $d $(stat -c %s /tmp/p.deb) $(sha256sum /tmp/p.deb | cut -c1-64)"
+            (cd /tmp && rm -rf x && mkdir x && cd x && ar x ../p.deb && tar -tf data.tar.* | grep -E 'fw$|copyright' | tr '\n' ' '; echo)
           done
-          for p in power-profiles-daemon bolt brltty; do echo "LISTA $p:"; apk fetch -q --stdout $p | tar -tz 2>/dev/null | grep -v '/$' | grep -vE 'man/|doc/|locale/' | head -30; done
-          apk fetch -q --stdout power-profiles-daemon | tar -xzO --wildcards '*dbus-1/system-services/*' 2>/dev/null || apk fetch -q --stdout power-profiles-daemon | tar -xzO 'usr/share/dbus-1/system-services/org.freedesktop.UPower.PowerProfiles.service' 2>&1 | head
-      - name: herramienta con busybox
-        run: |
-          apk add -q linux-lts >/dev/null 2>&1 || true
-          kv=$(ls /lib/modules | head -1); echo "kernel $kv"; wc -l /lib/modules/$kv/modules.alias
-          f=/tmp/sys; mkdir -p $f/bus/pci/devices/0000:00:01.0 $f/bus/usb/devices/1-1:1.0
-          echo pci:v000014E4d00004311sv00001028sd00000007bc02sc80i00 > $f/bus/pci/devices/0000:00:01.0/modalias
-          echo usb:v0CF3p9271d0108dcFFdscFFdpFFicFFiscFFipFFin00 > $f/bus/usb/devices/1-1:1.0/modalias
-          time env LAZARO_SYS=$f LAZARO_MODULOS=/lib/modules/$kv/modules.alias LAZARO_DMESG=/dev/null LAZARO_CMDLINE=/dev/null \
-            sh -x pruebas-hw/lazaro-controladores --revisar 2>/tmp/traza || { tail -40 /tmp/traza; exit 1; }
-          mkdir -p /tmp/ipw && cd /tmp/ipw && wget -q https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/firmware-ipw2x00_20260916-1~bpo13+1_all.deb -O ipw.deb
-          sh -c ". /dev/stdin; sacar_data_tar ipw.deb && tar -xf data.tar.* && find . -name '*.fw'" <<EOS
-          $(sed -n '/^sacar_data_tar()/,/^}/p' $GITHUB_WORKSPACE/pruebas-hw/lazaro-controladores)
-          EOS
-      - name: nouveau extractor
-        if: false
-        run: |
-          apk add -q python3 bash >/dev/null
-          cd /tmp && wget -q https://download.nvidia.com/XFree86/Linux-x86/325.15/NVIDIA-Linux-x86-325.15.run && wget -q https://raw.githubusercontent.com/envytools/firmware/master/extract_firmware.py
-          bash NVIDIA-Linux-x86-325.15.run --extract-only 2>&1 | tail -5 || echo "extract rc=$?"; ls -d NVIDIA* || true
-          python3 extract_firmware.py || echo "py rc=$?"; ls | grep -E '^(nv|vuc)' | tr '\n' ' '
-      - name: p54 lm87
-        if: false
-        run: |
-          for u in https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.25.0.lm87.arm https://daemonizer.de/prism54/prism54-fw/fw-usb/2.13.24.0.lm87.arm https://daemonizer.de/prism54/prism54-fw/fw-usb/; do
-            rc=0; wget -q -O /tmp/f "$u" || rc=$?; echo "URL $u rc=$rc tam=$(stat -c %s /tmp/f 2>/dev/null)"
+          for s in bookworm trixie forky; do
+            echo "SUITE $s: $(curl -fsSL https://deb.debian.org/debian/dists/$s/non-free-firmware/binary-all/Packages.xz | xz -d | grep -A12 '^Package: firmware-ipw2x00$' | grep -E '^(Version|Filename|SHA256):' | tr '\n' ' ')"
           done
