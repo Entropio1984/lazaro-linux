@@ -28,6 +28,8 @@ PATH="$TMP/bin:$PATH"
 mkdir -p "$TMP/datos"
 cp "$DIR/live/usr/share/lazaro/firmware-paquetes.tsv" "$TMP/datos/"
 printf '%s\n' 06cb:00bd 138a:0097 > "$TMP/datos/huellas.ids"
+mkdir -p "$TMP/datos/firmware-licencia/ipw2x00"
+echo "Licencia de prueba" > "$TMP/datos/firmware-licencia/LICENSE.ipw2x00"
 
 cat > "$TMP/modules.alias" <<'EOS'
 # Aliases tomados de modules.alias de linux-lts (forma real).
@@ -47,7 +49,8 @@ n=0
 
 # caso NOMBRE "DEBE TENER" "NO DEBE TENER" [VAR=valor...]
 #   Arma el equipo con las funciones de abajo antes de llamar.
-#   DEBE TENER: claves (columna 2) separadas por espacios.
+#   DEBE TENER: claves (columna 2) separadas por espacios; "clase:clave"
+#   exige además la clase (alpine, descarga, licencia, menu).
 caso() {
 	nombre="$1"; si="$2"; no="$3"; shift 3
 	n=$((n + 1))
@@ -57,7 +60,7 @@ caso() {
 		LAZARO_CONTROLADORES_LOG="$TMP/log" "$@" \
 		sh "$PROG" --revisar --raiz "$RAIZ" 2>"$TMP/err")" || {
 		echo "FALLO $nombre: terminó con error"; cat "$TMP/err"; fallos=$((fallos + 1)); return 0; }
-	claves=" $(printf '%s\n' "$salida" | cut -f2 | tr '\n' ' ')"
+	claves=" $(printf '%s\n' "$salida" | awk -F'\t' '{ printf "%s %s:%s ", $2, $1, $2 }')"
 	mal=""
 	for c in $si; do
 		case "$claves" in *" $c "*) ;; *) mal="$mal falta:$c" ;; esac
@@ -98,7 +101,7 @@ instalados() { printf '%s\n' "$@" >> "$TMP/instalados"; }
 SIEMPRE="escaneres celulares tabletas discos temperatura"
 
 nuevo
-caso "escritorio sin nada especial" "$SIEMPRE firmware braille" "bateria sonido-sof huellas b43 tarjetas"
+caso "escritorio sin nada especial" "$SIEMPRE menu:firmware menu:braille" "bateria sonido-sof huellas b43 tarjetas"
 
 nuevo
 instalados sane sane-airscan simple-scan gvfs-mtp gvfs-gphoto2 gvfs-afc xf86-input-wacom libwacom ntfs-3g exfatprogs mtools lm-sensors
@@ -113,7 +116,7 @@ bateria
 pci 0000:00:1f.3 8086 9dc8
 usb 1-1 03f0 1234 07
 usb 1-2 06cb 00bd ff
-caso "portátil: batería, sonido SOF, impresora HP, huellas" "bateria sonido-sof impresora-hp huellas" "impresora-otra"
+caso "portátil: batería, sonido SOF, impresora HP, huellas" "alpine:bateria alpine:sonido-sof alpine:impresora-hp alpine:huellas" "impresora-otra"
 
 nuevo
 usb 1-1 04b8 0001 07
@@ -122,7 +125,7 @@ caso "impresora Epson y lector de tarjetas" "impresora-epson tarjetas" "impresor
 
 nuevo
 pci 0000:02:00.0 14e4 4318
-caso "Broadcom b43" "b43" "b43legacy"
+caso "Broadcom b43" "descarga:b43" "b43legacy"
 
 nuevo
 pci 0000:02:00.0 14e4 4311
@@ -139,7 +142,7 @@ caso "Broadcom b43legacy" "b43legacy" "b43"
 
 nuevo
 pci 0000:02:02.0 8086 4220
-caso "Intel 2200 pide licencia" "ipw2200" "ipw2100"
+caso "Intel 2200 pide licencia" "licencia:ipw2200" "ipw2100"
 
 nuevo
 pci 0000:02:02.0 8086 4220
@@ -151,8 +154,14 @@ pci 0000:02:02.0 8086 1043
 caso "Intel 2100" "ipw2100" "ipw2200"
 
 nuevo
+pci 0000:02:02.0 8086 4220
+mv "$TMP/datos/firmware-licencia" "$TMP/datos/sin-licencia"
+caso "Intel 2200 sin el texto de la licencia: no se ofrece" "" "ipw2200"
+mv "$TMP/datos/sin-licencia" "$TMP/datos/firmware-licencia"
+
+nuevo
 pci 0000:02:00.0 1260 3890
-caso "Prism54 PCI" "p54pci" ""
+caso "Prism54 PCI" "descarga:p54pci" ""
 
 nuevo
 cat > "$TMP/dmesg" <<'EOS'
@@ -160,7 +169,7 @@ cat > "$TMP/dmesg" <<'EOS'
 [    5.2] bluetooth hci0: firmware: failed to load rtl_bt/rtl8723b_fw.bin (-2)
 [    5.3] b43-phy0 ERROR: Direct firmware load for b43/ucode15.fw failed with error -2
 EOS
-caso "firmware que el kernel no encontró" "firmware-linux-firmware-intel firmware-linux-firmware-rtl_bt" "b43"
+caso "firmware que el kernel no encontró" "alpine:firmware-linux-firmware-intel alpine:firmware-linux-firmware-rtl_bt" "b43"
 
 nuevo
 echo "quiet lazaro.controladores=b43,ipw2200,huellas,tarjetas" > "$TMP/cmdline"
@@ -168,31 +177,7 @@ caso "simulado por parámetro de arranque (QEMU)" "b43 ipw2200 huellas tarjetas"
 
 nuevo
 bateria
-caso "solo lo automático: sin cosas de menú" "bateria" "firmware braille" SOLO_AUTOMATICO=si
-
-# Saca data.tar.* de un .deb sin la orden ar (busybox no la trae).
-n=$((n + 1))
-mkdir -p "$TMP/deb/x/usr/lib/firmware" "$TMP/deb/o"
-echo prueba > "$TMP/deb/x/usr/lib/firmware/ipw2200-bss.fw"
-echo 2.0 > "$TMP/deb/debian-binary"
-# Partes de tamaño impar a propósito: ar las rellena con un byte.
-printf 'xyz' > "$TMP/deb/control.tar.gz"
-tar -czf "$TMP/deb/data.tar.gz" -C "$TMP/deb/x" .
-{
-	printf '!<arch>\n'
-	for f in debian-binary control.tar.gz data.tar.gz; do
-		t="$(wc -c < "$TMP/deb/$f")"
-		printf '%-16s%-12s%-6s%-6s%-8s%-10s`\n' "$f" 0 0 0 100644 "$t"
-		cat "$TMP/deb/$f"
-		[ $((t % 2)) = 0 ] || printf '\n'
-	done
-} > "$TMP/deb/p.deb"
-if (cd "$TMP/deb/o" && sed -n '/^sacar_data_tar()/,/^}/p' "$PROG" > f.sh && . ./f.sh \
-	&& sacar_data_tar ../p.deb && tar -xzf data.tar.gz && grep -qx prueba usr/lib/firmware/ipw2200-bss.fw); then
-	echo "ok    sacar el firmware de un .deb"
-else
-	echo "FALLO sacar el firmware de un .deb"; fallos=$((fallos + 1))
-fi
+caso "solo lo automático: sin cosas de menú" "alpine:bateria" "firmware braille" SOLO_AUTOMATICO=si
 
 echo "$((n - fallos)) de $n casos bien."
 [ "$fallos" = 0 ]

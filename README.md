@@ -271,8 +271,10 @@ después conectas algo que necesita un controlador, aparece un aviso; el
 programa **Controladores** del menú hace la misma revisión cuando
 quieras. Algunos wifi muy viejos (Broadcom b43, Intel PRO/Wireless
 2100/2200, Prism54) necesitan un firmware que no se puede incluir sin
-más: el aviso te pide permiso para descargarlo y, en el caso de Intel,
-que aceptes su licencia. Esto funciona también en la sesión de prueba.
+más: el aviso te pide permiso para descargarlo o, en el caso de Intel
+(que viene en el USB), que aceptes su licencia. En la sesión de prueba
+el aviso solo ofrece eso, para que el wifi funcione antes de instalar;
+lo demás (impresoras, huellas...) se instala solo al instalar.
 
 **La hora está mal en el primer arranque.** Se corrige sola en unos
 minutos al conectarse a internet.

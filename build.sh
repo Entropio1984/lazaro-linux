@@ -227,23 +227,28 @@ rm -rf "$t_hw"
 echo "  lectores de huellas: $(wc -l < "$DATOS_HW/usr/share/lazaro/huellas.ids")"
 # Firmware de Intel PRO/Wireless 2100/2200 (paquete de Debian). Su licencia
 # permite repartirlo junto con ella; se instala solo si el usuario la acepta.
-IPW_POOL="https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree"
+# Versión fija de Debian 13 (estable; queda en el servidor por años) con su
+# suma: si el archivo no es exactamente ese, no se usa. Se sacan del
+# paquete solo los 6 firmware y la licencia.
+IPW_DEB="https://deb.debian.org/debian/pool/non-free-firmware/f/firmware-nonfree/firmware-ipw2x00_20250410-2_all.deb"
+IPW_SHA256="a0351412176598056d18982d905aa9605b6250bfb16c316fa773c6716868db56"
+IPW_ARCHIVOS="./usr/lib/firmware/ipw2100-1.3.fw ./usr/lib/firmware/ipw2100-1.3-i.fw
+	./usr/lib/firmware/ipw2100-1.3-p.fw ./usr/lib/firmware/ipw2200-bss.fw
+	./usr/lib/firmware/ipw2200-ibss.fw ./usr/lib/firmware/ipw2200-sniffer.fw
+	./usr/share/doc/firmware-ipw2x00/copyright"
 t_hw="$(mktemp -d)"
-ipw_deb="$(curl -fsSL --retry 3 "$IPW_POOL/" | grep -o 'firmware-ipw2x00_[^"]*_all\.deb' | sort -u | tail -n 1)" || true
-if [ -n "$ipw_deb" ] && curl -fsSL --retry 3 -o "$t_hw/ipw.deb" "$IPW_POOL/$ipw_deb" &&
-	(cd "$t_hw" && ar x ipw.deb && mkdir d && tar -xf data.tar.* -C d); then
-	ipw_d="$DATOS_HW/usr/share/lazaro/firmware-licencia"
-	find "$t_hw/d" -name 'ipw2[12]00*.fw' -exec cp {} "$ipw_d/ipw2x00/" \;
-	if cp "$t_hw/d/usr/share/doc/firmware-ipw2x00/copyright" "$ipw_d/LICENSE.ipw2x00"; then
-		echo "  firmware de Intel: $ipw_deb ($(ls "$ipw_d/ipw2x00" | wc -l) archivos)"
-	else
-		# Sin el texto de la licencia no se puede repartir.
-		echo "AVISO: $ipw_deb no trae la licencia; Lázaro lo descargará si hace falta."
-		rm -rf "$ipw_d"
-	fi
+ipw_d="$DATOS_HW/usr/share/lazaro/firmware-licencia"
+# shellcheck disable=SC2086
+if curl -fsSL --retry 3 --connect-timeout 20 --max-time 300 -o "$t_hw/ipw.deb" "$IPW_DEB" &&
+	[ "$(sha256sum "$t_hw/ipw.deb" | cut -c1-64)" = "$IPW_SHA256" ] &&
+	(cd "$t_hw" && ar x ipw.deb && mkdir d && tar -xf data.tar.* -C d $IPW_ARCHIVOS); then
+	cp "$t_hw"/d/usr/lib/firmware/ipw2*.fw "$ipw_d/ipw2x00/"
+	cp "$t_hw/d/usr/share/doc/firmware-ipw2x00/copyright" "$ipw_d/LICENSE.ipw2x00"
+	echo "  firmware de Intel: $(basename "$IPW_DEB") ($(ls "$ipw_d/ipw2x00" | wc -l) archivos)"
 else
-	echo "AVISO: no se pudo descargar $ipw_deb; Lázaro lo descargará si hace falta."
-	rm -rf "$DATOS_HW/usr/share/lazaro/firmware-licencia"
+	# Sin firmware ni licencia, lazaro-controladores no ofrece estas tarjetas.
+	echo "AVISO: no se pudo obtener $(basename "$IPW_DEB") (o su suma no coincide); la ISO va sin el firmware de Intel 2100/2200."
+	rm -rf "$ipw_d"
 fi
 rm -rf "$t_hw"
 chown -R constructor:abuild "$DATOS_HW"
