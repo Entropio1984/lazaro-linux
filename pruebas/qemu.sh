@@ -307,16 +307,20 @@ prueba_instalar() {
 	[ -z "$broadcom" ] || echo "OK: broadcom-wl compilado ($(grep -m1 -o 'LAZARO-BROADCOM-OK.*' "$serie"))."
 	# lazaro-controladores: la prueba simula un lector de huellas y uno de
 	# tarjetas (lazaro.controladores=...); sus paquetes vienen en la ISO,
-	# así que se instalan también sin internet.
+	# así que se instalan también sin internet. Si el escritorio ya los
+	# trajo (Plasma trae fprintd), no aparecen en la lista de lo que falta.
+	faltan="$(grep -m1 -o 'LAZARO-CONTROLADORES-FALTAN.*' "$serie" || true)"
 	for c in huellas tarjetas; do
-		if ! grep -q "LAZARO-CONTROLADOR-OK $c" "$serie"; then
+		if [ -z "$faltan" ] || grep -q "LAZARO-CONTROLADOR-NO $c" "$serie" \
+			|| { case " $faltan " in *" $c "*) true ;; *) false ;; esac \
+				&& ! grep -q "LAZARO-CONTROLADOR-OK $c" "$serie"; }; then
 			terminar "$pid"
 			echo "FALLO: lazaro-controladores no instaló '$c'." >&2
 			grep -E 'LAZARO-CONTROLADOR|[Cc]ontroladores' "$serie" | tail -n 20 >&2 || true
 			return 1
 		fi
 	done
-	echo "OK: controladores simulados instalados (huellas, tarjetas)."
+	echo "OK: controladores: ${faltan#LAZARO-CONTROLADORES-FALTAN }"
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-desktop instala (sin
 	# escritorio no hay ese paso: setup-disk no escribe una línea por

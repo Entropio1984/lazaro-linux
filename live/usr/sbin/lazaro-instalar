@@ -624,6 +624,8 @@ paso_controladores() { # RAIZ
 	log "Controladores: revisando el hardware..."
 	pc_lista="$(en_destino "$1" /usr/local/sbin/lazaro-controladores --revisar 2>>"$LOG")" || true
 	printf '%s\n' "$pc_lista" | sed '/^$/d; s/^/  /' >>"$LOG"
+	# Las pruebas en QEMU buscan esta línea en la consola.
+	log "LAZARO-CONTROLADORES-FALTAN $(printf '%s\n' "$pc_lista" | cut -f2 | tr '\n' ' ')"
 	avance_iniciar "los controladores"
 	pc_rc=0
 	pc_salida="$(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar-alpine </dev/null 2>&1)" || pc_rc=$?

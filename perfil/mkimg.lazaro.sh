@@ -85,6 +85,12 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 # red del 2026-11-04): acenic, adaptec, sun y myricom (tarjetas de cable
 # antiguas o de servidor), microchip y aeonsemi (chips de cable), nxp
 # (Bluetooth NXP) y atusb (radio USB 802.15.4).
+# linux-firmware de Alpine va quitando firmware viejo (edge, nov. 2026,
+# ya no trae acenic, myricom ni sun): lo que no exista en la versión que
+# se compila se salta con un aviso, en vez de romper la compilación. Solo
+# si apk puede consultar los repositorios (si no, va la lista entera).
+_fw_revisar=no
+apk search -q -x linux-firmware-none 2>/dev/null | grep -q . && _fw_revisar=si
 LAZARO_FIRMWARE_RED=""
 for _fw in ath6k ath11k ath12k atmel libertas mrvl mwl8k mwlwifi rsi rtw89 \
 		ti-connectivity wfx ar3k qca 3com bnx2 bnx2x cxgb3 cxgb4 e100 \
@@ -92,9 +98,13 @@ for _fw in ath6k ath11k ath12k atmel libertas mrvl mwl8k mwlwifi rsi rtw89 \
 		tigon vxge airoha ueagle-atm cis ositech xe isci amd amdnpu \
 		amdtee cirrus acenic adaptec sun microchip myricom aeonsemi nxp \
 		atusb; do
+	if [ "$_fw_revisar" = si ] && ! apk search -q -x "linux-firmware-$_fw" 2>/dev/null | grep -q .; then
+		echo "AVISO: no existe linux-firmware-$_fw en esta versión de Alpine; se omite." >&2
+		continue
+	fi
 	LAZARO_FIRMWARE_RED="$LAZARO_FIRMWARE_RED linux-firmware-$_fw"
 done
-unset _fw
+unset _fw _fw_revisar
 
 # broadcom-wl (paquetes/broadcom-wl): driver wifi privativo para las
 # Broadcom sin driver libre. lazaro-instalar lo instala solo si encuentra
