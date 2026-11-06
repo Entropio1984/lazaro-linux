@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Afinador
+GenericName=Ajustes de rendimiento
+Comment=Ajusta el sistema para que el equipo responda mejor (todo se puede quitar)
+Exec=lazaro-afinador --ventana
+Icon=preferences-system-performance
+Terminal=false
+Categories=System;Settings;
+Keywords=rendimiento;velocidad;memoria;kernel;afinador;optimizar;

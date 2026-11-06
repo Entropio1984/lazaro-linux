@@ -38,6 +38,11 @@ imprimir.
   un instalador en modo texto que hace lo mismo con el teclado. Y si
   algo falla, el comando `lazaro-diagnostico` arma un informe para pedir
   ayuda.
+- **Afinado para tu equipo.** Al instalar, el
+  [Afinador](#afinador-que-el-equipo-responda-mejor) ajusta el sistema
+  según tu procesador, tu memoria y tus discos para que no se congele con
+  muchas pestañas abiertas ni al copiar a un pendrive. Todo se puede
+  quitar con un clic.
 - **Avisa de las actualizaciones.** Un icono en la barra te avisa cuando
   hay actualizaciones, y se instalan con un clic.
 - **La tienda de aplicaciones lista.** Si la marcas, queda la tienda
@@ -250,7 +255,7 @@ conectar el wifi antes, escribe (con las comillas):
 **No hay wifi.** Algunos portátiles tienen un botón o una combinación de
 teclas (por ejemplo Fn + F2) para encender el wifi; revisa que esté
 encendido. Si sigue sin aparecer ninguna red, pide ayuda con el
-[informe de diagnóstico](#pedir-ayuda-informe-de-diagnóstico).
+[informe de diagnóstico](#diagnóstico-pedir-ayuda).
 
 **Wifi Broadcom en la sesión de prueba.** Muchos portátiles de 2008 a
 2015 traen una tarjeta Broadcom que solo funciona con el controlador de
@@ -303,31 +308,142 @@ Si aun así falla, puedes forzar la decisión al arrancar desde el USB:
 Usa `lazaro.nvidia=activa` en lugar de `seguro` para forzar el
 controlador. El sistema instalado recuerda esta elección.
 
-## Pedir ayuda: informe de diagnóstico
+## Herramientas de Lázaro
 
-Si algo no funciona, abre una terminal (búscala como "Terminal" en el menú)
-y escribe:
+Lázaro trae tres herramientas propias para cuidar el equipo. Las tres se
+abren desde el menú de aplicaciones o desde una **terminal** (búscala como
+"Terminal" en el menú). Cuando una orden empieza con `doas`, te pide **tu
+contraseña** (la que elegiste al instalar); mientras la escribes no se ve
+nada en la pantalla, es normal: escríbela y pulsa Enter.
+
+### Afinador: que el equipo responda mejor
+
+El afinador revisa tu equipo (procesador, memoria, discos) y ajusta el
+sistema para que vaya más suelto, sobre todo con poca memoria. **Al
+instalar Lázaro ya queda aplicado lo recomendado para tu equipo**: no
+tienes que hacer nada. Esta sección es para ver qué hizo, quitarlo o
+cambiar la opción avanzada.
+
+**Qué ajusta** (solo lo que le sirve a tu equipo):
+
+| Ajuste | Para qué sirve |
+|---|---|
+| **Respuesta del escritorio** | El sistema atiende antes a las ventanas y al ratón aunque esté ocupado (por ejemplo, actualizando) |
+| **Memoria** | Evita que el equipo se congele cuando se acaba la memoria por tener muchas pestañas abiertas |
+| **Discos y pendrives** | Copiar un archivo grande a un pendrive no congela el escritorio |
+| **Páginas gigantes** | Con 4 GB de memoria o menos, ahorra memoria |
+| **Procesador** | En procesadores viejos, sube la velocidad en cuanto hay trabajo |
+
+Además revisa que estén activas la memoria comprimida (zram) y las
+mejoras de disco que deja puestas la configuración final.
+
+**Paso a paso, con el menú:**
+
+1. Abre el menú de aplicaciones y busca **Afinador** (está en
+   Sistema o Configuración).
+2. Arriba ves la lista de ajustes: ✔ quiere decir que ya está puesto,
+   ○ que se puede poner y · que tu equipo no lo necesita.
+3. Elige una opción y pulsa **Aceptar**:
+   - **Aplicar lo recomendado**: pone los ajustes que le sirven a tu
+     equipo.
+   - **Quitar los ajustes**: deja todo como venía en Alpine.
+   - **Protecciones del procesador (avanzado)**: ver más abajo.
+   - **Ver el informe del hardware**: muestra lo que encontró en tu
+     equipo.
+4. Te pide tu contraseña. Algunos ajustes se notan **después de
+   reiniciar**.
+
+**Paso a paso, con la terminal:**
 
 ```sh
-lazaro-diagnostico
+lazaro-afinador --revisar          # qué ajustes hay y cuáles están puestos
+lazaro-afinador --perfil           # informe del hardware del equipo
+doas lazaro-afinador --aplicar     # poner lo recomendado
+doas lazaro-afinador --deshacer    # quitarlo todo
 ```
 
-En el sistema instalado te pide tu contraseña; en la sesión de prueba no.
-Normalmente en menos de un minuto deja en tu **carpeta personal** un
-archivo llamado `lazaro-diagnostico-` con la fecha y la hora, por ejemplo
-`lazaro-diagnostico-20261103-142530.txt`. Trae los datos del equipo, el
-hardware, la red, el sonido y los errores del arranque y de la
-instalación. No guarda contraseñas y solo tú puedes leerlo.
+**Protecciones del procesador (opción avanzada, apagada de fábrica).**
+Los procesadores tienen fallos de diseño conocidos (con nombres como
+Spectre y Meltdown) y el sistema los tapa con unas protecciones que lo
+frenan un poco: en procesadores Intel Core de 2ª a 7ª generación (de
+2011 a 2017, aproximadamente), entre un 5 % y un 15 %. Se pueden apagar
+para ganar esa velocidad, **pero entonces una página web maliciosa podría
+leer datos de otros programas, como contraseñas**. Hazlo solo en un
+equipo que no se use para navegar, el banco o el correo. Se apaga desde
+el Afinador o con `doas lazaro-afinador --mitigaciones si`, y se vuelve a
+encender con `doas lazaro-afinador --mitigaciones no`. En ambos casos
+hay que reiniciar.
 
-En la sesión de prueba esa carpeta se borra al apagar: copia el archivo a
-otro USB o envíalo antes.
+**Si algo va peor después de un ajuste**, quítalos con **Quitar los
+ajustes** (o `doas lazaro-afinador --deshacer`) y reinicia: el equipo
+queda exactamente como venía. Ningún ajuste del afinador puede impedir
+que el equipo arranque.
 
-Para avisar de un problema, abre un reporte en
+### Controladores: lo que le falta al hardware
+
+Un **controlador** es lo que el sistema necesita para usar una pieza
+(el wifi, la impresora, un lector de huellas). Lázaro revisa el equipo al
+instalar y deja puesto lo que hace falta, así que normalmente no tienes
+que hacer nada. Si después conectas algo que necesita un controlador,
+aparece un **aviso** en la esquina de la pantalla.
+
+**Paso a paso:**
+
+1. Si aparece el aviso **"Falta algo para tu hardware"**, pulsa
+   **Instalar**. Si no ves el aviso, abre el menú de aplicaciones y busca
+   **Controladores**.
+2. Se abre una lista con lo que le falta al equipo. Viene todo marcado;
+   desmarca lo que no quieras.
+3. Pulsa **Aceptar** y escribe tu contraseña. Lo que se descarga necesita
+   internet.
+4. Si alguno es el firmware de un wifi Intel viejo, primero aparece su
+   **licencia**: léela y acéptala para poder instalarlo.
+5. Cuando diga **Listo**, reinicia si la pieza todavía no funciona.
+
+Si dice **"No falta nada"**, el equipo ya tiene todo lo que Lázaro sabe
+revisar. Si una pieza sigue sin funcionar, pide ayuda con el informe de
+diagnóstico (abajo).
+
+**Con la terminal:**
+
+```sh
+lazaro-controladores --revisar               # lista lo que falta
+doas lazaro-controladores --instalar-alpine  # instala lo que falta de Alpine
+```
+
+### Diagnóstico: pedir ayuda
+
+Si algo no funciona, el diagnóstico arma un informe con los datos del
+equipo para que otra persona pueda ayudarte.
+
+**Paso a paso:**
+
+1. Abre una terminal.
+2. Escribe `lazaro-diagnostico` y pulsa Enter.
+3. En el sistema instalado te pide tu contraseña; en la sesión de prueba
+   no.
+4. Espera: normalmente tarda menos de un minuto. Al final dice
+   **Listo:** y el nombre del archivo.
+5. El archivo queda en tu **carpeta personal** y se llama
+   `lazaro-diagnostico-` con la fecha y la hora, por ejemplo
+   `lazaro-diagnostico-20261103-142530.txt`. Ábrelo con doble clic si
+   quieres ver qué tiene.
+6. En la sesión de prueba esa carpeta se borra al apagar: copia el
+   archivo a otro USB o envíalo antes.
+
+**Qué trae:** los datos del equipo y del procesador, la memoria y los
+discos, el hardware (incluido lo que dice el afinador y lo que le falta
+según Controladores), la red, el sonido, la pantalla y los errores del
+arranque y de la instalación. No guarda contraseñas y solo tú puedes
+leerlo.
+
+**Para avisar de un problema**, abre un reporte en
 [Issues](https://github.com/Entropio1984/lazaro-linux/issues) (necesitas
-una cuenta de GitHub, que es gratis) y adjunta el informe. **Los reportes
-son públicos**: el informe trae datos de la red (como las direcciones IP
-y los nombres de las redes guardadas) y registros del sistema. Ábrelo
-antes con un editor de texto y borra lo que no quieras mostrar.
+una cuenta de GitHub, que es gratis), cuenta qué pasa y adjunta el
+informe. **Los reportes son públicos**: el informe trae datos de la red
+(como las direcciones IP y los nombres de las redes guardadas) y
+registros del sistema. Ábrelo antes con un editor de texto y borra lo que
+no quieras mostrar.
 
 ## Palabras que aparecen en esta guía
 
@@ -342,6 +458,11 @@ antes con un editor de texto y borra lo que no quieras mostrar.
 | **Flatpak / Flathub** | Una forma de instalar programas, y la tienda gratuita donde están |
 | **Firmware** | Pequeños programas que necesitan algunas piezas, como el wifi, para funcionar |
 | **Alpine Linux** | El sistema liviano sobre el que está hecho Lázaro |
+| **Kernel (núcleo)** | La parte central del sistema, la que habla con el hardware |
+| **Controlador** | Lo que el sistema necesita para usar una pieza del equipo, como el wifi o la impresora |
+| **Memoria (RAM)** | Donde el equipo guarda lo que está usando en ese momento; se borra al apagar |
+| **zram** | Memoria comprimida: hace que la RAM rinda más, a cambio de un poco de procesador |
+| **GRUB** | El menú que aparece al encender y arranca el sistema |
 
 ---
 
@@ -369,6 +490,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Perfil de la ISO | `perfil/mkimg.lazaro.sh` | Lo usa `mkimage.sh` de aports |
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
 | Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
+| Afinador | `live/usr/sbin/lazaro-afinador` | Perfil del hardware (fijo y extraíble, nivel x86-64, discos, memoria) y ajustes reversibles: `preempt=full`, Multi-Gen LRU con `min_ttl_ms`, tope de escritura en `sysctl.d`, páginas gigantes y `schedutil`; servicio de arranque y menú "Afinador" |
 | Controladores que faltan | `live/usr/sbin/lazaro-controladores` | Revisa el hardware e instala lo que le falta (al instalar, al arrancar, con aviso en la sesión y desde el menú) |
 | Recomendación según el equipo | `live/usr/sbin/lazaro-recomendar` | Escritorio y programas preseleccionados en Calamares según memoria, gráfica y disco |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
@@ -394,6 +516,10 @@ prueban y publican solas en cada cambio de la rama principal.
    aplicaciones) y las premarcadas de su menú. Si no hay internet, el
    script queda programado para el primer arranque con red (servicio
    `lazaro-primer-arranque`).
+7. `lazaro-afinador --aplicar --raiz`: los ajustes recomendados para el
+   hardware (bloque con marcas en `/etc/default/grub`,
+   `/etc/sysctl.d/60-lazaro-afinador.conf` y el servicio
+   `lazaro-afinador`, que aplica lo de `/sys` en cada arranque).
 
 ## Compilar
 
@@ -465,7 +591,12 @@ equipos con distinta memoria, gráfica y disco. Y las reglas de
 `lazaro-controladores` (impresoras, huellas, wifi viejo, firmware que
 falta) las recorre `pruebas/controladores.sh` con equipos simulados; en
 las instalaciones de QEMU, además, se simulan un lector de huellas y uno
-de tarjetas para comprobar que se instalan desde el USB.
+de tarjetas para comprobar que se instalan desde el USB. El afinador
+tiene su propia prueba, `pruebas/afinador.sh`, con un portátil viejo, un
+equipo nuevo y uno sin escritorio simulados (qué ajustes elige y que
+aplicar y deshacer dejen GRUB como estaba); en las instalaciones de QEMU
+se comprueba además que el sistema arranca con `preempt=full` y con la
+protección de memoria puesta.
 
 ## Versiones probadas
 

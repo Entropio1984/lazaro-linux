@@ -321,6 +321,16 @@ prueba_instalar() {
 		fi
 	done
 	echo "OK: controladores: ${faltan#LAZARO-CONTROLADORES-FALTAN }"
+	# lazaro-afinador: aplica lo recomendado al instalar; con escritorio,
+	# eso incluye preempt=full en el menú de arranque.
+	afinador="$(grep -m1 -o 'LAZARO-AFINADOR-OK.*' "$serie" || true)"
+	if [ -z "$afinador" ] || { [ "$de" != ninguno ] && ! printf '%s' "$afinador" | grep -q 'preempt=full'; }; then
+		terminar "$pid"
+		echo "FALLO: el afinador no aplicó sus ajustes al instalar (${afinador:-sin línea LAZARO-AFINADOR-OK})." >&2
+		grep -iE 'afinador' "$serie" | tail -n 20 >&2 || true
+		return 1
+	fi
+	echo "OK: afinador: ${afinador#LAZARO-AFINADOR-OK}"
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-desktop instala (sin
 	# escritorio no hay ese paso: setup-disk no escribe una línea por
@@ -453,6 +463,11 @@ prueba_instalar() {
 			ok=1
 		elif [ "$de" != ninguno ] && ! grep -q LAZARO-YOUTUBE-OK "$serie2"; then
 			echo "FALLO: no se confirmó YouTube ligero (Pipe Viewer + mpv + yt-dlp con QuickJS)." >&2
+			ok=1
+		elif ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*ttl=1000' "$serie2" \
+			|| { [ "$de" != ninguno ] && ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*Dynamic Preempt: full' "$serie2"; }; then
+			echo "FALLO: el sistema instalado no arrancó con los ajustes del afinador." >&2
+			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
 		elif ! grep -q LAZARO-DIAGNOSTICO-OK "$serie2"; then
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2

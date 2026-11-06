@@ -430,6 +430,10 @@ idioma_sesion() {
 	for s in lightdm sddm gdm greetd; do
 		cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 	done
+	# Ajustes del afinador en el sistema en marcha: el servicio puso la
+	# protección de memoria y el arranque trae preempt=full (con
+	# escritorio), que el kernel confirma con "Dynamic Preempt: full".
+	echo "LAZARO-AFINADOR-ARRANQUE $(dmesg | grep -o 'Dynamic Preempt: [a-z]*' | tail -n 1) ttl=$(cat /sys/kernel/mm/lru_gen/min_ttl_ms 2>/dev/null)"
 	# Informe de diagnóstico (lazaro-diagnostico, como root): debe dejar
 	# un archivo con sus secciones.
 	if [ -z "$reiniciar" ]; then

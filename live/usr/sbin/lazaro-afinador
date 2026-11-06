@@ -1,0 +1,560 @@
+#!/bin/sh
+# lazaro-afinador: revisa el hardware del equipo y ajusta el sistema para
+# que responda mejor, sobre todo en equipos viejos o con poca memoria.
+# Todo lo que cambia se puede deshacer, y nada de esto puede impedir que
+# el equipo arranque: solo toca ajustes que el kernel acepta en marcha y
+# dos opciones del arranque que el kernel de Alpine ya trae.
+#
+# Lo que ya deja puesto desktop-postinstall.sh (zram con zstd,
+# swappiness=100, earlyoom, BFQ para discos mecánicos, TRIM semanal) no
+# se repite: el afinador solo lo revisa y lo muestra.
+#
+# Ajustes (cada uno solo si el equipo y el kernel lo admiten):
+#   preempt      el kernel atiende antes al escritorio (preempt=full en
+#                el arranque; el kernel de Alpine trae el modo dinámico).
+#   memoria      Multi-Gen LRU con protección de 1 s contra el
+#                "thrashing" (congelones con poca RAM).
+#   escritura    tope bajo a lo que se acumula para escribir en disco: al
+#                copiar a un pendrive el escritorio no se congela.
+#   paginas      páginas gigantes solo para quien las pide (madvise), con
+#                4 GB de RAM o menos: ahorra memoria.
+#   cpu          con el controlador acpi-cpufreq (procesadores viejos),
+#                modo schedutil si estaba en uno que lo frena.
+# Opcional, nunca automático:
+#   mitigaciones apaga las protecciones del procesador contra Spectre y
+#                similares (mitigations=off): más rápido en Intel de 2ª a
+#                7ª generación, pero menos seguro al navegar.
+#
+# Uso:
+#   lazaro-afinador --perfil          hardware del equipo (procesador,
+#        nivel x86-64, memoria, discos, controladores del hardware fijo y
+#        del extraíble, estado del kernel)
+#   lazaro-afinador --modulos         solo los controladores que pide el
+#        hardware fijo (uno por línea; para el kernel a medida)
+#   lazaro-afinador --revisar         cada ajuste y su estado, una línea
+#        por ajuste: ESTADO<TAB>CLAVE<TAB>DESCRIPCIÓN (ESTADO: aplicado,
+#        pendiente, no-aplica, info)
+#   lazaro-afinador --aplicar [--raiz R]    aplica lo recomendado (como
+#        root; con --raiz, lo deja escrito en ese sistema)
+#   lazaro-afinador --deshacer [--raiz R]   quita todo lo del afinador
+#   lazaro-afinador --mitigaciones si|no    apaga (si) o vuelve a
+#        encender (no) las protecciones del procesador
+#   lazaro-afinador --arranque        lo usa el servicio al encender
+#   lazaro-afinador --ventana         ventana para el menú
+#
+# Variables para las pruebas: LAZARO_SYS (en vez de /sys), LAZARO_PROC (en
+# vez de /proc), LAZARO_MODULOS (en vez de modules.alias), LAZARO_KCONFIG
+# (configuración del kernel), LAZARO_CONF (en vez de afinador.conf),
+# LAZARO_AFINADOR_LOG.
+
+set -eu
+
+SYS="${LAZARO_SYS:-/sys}"
+PROC="${LAZARO_PROC:-/proc}"
+RAIZ=""
+LOG="${LAZARO_AFINADOR_LOG:-/var/log/lazaro-afinador.log}"
+CONF_REL="etc/lazaro/afinador.conf"
+SYSCTL_REL="etc/sysctl.d/60-lazaro-afinador.conf"
+GRUB_REL="etc/default/grub"
+MARCA_INI="# lazaro-afinador: inicio (no editar entre estas marcas)"
+MARCA_FIN="# lazaro-afinador: fin"
+
+# Valores de los ajustes.
+SUCIO_FONDO=16777216    # 16 MiB: empieza a escribir en segundo plano
+SUCIO_TOPE=50331648     # 48 MiB: tope antes de frenar a quien escribe
+MGLRU_TTL=1000          # ms que se protege la memoria en uso
+
+registrar() {
+	printf '%s %s\n' "$(date '+%F %T' 2>/dev/null)" "$*" >>"$RAIZ$LOG" 2>/dev/null || true
+}
+aviso() { printf '[lazaro-afinador] %s\n' "$*" >&2; registrar "$*"; }
+leer() { cat "$1" 2>/dev/null || true; }
+
+# --- Lo que hay en el equipo ---------------------------------------------
+
+ram_mb() { awk '/^MemTotal:/ { printf "%d", $2 / 1024 }' "$PROC/meminfo" 2>/dev/null || echo 0; }
+nucleos() { grep -c '^processor' "$PROC/cpuinfo" 2>/dev/null || echo 1; }
+cpu_modelo() { sed -n 's/^model name[[:space:]]*:[[:space:]]*//p' "$PROC/cpuinfo" 2>/dev/null | head -n 1; }
+
+# Nivel de microarquitectura x86-64 (v1 a v4) según las instrucciones que
+# anuncia el procesador.
+nivel_x86() {
+	flags=" $(sed -n 's/^flags[[:space:]]*:[[:space:]]*//p' "$PROC/cpuinfo" 2>/dev/null | head -n 1) "
+	tiene() { for f in "$@"; do case "$flags" in *" $f "*) ;; *) return 1 ;; esac; done; }
+	n=v1
+	tiene cx16 lahf_lm popcnt sse4_1 sse4_2 ssse3 || { echo $n; return 0; }
+	n=v2
+	tiene avx avx2 bmi1 bmi2 f16c fma abm movbe xsave || { echo $n; return 0; }
+	n=v3
+	tiene avx512f avx512bw avx512cd avx512dq avx512vl || { echo $n; return 0; }
+	echo v4
+}
+
+cpufreq_driver() { leer "$SYS/devices/system/cpu/cpu0/cpufreq/scaling_driver"; }
+cpufreq_gov() { leer "$SYS/devices/system/cpu/cpu0/cpufreq/scaling_governor"; }
+cpufreq_govs() { leer "$SYS/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"; }
+
+# Configuración del kernel instalado (para saber qué admite).
+kconfig() {
+	if [ -n "${LAZARO_KCONFIG:-}" ]; then cat "$LAZARO_KCONFIG"; return 0; fi
+	# El del kernel en marcha (6.18.59-0-lts -> config-lts) o, al
+	# instalar, el lts que pone setup-disk; si no, el primero que haya.
+	sabor="$(uname -r)"; sabor="${sabor##*-}"
+	[ -z "$RAIZ" ] || sabor=lts
+	for f in "$RAIZ/boot/config-$sabor" "$RAIZ"/boot/config-*; do
+		[ -r "$f" ] && { cat "$f"; return 0; }
+	done
+	if [ -z "$RAIZ" ]; then
+		[ -r /proc/config.gz ] || modprobe configs 2>/dev/null || true
+		if [ -r /proc/config.gz ]; then zcat /proc/config.gz 2>/dev/null; return 0; fi
+	fi
+	# Último recurso: lo que dijo el kernel en marcha al arrancar (en la
+	# instalación es el mismo kernel que el del sistema nuevo).
+	if [ -z "${LAZARO_PROC:-}" ]; then
+		dmesg 2>/dev/null | grep -q 'Dynamic Preempt:' && echo CONFIG_PREEMPT_DYNAMIC=y
+		[ -e /sys/kernel/mm/lru_gen/enabled ] && echo CONFIG_LRU_GEN=y
+	fi
+	return 0
+}
+kconfig_tiene() { kconfig | grep -qx "$1=y"; }
+
+cmdline_tiene() { grep -qw -- "$1" "$PROC/cmdline" 2>/dev/null; }
+con_escritorio() { [ ! -e "$RAIZ/etc/lazaro/sin-escritorio" ]; }
+
+# Discos: NOMBRE TIPO TAMAÑO_GB PLANIFICADOR (TIPO: HDD, SSD, NVMe, USB).
+discos() {
+	for q in "$SYS"/block/*/queue/rotational; do
+		[ -e "$q" ] || continue
+		d="${q%/queue/rotational}"; d="${d##*/}"
+		case "$d" in loop*|ram*|zram*|sr*|fd*|dm-*|md*) continue ;; esac
+		tipo=SSD
+		[ "$(leer "$q")" = 1 ] && tipo=HDD
+		case "$d" in nvme*) tipo=NVMe ;; mmcblk*) tipo=eMMC/SD ;; esac
+		readlink "$SYS/block/$d" 2>/dev/null | grep -q '/usb' && tipo=USB
+		sectores="$(leer "$SYS/block/$d/size")"
+		gb=$(( ${sectores:-0} / 2097152 ))
+		plan="$(sed -n 's/.*\[\(.*\)\].*/\1/p' "$SYS/block/$d/queue/scheduler" 2>/dev/null)"
+		echo "$d $tipo ${gb} ${plan:-?}"
+	done
+}
+
+# awk: lee modules.alias y dice el controlador de cada modalias (igual que
+# lazaro-controladores; el modprobe de busybox no tiene -R).
+AWK_ALIAS='BEGIN { n = 0 }
+FNR == NR {
+	if ($1 != "alias") next
+	pat = $2; mod = $3
+	i = match(pat, /[*?[]/)
+	pre[n] = (i ? substr(pat, 1, i - 1) : pat)
+	re = pat
+	gsub(/[.+^$(){}|\\]/, "\\\\&", re)
+	gsub(/\*/, ".*", re); gsub(/\?/, ".", re)
+	rx[n] = "^" re "$"; md[n] = mod; n++
+	next
+}
+{
+	for (k = 0; k < n; k++)
+		if (substr($0, 1, length(pre[k])) == pre[k] && $0 ~ rx[k]) print md[k]
+}
+'
+
+# Modalias de cada pieza, separadas en fijas (placa, gráfica, wifi
+# interno, disco, webcam y bluetooth integrados) y extraíbles (lo que se
+# enchufa por USB). Lee /sys aunque la pieza no tenga controlador cargado.
+# Salida: fijo|extraible<TAB>modalias
+modalias_clasificados() {
+	for m in "$SYS"/bus/*/devices/*/modalias; do
+		[ -r "$m" ] || continue
+		a="$(leer "$m")"
+		[ -n "$a" ] || continue
+		clase=fijo
+		case "$a" in
+			usb:*)
+				# El puerto dice si es interno ("fixed", según la BIOS).
+				dev="$(cd "${m%/modalias}" 2>/dev/null && pwd -P)" || dev=""
+				clase=extraible
+				while [ -n "$dev" ] && [ "$dev" != / ]; do
+					if [ -r "$dev/removable" ]; then
+						[ "$(leer "$dev/removable")" = fixed ] && clase=fijo
+						break
+					fi
+					dev="${dev%/*}"
+				done ;;
+		esac
+		printf '%s\t%s\n' "$clase" "$a"
+	done | sort -u
+}
+
+modulos_de() { # fijo|extraible
+	al="${LAZARO_MODULOS:-/lib/modules/$(uname -r)/modules.alias}"
+	{
+		if [ -r "$al" ]; then
+			modalias_clasificados | awk -F'\t' -v c="$1" '$1 == c { print $2 }' |
+				awk "$AWK_ALIAS" "$al" -
+		fi
+		# Los controladores que ya manejan una pieza fija.
+		if [ "$1" = fijo ]; then
+			for d in "$SYS"/bus/pci/devices/*/driver "$SYS"/bus/platform/devices/*/driver; do
+				[ -L "$d" ] && basename "$(readlink "$d")"
+			done
+		fi
+	} | tr '-' '_' | sort -u
+}
+
+# --- Ajustes ---------------------------------------------------------------
+
+conf() { echo "${LAZARO_CONF:-$RAIZ/$CONF_REL}"; }
+conf_valor() { sed -n "s/^$1=//p" "$(conf)" 2>/dev/null | tail -n 1; }
+conf_poner() {
+	c="$(conf)"
+	mkdir -p "${c%/*}"
+	{ grep -v "^$1=" "$c" 2>/dev/null || true; echo "$1=$2"; } > "$c.tmp"
+	mv "$c.tmp" "$c"
+}
+activo() { [ "$(conf_valor ESTADO)" = activo ]; }
+
+# Cada ajuste: ¿le sirve a este equipo? (0 sí, 1 no aplica)
+sirve_preempt() { con_escritorio && kconfig_tiene CONFIG_PREEMPT_DYNAMIC; }
+sirve_memoria() { [ -e "$SYS/kernel/mm/lru_gen/enabled" ] || kconfig_tiene CONFIG_LRU_GEN; }
+sirve_escritura() { return 0; }
+sirve_paginas() { [ "$(ram_mb)" -le 4096 ] && [ -e "$SYS/kernel/mm/transparent_hugepage/enabled" ]; }
+sirve_cpu() {
+	[ "$(cpufreq_driver)" = acpi-cpufreq ] || return 1
+	case " $(cpufreq_govs) " in *" schedutil "*) ;; *) return 1 ;; esac
+	case "$(cpufreq_gov)" in ondemand|conservative|powersave|userspace|schedutil) return 0 ;; esac
+	return 1
+}
+
+# Parámetros del arranque que pone el afinador.
+parametros_grub() {
+	p=""
+	sirve_preempt && p="preempt=full"
+	[ "$(conf_valor MITIGACIONES)" = apagadas ] && p="${p:+$p }mitigations=off"
+	echo "$p"
+}
+
+grub_quitar_bloque() {
+	g="$RAIZ/$GRUB_REL"
+	[ -f "$g" ] && grep -qxF "$MARCA_INI" "$g" || return 0
+	# Solo con las dos marcas, en orden: si alguien borró la de cierre, no
+	# se toca nada (se perderían las líneas de abajo).
+	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '$0 == i { a = NR } $0 == f && a { ok = 1 } END { exit !ok }' "$g" || {
+		aviso "$g tiene la marca de inicio del afinador sin la de cierre: no se modifica."
+		return 1
+	}
+	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '
+		$0 == i { dentro = 1; next }
+		dentro && $0 == f { dentro = 0; next }
+		!dentro { print }' "$g" > "$g.tmp.$$" && cat "$g.tmp.$$" > "$g"
+	rm -f "$g.tmp.$$"
+}
+grub_poner_bloque() { # PARÁMETROS
+	g="$RAIZ/$GRUB_REL"
+	grub_quitar_bloque || return 1
+	[ -n "$1" ] && [ -f "$g" ] || return 0
+	[ -z "$(tail -c 1 "$g")" ] || echo >> "$g"
+	printf '%s\nGRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT %s"\n%s\n' \
+		"$MARCA_INI" "$1" "$MARCA_FIN" >> "$g"
+}
+# Sin --raiz se regenera el menú de arranque aquí; con --raiz lo hace
+# quien instala (dentro del sistema nuevo).
+grub_regenerar() {
+	[ -z "$RAIZ" ] || return 0
+	[ -d /boot/grub ] && command -v grub-mkconfig >/dev/null 2>&1 || {
+		aviso "No se encontró GRUB: los cambios del arranque no se aplicaron."
+		return 0
+	}
+	if grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1; then
+		registrar "Menú de arranque actualizado."
+	else
+		aviso "No se pudo actualizar el menú de arranque (grub-mkconfig); detalles en $LOG."
+		return 1
+	fi
+}
+
+escribir_sysctl() {
+	mkdir -p "$RAIZ/etc/sysctl.d"
+	cat > "$RAIZ/$SYSCTL_REL" <<-EOF
+	# lazaro-afinador: lo que se acumula para escribir en disco tiene un
+	# tope bajo, así copiar a un pendrive no congela el escritorio.
+	# Para quitarlo: doas lazaro-afinador --deshacer
+	vm.dirty_background_bytes = $SUCIO_FONDO
+	vm.dirty_bytes = $SUCIO_TOPE
+	EOF
+}
+
+poner_sys() { # ARCHIVO VALOR
+	[ -w "$1" ] || return 0
+	echo "$2" > "$1" 2>/dev/null || registrar "No se pudo escribir $2 en $1"
+}
+
+# Lo que no sobrevive al reinicio (/sys y sysctl): lo aplica el servicio
+# en cada arranque.
+aplicar_en_marcha() {
+	activo || return 0
+	if [ -r "/$SYSCTL_REL" ] && command -v sysctl >/dev/null 2>&1; then
+		sysctl -q -p "/$SYSCTL_REL" >/dev/null 2>&1 || registrar "sysctl no aceptó $SYSCTL_REL"
+	fi
+	if sirve_memoria; then
+		poner_sys "$SYS/kernel/mm/lru_gen/enabled" y
+		poner_sys "$SYS/kernel/mm/lru_gen/min_ttl_ms" "$MGLRU_TTL"
+	fi
+	if sirve_paginas; then
+		poner_sys "$SYS/kernel/mm/transparent_hugepage/enabled" madvise
+		poner_sys "$SYS/kernel/mm/transparent_hugepage/defrag" defer+madvise
+	fi
+	if sirve_cpu; then
+		for g in "$SYS"/devices/system/cpu/cpufreq/policy*/scaling_governor; do
+			poner_sys "$g" schedutil
+		done
+	fi
+}
+
+aplicar() {
+	# Primero lo que queda escrito; el estado "activo" se anota solo si
+	# eso salió bien (con set -e, un fallo corta antes).
+	escribir_sysctl
+	grub_poner_bloque "$(parametros_grub)" || exit 1
+	conf_poner ESTADO activo
+	if [ -z "$RAIZ" ]; then
+		aplicar_en_marcha
+		grub_regenerar || exit 1
+	fi
+	# Servicio de arranque.
+	if [ -e "$RAIZ/etc/init.d/lazaro-afinador" ]; then
+		mkdir -p "$RAIZ/etc/runlevels/default"
+		ln -sf /etc/init.d/lazaro-afinador "$RAIZ/etc/runlevels/default/lazaro-afinador"
+	fi
+	registrar "Ajustes aplicados: $(revisar | awk -F'\t' '$1 == "aplicado" { printf "%s ", $2 }')"
+	echo "LAZARO-AFINADOR-OK $(parametros_grub)"
+}
+
+deshacer() {
+	grub_quitar_bloque || exit 1
+	rm -f "$RAIZ/$SYSCTL_REL"
+	conf_poner ESTADO desactivado
+	conf_poner MITIGACIONES encendidas
+	rm -f "$RAIZ/etc/runlevels/default/lazaro-afinador"
+	if [ -z "$RAIZ" ]; then
+		# Escritura a disco: los valores del kernel por defecto, ya.
+		if command -v sysctl >/dev/null 2>&1; then
+			sysctl -q -w vm.dirty_background_ratio=10 vm.dirty_ratio=20 >/dev/null 2>&1 || true
+		fi
+		grub_regenerar || exit 1
+	fi
+	registrar "Ajustes quitados."
+	echo "LAZARO-AFINADOR-DESHECHO (lo demás vuelve a como estaba al reiniciar)"
+}
+
+mitigaciones() { # si|no
+	case "$1" in
+		si) conf_poner MITIGACIONES apagadas
+			aviso "Protecciones del procesador APAGADAS (mitigations=off) desde el próximo arranque." ;;
+		no) conf_poner MITIGACIONES encendidas
+			aviso "Protecciones del procesador encendidas desde el próximo arranque." ;;
+		*) echo "Uso: lazaro-afinador --mitigaciones si|no" >&2; exit 2 ;;
+	esac
+	if activo; then
+		grub_poner_bloque "$(parametros_grub)" || exit 1
+	elif [ "$1" = si ]; then
+		# Sin el resto de ajustes, solo este parámetro.
+		grub_poner_bloque "mitigations=off" || exit 1
+	else
+		grub_quitar_bloque || exit 1
+	fi
+	grub_regenerar || exit 1
+}
+
+# --- Informes ----------------------------------------------------------------
+
+linea() { printf '%s\t%s\t%s\n' "$1" "$2" "$3"; }
+
+revisar() {
+	act=no; activo && act=si
+	en_marcha() { [ -z "$RAIZ" ] && [ "$act" = si ]; }
+
+	if ! sirve_preempt; then
+		linea no-aplica preempt "Respuesta del escritorio: el kernel no tiene el modo dinámico (o no hay escritorio)"
+	elif cmdline_tiene preempt=full && [ -z "$RAIZ" ]; then
+		linea aplicado preempt "Respuesta del escritorio: el kernel atiende antes a las ventanas (preempt=full)"
+	elif [ "$act" = si ]; then
+		linea pendiente preempt "Respuesta del escritorio (preempt=full): se activa al reiniciar"
+	else
+		linea pendiente preempt "Respuesta del escritorio: el kernel atendería antes a las ventanas (preempt=full)"
+	fi
+
+	if ! sirve_memoria; then
+		linea no-aplica memoria "Memoria: el kernel no tiene Multi-Gen LRU"
+	elif en_marcha && [ "$(leer "$SYS/kernel/mm/lru_gen/min_ttl_ms")" = "$MGLRU_TTL" ]; then
+		linea aplicado memoria "Memoria: Multi-Gen LRU con protección contra congelones al quedarse sin RAM"
+	else
+		linea pendiente memoria "Memoria: protección contra congelones al quedarse sin RAM (Multi-Gen LRU)"
+	fi
+
+	if [ "$act" = si ] && [ -e "$RAIZ/$SYSCTL_REL" ]; then
+		linea aplicado escritura "Discos y pendrives: copiar archivos grandes no congela el escritorio"
+	else
+		linea pendiente escritura "Discos y pendrives: que copiar archivos grandes no congele el escritorio"
+	fi
+
+	if ! sirve_paginas; then
+		linea no-aplica paginas "Páginas gigantes: con más de 4 GB de RAM no hace falta cambiarlas"
+	elif en_marcha && grep -q '\[madvise\]' "$SYS/kernel/mm/transparent_hugepage/enabled" 2>/dev/null; then
+		linea aplicado paginas "Páginas gigantes solo para quien las pide: ahorra memoria"
+	else
+		linea pendiente paginas "Páginas gigantes solo para quien las pide: ahorra memoria"
+	fi
+
+	drv="$(cpufreq_driver)"
+	if [ -z "$drv" ]; then
+		linea no-aplica cpu "Procesador: el equipo no deja cambiar su velocidad"
+	elif [ "$drv" != acpi-cpufreq ]; then
+		linea no-aplica cpu "Procesador: lo maneja $drv junto con el perfil de energía; no hace falta tocarlo"
+	elif [ "$(cpufreq_gov)" = schedutil ]; then
+		linea aplicado cpu "Procesador: sube la velocidad en cuanto hay trabajo (schedutil)"
+	elif sirve_cpu; then
+		linea pendiente cpu "Procesador: que suba la velocidad en cuanto hay trabajo (schedutil)"
+	else
+		linea no-aplica cpu "Procesador: modo $(cpufreq_gov), elegido a mano; no se toca"
+	fi
+
+	if [ "$(conf_valor MITIGACIONES)" = apagadas ]; then
+		linea aplicado mitigaciones "Protecciones del procesador APAGADAS (más rápido, menos seguro al navegar)"
+	else
+		linea info mitigaciones "Protecciones del procesador encendidas (recomendado)"
+	fi
+
+	# Lo que deja desktop-postinstall.sh: solo se informa.
+	if [ -e "$RAIZ/etc/runlevels/default/zram-init" ] || grep -q zram "$PROC/swaps" 2>/dev/null; then
+		linea info zram "Memoria comprimida (zram) activa"
+	else
+		linea info zram "Memoria comprimida (zram) todavía no está activa (la pone la configuración final)"
+	fi
+}
+
+perfil() {
+	echo "== Equipo"
+	echo "Modelo: $(leer "$SYS/class/dmi/id/sys_vendor") $(leer "$SYS/class/dmi/id/product_name")"
+	echo "Arranque: $([ -d "$SYS/firmware/efi" ] && echo UEFI || echo BIOS)"
+	echo
+	echo "== Procesador"
+	echo "Modelo: $(cpu_modelo)"
+	echo "Núcleos: $(nucleos)"
+	echo "Nivel x86-64: $(nivel_x86)"
+	echo "Control de velocidad: $(cpufreq_driver) (modo: $(cpufreq_gov))"
+	vul=""
+	for v in "$SYS"/devices/system/cpu/vulnerabilities/*; do
+		[ -r "$v" ] || continue
+		case "$(leer "$v")" in "Not affected"*) continue ;; esac
+		vul="$vul ${v##*/}"
+	done
+	echo "Fallos del procesador con protección:${vul:- ninguno}"
+	echo
+	echo "== Memoria"
+	echo "RAM: $(ram_mb) MB"
+	awk 'NR > 1 { printf "Intercambio: %s %d MB (%s)\n", $1, $3 / 1024, $2 }' "$PROC/swaps" 2>/dev/null || true
+	echo "Multi-Gen LRU: $(leer "$SYS/kernel/mm/lru_gen/enabled") (protección $(leer "$SYS/kernel/mm/lru_gen/min_ttl_ms") ms)"
+	echo "Páginas gigantes: $(leer "$SYS/kernel/mm/transparent_hugepage/enabled")"
+	echo
+	echo "== Discos"
+	raiz_dev="$(awk '$2 == "/" { print $1 }' "$PROC/mounts" 2>/dev/null | tail -n 1)"
+	discos | while read -r d tipo gb plan; do
+		marca=""
+		case "$raiz_dev" in /dev/"$d"*) marca=" (sistema)" ;; esac
+		echo "$d: $tipo, $gb GB, planificador $plan$marca"
+	done
+	echo
+	echo "== Kernel"
+	echo "Versión: $(uname -r)"
+	echo "Arranque: $(leer "$PROC/cmdline")"
+	kconfig_tiene CONFIG_PREEMPT_DYNAMIC && echo "Modo de respuesta dinámico: sí" || echo "Modo de respuesta dinámico: no"
+	echo
+	echo "== Controladores del hardware fijo"
+	modulos_de fijo | tr '\n' ' '; echo
+	echo
+	echo "== Controladores de lo conectado por USB (extraíble)"
+	modulos_de extraible | tr '\n' ' '; echo
+	echo
+	echo "== Ajustes del afinador"
+	revisar | awk -F'\t' '{ printf "%-10s %-12s %s\n", $1, $2, $3 }'
+}
+
+# --- Ventana -----------------------------------------------------------------
+
+como_root() {
+	if [ "$(id -u)" = 0 ]; then "$@"
+	elif command -v pkexec >/dev/null 2>&1; then pkexec "$@"
+	else doas "$@"
+	fi
+}
+
+ventana() {
+	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	while :; do
+		estado="$(revisar | awk -F'\t' '{
+			s = ($1 == "aplicado") ? "✔" : ($1 == "pendiente") ? "○" : "·"
+			printf "%s %s\n", s, $3 }')"
+		if activo; then
+			b1="Quitar los ajustes"; a1=deshacer
+		else
+			b1="Aplicar lo recomendado"; a1=aplicar
+		fi
+		eleccion="$(zenity --list --title="Afinador" --width=640 --height=420 \
+			--text="Ajustes para que el equipo responda mejor. Todos se pueden quitar.\n\n$estado\n\n✔ puesto   ○ se puede poner   · no hace falta\nQué quieres hacer:" \
+			--column="Acción" --hide-header "$b1" "Protecciones del procesador (avanzado)" "Ver el informe del hardware" "Cerrar" 2>/dev/null)" || return 0
+		case "$eleccion" in
+			"$b1")
+				if salida="$(como_root "$0" --"$a1" 2>&1)"; then
+					zenity --info --width=420 --title="Afinador" \
+						--text="Listo. Algunos ajustes se notan después de reiniciar." >/dev/null 2>&1 || true
+				else
+					zenity --error --width=420 --title="Afinador" \
+						--text="No se pudo.\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+				fi ;;
+			"Protecciones del procesador (avanzado)")
+				if [ "$(conf_valor MITIGACIONES)" = apagadas ]; then
+					zenity --question --width=480 --title="Protecciones del procesador" --ok-label="Encenderlas" --cancel-label="Dejarlas apagadas" \
+						--text="Las protecciones del procesador están APAGADAS.\n\nRecomendado: encenderlas si usas el equipo para navegar, el banco o el correo." >/dev/null 2>&1 &&
+						como_root "$0" --mitigaciones no >/dev/null 2>&1 || true
+				else
+					zenity --question --width=520 --title="Protecciones del procesador" --ok-label="Apagarlas" --cancel-label="Dejarlas encendidas" \
+						--text="El kernel protege al procesador de fallos de diseño (Spectre, Meltdown y otros). Esas protecciones lo frenan un poco: en procesadores Intel de 2ª a 7ª generación, entre un 5 % y un 15 %.\n\nApagarlas lo hace más rápido, pero una página web maliciosa podría leer datos de otros programas, como contraseñas.\n\nApágalas solo si el equipo no se usa para navegar, el banco o el correo. Se aplica al reiniciar y se puede volver a encender aquí." >/dev/null 2>&1 &&
+						como_root "$0" --mitigaciones si >/dev/null 2>&1 || true
+				fi ;;
+			"Ver el informe del hardware")
+				perfil | zenity --text-info --width=720 --height=560 --title="Hardware del equipo" >/dev/null 2>&1 || true ;;
+			*) return 0 ;;
+		esac
+	done
+}
+
+# --- Opciones ------------------------------------------------------------------
+
+orden=""
+valor=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--raiz) RAIZ="${2%/}"; shift ;;
+		--mitigaciones) orden="$1"; valor="${2:-}"; [ $# -lt 2 ] || shift ;;
+		--perfil|--modulos|--revisar|--aplicar|--deshacer|--arranque|--ventana) orden="$1" ;;
+		*) echo "Opción desconocida: $1" >&2; exit 2 ;;
+	esac
+	shift
+done
+mkdir -p "$(dirname "$RAIZ$LOG")" 2>/dev/null || true
+
+necesita_root() {
+	[ "$(id -u)" = 0 ] || [ -n "${LAZARO_PRUEBA:-}" ] || { echo "Hace falta ser administrador: doas lazaro-afinador $orden" >&2; exit 1; }
+}
+
+case "$orden" in
+	--perfil) perfil ;;
+	--modulos) modulos_de fijo ;;
+	--revisar) revisar ;;
+	--aplicar) necesita_root; aplicar ;;
+	--deshacer) necesita_root; deshacer ;;
+	--mitigaciones) necesita_root; mitigaciones "$valor" ;;
+	--arranque) aplicar_en_marcha ;;
+	--ventana) ventana ;;
+	*) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+esac
