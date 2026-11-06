@@ -262,6 +262,10 @@ jobs:
       # aplicar y deshacer dejen GRUB y sysctl.d como estaban.
       - run: sh pruebas/afinador.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh pruebas/afinador.sh
+      # lazaro-kernel: instalar, arranque de prueba bien y mal, actualizar
+      # y quitar, con GRUB y apk falsos.
+      - run: sh pruebas/kernel.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q curl && sh pruebas/kernel.sh'
 
   pruebas:
     name: Prueba ${{ matrix.prueba }} (${{ matrix.alpine }})

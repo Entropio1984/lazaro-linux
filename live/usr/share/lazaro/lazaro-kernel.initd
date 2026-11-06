@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+# Confirma el arranque de prueba del kernel Lázaro: si el equipo llegó
+# hasta aquí con él, queda como el kernel por defecto. Si arrancó el de
+# Alpine durante la prueba, la anota como fallida (ver lazaro-kernel
+# --estado). Registro: /var/log/lazaro-kernel.log
+
+description="Confirma el arranque de prueba del kernel Lázaro"
+
+depend() {
+	after *
+}
+
+start() {
+	ebegin "Lázaro Linux: revisando el arranque del kernel"
+	/usr/local/sbin/lazaro-kernel --arranque </dev/null >/dev/null 2>&1
+	eend 0
+}

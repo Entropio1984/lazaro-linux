@@ -251,6 +251,9 @@ else
 	rm -rf "$ipw_d"
 fi
 rm -rf "$t_hw"
+# Clave pública del kernel Lázaro (lazaro-kernel la instala en el sistema
+# para que apk acepte los paquetes que firma GitHub).
+install -Dm644 "$LAZARO_DIR/kernel/lazaro-kernel.rsa.pub" "$DATOS_HW/usr/share/lazaro/lazaro-kernel.rsa.pub"
 chown -R constructor:abuild "$DATOS_HW"
 
 # --- ISO ----------------------------------------------------------------

@@ -1,0 +1,4 @@
+# KERNEL_REV: se suma al pkgrel de Alpine (pkgrel*100 + KERNEL_REV).
+# Súbelo al cambiar lazaro.fragment para publicar una compilación nueva
+# de la misma versión del kernel.
+KERNEL_REV=0

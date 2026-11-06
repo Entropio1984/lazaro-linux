@@ -348,6 +348,8 @@ mejoras de disco que deja puestas la configuración final.
      equipo.
    - **Quitar los ajustes**: deja todo como venía en Alpine.
    - **Protecciones del procesador (avanzado)**: ver más abajo.
+   - **Kernel Lázaro (experimental)**: ver
+     [Kernel Lázaro](#kernel-lázaro-experimental).
    - **Ver el informe del hardware**: muestra lo que encontró en tu
      equipo.
 4. Te pide tu contraseña. Algunos ajustes se notan **después de
@@ -378,6 +380,57 @@ hay que reiniciar.
 ajustes** (o `doas lazaro-afinador --deshacer`) y reinicia: el equipo
 queda exactamente como venía. Ningún ajuste del afinador puede impedir
 que el equipo arranque.
+
+### Kernel Lázaro (experimental)
+
+El **kernel** es la parte central del sistema, la que habla con el
+hardware. Lázaro usa de fábrica el de Alpine. Si quieres, puedes cambiarlo
+por el **kernel Lázaro**: es el mismo kernel de Alpine, con el mismo
+código y las mismas actualizaciones de seguridad, pero:
+
+- sin las piezas que solo usan los servidores y los centros de datos
+  (redes especiales, discos de servidor) ni la información de
+  depuración, así que pesa menos;
+- con el escritorio más atento al ratón y al teclado aunque el equipo
+  esté ocupado.
+
+La mejora es pequeña y se nota más en equipos lentos. **El kernel de
+Alpine se queda siempre instalado como respaldo.**
+
+**Paso a paso:**
+
+1. Conéctate a internet.
+2. Abre el **Afinador** desde el menú y elige **Kernel Lázaro
+   (experimental)**.
+3. Pulsa **Instalar y probar** y escribe tu contraseña. Tarda unos
+   minutos.
+4. Pulsa **Reiniciar ahora**. Ese arranque es **de prueba**:
+   - Si el equipo enciende bien, el kernel Lázaro queda como el de
+     siempre. No tienes que hacer nada más.
+   - Si se queda colgado o en negro, apágalo (mantén pulsado el botón de
+     encendido) y vuelve a encenderlo: **arranca solo con el kernel de
+     Alpine**, como antes.
+5. Para ver en qué quedó, abre otra vez **Kernel Lázaro
+   (experimental)**: dice si está en uso, esperando la prueba o si la
+   prueba falló.
+
+Las actualizaciones del kernel Lázaro llegan con las normales del
+sistema (el aviso de actualizaciones), y después de cada una el primer
+arranque vuelve a ser de prueba.
+
+**Para volver al kernel de Alpine:** en el mismo lugar, pulsa **Volver al
+kernel de Alpine** y reinicia. Si el equipo no llega al escritorio, en el
+menú negro que aparece al encender, usa las flechas para elegir la línea
+que termina en **lts** (es el kernel de Alpine; puede estar dentro de
+**Advanced options**) y pulsa Enter.
+
+**Con la terminal:**
+
+```sh
+lazaro-kernel --estado            # si está instalado y en qué quedó la prueba
+doas lazaro-kernel --instalar     # instalar y preparar el arranque de prueba
+doas lazaro-kernel --quitar       # volver al kernel de Alpine
+```
 
 ### Controladores: lo que le falta al hardware
 
@@ -491,6 +544,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
 | Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
 | Afinador | `live/usr/sbin/lazaro-afinador` | Perfil del hardware (fijo y extraíble, nivel x86-64, discos, memoria) y ajustes reversibles: `preempt=full`, Multi-Gen LRU con `min_ttl_ms`, tope de escritura en `sysctl.d`, páginas gigantes y `schedutil`; servicio de arranque y menú "Afinador" |
+| Kernel Lázaro | `kernel/` + `live/usr/sbin/lazaro-kernel` | `linux-lazaro`: el linux-lts de Alpine con `kernel/lazaro.fragment` (sin hardware de servidor ni depuración, expropiación completa). Lo compila, prueba en QEMU y publica firmado `.github/workflows/lazaro-kernel.yml` en la Release `kernel-vX.Y` cada vez que Alpine saca un linux-lts nuevo. `lazaro-kernel` lo baja a un repositorio local `@lazaro`, lo instala junto al de Alpine y hace un arranque de prueba (`grub-reboot`) que se confirma al terminar de encender |
 | Controladores que faltan | `live/usr/sbin/lazaro-controladores` | Revisa el hardware e instala lo que le falta (al instalar, al arrancar, con aviso en la sesión y desde el menú) |
 | Recomendación según el equipo | `live/usr/sbin/lazaro-recomendar` | Escritorio y programas preseleccionados en Calamares según memoria, gráfica y disco |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
@@ -597,6 +651,22 @@ equipo nuevo y uno sin escritorio simulados (qué ajustes elige y que
 aplicar y deshacer dejen GRUB como estaba); en las instalaciones de QEMU
 se comprueba además que el sistema arranca con `preempt=full` y con la
 protección de memoria puesta.
+
+### Kernel Lázaro: compilar y publicar
+
+```sh
+./kernel/compilar.sh     # en cualquier Linux con Docker; resultado en salida/kernel/
+```
+
+Sin la variable `LAZARO_APK_KEY` se firma con una clave de prueba (sirve
+para probar, no para publicar). En GitHub, la clave es el secreto
+`LAZARO_APK_KEY`, y su mitad pública es `kernel/lazaro-kernel.rsa.pub`, la
+que llevan la ISO y los equipos; la compilación se niega a firmar si no
+coinciden. Para cambiar la configuración, edita `kernel/lazaro.fragment` y
+sube `KERNEL_REV` en `kernel/version`. La prueba `pruebas/kernel.sh`
+recorre la instalación, el arranque de prueba (bien y mal), una
+actualización y la vuelta al kernel de Alpine; `pruebas/kernel-arranque.sh`
+arranca el kernel compilado en QEMU y lo compara con el de Alpine.
 
 ## Versiones probadas
 
