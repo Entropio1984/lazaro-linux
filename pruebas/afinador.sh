@@ -117,6 +117,14 @@ af viejo --deshacer --raiz "$D" >/dev/null
 espera "viejo: deshacer limpia GRUB" "$(cat "$D/etc/default/grub")" "$(printf 'GRUB_TIMEOUT=2\nGRUB_CMDLINE_LINUX_DEFAULT="modules=sd-mod,usb-storage,ext4 quiet rootfstype=ext4 splash"')"
 [ ! -e "$D/etc/sysctl.d/60-lazaro-afinador.conf" ] && ok "viejo: deshacer quita sysctl.d" || mal "viejo: sysctl.d sigue"
 [ ! -e "$D/etc/runlevels/default/lazaro-afinador" ] && ok "viejo: deshacer quita el servicio" || mal "viejo: el servicio sigue"
+# Un bloque sin la marca de cierre (editado a mano) no se toca: se
+# perderían las líneas de abajo.
+cp "$D/etc/default/grub" "$TMP/grub.bien"
+printf '# lazaro-afinador: inicio (no editar entre estas marcas)\nGRUB_TIMEOUT=5\n' >> "$D/etc/default/grub"
+cp "$D/etc/default/grub" "$TMP/grub.roto"
+if af viejo --aplicar --raiz "$D" >/dev/null 2>&1; then mal "viejo: aplicó con un bloque roto"; else ok "viejo: bloque sin cierre, no aplica"; fi
+cmp -s "$D/etc/default/grub" "$TMP/grub.roto" && ok "viejo: bloque sin cierre, GRUB intacto" || mal "viejo: tocó GRUB con un bloque roto"
+cp "$TMP/grub.bien" "$D/etc/default/grub"
 # Servicio de arranque: aplica en /sys (falso) con el afinador activo.
 af viejo --aplicar --raiz "$D" >/dev/null
 cp "$D/etc/lazaro/afinador.conf" "$TMP/afinador.conf"

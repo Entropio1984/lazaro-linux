@@ -97,7 +97,11 @@ cpufreq_govs() { leer "$SYS/devices/system/cpu/cpu0/cpufreq/scaling_available_go
 # Configuración del kernel instalado (para saber qué admite).
 kconfig() {
 	if [ -n "${LAZARO_KCONFIG:-}" ]; then cat "$LAZARO_KCONFIG"; return 0; fi
-	for f in "$RAIZ"/boot/config-*; do
+	# El del kernel en marcha (6.18.59-0-lts -> config-lts) o, al
+	# instalar, el lts que pone setup-disk; si no, el primero que haya.
+	sabor="$(uname -r)"; sabor="${sabor##*-}"
+	[ -z "$RAIZ" ] || sabor=lts
+	for f in "$RAIZ/boot/config-$sabor" "$RAIZ"/boot/config-*; do
 		[ -r "$f" ] && { cat "$f"; return 0; }
 	done
 	if [ -z "$RAIZ" ]; then
@@ -232,6 +236,12 @@ parametros_grub() {
 grub_quitar_bloque() {
 	g="$RAIZ/$GRUB_REL"
 	[ -f "$g" ] && grep -qxF "$MARCA_INI" "$g" || return 0
+	# Solo con las dos marcas, en orden: si alguien borró la de cierre, no
+	# se toca nada (se perderían las líneas de abajo).
+	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '$0 == i { a = NR } $0 == f && a { ok = 1 } END { exit !ok }' "$g" || {
+		aviso "$g tiene la marca de inicio del afinador sin la de cierre: no se modifica."
+		return 1
+	}
 	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '
 		$0 == i { dentro = 1; next }
 		dentro && $0 == f { dentro = 0; next }
@@ -240,7 +250,7 @@ grub_quitar_bloque() {
 }
 grub_poner_bloque() { # PARÁMETROS
 	g="$RAIZ/$GRUB_REL"
-	grub_quitar_bloque
+	grub_quitar_bloque || return 1
 	[ -n "$1" ] && [ -f "$g" ] || return 0
 	[ -z "$(tail -c 1 "$g")" ] || echo >> "$g"
 	printf '%s\nGRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT %s"\n%s\n' \
@@ -257,7 +267,8 @@ grub_regenerar() {
 	if grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1; then
 		registrar "Menú de arranque actualizado."
 	else
-		aviso "No se pudo actualizar el menú de arranque (grub-mkconfig)."
+		aviso "No se pudo actualizar el menú de arranque (grub-mkconfig); detalles en $LOG."
+		return 1
 	fi
 }
 
@@ -300,12 +311,14 @@ aplicar_en_marcha() {
 }
 
 aplicar() {
-	conf_poner ESTADO activo
+	# Primero lo que queda escrito; el estado "activo" se anota solo si
+	# eso salió bien (con set -e, un fallo corta antes).
 	escribir_sysctl
-	grub_poner_bloque "$(parametros_grub)"
+	grub_poner_bloque "$(parametros_grub)" || exit 1
+	conf_poner ESTADO activo
 	if [ -z "$RAIZ" ]; then
 		aplicar_en_marcha
-		grub_regenerar
+		grub_regenerar || exit 1
 	fi
 	# Servicio de arranque.
 	if [ -e "$RAIZ/etc/init.d/lazaro-afinador" ]; then
@@ -317,17 +330,17 @@ aplicar() {
 }
 
 deshacer() {
+	grub_quitar_bloque || exit 1
+	rm -f "$RAIZ/$SYSCTL_REL"
 	conf_poner ESTADO desactivado
 	conf_poner MITIGACIONES encendidas
-	rm -f "$RAIZ/$SYSCTL_REL"
-	grub_quitar_bloque
 	rm -f "$RAIZ/etc/runlevels/default/lazaro-afinador"
 	if [ -z "$RAIZ" ]; then
 		# Escritura a disco: los valores del kernel por defecto, ya.
 		if command -v sysctl >/dev/null 2>&1; then
 			sysctl -q -w vm.dirty_background_ratio=10 vm.dirty_ratio=20 >/dev/null 2>&1 || true
 		fi
-		grub_regenerar
+		grub_regenerar || exit 1
 	fi
 	registrar "Ajustes quitados."
 	echo "LAZARO-AFINADOR-DESHECHO (lo demás vuelve a como estaba al reiniciar)"
@@ -342,14 +355,14 @@ mitigaciones() { # si|no
 		*) echo "Uso: lazaro-afinador --mitigaciones si|no" >&2; exit 2 ;;
 	esac
 	if activo; then
-		grub_poner_bloque "$(parametros_grub)"
+		grub_poner_bloque "$(parametros_grub)" || exit 1
 	elif [ "$1" = si ]; then
 		# Sin el resto de ajustes, solo este parámetro.
-		grub_poner_bloque "mitigations=off"
+		grub_poner_bloque "mitigations=off" || exit 1
 	else
-		grub_quitar_bloque
+		grub_quitar_bloque || exit 1
 	fi
-	grub_regenerar
+	grub_regenerar || exit 1
 }
 
 # --- Informes ----------------------------------------------------------------
