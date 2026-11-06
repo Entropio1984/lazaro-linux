@@ -654,12 +654,19 @@ paso_afinador() { # RAIZ
 	[ -x "$pa_af" ] || return 0
 	install -Dm755 "$pa_af" "$1/usr/local/sbin/lazaro-afinador"
 	install -Dm755 "$DATOS/lazaro-afinador.initd" "$1/etc/init.d/lazaro-afinador"
-	# Kernel Lázaro: solo la herramienta y su clave; se instala si el
-	# usuario lo pide (menú Afinador o lazaro-kernel --instalar).
+	# Kernel Lázaro: solo la herramienta; se instala si el usuario lo pide
+	# (menú Afinador o lazaro-kernel --instalar).
 	install -Dm755 /usr/sbin/lazaro-kernel "$1/usr/local/sbin/lazaro-kernel"
 	install -Dm644 "$DATOS/lazaro-kernel.initd" "$1/usr/share/lazaro/lazaro-kernel.initd"
-	[ ! -e "$DATOS/lazaro-kernel.rsa.pub" ] ||
-		install -Dm644 "$DATOS/lazaro-kernel.rsa.pub" "$1/usr/share/lazaro/lazaro-kernel.rsa.pub"
+	# Repositorio de Lázaro: con él las herramientas se actualizan solas
+	# (paquete lazaro-herramientas, que se instala en el primer arranque
+	# con internet).
+	if [ -x /usr/sbin/lazaro-repositorio ]; then
+		pa_r="$(/usr/sbin/lazaro-repositorio --activar --raiz "$1" 2>>"$LOG")" ||
+			log "Aviso: no se pudo preparar el repositorio de Lázaro."
+		# Las pruebas en QEMU buscan esta línea en la consola.
+		[ -z "${pa_r:-}" ] || log "$pa_r"
+	fi
 	[ -e "$1/etc/lazaro/sin-escritorio" ] ||
 		install -Dm644 "$DATOS/lazaro-afinador.desktop" "$1/usr/share/applications/lazaro-afinador.desktop"
 	pa_salida="$("$pa_af" --aplicar --raiz "$1" 2>>"$LOG")" || {

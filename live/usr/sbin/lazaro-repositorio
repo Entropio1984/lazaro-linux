@@ -1,0 +1,247 @@
+#!/bin/sh
+# lazaro-repositorio: el repositorio de paquetes de Lázaro Linux. Trae las
+# herramientas de Lázaro (paquete lazaro-herramientas: afinador,
+# controladores, diagnóstico, kernel...) y el kernel Lázaro (linux-lazaro),
+# firmados por la compilación de GitHub con la clave de Lázaro.
+#
+# GitHub publica los paquetes en la Release "repo-vX.Y" de lazaro-linux.
+# Como una Release no tiene carpetas, este programa la copia a
+# /var/lib/lazaro-repositorio/<arquitectura> y apk la usa como un
+# repositorio local con la etiqueta @lazaro. apk comprueba la firma de
+# todo con /etc/apk/keys/lazaro.rsa.pub: lo que no esté firmado por
+# Lázaro no se instala.
+#
+# Una vez activado, las herramientas nuevas llegan con la actualización
+# normal del sistema (el aviso de actualizaciones).
+#
+# Uso (como root):
+#   lazaro-repositorio --activar      pone la clave, el repositorio, la
+#        tarea diaria y el servicio, e instala lazaro-herramientas
+#   lazaro-repositorio --sincronizar  copia la última versión publicada
+#        (el kernel Lázaro solo si está instalado; --con-kernel lo trae
+#        para instalarlo)
+#   lazaro-repositorio --arranque     lo usa el servicio: sincroniza en
+#        segundo plano (espera internet) e instala lo que falte
+#   lazaro-repositorio --desactivar   quita el repositorio (los paquetes
+#        instalados se quedan)
+#   lazaro-repositorio --activar --raiz R   deja todo listo en el sistema
+#        R (al instalar); se completa en su primer arranque con internet
+#
+# Para los equipos instalados antes de que existiera, una sola vez:
+#   wget -qO /tmp/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh /tmp/lr --activar
+#
+# Variables para las pruebas: LAZARO_REPO_RAIZ, LAZARO_REPO_URL.
+
+set -eu
+
+RAIZ="${LAZARO_REPO_RAIZ:-}"
+PROYECTO="https://github.com/Entropio1984/lazaro-linux/releases/download"
+LLAVE_NOMBRE=lazaro.rsa.pub
+# La mitad pública de la clave de Lázaro (repo/lazaro.rsa.pub; la prueba
+# pruebas/kernel.sh revisa que sean iguales). Va aquí dentro para que este
+# archivo solo sirva para activar el repositorio en un equipo viejo.
+LLAVE='-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyxHsBrSbk0QKTHht7hRs
+27MUxkKKzGCKr9tB+VBHu2KDi/B5SkslMwfyB39+6t61tCWWMC8jgJxiK54witKh
++HPwVyrTrlZnB5Sd16zoPB66a7NIdIKaz8tZssNZC/j9VzBpqv5V4G7hZo1mAKaM
+fFBmYvguvELqNTE1Nly/1YaYc0qutnwF/Wj+RcUgMbzkJE49ht96OD5Iyf4FGYpp
+qEV6MEGKUd51h504qb5Kow/n3b6W76IkLdQgzhcahb86Bu8B4Mfye9mivP5pspx1
+0gt7UzJWCJ7KWWNm1ln9ksosuNPgIWXF3P/y1twldi4pJbZHR1AmC3zm/siUColv
+OQIDAQAB
+-----END PUBLIC KEY-----'
+
+ajustar_rutas() {
+	DIR="$RAIZ/var/lib/lazaro-repositorio"
+	REPOS="$RAIZ/etc/apk/repositories"
+	LOG="$RAIZ/var/log/lazaro-repositorio.log"
+	# Dentro del sistema la ruta del repositorio es sin la raíz.
+	REPO_LINEA="@lazaro /var/lib/lazaro-repositorio"
+	[ -z "${LAZARO_REPO_RAIZ:-}" ] || REPO_LINEA="@lazaro $DIR"
+}
+ajustar_rutas
+
+registrar() { printf '%s %s\n' "$(date '+%F %T' 2>/dev/null)" "$*" >>"$LOG" 2>/dev/null || true; }
+aviso() { printf '[lazaro-repositorio] %s\n' "$*" >&2; registrar "$*"; }
+die() { aviso "ERROR: $*"; exit 1; }
+
+# Versión de Alpine del sistema (v3.24) -> Release repo-v3.24.
+rama() {
+	v="$(sed -n 's/^ALPINE_BRANCH="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$RAIZ/usr/share/lazaro/version.env" 2>/dev/null | head -n 1)"
+	if [ -z "$v" ]; then
+		v="$(cut -d. -f1,2 "$RAIZ/etc/alpine-release" 2>/dev/null)"
+		case "$v" in [0-9]*.[0-9]*) v="v$v" ;; *) v="" ;; esac
+	fi
+	echo "${v:-v3.24}"
+}
+url_base() { echo "${LAZARO_REPO_URL:-$PROYECTO/repo-$(rama)}"; }
+arquitectura() { cat "$RAIZ/etc/apk/arch" 2>/dev/null || uname -m; }
+
+bajar() { # URL DESTINO
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL --retry 3 --connect-timeout 20 -o "$2" "$1"
+	else
+		wget -q -T 30 -O "$2" "$1"
+	fi
+}
+
+poner_llave() {
+	mkdir -p "$RAIZ/etc/apk/keys"
+	printf '%s\n' "$LLAVE" > "$RAIZ/etc/apk/keys/$LLAVE_NOMBRE"
+}
+
+# Copia el índice publicado y sus paquetes. El índice nuevo solo reemplaza
+# al anterior cuando ya están todos sus paquetes: sin internet o a medio
+# descargar, apk sigue viendo un repositorio completo.
+sincronizar() {
+	d="$DIR/$(arquitectura)"
+	mkdir -p "$d"
+	t="$(mktemp -d)"
+	if ! bajar "$(url_base)/APKINDEX.tar.gz" "$t/APKINDEX.tar.gz"; then
+		rm -rf "$t"
+		aviso "No se pudo descargar el índice del repositorio de Lázaro ($(url_base)). ¿Hay internet?"
+		return 1
+	fi
+	todos="$(tar -xzOf "$t/APKINDEX.tar.gz" APKINDEX 2>/dev/null |
+		awk '/^P:/ { p = substr($0, 3) } /^V:/ { print p "\t" p "-" substr($0, 3) ".apk" }')"
+	[ -n "$todos" ] || { rm -rf "$t"; aviso "El índice del repositorio de Lázaro está vacío o dañado."; return 1; }
+	# Solo lo que este equipo usa: el kernel (decenas de MB) solo si está
+	# instalado o se va a instalar.
+	paquetes="$(printf '%s\n' "$todos" | while IFS='	' read -r n a; do
+		quiere "$n" && echo "$a"
+	done)" || true
+	for a in $paquetes; do
+		[ -s "$d/$a" ] && continue
+		bajar "$(url_base)/$a" "$t/$a" || { rm -rf "$t"; aviso "No se pudo descargar $a."; return 1; }
+		mv "$t/$a" "$d/$a"
+	done
+	mv "$t/APKINDEX.tar.gz" "$d/APKINDEX.tar.gz"
+	rm -rf "$t"
+	for a in "$d"/*.apk; do
+		[ -e "$a" ] || continue
+		printf '%s\n' "$paquetes" | grep -qx "${a##*/}" || rm -f "$a"
+	done
+	# El repositorio va en /etc/apk/repositories recién cuando tiene su
+	# índice: sin él, apk update daría error en cada actualización.
+	repo_poner
+	registrar "Sincronizado: $(printf '%s\n' "$paquetes" | tr '\n' ' ')"
+}
+
+instalado() { grep -qx "P:$1" "$RAIZ/lib/apk/db/installed" 2>/dev/null; }
+quiere() { # PAQUETE
+	case "$1" in
+		linux-lazaro) [ "$CON_KERNEL" = si ] || instalado linux-lazaro ;;
+		linux-lazaro-dev) { [ "$CON_KERNEL" = si ] && instalado akms; } || instalado linux-lazaro-dev ;;
+		*) return 0 ;;
+	esac
+}
+
+repo_poner() {
+	mkdir -p "${REPOS%/*}"
+	grep -qxF "$REPO_LINEA" "$REPOS" 2>/dev/null || echo "$REPO_LINEA" >> "$REPOS"
+}
+repo_quitar() {
+	[ -f "$REPOS" ] || return 0
+	grep -vxF "$REPO_LINEA" "$REPOS" > "$REPOS.tmp" || true
+	cat "$REPOS.tmp" > "$REPOS"; rm -f "$REPOS.tmp"
+}
+
+poner_tareas() {
+	# Tarea diaria (la corre crond): trae lo nuevo, que instala la
+	# actualización normal del sistema, y pone lazaro-herramientas si
+	# todavía falta (si al encender apk estaba ocupado).
+	mkdir -p "$RAIZ/etc/periodic/daily"
+	printf '#!/bin/sh\n# Copia la última versión del repositorio de Lázaro (lazaro-repositorio).\n/usr/local/sbin/lazaro-repositorio --arranque >/dev/null 2>&1 || true\n' \
+		> "$RAIZ/etc/periodic/daily/lazaro-repositorio"
+	chmod 755 "$RAIZ/etc/periodic/daily/lazaro-repositorio"
+	# Este programa, en su lugar, y su servicio de arranque.
+	if [ "$(cd "$(dirname "$0")" && pwd)/$(basename "$0")" != "$RAIZ/usr/local/sbin/lazaro-repositorio" ]; then
+		install -Dm755 "$0" "$RAIZ/usr/local/sbin/lazaro-repositorio"
+	fi
+	mkdir -p "$RAIZ/etc/init.d" "$RAIZ/etc/runlevels/default"
+	cat > "$RAIZ/etc/init.d/lazaro-repositorio" <<-'EOF'
+	#!/sbin/openrc-run
+	# Repositorio de Lázaro: al encender, en segundo plano, copia la última
+	# versión publicada e instala las herramientas de Lázaro si faltan.
+	# Registro: /var/log/lazaro-repositorio.log
+	description="Repositorio de paquetes de Lázaro Linux"
+	depend() {
+		after networkmanager
+	}
+	start() {
+		ebegin "Lázaro Linux: revisando su repositorio"
+		(/usr/local/sbin/lazaro-repositorio --arranque </dev/null >/dev/null 2>&1 &)
+		eend 0
+	}
+	EOF
+	chmod 755 "$RAIZ/etc/init.d/lazaro-repositorio"
+	ln -sf /etc/init.d/lazaro-repositorio "$RAIZ/etc/runlevels/default/lazaro-repositorio"
+	# crond corre las tareas diarias (setup-alpine lo deja puesto; por si
+	# acaso).
+	[ -e "$RAIZ/etc/init.d/crond" ] && ln -sf /etc/init.d/crond "$RAIZ/etc/runlevels/default/crond" || true
+}
+
+instalar_herramientas() {
+	apk info -e lazaro-herramientas >/dev/null 2>&1 && return 0
+	if apk add lazaro-herramientas@lazaro >>"$LOG" 2>&1; then
+		registrar "lazaro-herramientas instalado."
+		echo "LAZARO-REPOSITORIO-HERRAMIENTAS-OK"
+	else
+		aviso "No se pudo instalar lazaro-herramientas (detalles en $LOG)."
+		return 1
+	fi
+}
+
+activar() {
+	poner_llave
+	poner_tareas
+	if [ -n "$RAIZ" ] && [ -z "${LAZARO_REPO_RAIZ:-}" ]; then
+		# Instalando: el primer arranque con internet termina el trabajo.
+		registrar "Repositorio preparado en $RAIZ."
+		echo "LAZARO-REPOSITORIO-PREPARADO"
+		return 0
+	fi
+	sincronizar || die "Sin el repositorio no se puede seguir. Revisa la conexión a internet y vuelve a intentarlo."
+	instalar_herramientas || exit 1
+	echo "LAZARO-REPOSITORIO-ACTIVO"
+	echo "Listo: las herramientas de Lázaro se actualizarán con las actualizaciones del sistema."
+}
+
+desactivar() {
+	repo_quitar
+	rm -f "$RAIZ/etc/periodic/daily/lazaro-repositorio" "$RAIZ/etc/runlevels/default/lazaro-repositorio" \
+		"$RAIZ/etc/init.d/lazaro-repositorio"
+	registrar "Repositorio desactivado."
+	echo "LAZARO-REPOSITORIO-DESACTIVADO"
+}
+
+# Servicio: espera internet hasta 30 minutos sin retrasar el arranque.
+arranque() {
+	i=0
+	until sincronizar 2>/dev/null; do
+		i=$((i + 1))
+		[ "$i" -lt 60 ] || { registrar "Sin internet en 30 minutos; se intenta en el próximo arranque."; return 0; }
+		sleep 30
+	done
+	instalar_herramientas || true
+}
+
+orden=""
+CON_KERNEL=no
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--raiz) RAIZ="${2%/}"; shift; ajustar_rutas ;;
+		--activar|--sincronizar|--arranque|--desactivar) orden="$1" ;;
+		--con-kernel) CON_KERNEL=si ;;
+		*) echo "Opción desconocida: $1" >&2; exit 2 ;;
+	esac
+	shift
+done
+[ "$(id -u)" = 0 ] || [ -n "$RAIZ" ] || die "Hace falta ser administrador: doas $0 ${orden:-}"
+mkdir -p "${LOG%/*}" 2>/dev/null || true
+case "$orden" in
+	--activar) activar ;;
+	--sincronizar) sincronizar ;;
+	--arranque) arranque ;;
+	--desactivar) desactivar ;;
+	*) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+esac

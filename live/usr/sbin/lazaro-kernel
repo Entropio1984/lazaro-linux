@@ -5,7 +5,8 @@
 # El kernel Lázaro es el linux-lts de Alpine, con su mismo código, sin el
 # hardware de servidores ni la información de depuración y con
 # expropiación completa. Lo compila y firma GitHub cada vez que Alpine
-# saca un linux-lts nuevo (Release "kernel-vX.Y" de lazaro-linux).
+# saca un linux-lts nuevo y llega por el repositorio de Lázaro
+# (lazaro-repositorio), con las actualizaciones normales del sistema.
 #
 # Arranque de prueba: al instalarlo (y después de cada actualización) el
 # kernel Lázaro arranca UNA vez de prueba (grub-reboot) y el menú de
@@ -18,14 +19,12 @@
 #   lazaro-kernel --instalar      descarga, instala y deja la prueba lista
 #   lazaro-kernel --quitar        vuelve al kernel de Alpine y lo desinstala
 #   lazaro-kernel --estado        si está instalado, en prueba o en uso
-#   lazaro-kernel --sincronizar   descarga la última versión publicada (lo
-#        hace la tarea diaria; la instala la actualización normal)
 #   lazaro-kernel --arranque      lo usa el servicio al encender
 #   lazaro-kernel --nueva-version lo usa apk tras actualizar el kernel
 #   lazaro-kernel --ventana       ventana (menú Afinador)
 #
 # Variables para las pruebas: LAZARO_KERNEL_RAIZ (todo cuelga de ahí),
-# LAZARO_KERNEL_URL (dónde está publicado), LAZARO_KERNEL_UNAME.
+# LAZARO_KERNEL_UNAME, LAZARO_REPO_PROG (en vez de lazaro-repositorio).
 
 set -eu
 
@@ -35,13 +34,11 @@ CONF="$R/etc/lazaro/kernel.conf"
 LOG="$R/var/log/lazaro-kernel.log"
 GRUB_DEFAULT_ARCH="$R/etc/default/grub"
 GRUB_CFG="$R/boot/grub/grub.cfg"
-REPOS="$R/etc/apk/repositories"
-LLAVE=lazaro-kernel.rsa.pub
 DATOS="$R/usr/share/lazaro"
 MARCA_INI="# lazaro-kernel: inicio (no editar entre estas marcas)"
 MARCA_FIN="# lazaro-kernel: fin"
-REPO_LINEA="@lazaro $DIR"
-PROYECTO="https://github.com/Entropio1984/lazaro-linux/releases/download"
+REPO_PROG="${LAZARO_REPO_PROG:-/usr/local/sbin/lazaro-repositorio}"
+[ -x "$REPO_PROG" ] || REPO_PROG=lazaro-repositorio
 
 registrar() { printf '%s %s\n' "$(date '+%F %T' 2>/dev/null)" "$*" >>"$LOG" 2>/dev/null || true; }
 aviso() { printf '[lazaro-kernel] %s\n' "$*" >&2; registrar "$*"; }
@@ -55,66 +52,7 @@ conf_poner() {
 }
 estado() { v="$(conf_valor ESTADO)"; echo "${v:-no}"; }
 
-# Versión de Alpine del sistema (v3.24) -> Release kernel-v3.24.
-rama() {
-	v="$(sed -n 's/^ALPINE_BRANCH="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$R/usr/share/lazaro/version.env" 2>/dev/null | head -n 1)"
-	if [ -z "$v" ]; then
-		v="$(cut -d. -f1,2 "$R/etc/alpine-release" 2>/dev/null)"
-		case "$v" in [0-9]*.[0-9]*) v="v$v" ;; *) v="" ;; esac
-	fi
-	echo "${v:-v3.24}"
-}
-url_base() { echo "${LAZARO_KERNEL_URL:-$PROYECTO/kernel-$(rama)}"; }
 kernel_en_uso() { echo "${LAZARO_KERNEL_UNAME:-$(uname -r)}"; }
-
-bajar() { # URL DESTINO
-	if command -v curl >/dev/null 2>&1; then
-		curl -fsSL --retry 3 --connect-timeout 20 -o "$2" "$1"
-	else
-		wget -q -T 30 -O "$2" "$1"
-	fi
-}
-
-# --- Repositorio local ---------------------------------------------------------
-
-# Descarga el índice publicado y sus paquetes a $DIR/x86_64. apk comprueba
-# la firma con /etc/apk/keys/lazaro-kernel.rsa.pub al usarlos.
-sincronizar() {
-	arch="$(cat "$R/etc/apk/arch" 2>/dev/null || echo x86_64)"
-	d="$DIR/$arch"
-	mkdir -p "$d"
-	t="$(mktemp -d)"
-	if ! bajar "$(url_base)/APKINDEX.tar.gz" "$t/APKINDEX.tar.gz"; then
-		rm -rf "$t"
-		aviso "No se pudo descargar el índice del kernel Lázaro ($(url_base)). ¿Hay internet?"
-		return 1
-	fi
-	paquetes="$(tar -xzOf "$t/APKINDEX.tar.gz" APKINDEX 2>/dev/null |
-		awk '/^P:/ { p = substr($0, 3) } /^V:/ { print p "-" substr($0, 3) ".apk" }')"
-	[ -n "$paquetes" ] || { rm -rf "$t"; aviso "El índice del kernel Lázaro está vacío o dañado."; return 1; }
-	for a in $paquetes; do
-		[ -s "$d/$a" ] && continue
-		bajar "$(url_base)/$a" "$t/$a" || { rm -rf "$t"; aviso "No se pudo descargar $a."; return 1; }
-		mv "$t/$a" "$d/$a"
-	done
-	mv "$t/APKINDEX.tar.gz" "$d/APKINDEX.tar.gz"
-	rm -rf "$t"
-	for a in "$d"/*.apk; do
-		[ -e "$a" ] || continue
-		printf '%s\n' "$paquetes" | grep -qx "${a##*/}" || rm -f "$a"
-	done
-	registrar "Sincronizado: $(printf '%s ' $paquetes)"
-}
-
-repo_poner() {
-	mkdir -p "${REPOS%/*}"
-	grep -qxF "$REPO_LINEA" "$REPOS" 2>/dev/null || echo "$REPO_LINEA" >> "$REPOS"
-}
-repo_quitar() {
-	[ -f "$REPOS" ] || return 0
-	grep -vxF "$REPO_LINEA" "$REPOS" > "$REPOS.tmp" || true
-	cat "$REPOS.tmp" > "$REPOS"; rm -f "$REPOS.tmp"
-}
 
 # --- Menú de arranque ----------------------------------------------------------
 
@@ -176,12 +114,9 @@ prueba_unica() {
 necesita_root() { [ "$(id -u)" = 0 ] || [ -n "$R" ] || die "Hace falta ser administrador: doas lazaro-kernel $1"; }
 
 instalar() {
-	[ -s "$R/etc/apk/keys/$LLAVE" ] || {
-		[ -s "$DATOS/$LLAVE" ] || die "Falta la clave pública del kernel Lázaro ($LLAVE)."
-		mkdir -p "$R/etc/apk/keys"; cp "$DATOS/$LLAVE" "$R/etc/apk/keys/$LLAVE"
-	}
-	sincronizar || exit 1
-	repo_poner
+	# El repositorio de Lázaro (clave, @lazaro y la última versión).
+	"$REPO_PROG" --activar --con-kernel >>"$LOG" 2>&1 || die "No se pudo preparar el repositorio de Lázaro (¿hay internet?). Detalles en $LOG."
+	mkdir -p "$DIR"
 	paq="linux-lazaro@lazaro"
 	# Con controladores que se compilan para cada kernel (akms, como el
 	# wifi Broadcom wl), hacen falta sus cabeceras.
@@ -194,18 +129,16 @@ instalar() {
 	prueba_unica
 	conf_poner ESTADO prueba
 	date +%s > "$DIR/probado" 2>/dev/null || true
-	# Servicio que confirma la prueba, tarea diaria y gancho de apk.
+	# Servicio que confirma la prueba y gancho de apk.
 	if [ -e "$DATOS/lazaro-kernel.initd" ]; then
 		install -Dm755 "$DATOS/lazaro-kernel.initd" "$R/etc/init.d/lazaro-kernel"
 		mkdir -p "$R/etc/runlevels/default"
 		ln -sf /etc/init.d/lazaro-kernel "$R/etc/runlevels/default/lazaro-kernel"
 	fi
-	mkdir -p "$R/etc/periodic/daily" "$R/etc/apk/commit_hooks.d"
-	printf '#!/bin/sh\n# Descarga la última versión del kernel Lázaro (la instala la actualización normal).\n/usr/local/sbin/lazaro-kernel --sincronizar >/dev/null 2>&1 || true\n' \
-		> "$R/etc/periodic/daily/lazaro-kernel"
+	mkdir -p "$R/etc/apk/commit_hooks.d"
 	printf '#!/bin/sh\n# Tras actualizar el kernel Lázaro, su primer arranque vuelve a ser de prueba.\n[ "$1" = post-commit ] || exit 0\n/usr/local/sbin/lazaro-kernel --nueva-version >/dev/null 2>&1 || true\n' \
 		> "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
-	chmod 755 "$R/etc/periodic/daily/lazaro-kernel" "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
+	chmod 755 "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
 	registrar "Instalado; arranque de prueba preparado."
 	echo "LAZARO-KERNEL-INSTALADO"
 	echo "Listo. Reinicia para probar el kernel Lázaro. Si algo falla, reinicia otra vez: el equipo vuelve solo al kernel de Alpine."
@@ -215,9 +148,7 @@ quitar() {
 	if [ -f "$GRUB_CFG" ] && [ -n "$(entrada lts)" ]; then por_defecto lts; fi
 	grub_quitar_bloque
 	apk del linux-lazaro linux-lazaro-dev >>"$LOG" 2>&1 || true
-	repo_quitar
-	rm -f "$R/etc/runlevels/default/lazaro-kernel" "$R/etc/periodic/daily/lazaro-kernel" \
-		"$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
+	rm -f "$R/etc/runlevels/default/lazaro-kernel" "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
 	rm -rf "$DIR"
 	grub_regenerar
 	conf_poner ESTADO no
@@ -307,7 +238,6 @@ mkdir -p "${LOG%/*}" 2>/dev/null || true
 case "${1:-}" in
 	--instalar) necesita_root "$1"; instalar ;;
 	--quitar) necesita_root "$1"; quitar ;;
-	--sincronizar) necesita_root "$1"; sincronizar ;;
 	--arranque) arranque ;;
 	--nueva-version) nueva_version ;;
 	--estado) mostrar_estado ;;

@@ -1,0 +1,241 @@
+# Repositorio de paquetes de Lázaro: arma y publica, firmados con la clave
+# de Lázaro, el paquete lazaro-herramientas (afinador, controladores,
+# diagnóstico, kernel, repositorio) y el kernel Lázaro (linux-lazaro), en
+# la Release "repo-<versión de Alpine>". Los equipos lo copian con
+# lazaro-repositorio (tarea diaria) y lo instalan con la actualización
+# normal del sistema.
+#
+# Las herramientas se arman en cada cambio de main. El kernel tarda horas:
+# solo se compila cuando cambia su receta (kernel/) o cuando Alpine saca
+# un linux-lts nuevo (la revisión diaria).
+name: Repositorio Lázaro
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "kernel/**"
+      - "repo/**"
+      - "paquetes/lazaro-herramientas/**"
+      - "live/usr/sbin/**"
+      - "live/usr/share/lazaro/**"
+      - "live/usr/share/applications/**"
+      - "live/etc/xdg/autostart/**"
+      - "pruebas/kernel-arranque.sh"
+      - ".github/workflows/lazaro-repositorio.yml"
+  pull_request:
+    paths:
+      - "kernel/**"
+      - "repo/**"
+      - "paquetes/lazaro-herramientas/**"
+      - "live/usr/sbin/**"
+      - "live/usr/share/lazaro/**"
+      - "live/usr/share/applications/**"
+      - "live/etc/xdg/autostart/**"
+      - "pruebas/kernel-arranque.sh"
+      - ".github/workflows/lazaro-repositorio.yml"
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: "Compilar el kernel aunque ya esté publicada esta versión"
+        type: boolean
+        default: false
+
+concurrency:
+  group: lazaro-repositorio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    name: ¿Qué hay que armar?
+    runs-on: ubuntu-24.04
+    outputs:
+      kernel: ${{ steps.r.outputs.kernel }}
+      version: ${{ steps.r.outputs.version }}
+      etiqueta: ${{ steps.r.outputs.etiqueta }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: r
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENTO: ${{ github.event_name }}
+          FORZAR: ${{ inputs.forzar }}
+          ANTES: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          LAZARO_DIR=$PWD . ./lib.sh
+          . kernel/version
+          apkbuild="$(curl -fsSL --retry 3 "https://raw.githubusercontent.com/alpinelinux/aports/$APORTS_BRANCH/main/linux-lts/APKBUILD")"
+          pkgver="$(printf '%s\n' "$apkbuild" | sed -n 's/^pkgver=//p')"
+          pkgrel="$(printf '%s\n' "$apkbuild" | sed -n 's/^pkgrel=//p')"
+          version="$pkgver-r$((pkgrel * 100 + KERNEL_REV))"
+          etiqueta="repo-$ALPINE_BRANCH"
+          publicado=no
+          gh release view "$etiqueta" --json assets -q '.assets[].name' 2>/dev/null | grep -qx "linux-lazaro-$version.apk" && publicado=si
+          case "$EVENTO" in
+            schedule) kernel=$([ "$publicado" = si ] && echo no || echo si) ;;
+            workflow_dispatch) kernel=$([ "$publicado" = si ] && [ "$FORZAR" != true ] && echo no || echo si) ;;
+            *)
+              # Cambios en la receta del kernel (o la primera vez).
+              kernel=no
+              [ "$publicado" = si ] || kernel=si
+              if [ -n "$ANTES" ] && git cat-file -e "$ANTES" 2>/dev/null; then
+                git diff --name-only "$ANTES" HEAD | grep -qE '^(kernel/|pruebas/kernel-arranque\.sh$|repo/firma\.sh$)' && kernel=si
+              else
+                kernel=si
+              fi
+              ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
+          echo "kernel=$kernel" >> "$GITHUB_OUTPUT"
+          echo "linux-lazaro $version ($etiqueta): publicado=$publicado compilar=$kernel"
+
+  kernel:
+    name: Compilar y probar linux-lazaro ${{ needs.revisar.outputs.version }}
+    needs: revisar
+    if: needs.revisar.outputs.kernel == 'si' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Liberar espacio en disco
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - name: Compilar
+        env:
+          LAZARO_APK_KEY: ${{ secrets.LAZARO_APK_KEY }}
+        run: ./kernel/compilar.sh
+
+      - name: Probar el arranque en QEMU (y comparar con linux-lts)
+        shell: bash
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q qemu-system-x86 cpio >/dev/null
+          sudo chmod 666 /dev/kvm 2>/dev/null || true
+          LAZARO_DIR=$PWD . ./lib.sh
+          lts_ver="$(curl -fsSL "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz" | tar -xzO APKINDEX | awk '/^P:linux-lts$/ { p = 1 } p && /^V:/ { print substr($0, 3); exit }')"
+          curl -fsSL --retry 3 -o /tmp/linux-lts.apk "$ALPINE_REPO_MAIN/$ALPINE_ARCH/linux-lts-$lts_ver.apk" || true
+          sh pruebas/kernel-arranque.sh "salida/kernel/x86_64/linux-lazaro-${{ needs.revisar.outputs.version }}.apk" /tmp/linux-lts.apk | tee /tmp/arranque.txt
+          sudo sh -c 'cat /tmp/arranque.txt >> salida/kernel/resumen.txt'
+          {
+            echo "### Kernel Lázaro ${{ needs.revisar.outputs.version }}"
+            echo '```'
+            cat salida/kernel/resumen.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: kernel-lazaro
+          path: salida/kernel
+          retention-days: 14
+
+  herramientas:
+    name: Armar lazaro-herramientas
+    needs: revisar
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Armar
+        env:
+          LAZARO_APK_KEY: ${{ secrets.LAZARO_APK_KEY }}
+        run: |
+          # Cada cambio de lazaro-linux es una versión nueva del paquete.
+          LAZARO_REL="$(git rev-list --count HEAD)" ./repo/herramientas.sh
+          {
+            echo "### lazaro-herramientas"
+            echo '```'
+            cat salida/herramientas/resumen.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: lazaro-herramientas
+          path: salida/herramientas
+          retention-days: 14
+
+  publicar:
+    name: Publicar el repositorio
+    needs: [revisar, kernel, herramientas]
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      needs.herramientas.result == 'success' &&
+      (needs.kernel.result == 'success' || needs.kernel.result == 'skipped')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: lazaro-repositorio-publicar
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v7
+        with:
+          path: nuevo
+
+      - name: Juntar con lo publicado y firmar el índice
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ETIQUETA: ${{ needs.revisar.outputs.etiqueta }}
+          LAZARO_APK_KEY: ${{ secrets.LAZARO_APK_KEY }}
+        run: |
+          # Solo se publica lo firmado con la clave oficial.
+          for r in nuevo/*/resumen.txt; do
+            grep -qx 'FIRMA=oficial' "$r" || { echo "Sin el secreto LAZARO_APK_KEY no se publica ($r)."; exit 1; }
+          done
+          mkdir -p repo-x86_64
+          gh release download "$ETIQUETA" -p '*.apk' -D repo-x86_64 2>/dev/null || echo "Release nueva."
+          # Un archivo ya publicado no se cambia (los equipos que lo tienen
+          # no lo vuelven a bajar y su suma ya no coincidiría con el índice).
+          cp -n nuevo/*/x86_64/*.apk repo-x86_64/
+          ./repo/indexar.sh repo-x86_64 | tee indexar.txt
+          grep -qx 'FIRMA=oficial' indexar.txt
+
+      - name: Actualizar la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ETIQUETA: ${{ needs.revisar.outputs.etiqueta }}
+        run: |
+          notas="Repositorio de paquetes de Lázaro Linux con Alpine ${ETIQUETA#repo-}, firmado con la clave de Lázaro. No hace falta descargar nada a mano: los equipos lo usan solos (lazaro-repositorio).
+
+          Para activarlo en un equipo instalado antes de que existiera, una sola vez en la Terminal:
+
+              wget -qO /tmp/lr https://github.com/$GH_REPO/releases/download/$ETIQUETA/lazaro-repositorio && doas sh /tmp/lr --activar
+
+          Paquetes:
+          $(cd repo-x86_64 && ls ./*.apk | sed 's|^\./|- |')
+
+          $(cat nuevo/kernel-lazaro/resumen.txt 2>/dev/null || true)"
+          if gh release view "$ETIQUETA" >/dev/null 2>&1; then
+            gh release edit "$ETIQUETA" --notes "$notas"
+          else
+            gh release create "$ETIQUETA" --target "$GITHUB_SHA" --latest=false \
+              --title "Repositorio Lázaro (Alpine ${ETIQUETA#repo-})" --notes "$notas"
+          fi
+          publicados="$(gh release view "$ETIQUETA" --json assets -q '.assets[].name')"
+          # Primero los paquetes y al final el índice, para que un equipo
+          # que descarga a la mitad nunca vea un índice sin sus paquetes.
+          for a in repo-x86_64/*.apk; do
+            printf '%s\n' "$publicados" | grep -qx "${a##*/}" || gh release upload "$ETIQUETA" "$a"
+          done
+          cp live/usr/sbin/lazaro-repositorio lazaro-repositorio
+          gh release upload "$ETIQUETA" lazaro-repositorio repo/lazaro.rsa.pub --clobber
+          gh release upload "$ETIQUETA" repo-x86_64/APKINDEX.tar.gz --clobber
+          # Las versiones anteriores ya no las nombra el índice.
+          quedan="$(cd repo-x86_64 && ls ./*.apk | sed 's|^\./||')"
+          printf '%s\n' "$publicados" | grep '\.apk$' | while read -r a; do
+            printf '%s\n' "$quedan" | grep -qx "$a" || gh release delete-asset "$ETIQUETA" "$a" -y
+          done

@@ -6,14 +6,12 @@
 #   ./kernel/compilar.sh            En cualquier Linux con Docker.
 #   ./kernel/compilar.sh --dentro   Lo que corre dentro del contenedor.
 #
-# Resultado en salida/kernel/ (un repositorio de apk listo para publicar):
+# Resultado en salida/kernel/ (los paquetes para el repositorio de Lázaro):
 #   x86_64/linux-lazaro-<versión>.apk, x86_64/linux-lazaro-dev-<versión>.apk
-#   x86_64/APKINDEX.tar.gz (firmado), lazaro-kernel.rsa.pub, resumen.txt
+#   x86_64/APKINDEX.tar.gz (firmado, solo con el kernel), resumen.txt
 #
-# Firma: con la clave privada de la variable LAZARO_APK_KEY (el secreto de
-# GitHub). Su mitad pública tiene que ser kernel/lazaro-kernel.rsa.pub, la
-# que llevan la ISO y los equipos instalados. Sin LAZARO_APK_KEY se firma
-# con una clave de prueba: sirve para probar, nunca para publicar.
+# Firma: ver repo/firma.sh (secreto LAZARO_APK_KEY; sin él, clave de
+# prueba que nunca se publica).
 
 set -eu
 
@@ -42,40 +40,8 @@ fi
 msg "Preparando el entorno (Alpine $ALPINE_BRANCH)"
 printf '%s\n%s\n' "$ALPINE_REPO_MAIN" "$ALPINE_REPO_COMMUNITY" > /etc/apk/repositories
 apk update
-apk add alpine-sdk git openssl
-
-id constructor >/dev/null 2>&1 || adduser -D -G abuild constructor
-CASA=/home/constructor
-
-# --- Clave de firma --------------------------------------------------------
-LLAVES="$CASA/.llaves"
-mkdir -p "$LLAVES"
-if [ -n "${LAZARO_APK_KEY:-}" ]; then
-	NOMBRE=lazaro-kernel.rsa
-	printf '%s\n' "$LAZARO_APK_KEY" > "$LLAVES/$NOMBRE"
-	openssl rsa -in "$LLAVES/$NOMBRE" -pubout -out "$LLAVES/$NOMBRE.pub" 2>/dev/null ||
-		die "LAZARO_APK_KEY no es una clave RSA válida"
-	if [ -f "$LAZARO_DIR/kernel/lazaro-kernel.rsa.pub" ] &&
-		! cmp -s "$LLAVES/$NOMBRE.pub" "$LAZARO_DIR/kernel/lazaro-kernel.rsa.pub"; then
-		die "LAZARO_APK_KEY no corresponde a kernel/lazaro-kernel.rsa.pub: los equipos rechazarían el kernel"
-	fi
-	FIRMA=oficial
-else
-	NOMBRE=lazaro-kernel-prueba.rsa
-	openssl genrsa -out "$LLAVES/$NOMBRE" 2048 2>/dev/null
-	openssl rsa -in "$LLAVES/$NOMBRE" -pubout -out "$LLAVES/$NOMBRE.pub" 2>/dev/null
-	FIRMA=prueba
-	echo "AVISO: sin LAZARO_APK_KEY; se firma con una clave de prueba (no publicar)."
-fi
-chmod 600 "$LLAVES/$NOMBRE"
-for d in "$CASA/.abuild" "$CASA/.config/abuild"; do
-	mkdir -p "$d"
-	echo "PACKAGER_PRIVKEY=\"$LLAVES/$NOMBRE\"" > "$d/abuild.conf"
-	echo "JOBS=$(nproc)" >> "$d/abuild.conf"
-	echo "MAKEFLAGS=-j$(nproc)" >> "$d/abuild.conf"
-done
-cp "$LLAVES/$NOMBRE.pub" /etc/apk/keys/
-chown -R constructor:abuild "$CASA"
+apk add git
+. "$LAZARO_DIR/repo/firma.sh"
 
 # --- linux-lts de aports -----------------------------------------------------
 msg "Descargando main/linux-lts de aports ($APORTS_BRANCH)"
@@ -122,14 +88,7 @@ mkdir -p "$SALIDA/$ALPINE_ARCH"
 cp "$REPO"/main/"$ALPINE_ARCH"/linux-lazaro-"$pkgver"-r"$pkgrel".apk \
 	"$REPO"/main/"$ALPINE_ARCH"/linux-lazaro-dev-"$pkgver"-r"$pkgrel".apk \
 	"$SALIDA/$ALPINE_ARCH/" || die "no se encontraron los paquetes compilados"
-cd "$SALIDA/$ALPINE_ARCH"
-apk index --quiet -o APKINDEX.tar.gz --rewrite-arch "$ALPINE_ARCH" \
-	-d "Kernel Lázaro para Alpine $ALPINE_BRANCH" ./*.apk
-cp APKINDEX.tar.gz "$CASA/APKINDEX.tar.gz"
-chown constructor:abuild "$CASA/APKINDEX.tar.gz"
-su constructor -c "abuild-sign -k $LLAVES/$NOMBRE $CASA/APKINDEX.tar.gz" >/dev/null
-cp "$CASA/APKINDEX.tar.gz" APKINDEX.tar.gz
-cp "$LLAVES/$NOMBRE.pub" "$SALIDA/"
+firmar_indice "$SALIDA/$ALPINE_ARCH"
 # Las opciones que de verdad quedaron (olddefconfig puede haber cambiado
 # alguna por dependencias): las trae el paquete en /boot.
 CONFIG_FINAL="$SALIDA/config-lazaro"

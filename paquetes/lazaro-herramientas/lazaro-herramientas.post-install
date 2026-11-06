@@ -1,0 +1,27 @@
+#!/bin/sh
+# Pone en /usr/local/sbin y en /etc lo que trae el paquete en
+# /usr/share/lazaro (ver repo/herramientas.sh) y enciende los servicios.
+# Si el afinador nunca corrió en este equipo, aplica sus ajustes
+# recomendados, como al instalar Lázaro.
+S=/usr/share/lazaro
+# Con un archivo nuevo y mv: un programa que está corriendo (por ejemplo
+# lazaro-repositorio, que llamó a apk) sigue leyendo su versión vieja.
+mkdir -p /usr/local/sbin
+for p in "$S"/programas/lazaro-*; do
+	[ -f "$p" ] || continue
+	n="/usr/local/sbin/${p##*/}"
+	install -m755 "$p" "$n.nuevo" && mv -f "$n.nuevo" "$n"
+done
+for s in lazaro-controladores lazaro-afinador; do
+	install -Dm755 "$S/$s.initd" "/etc/init.d/$s"
+	[ -e "/etc/runlevels/default/$s" ] || ln -s "/etc/init.d/$s" "/etc/runlevels/default/$s" 2>/dev/null
+done
+[ ! -e /etc/init.d/lazaro-repositorio ] || [ -e /etc/runlevels/default/lazaro-repositorio ] ||
+	ln -s /etc/init.d/lazaro-repositorio /etc/runlevels/default/lazaro-repositorio 2>/dev/null
+install -Dm644 "$S/lazaro.rsa.pub" /etc/apk/keys/lazaro.rsa.pub
+[ -e /etc/lazaro/sin-escritorio ] ||
+	install -Dm644 "$S/lazaro-controladores-sesion.desktop" /etc/xdg/autostart/lazaro-controladores.desktop
+if [ ! -e /etc/lazaro/afinador.conf ] && [ -x /usr/local/sbin/lazaro-afinador ]; then
+	/usr/local/sbin/lazaro-afinador --aplicar >/dev/null 2>&1 || true
+fi
+exit 0

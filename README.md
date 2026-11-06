@@ -312,7 +312,9 @@ controlador. El sistema instalado recuerda esta elección.
 
 Lázaro trae tres herramientas propias para cuidar el equipo. Las tres se
 abren desde el menú de aplicaciones o desde una **terminal** (búscala como
-"Terminal" en el menú). Cuando una orden empieza con `doas`, te pide **tu
+"Terminal" en el menú), y **se actualizan solas** con las actualizaciones
+normales del sistema (ver
+[Actualizaciones de las herramientas](#actualizaciones-de-las-herramientas)). Cuando una orden empieza con `doas`, te pide **tu
 contraseña** (la que elegiste al instalar); mientras la escribes no se ve
 nada en la pantalla, es normal: escríbela y pulsa Enter.
 
@@ -432,6 +434,48 @@ doas lazaro-kernel --instalar     # instalar y preparar el arranque de prueba
 doas lazaro-kernel --quitar       # volver al kernel de Alpine
 ```
 
+### Actualizaciones de las herramientas
+
+Las herramientas de Lázaro (Afinador, Controladores, Diagnóstico y el
+kernel Lázaro) llegan por el **repositorio de Lázaro**: un lugar en
+internet, en GitHub, de donde el sistema baja paquetes, igual que lo hace
+con los de Alpine. Así, cuando Lázaro mejora una herramienta o agrega una
+nueva, tu equipo la recibe con el **aviso de actualizaciones** de
+siempre. Todo lo que viene de ahí está **firmado** con la clave de
+Lázaro: el sistema rechaza cualquier paquete que no tenga esa firma.
+
+**Equipos instalados con una ISO nueva:** no tienes que hacer nada. En el
+primer arranque con internet el equipo se conecta solo al repositorio.
+
+**Equipos que ya tenían Lázaro antes de esta novedad:**
+hay que conectarlo **una sola vez**:
+
+1. Conéctate a internet.
+2. Abre una **Terminal** (búscala como "Terminal" en el menú).
+3. Copia esta línea entera, pégala en la terminal (clic derecho y
+   **Pegar**, o Ctrl+Mayús+V) y pulsa Enter:
+
+   ```sh
+   wget -qO /tmp/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh /tmp/lr --activar
+   ```
+
+4. Escribe tu contraseña y pulsa Enter. Al terminar dice **Listo: las
+   herramientas de Lázaro se actualizarán con las actualizaciones del
+   sistema**. Desde ese momento el equipo tiene el **Afinador** (con sus
+   ajustes recomendados ya aplicados) y las versiones nuevas de las otras
+   herramientas.
+
+Si dice que no pudo descargar, revisa la conexión y vuelve a pegar la
+línea: se puede repetir sin problema.
+
+**Con la terminal:**
+
+```sh
+doas lazaro-repositorio --sincronizar   # buscar ahora lo nuevo (lo hace solo cada día)
+doas apk upgrade                        # instalarlo (lo mismo que el aviso de actualizaciones)
+doas lazaro-repositorio --desactivar    # dejar de recibirlas (lo instalado se queda)
+```
+
 ### Controladores: lo que le falta al hardware
 
 Un **controlador** es lo que el sistema necesita para usar una pieza
@@ -544,7 +588,8 @@ prueban y publican solas en cada cambio de la rama principal.
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
 | Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
 | Afinador | `live/usr/sbin/lazaro-afinador` | Perfil del hardware (fijo y extraíble, nivel x86-64, discos, memoria) y ajustes reversibles: `preempt=full`, Multi-Gen LRU con `min_ttl_ms`, tope de escritura en `sysctl.d`, páginas gigantes y `schedutil`; servicio de arranque y menú "Afinador" |
-| Kernel Lázaro | `kernel/` + `live/usr/sbin/lazaro-kernel` | `linux-lazaro`: el linux-lts de Alpine con `kernel/lazaro.fragment` (sin hardware de servidor ni depuración, expropiación completa). Lo compila, prueba en QEMU y publica firmado `.github/workflows/lazaro-kernel.yml` en la Release `kernel-vX.Y` cada vez que Alpine saca un linux-lts nuevo. `lazaro-kernel` lo baja a un repositorio local `@lazaro`, lo instala junto al de Alpine y hace un arranque de prueba (`grub-reboot`) que se confirma al terminar de encender |
+| Kernel Lázaro | `kernel/` + `live/usr/sbin/lazaro-kernel` | `linux-lazaro`: el linux-lts de Alpine con `kernel/lazaro.fragment` (sin hardware de servidor ni depuración, expropiación completa). Se compila, prueba en QEMU y publica en el repositorio de Lázaro cada vez que Alpine saca un linux-lts nuevo. `lazaro-kernel` lo instala junto al de Alpine y hace un arranque de prueba (`grub-reboot`) que se confirma al terminar de encender |
+| Repositorio de Lázaro | `repo/`, `paquetes/lazaro-herramientas/` + `live/usr/sbin/lazaro-repositorio` | `.github/workflows/lazaro-repositorio.yml` arma el paquete `lazaro-herramientas` en cada cambio de main (y el kernel cuando toca), los firma y los publica en la Release `repo-vX.Y`. Como una Release no tiene carpetas, `lazaro-repositorio` la copia cada día a `/var/lib/lazaro-repositorio` y apk la usa como repositorio local `@lazaro` (el kernel solo se baja si está instalado) |
 | Controladores que faltan | `live/usr/sbin/lazaro-controladores` | Revisa el hardware e instala lo que le falta (al instalar, al arrancar, con aviso en la sesión y desde el menú) |
 | Recomendación según el equipo | `live/usr/sbin/lazaro-recomendar` | Escritorio y programas preseleccionados en Calamares según memoria, gráfica y disco |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
@@ -652,19 +697,30 @@ aplicar y deshacer dejen GRUB como estaba); en las instalaciones de QEMU
 se comprueba además que el sistema arranca con `preempt=full` y con la
 protección de memoria puesta.
 
-### Kernel Lázaro: compilar y publicar
+### Repositorio de Lázaro: compilar y publicar
 
 ```sh
-./kernel/compilar.sh     # en cualquier Linux con Docker; resultado en salida/kernel/
+./kernel/compilar.sh       # kernel; en cualquier Linux con Docker; resultado en salida/kernel/
+./repo/herramientas.sh     # paquete lazaro-herramientas; resultado en salida/herramientas/
+./repo/indexar.sh CARPETA  # junta paquetes viejos y nuevos y firma el índice
 ```
 
 Sin la variable `LAZARO_APK_KEY` se firma con una clave de prueba (sirve
 para probar, no para publicar). En GitHub, la clave es el secreto
-`LAZARO_APK_KEY`, y su mitad pública es `kernel/lazaro-kernel.rsa.pub`, la
-que llevan la ISO y los equipos; la compilación se niega a firmar si no
-coinciden. Para cambiar la configuración, edita `kernel/lazaro.fragment` y
+`LAZARO_APK_KEY`, y su mitad pública es `repo/lazaro.rsa.pub` (también va
+escrita dentro de `lazaro-repositorio`, y `pruebas/kernel.sh` revisa que
+sean iguales); la compilación se niega a firmar si no coinciden. Solo se
+publica lo firmado con la clave oficial, y solo desde main. Un paquete ya
+publicado nunca se reemplaza por otro con el mismo nombre: cada cambio de
+main lleva un número de versión nuevo (`git rev-list --count HEAD`).
+
+Si cambias las herramientas, no hace falta tocar nada más: el workflow
+arma el paquete solo. Si un programa nuevo debe llegar a los equipos,
+agrégalo en `repo/herramientas.sh` (y en `lazaro-instalar` para las
+instalaciones nuevas). Para cambiar la configuración, edita `kernel/lazaro.fragment` y
 sube `KERNEL_REV` en `kernel/version`. La prueba `pruebas/kernel.sh`
-recorre la instalación, el arranque de prueba (bien y mal), una
+recorre el repositorio (al instalar, en un equipo viejo, sin internet y
+al desactivarlo) y, del kernel, la instalación, el arranque de prueba (bien y mal), una
 actualización y la vuelta al kernel de Alpine; `pruebas/kernel-arranque.sh`
 arranca el kernel compilado en QEMU y lo compara con el de Alpine.
 
