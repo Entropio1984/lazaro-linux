@@ -120,6 +120,16 @@ echo "Reuniendo información... (suele tardar menos de un minuto)"
 	archivo /etc/lazaro/controladores.conf 20
 	archivo /var/log/lazaro-controladores.log 40
 
+	seccion "Perfil del hardware y ajustes (lazaro-afinador)"
+	for la in /usr/local/sbin/lazaro-afinador /usr/sbin/lazaro-afinador; do
+		[ -x "$la" ] || continue
+		timeout 60 "$la" --perfil 2>&1
+		break
+	done
+	archivo /etc/lazaro/afinador.conf
+	archivo /etc/sysctl.d/60-lazaro-afinador.conf
+	archivo /var/log/lazaro-afinador.log 20
+
 	seccion "Gráfica y pantalla"
 	lsmod | grep -E '^(nouveau|i915|xe|amdgpu|radeon|simpledrm|bochs|qxl|virtio_gpu|vboxvideo|drm) ' || echo "(ningún controlador gráfico conocido cargado)"
 	ls -l /dev/dri 2>&1

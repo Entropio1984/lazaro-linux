@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# Aplica en cada arranque los ajustes de lazaro-afinador que el kernel no
+# recuerda al apagar (memoria, páginas gigantes, velocidad del
+# procesador y el tope de escritura a disco). Los del menú de arranque
+# (preempt=full) ya quedan en GRUB. Para quitarlo todo:
+#   doas lazaro-afinador --deshacer
+# Registro: /var/log/lazaro-afinador.log
+
+description="Ajustes de rendimiento de Lázaro (lazaro-afinador)"
+
+depend() {
+	after sysctl
+}
+
+start() {
+	ebegin "Lázaro Linux: aplicando los ajustes del afinador"
+	/usr/local/sbin/lazaro-afinador --arranque </dev/null >/dev/null 2>&1
+	eend 0
+}

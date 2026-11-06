@@ -643,6 +643,32 @@ $(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar "$pc_c" </dev/
 	[ "$pc_rc" = 0 ] || log "Aviso: faltaron controladores; se instalarán al arrancar con internet."
 }
 
+# Afinador (lazaro-afinador): ajustes para que el equipo responda mejor,
+# todos reversibles. Se deja la herramienta, su servicio de arranque y el
+# menú "Afinador", y se aplica lo recomendado para este hardware. Va al
+# final, después de desktop-postinstall.sh, porque el script también
+# toca /etc/default/grub (el bloque del afinador queda aparte y se
+# conserva cuando el script vuelve a generar el menú de arranque).
+paso_afinador() { # RAIZ
+	pa_af=/usr/sbin/lazaro-afinador
+	[ -x "$pa_af" ] || return 0
+	install -Dm755 "$pa_af" "$1/usr/local/sbin/lazaro-afinador"
+	install -Dm755 "$DATOS/lazaro-afinador.initd" "$1/etc/init.d/lazaro-afinador"
+	[ -e "$1/etc/lazaro/sin-escritorio" ] ||
+		install -Dm644 "$DATOS/lazaro-afinador.desktop" "$1/usr/share/applications/lazaro-afinador.desktop"
+	pa_salida="$("$pa_af" --aplicar --raiz "$1" 2>>"$LOG")" || {
+		log "Aviso: el afinador no pudo aplicar sus ajustes (se pueden poner después desde el menú)."
+		return 0
+	}
+	"$pa_af" --revisar --raiz "$1" 2>/dev/null | sed 's/^/  /' >>"$LOG"
+	# Las pruebas en QEMU buscan esta línea en la consola.
+	log "$pa_salida"
+	if grep -q 'lazaro-afinador: inicio' "$1/etc/default/grub" 2>/dev/null &&
+		! en_destino "$1" grub-mkconfig -o /boot/grub/grub.cfg </dev/null >>"$LOG" 2>&1; then
+		log "Aviso: no se pudo actualizar el menú de arranque con los ajustes del afinador."
+	fi
+}
+
 # --- Paso 3: ajustes y desktop-postinstall.sh ----------------------------
 paso_ajustes() {
 	raiz="${1%/}"
@@ -771,6 +797,8 @@ paso_ajustes() {
 		log "Sin internet: desktop-postinstall.sh se ejecutará en el primer arranque con red."
 		programar_primer_arranque "$raiz"
 	fi
+
+	paso_afinador "$raiz"
 
 	cp "$LOG" "$raiz/var/log/lazaro-instalar.log" 2>/dev/null || true
 	log "Instalación terminada."
