@@ -24,7 +24,7 @@ LAZARO_DIR="$DIR" # lo usa lib.sh
 . "$DIR/lib.sh"
 mkdir -p "$TMP/raiz/bin"
 curl -fsSL --retry 3 -o "$TMP/indice.tar.gz" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz"
-bb_ver="$(tar -xzOf "$TMP/indice.tar.gz" APKINDEX | awk '/^P:busybox-static$/ { p = 1 } p && /^V:/ { print substr($0, 3); exit }')"
+bb_ver="$(tar -xzOf "$TMP/indice.tar.gz" APKINDEX | awk '/^P:/ { p = ($0 == "P:busybox-static") } p && /^V:/ && v == "" { v = substr($0, 3) } END { print v }')"
 [ -n "$bb_ver" ] || { echo "No se encontró busybox-static en el índice de Alpine." >&2; exit 1; }
 curl -fsSL --retry 3 -o "$TMP/bb.apk" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/busybox-static-$bb_ver.apk"
 # Un .apk son varios tar.gz seguidos: tar puede quejarse del final aunque
@@ -60,11 +60,13 @@ arrancar() { # APK NOMBRE -> salida en $TMP/NOMBRE.log
 	timeout 300 qemu-system-x86_64 $acel -m 1024 -nographic -no-reboot \
 		-kernel "$k" -initrd "$TMP/initramfs.gz" \
 		-append "console=ttyS0 panic=-1 quiet loglevel=3" > "$TMP/$2.log" 2>&1 || true
-	tr -d '\r' < "$TMP/$2.log" | grep '^LAZARO-KERNEL-' | sed "s/^/[$2] /"
+	# La consola de QEMU deja códigos de pantalla delante de la primera
+	# línea: se busca la marca en cualquier parte.
+	tr -d '\r' < "$TMP/$2.log" | grep -o 'LAZARO-KERNEL-.*' | sed "s/^/[$2] /"
 }
 
 arrancar "$1" lazaro
-if ! grep -q '^LAZARO-KERNEL-ARRANCO .*-lazaro' "$TMP/lazaro.log"; then
+if ! grep -q 'LAZARO-KERNEL-ARRANCO [^ ]*-lazaro' "$TMP/lazaro.log"; then
 	echo "FALLO: el kernel Lázaro no llegó a ejecutar programas. Últimas líneas:" >&2
 	tr -d '\r' < "$TMP/lazaro.log" | tail -n 40 >&2
 	exit 1
