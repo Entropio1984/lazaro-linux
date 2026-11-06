@@ -68,8 +68,10 @@ case "\$1" in
 		shift
 		for p in "\$@"; do
 			p="\${p%@lazaro}"
-			ls "\$L/\$p"-[0-9]*.apk >/dev/null 2>&1 || exit 1
-			printf 'P:%s\n\n' "\$p" >> "$R/lib/apk/db/installed"
+			a="\$(ls "\$L/\$p"-[0-9]*.apk 2>/dev/null | head -n 1)"
+			[ -n "\$a" ] || exit 1
+			v="\${a##*/\$p-}"
+			printf 'P:%s\nV:%s\n\n' "\$p" "\${v%.apk}" >> "$R/lib/apk/db/installed"
 			[ "\$p" != linux-lazaro ] || { mkdir -p "$R/boot"; : > "$R/boot/vmlinuz-lazaro"; }
 		done ;;
 	del) rm -f "$R/boot/vmlinuz-lazaro"; sed -i '/^P:linux-lazaro/d' "$R/lib/apk/db/installed" ;;
@@ -185,12 +187,16 @@ lk 6.18.59-0-lts --instalar >/dev/null 2>&1
 espera "prueba bien: confirmado" "$(lk 6.18.59-0-lazaro --arranque)" LAZARO-KERNEL-CONFIRMADO
 contiene "prueba bien: el Lázaro queda por defecto" "grub-set-default $LAZ" "$ANOTA"
 espera "prueba bien: estado activo" "$(sed -n 's/^ESTADO=//p' "$R/etc/lazaro/kernel.conf")" activo
+: > "$ANOTA"
 espera "ya confirmado: el servicio no hace nada" "$(lk 6.18.59-0-lazaro --arranque)" ""
+[ -s "$ANOTA" ] && mal "ya confirmado: volvió a tocar GRUB ($(cat "$ANOTA"))" || ok "ya confirmado: no vuelve a tocar GRUB"
 
 # --- Actualización: el gancho de apk vuelve a probar ---------------------------
 : > "$ANOTA"
 espera "sin cambios: el gancho no hace nada" "$(lk 6.18.59-0-lazaro --nueva-version)" ""
-touch -d '+1 minute' "$R/boot/vmlinuz-lazaro" 2>/dev/null || { sleep 1; touch "$R/boot/vmlinuz-lazaro"; }
+# apk actualizó el paquete (con una fecha vieja en /boot, como hace apk).
+sed -i 's/^V:6.18.59-r0$/V:6.18.59-r1/' "$R/lib/apk/db/installed"
+touch -d '2020-01-01' "$R/boot/vmlinuz-lazaro" 2>/dev/null || true
 espera "kernel nuevo: vuelve a prueba" "$(lk 6.18.59-0-lazaro --nueva-version)" LAZARO-KERNEL-PRUEBA-NUEVA
 contiene "kernel nuevo: el de Alpine por defecto" "grub-set-default $LTS" "$ANOTA"
 contiene "kernel nuevo: el Lázaro de prueba" "grub-reboot $LAZ" "$ANOTA"

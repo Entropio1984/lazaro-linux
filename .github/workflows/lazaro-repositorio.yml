@@ -43,6 +43,10 @@ on:
         type: boolean
         default: false
 
+# Solo lectura salvo en publicar.
+permissions:
+  contents: read
+
 concurrency:
   group: lazaro-repositorio-${{ github.ref }}
   cancel-in-progress: true
@@ -68,7 +72,8 @@ jobs:
           ANTES: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           LAZARO_DIR=$PWD . ./lib.sh
-          . kernel/version
+          KERNEL_REV="$(sed -n 's/^KERNEL_REV=\([0-9][0-9]*\)$/\1/p' kernel/version)"
+          [ -n "$KERNEL_REV" ] || { echo "kernel/version: falta KERNEL_REV=<número>"; exit 1; }
           apkbuild="$(curl -fsSL --retry 3 "https://raw.githubusercontent.com/alpinelinux/aports/$APORTS_BRANCH/main/linux-lts/APKBUILD")"
           pkgver="$(printf '%s\n' "$apkbuild" | sed -n 's/^pkgver=//p')"
           pkgrel="$(printf '%s\n' "$apkbuild" | sed -n 's/^pkgrel=//p')"
@@ -111,7 +116,8 @@ jobs:
 
       - name: Compilar
         env:
-          LAZARO_APK_KEY: ${{ secrets.LAZARO_APK_KEY }}
+          # La clave nunca llega a un PR: ahí se firma con una de prueba.
+          LAZARO_APK_KEY: ${{ github.event_name != 'pull_request' && secrets.LAZARO_APK_KEY || '' }}
         run: ./kernel/compilar.sh
 
       - name: Probar el arranque en QEMU (y comparar con linux-lts)
@@ -121,8 +127,12 @@ jobs:
           sudo chmod 666 /dev/kvm 2>/dev/null || true
           LAZARO_DIR=$PWD . ./lib.sh
           lts_ver="$(curl -fsSL "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz" | tar -xzO APKINDEX | awk '/^P:linux-lts$/ { p = 1 } p && /^V:/ { print substr($0, 3); exit }')"
-          curl -fsSL --retry 3 -o /tmp/linux-lts.apk "$ALPINE_REPO_MAIN/$ALPINE_ARCH/linux-lts-$lts_ver.apk" || true
-          sh pruebas/kernel-arranque.sh "salida/kernel/x86_64/linux-lazaro-${{ needs.revisar.outputs.version }}.apk" /tmp/linux-lts.apk | tee /tmp/arranque.txt
+          [ -n "$lts_ver" ] || { echo "No se encontró linux-lts en el índice de Alpine."; exit 1; }
+          curl -fsSL --retry 3 -o /tmp/linux-lts.apk "$ALPINE_REPO_MAIN/$ALPINE_ARCH/linux-lts-$lts_ver.apk"
+          # El paquete que salió de verdad (aports pudo avanzar desde la revisión).
+          apk_lazaro="$(ls salida/kernel/x86_64/linux-lazaro-[0-9]*.apk)"
+          sh pruebas/kernel-arranque.sh "$apk_lazaro" /tmp/linux-lts.apk | tee /tmp/arranque.txt
+          grep -q '^Memoria libre al arrancar' /tmp/arranque.txt || { echo "Falta la comparación con linux-lts."; exit 1; }
           sudo sh -c 'cat /tmp/arranque.txt >> salida/kernel/resumen.txt'
           {
             echo "### Kernel Lázaro ${{ needs.revisar.outputs.version }}"
@@ -148,7 +158,7 @@ jobs:
           fetch-depth: 0
       - name: Armar
         env:
-          LAZARO_APK_KEY: ${{ secrets.LAZARO_APK_KEY }}
+          LAZARO_APK_KEY: ${{ github.event_name != 'pull_request' && secrets.LAZARO_APK_KEY || '' }}
         run: |
           # Cada cambio de lazaro-linux es una versión nueva del paquete.
           LAZARO_REL="$(git rev-list --count HEAD)" ./repo/herramientas.sh

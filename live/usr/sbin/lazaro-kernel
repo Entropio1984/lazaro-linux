@@ -53,6 +53,12 @@ conf_poner() {
 estado() { v="$(conf_valor ESTADO)"; echo "${v:-no}"; }
 
 kernel_en_uso() { echo "${LAZARO_KERNEL_UNAME:-$(uname -r)}"; }
+# Versión instalada de linux-lazaro, de la base de datos de apk (la fecha
+# de /boot/vmlinuz-lazaro no sirve: apk le pone la de la compilación).
+version_instalada() {
+	awk '/^P:/ { p = substr($0, 3) } /^V:/ && p == "linux-lazaro" { print substr($0, 3); exit }' \
+		"$R/lib/apk/db/installed" 2>/dev/null
+}
 
 # --- Menú de arranque ----------------------------------------------------------
 
@@ -128,7 +134,7 @@ instalar() {
 	por_defecto lts
 	prueba_unica
 	conf_poner ESTADO prueba
-	date +%s > "$DIR/probado" 2>/dev/null || true
+	version_instalada > "$DIR/probado" 2>/dev/null || true
 	# Servicio que confirma la prueba y gancho de apk.
 	if [ -e "$DATOS/lazaro-kernel.initd" ]; then
 		install -Dm755 "$DATOS/lazaro-kernel.initd" "$R/etc/init.d/lazaro-kernel"
@@ -181,12 +187,14 @@ arranque() {
 # siguiente arranque vuelve a ser de prueba.
 nueva_version() {
 	case "$(estado)" in activo|fallo) ;; *) return 0 ;; esac
-	[ -e "$R/boot/vmlinuz-lazaro" ] || return 0
-	if [ -e "$DIR/probado" ] && [ ! "$R/boot/vmlinuz-lazaro" -nt "$DIR/probado" ]; then return 0; fi
+	v="$(version_instalada)"
+	[ -n "$v" ] || return 0
+	[ "$v" != "$(cat "$DIR/probado" 2>/dev/null)" ] || return 0
 	por_defecto lts
 	prueba_unica
 	conf_poner ESTADO prueba
-	date +%s > "$DIR/probado"
+	mkdir -p "$DIR"
+	echo "$v" > "$DIR/probado"
 	registrar "Kernel Lázaro actualizado: el próximo arranque es de prueba."
 	echo "LAZARO-KERNEL-PRUEBA-NUEVA"
 }
