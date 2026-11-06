@@ -331,6 +331,15 @@ prueba_instalar() {
 		return 1
 	fi
 	echo "OK: afinador: ${afinador#LAZARO-AFINADOR-OK}"
+	# lazaro-repositorio: el sistema queda listo para que las herramientas
+	# de Lázaro se actualicen solas.
+	if ! grep -q 'LAZARO-REPOSITORIO-PREPARADO' "$serie"; then
+		terminar "$pid"
+		echo "FALLO: no se preparó el repositorio de Lázaro al instalar." >&2
+		grep -iE 'repositorio' "$serie" | tail -n 20 >&2 || true
+		return 1
+	fi
+	echo "OK: repositorio de Lázaro preparado"
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-desktop instala (sin
 	# escritorio no hay ese paso: setup-disk no escribe una línea por

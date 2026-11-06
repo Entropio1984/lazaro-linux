@@ -1,0 +1,254 @@
+#!/bin/sh
+# lazaro-kernel: instala o quita el kernel Lázaro (linux-lazaro), siempre
+# con el kernel de Alpine (linux-lts) de respaldo.
+#
+# El kernel Lázaro es el linux-lts de Alpine, con su mismo código, sin el
+# hardware de servidores ni la información de depuración y con
+# expropiación completa. Lo compila y firma GitHub cada vez que Alpine
+# saca un linux-lts nuevo y llega por el repositorio de Lázaro
+# (lazaro-repositorio), con las actualizaciones normales del sistema.
+#
+# Arranque de prueba: al instalarlo (y después de cada actualización) el
+# kernel Lázaro arranca UNA vez de prueba (grub-reboot) y el menú de
+# arranque sigue teniendo el de Alpine por defecto. Si el sistema llega a
+# encender por completo, el servicio lazaro-kernel lo deja como el de
+# siempre. Si no llega (se cuelga o no arranca), basta con reiniciar: el
+# equipo vuelve solo al kernel de Alpine y el aviso lo cuenta.
+#
+# Uso (como root, salvo --estado y --ventana):
+#   lazaro-kernel --instalar      descarga, instala y deja la prueba lista
+#   lazaro-kernel --quitar        vuelve al kernel de Alpine y lo desinstala
+#   lazaro-kernel --estado        si está instalado, en prueba o en uso
+#   lazaro-kernel --arranque      lo usa el servicio al encender
+#   lazaro-kernel --nueva-version lo usa apk tras actualizar el kernel
+#   lazaro-kernel --ventana       ventana (menú Afinador)
+#
+# Variables para las pruebas: LAZARO_KERNEL_RAIZ (todo cuelga de ahí),
+# LAZARO_KERNEL_UNAME, LAZARO_REPO_PROG (en vez de lazaro-repositorio).
+
+set -eu
+
+R="${LAZARO_KERNEL_RAIZ:-}"
+DIR="$R/var/lib/lazaro-kernel"
+CONF="$R/etc/lazaro/kernel.conf"
+LOG="$R/var/log/lazaro-kernel.log"
+GRUB_DEFAULT_ARCH="$R/etc/default/grub"
+GRUB_CFG="$R/boot/grub/grub.cfg"
+DATOS="$R/usr/share/lazaro"
+MARCA_INI="# lazaro-kernel: inicio (no editar entre estas marcas)"
+MARCA_FIN="# lazaro-kernel: fin"
+REPO_PROG="${LAZARO_REPO_PROG:-/usr/local/sbin/lazaro-repositorio}"
+[ -x "$REPO_PROG" ] || REPO_PROG=lazaro-repositorio
+
+registrar() { printf '%s %s\n' "$(date '+%F %T' 2>/dev/null)" "$*" >>"$LOG" 2>/dev/null || true; }
+aviso() { printf '[lazaro-kernel] %s\n' "$*" >&2; registrar "$*"; }
+die() { aviso "ERROR: $*"; exit 1; }
+
+conf_valor() { sed -n "s/^$1=//p" "$CONF" 2>/dev/null | tail -n 1; }
+conf_poner() {
+	mkdir -p "${CONF%/*}"
+	{ grep -v "^$1=" "$CONF" 2>/dev/null || true; echo "$1=$2"; } > "$CONF.tmp"
+	mv "$CONF.tmp" "$CONF"
+}
+estado() { v="$(conf_valor ESTADO)"; echo "${v:-no}"; }
+
+kernel_en_uso() { echo "${LAZARO_KERNEL_UNAME:-$(uname -r)}"; }
+# Versión instalada de linux-lazaro, de la base de datos de apk (la fecha
+# de /boot/vmlinuz-lazaro no sirve: apk le pone la de la compilación).
+version_instalada() {
+	awk '/^P:/ { p = substr($0, 3) } /^V:/ && p == "linux-lazaro" { print substr($0, 3); exit }' \
+		"$R/lib/apk/db/installed" 2>/dev/null
+}
+
+# --- Menú de arranque ----------------------------------------------------------
+
+grub_quitar_bloque() {
+	g="$GRUB_DEFAULT_ARCH"
+	[ -f "$g" ] && grep -qxF "$MARCA_INI" "$g" || return 0
+	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '$0 == i { a = NR } $0 == f && a { ok = 1 } END { exit !ok }' "$g" ||
+		die "$g tiene la marca de inicio de lazaro-kernel sin la de cierre: no se modifica."
+	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '
+		$0 == i { dentro = 1; next }
+		dentro && $0 == f { dentro = 0; next }
+		!dentro { print }' "$g" > "$g.tmp.$$" && cat "$g.tmp.$$" > "$g"
+	rm -f "$g.tmp.$$"
+}
+# GRUB_DEFAULT=saved: el kernel por defecto lo eligen grub-set-default y
+# grub-reboot (este último, solo para el siguiente arranque).
+grub_poner_bloque() {
+	g="$GRUB_DEFAULT_ARCH"
+	[ -f "$g" ] || die "No existe $g: este equipo no arranca con GRUB."
+	grub_quitar_bloque
+	[ -z "$(tail -c 1 "$g")" ] || echo >> "$g"
+	printf '%s\nGRUB_DEFAULT=saved\n%s\n' "$MARCA_INI" "$MARCA_FIN" >> "$g"
+}
+grub_regenerar() {
+	grub-mkconfig -o "$GRUB_CFG" >>"$LOG" 2>&1 || die "No se pudo actualizar el menú de arranque (grub-mkconfig)."
+}
+
+# Identificador de GRUB del kernel SABOR (lts, lazaro), en la forma que
+# aceptan grub-reboot y grub-set-default ("submenú>entrada").
+entrada() { # SABOR
+	awk -v s="-$1-advanced-" '
+		function id(l,   r) {
+			if (match(l, /\$menuentry_id_option '\''[^'\'']*'\''/)) {
+				r = substr(l, RSTART, RLENGTH); sub(/^[^'\'']*'\''/, "", r); sub(/'\''$/, "", r); return r
+			}
+			return ""
+		}
+		/^[[:space:]]*submenu / { sub_id = id($0); next }
+		/^}/ { sub_id = "" }
+		/^[[:space:]]*menuentry / {
+			e = id($0)
+			if (index(e, s) && e !~ /recovery/) { print (sub_id != "" ? sub_id ">" : "") e; exit }
+		}' "$GRUB_CFG" 2>/dev/null
+}
+
+por_defecto() { # SABOR
+	e="$(entrada "$1")"
+	[ -n "$e" ] || die "No se encontró el kernel $1 en el menú de arranque."
+	grub-set-default "$e"
+}
+prueba_unica() {
+	e="$(entrada lazaro)"
+	[ -n "$e" ] || die "No se encontró el kernel Lázaro en el menú de arranque."
+	grub-reboot "$e"
+}
+
+# --- Órdenes ---------------------------------------------------------------
+
+necesita_root() { [ "$(id -u)" = 0 ] || [ -n "$R" ] || die "Hace falta ser administrador: doas lazaro-kernel $1"; }
+
+instalar() {
+	# El repositorio de Lázaro (clave, @lazaro y la última versión).
+	"$REPO_PROG" --activar --con-kernel >>"$LOG" 2>&1 || die "No se pudo preparar el repositorio de Lázaro (¿hay internet?). Detalles en $LOG."
+	mkdir -p "$DIR"
+	paq="linux-lazaro@lazaro"
+	# Con controladores que se compilan para cada kernel (akms, como el
+	# wifi Broadcom wl), hacen falta sus cabeceras.
+	apk info -e akms >/dev/null 2>&1 && paq="$paq linux-lazaro-dev@lazaro"
+	# shellcheck disable=SC2086
+	apk add $paq >>"$LOG" 2>&1 || die "apk no pudo instalar el kernel Lázaro (detalles en $LOG)."
+	grub_poner_bloque
+	grub_regenerar
+	por_defecto lts
+	prueba_unica
+	conf_poner ESTADO prueba
+	version_instalada > "$DIR/probado" 2>/dev/null || true
+	# Servicio que confirma la prueba y gancho de apk.
+	if [ -e "$DATOS/lazaro-kernel.initd" ]; then
+		install -Dm755 "$DATOS/lazaro-kernel.initd" "$R/etc/init.d/lazaro-kernel"
+		mkdir -p "$R/etc/runlevels/default"
+		ln -sf /etc/init.d/lazaro-kernel "$R/etc/runlevels/default/lazaro-kernel"
+	fi
+	mkdir -p "$R/etc/apk/commit_hooks.d"
+	printf '#!/bin/sh\n# Tras actualizar el kernel Lázaro, su primer arranque vuelve a ser de prueba.\n[ "$1" = post-commit ] || exit 0\n/usr/local/sbin/lazaro-kernel --nueva-version >/dev/null 2>&1 || true\n' \
+		> "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
+	chmod 755 "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
+	registrar "Instalado; arranque de prueba preparado."
+	echo "LAZARO-KERNEL-INSTALADO"
+	echo "Listo. Reinicia para probar el kernel Lázaro. Si algo falla, reinicia otra vez: el equipo vuelve solo al kernel de Alpine."
+}
+
+quitar() {
+	if [ -f "$GRUB_CFG" ] && [ -n "$(entrada lts)" ]; then por_defecto lts; fi
+	grub_quitar_bloque
+	apk del linux-lazaro linux-lazaro-dev >>"$LOG" 2>&1 || true
+	rm -f "$R/etc/runlevels/default/lazaro-kernel" "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
+	rm -rf "$DIR"
+	grub_regenerar
+	conf_poner ESTADO no
+	registrar "Quitado; vuelve el kernel de Alpine."
+	echo "LAZARO-KERNEL-QUITADO"
+	echo "Listo. Al reiniciar se usa el kernel de Alpine."
+}
+
+# El servicio corre al final del arranque: si el kernel Lázaro llegó hasta
+# aquí en su arranque de prueba, queda como el de siempre.
+arranque() {
+	case "$(estado)" in
+		prueba)
+			case "$(kernel_en_uso)" in
+				*-lazaro)
+					por_defecto lazaro
+					conf_poner ESTADO activo
+					registrar "Arranque de prueba bien con $(kernel_en_uso): queda por defecto."
+					echo "LAZARO-KERNEL-CONFIRMADO" ;;
+				*)
+					# Arrancó el de Alpine: la prueba no llegó al final.
+					conf_poner ESTADO fallo
+					registrar "El kernel Lázaro no completó su arranque de prueba; se sigue con $(kernel_en_uso)."
+					echo "LAZARO-KERNEL-FALLO" ;;
+			esac ;;
+	esac
+}
+
+# Gancho de apk: si el kernel Lázaro cambió desde la última prueba, el
+# siguiente arranque vuelve a ser de prueba.
+nueva_version() {
+	case "$(estado)" in activo|fallo) ;; *) return 0 ;; esac
+	v="$(version_instalada)"
+	[ -n "$v" ] || return 0
+	[ "$v" != "$(cat "$DIR/probado" 2>/dev/null)" ] || return 0
+	por_defecto lts
+	prueba_unica
+	conf_poner ESTADO prueba
+	mkdir -p "$DIR"
+	echo "$v" > "$DIR/probado"
+	registrar "Kernel Lázaro actualizado: el próximo arranque es de prueba."
+	echo "LAZARO-KERNEL-PRUEBA-NUEVA"
+}
+
+mostrar_estado() {
+	v="$(apk info -e linux-lazaro 2>/dev/null && apk info linux-lazaro 2>/dev/null | sed -n '1s/ description:$//p')"
+	case "$(estado)" in
+		no) echo "Kernel Lázaro: no instalado." ;;
+		prueba) echo "Kernel Lázaro: instalado, espera su arranque de prueba (reinicia)." ;;
+		activo) echo "Kernel Lázaro: en uso por defecto." ;;
+		fallo) echo "Kernel Lázaro: el arranque de prueba no terminó; el equipo usa el kernel de Alpine." ;;
+	esac
+	[ -z "$v" ] || echo "Paquete: $v"
+	echo "Kernel en uso ahora: $(kernel_en_uso)"
+}
+
+como_root() {
+	if [ "$(id -u)" = 0 ]; then "$@"
+	elif command -v pkexec >/dev/null 2>&1; then pkexec "$@"
+	else doas "$@"
+	fi
+}
+
+ventana() {
+	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	texto="El kernel es la parte central del sistema. El kernel Lázaro es el de Alpine, con el mismo código y las mismas actualizaciones de seguridad, pero sin piezas que solo usan los servidores y con el escritorio más atento al ratón y al teclado.\n\nEs EXPERIMENTAL: la mejora es pequeña y se nota más en equipos lentos. El kernel de Alpine queda siempre en el menú de arranque.\n\n$(mostrar_estado | sed 's/$/\\n/' | tr -d '\n')"
+	case "$(estado)" in
+		no|fallo)
+			zenity --question --width=520 --title="Kernel Lázaro" --ok-label="Instalar y probar" --cancel-label="Cerrar" \
+				--text="$texto\nAl instalarlo, el próximo arranque es de prueba: si algo falla, reinicia y el equipo vuelve solo al kernel de Alpine. Necesita internet." >/dev/null 2>&1 || return 0
+			if salida="$(como_root "$0" --instalar 2>&1)"; then
+				zenity --question --width=420 --title="Kernel Lázaro" --ok-label="Reiniciar ahora" --cancel-label="Después" \
+					--text="Instalado. El próximo arranque prueba el kernel Lázaro." >/dev/null 2>&1 && { loginctl reboot 2>/dev/null || reboot; }
+			else
+				zenity --error --width=460 --title="Kernel Lázaro" --text="No se pudo instalar.\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+			fi ;;
+		*)
+			zenity --question --width=520 --title="Kernel Lázaro" --ok-label="Volver al kernel de Alpine" --cancel-label="Cerrar" \
+				--text="$texto" >/dev/null 2>&1 || return 0
+			if salida="$(como_root "$0" --quitar 2>&1)"; then
+				zenity --info --width=380 --title="Kernel Lázaro" --text="Listo. Al reiniciar se usa el kernel de Alpine." >/dev/null 2>&1 || true
+			else
+				zenity --error --width=460 --title="Kernel Lázaro" --text="No se pudo.\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+			fi ;;
+	esac
+}
+
+mkdir -p "${LOG%/*}" 2>/dev/null || true
+case "${1:-}" in
+	--instalar) necesita_root "$1"; instalar ;;
+	--quitar) necesita_root "$1"; quitar ;;
+	--arranque) arranque ;;
+	--nueva-version) nueva_version ;;
+	--estado) mostrar_estado ;;
+	--ventana) ventana ;;
+	*) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+esac

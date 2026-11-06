@@ -1,0 +1,66 @@
+# Kernel Lázaro: el linux-lts de Alpine con estos cambios encima (se
+# agregan al final de lts.x86_64.config y "make olddefconfig" resuelve el
+# resto). Si una opción desaparece en una versión nueva del kernel, se
+# ignora sola. Al cambiar este archivo, sube KERNEL_REV en kernel/version.
+
+# --- Respuesta del escritorio ---------------------------------------------
+# Expropiación completa de fábrica (con el modo dinámico se puede volver a
+# la de Alpine con preempt=voluntary en el arranque).
+# CONFIG_PREEMPT_VOLUNTARY is not set
+CONFIG_PREEMPT=y
+CONFIG_PREEMPT_DYNAMIC=y
+
+# --- Sin información de depuración ------------------------------------------
+# Solo la usan herramientas de rastreo (BPF CO-RE); compila mucho más
+# rápido y el paquete pesa menos.
+CONFIG_DEBUG_INFO_NONE=y
+# CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
+# CONFIG_DEBUG_INFO_BTF is not set
+# CONFIG_SCSI_DEBUG is not set
+
+# --- Hardware que solo existe en servidores y centros de datos -------------
+# Redes de alta velocidad (InfiniBand) y tarjetas de red de servidor.
+# CONFIG_INFINIBAND is not set
+# CONFIG_MLX4_EN is not set
+# CONFIG_MLX4_CORE is not set
+# CONFIG_MLX5_CORE is not set
+# CONFIG_ICE is not set
+# CONFIG_I40E is not set
+# CONFIG_IAVF is not set
+# CONFIG_IDPF is not set
+# CONFIG_FM10K is not set
+# CONFIG_BNXT is not set
+# CONFIG_BE2NET is not set
+# CONFIG_QED is not set
+# CONFIG_SFC is not set
+# CONFIG_ENA_ETHERNET is not set
+# CONFIG_GVE is not set
+# Discos de servidor: controladoras RAID, Fibre Channel e iSCSI de
+# almacenamiento empresarial.
+# CONFIG_FUSION is not set
+# CONFIG_SCSI_HPSA is not set
+# CONFIG_SCSI_ACARD is not set
+# CONFIG_SCSI_AACRAID is not set
+# CONFIG_SCSI_MVSAS is not set
+# CONFIG_SCSI_MVUMI is not set
+# CONFIG_SCSI_ADVANSYS is not set
+# CONFIG_SCSI_ARCMSR is not set
+# CONFIG_MEGARAID_NEWGEN is not set
+# CONFIG_MEGARAID_LEGACY is not set
+# CONFIG_MEGARAID_SAS is not set
+# CONFIG_SCSI_SMARTPQI is not set
+# CONFIG_SCSI_HPTIOP is not set
+# CONFIG_SCSI_BUSLOGIC is not set
+# CONFIG_SCSI_ISCI is not set
+# CONFIG_SCSI_IPS is not set
+# CONFIG_SCSI_INITIO is not set
+# CONFIG_SCSI_STEX is not set
+# CONFIG_SCSI_IPR is not set
+# CONFIG_SCSI_QLA_FC is not set
+# CONFIG_SCSI_QLA_ISCSI is not set
+# CONFIG_SCSI_LPFC is not set
+# CONFIG_SCSI_EFCT is not set
+# CONFIG_LIBFC is not set
+# CONFIG_FCOE is not set
+# CONFIG_ISCSI_TARGET is not set
+# CONFIG_TARGET_CORE is not set

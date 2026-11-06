@@ -501,7 +501,7 @@ ventana() {
 		fi
 		eleccion="$(zenity --list --title="Afinador" --width=640 --height=420 \
 			--text="Ajustes para que el equipo responda mejor. Todos se pueden quitar.\n\n$estado\n\n✔ puesto   ○ se puede poner   · no hace falta\nQué quieres hacer:" \
-			--column="Acción" --hide-header "$b1" "Protecciones del procesador (avanzado)" "Ver el informe del hardware" "Cerrar" 2>/dev/null)" || return 0
+			--column="Acción" --hide-header "$b1" "Protecciones del procesador (avanzado)" "Kernel Lázaro (experimental)" "Ver el informe del hardware" "Cerrar" 2>/dev/null)" || return 0
 		case "$eleccion" in
 			"$b1")
 				if salida="$(como_root "$0" --"$a1" 2>&1)"; then
@@ -521,6 +521,10 @@ ventana() {
 						--text="El kernel protege al procesador de fallos de diseño (Spectre, Meltdown y otros). Esas protecciones lo frenan un poco: en procesadores Intel de 2ª a 7ª generación, entre un 5 % y un 15 %.\n\nApagarlas lo hace más rápido, pero una página web maliciosa podría leer datos de otros programas, como contraseñas.\n\nApágalas solo si el equipo no se usa para navegar, el banco o el correo. Se aplica al reiniciar y se puede volver a encender aquí." >/dev/null 2>&1 &&
 						como_root "$0" --mitigaciones si >/dev/null 2>&1 || true
 				fi ;;
+			"Kernel Lázaro (experimental)")
+				lk=/usr/local/sbin/lazaro-kernel
+				[ -x "$lk" ] || lk=lazaro-kernel
+				"$lk" --ventana || true ;;
 			"Ver el informe del hardware")
 				perfil | zenity --text-info --width=720 --height=560 --title="Hardware del equipo" >/dev/null 2>&1 || true ;;
 			*) return 0 ;;

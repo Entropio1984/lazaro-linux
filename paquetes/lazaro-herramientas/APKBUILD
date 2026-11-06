@@ -1,0 +1,20 @@
+# Herramientas de Lázaro Linux para el sistema instalado. Lo arma
+# repo/herramientas.sh, que deja en archivos/ lo que va en el paquete
+# (los mismos programas que copia lazaro-instalar al instalar).
+# Versión: la de la ISO; pkgrel: el número de cambios de lazaro-linux,
+# así cada cambio publicado es una actualización.
+pkgname=lazaro-herramientas
+pkgver=${LAZARO_VER:-0.1}
+pkgrel=${LAZARO_REL:-0}
+pkgdesc="Herramientas de Lázaro Linux: afinador, controladores, diagnóstico, kernel Lázaro y repositorio"
+url="https://github.com/Entropio1984/lazaro-linux"
+arch="noarch"
+license="custom"
+install="$pkgname.post-install $pkgname.post-upgrade"
+options="!check"
+source=""
+
+package() {
+	mkdir -p "$pkgdir"
+	cp -a "$startdir"/archivos/. "$pkgdir"/
+}
