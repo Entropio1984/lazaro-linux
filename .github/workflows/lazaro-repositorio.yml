@@ -126,7 +126,7 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q qemu-system-x86 cpio >/dev/null
           sudo chmod 666 /dev/kvm 2>/dev/null || true
           LAZARO_DIR=$PWD . ./lib.sh
-          lts_ver="$(curl -fsSL "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz" | tar -xzO APKINDEX | awk '/^P:linux-lts$/ { p = 1 } p && /^V:/ { print substr($0, 3); exit }')"
+          lts_ver="$(curl -fsSL "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz" | tar -xzO APKINDEX | awk '/^P:/ { p = ($0 == "P:linux-lts") } p && /^V:/ && v == "" { v = substr($0, 3) } END { print v }')"
           [ -n "$lts_ver" ] || { echo "No se encontró linux-lts en el índice de Alpine."; exit 1; }
           curl -fsSL --retry 3 -o /tmp/linux-lts.apk "$ALPINE_REPO_MAIN/$ALPINE_ARCH/linux-lts-$lts_ver.apk"
           # El paquete que salió de verdad (aports pudo avanzar desde la revisión).
@@ -141,7 +141,10 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # También si falla la prueba: compilar tarda horas y el paquete sirve
+      # para ver qué pasó (nunca se publica sin la prueba).
       - uses: actions/upload-artifact@v6
+        if: success() || failure()
         with:
           name: kernel-lazaro
           path: salida/kernel
