@@ -18,13 +18,19 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # busybox estático de Alpine para el sistema mínimo.
+# shellcheck disable=SC2034
+LAZARO_DIR="$DIR" # lo usa lib.sh
+# shellcheck disable=SC1091
 . "$DIR/lib.sh"
 mkdir -p "$TMP/raiz/bin"
 curl -fsSL --retry 3 -o "$TMP/indice.tar.gz" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz"
 bb_ver="$(tar -xzOf "$TMP/indice.tar.gz" APKINDEX | awk '/^P:busybox-static$/ { p = 1 } p && /^V:/ { print substr($0, 3); exit }')"
 [ -n "$bb_ver" ] || { echo "No se encontró busybox-static en el índice de Alpine." >&2; exit 1; }
 curl -fsSL --retry 3 -o "$TMP/bb.apk" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/busybox-static-$bb_ver.apk"
-tar -xzf "$TMP/bb.apk" -C "$TMP" bin/busybox.static 2>/dev/null
+# Un .apk son varios tar.gz seguidos: tar puede quejarse del final aunque
+# haya sacado el archivo, así que se revisa el resultado y no su salida.
+tar -xzf "$TMP/bb.apk" -C "$TMP" bin/busybox.static 2>/dev/null || true
+[ -s "$TMP/bin/busybox.static" ] || { echo "No se pudo sacar busybox.static del paquete." >&2; exit 1; }
 mv "$TMP/bin/busybox.static" "$TMP/raiz/bin/busybox"
 chmod 755 "$TMP/raiz/bin/busybox"
 cat > "$TMP/raiz/init" <<'EOF'
@@ -47,8 +53,9 @@ acel=""
 
 arrancar() { # APK NOMBRE -> salida en $TMP/NOMBRE.log
 	mkdir -p "$TMP/$2"
-	tar -xzf "$1" -C "$TMP/$2" 'boot/vmlinuz-*' 2>/dev/null
-	k="$(ls "$TMP/$2"/boot/vmlinuz-* | head -n 1)"
+	tar -xzf "$1" -C "$TMP/$2" boot 2>/dev/null || true
+	k="$(ls "$TMP/$2"/boot/vmlinuz-* 2>/dev/null | head -n 1)"
+	[ -n "$k" ] || { echo "No se encontró boot/vmlinuz-* en $1." >&2; exit 1; }
 	# shellcheck disable=SC2086
 	timeout 300 qemu-system-x86_64 $acel -m 1024 -nographic -no-reboot \
 		-kernel "$k" -initrd "$TMP/initramfs.gz" \

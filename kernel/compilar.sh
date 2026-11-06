@@ -92,7 +92,7 @@ firmar_indice "$SALIDA/$ALPINE_ARCH"
 # Las opciones que de verdad quedaron (olddefconfig puede haber cambiado
 # alguna por dependencias): las trae el paquete en /boot.
 CONFIG_FINAL="$SALIDA/config-lazaro"
-tar -xzOf "$SALIDA/$ALPINE_ARCH/linux-lazaro-$pkgver-r$pkgrel.apk" 'boot/config-*' > "$CONFIG_FINAL" 2>/dev/null || true
+tar -xzOf "$SALIDA/$ALPINE_ARCH/linux-lazaro-$pkgver-r$pkgrel.apk" boot/config-lazaro > "$CONFIG_FINAL" 2>/dev/null || true
 [ -s "$CONFIG_FINAL" ] || { echo "AVISO: el paquete no trae /boot/config-lazaro."; rm -f "$CONFIG_FINAL"; CONFIG_FINAL=""; }
 
 # --- Resumen: cuánto se ahorra frente a linux-lts ----------------------------
