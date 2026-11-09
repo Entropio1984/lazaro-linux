@@ -378,9 +378,9 @@ jobs:
   # (prerelease): descarga directa del .iso, sin iniciar sesión en GitHub
   # y reanudable, a diferencia de los Artifacts.
   publicar:
-    name: Publicar ISO Ligera
+    name: Publicar ISO en desarrollo
     needs: [pruebas, graficas]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -398,7 +398,6 @@ jobs:
           path: iso
 
       - name: Actualizar la Release
-        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -418,10 +417,109 @@ jobs:
           gh api -X PATCH "repos/$GH_REPO/git/$git_ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
           gh release upload "$etiqueta" iso/* --clobber
 
+      # Copia en SourceForge (carpeta Ligera). Si falla, la Release de
+      # GitHub ya quedó publicada: solo se avisa.
+      - name: Subir a SourceForge
+        continue-on-error: true
+        env:
+          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
+        run: sh .github/subir-sourceforge.sh Ligera iso
+
+  # La Completa no cabe en una Release de GitHub (2 GB por archivo): se
+  # publica solo en SourceForge, carpeta Completa.
+  publicar-completa:
+    name: Publicar ISO Completa en SourceForge
+    needs: [pruebas-completa, graficas]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: lazaro-publicar-completa
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
+      - name: Liberar espacio en disco
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-completa
+          path: iso
+
+      - name: Subir a SourceForge
+        env:
+          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
+        run: sh .github/subir-sourceforge.sh Completa iso
+
+  # Versión numerada (etiqueta vX.Y): se publica solo si las DOS ediciones
+  # pasaron sus pruebas, en su propia Release (fija: nunca se reemplaza) y
+  # en SourceForge, carpeta Versiones/X.Y. Grupo propio: una publicación
+  # de main nunca desplaza a la de una versión.
+  publicar-version:
+    name: Publicar la versión
+    needs: [pruebas, graficas, pruebas-completa]
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: lazaro-publicar-version-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
+      # Solo se publica un commit que ya está en main (protegida): una
+      # etiqueta puesta en otro lado no se publica.
+      - name: Revisar que la etiqueta esté en main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          estado="$(gh api "repos/$GH_REPO/compare/main...$GITHUB_SHA" --jq .status)"
+          echo "Commit $GITHUB_SHA respecto de main: $estado"
+          case "$estado" in
+            identical | behind) ;;
+            *)
+              echo "::error::La etiqueta $GITHUB_REF_NAME apunta a un commit que no está en main: no se publica."
+              exit 1
+              ;;
+          esac
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "::error::La versión $GITHUB_REF_NAME ya está publicada y una versión no se reemplaza. Para corregirla, saca la siguiente."
+            exit 1
+          fi
+
+      - name: Liberar espacio en disco
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-estable
+          path: iso
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-completa
+          path: iso-completa
+
+      # Las dos ediciones en Versiones/X.Y. Sin reemplazar lo que ya
+      # esté allí con el mismo nombre.
+      - name: Subir a SourceForge
+        env:
+          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
+          SF_SIN_REEMPLAZAR: "1"
+        run: |
+          mkdir -p version
+          cp -l iso/* iso-completa/* version/ 2>/dev/null || cp iso/* iso-completa/* version/
+          sh .github/subir-sourceforge.sh "Versiones/${GITHUB_REF_NAME#v}" version
+
       # Versión numerada: una Release propia, fija (no se reemplaza), con
       # las novedades desde la versión anterior (los títulos de los PR).
       - name: Publicar la versión
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -448,57 +546,10 @@ jobs:
             fi
           } > notas.md
           cat notas.md
-          if gh release view "$etiqueta" >/dev/null 2>&1; then
-            gh release edit "$etiqueta" --notes-file notas.md
-          else
-            gh release create "$etiqueta" --verify-tag --latest \
-              --title "Lázaro Linux $version" --notes-file notas.md
-          fi
-          gh release upload "$etiqueta" iso/* --clobber
-
-      # Copia en SourceForge: carpeta Ligera (en desarrollo) o
-      # Versiones/X.Y (versión numerada). Si falla, la Release de GitHub ya
-      # quedó publicada: solo se avisa.
-      - name: Subir a SourceForge
-        continue-on-error: true
-        env:
-          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
-        run: |
-          if [ "$GITHUB_REF" = refs/heads/main ]; then
-            sh .github/subir-sourceforge.sh Ligera iso
-          else
-            sh .github/subir-sourceforge.sh "Versiones/${GITHUB_REF_NAME#v}" iso
-          fi
-
-  # La Completa no cabe en una Release de GitHub (2 GB por archivo): se
-  # publica solo en SourceForge, carpeta Completa.
-  publicar-completa:
-    name: Publicar ISO Completa en SourceForge
-    needs: [pruebas-completa, graficas]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ubuntu-24.04
-    concurrency:
-      group: lazaro-publicar-completa
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          sparse-checkout: .github
-
-      - name: Liberar espacio en disco
-        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-
-      - uses: actions/download-artifact@v7
-        with:
-          name: iso-completa
-          path: iso
-
-      - name: Subir a SourceForge
-        env:
-          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
-        run: |
-          if [ "$GITHUB_REF" = refs/heads/main ]; then
-            sh .github/subir-sourceforge.sh Completa iso
-          else
-            sh .github/subir-sourceforge.sh "Versiones/${GITHUB_REF_NAME#v}" iso
-          fi
+          # "Última versión" de GitHub solo si es la más alta publicada.
+          mayor="$(printf '%s\n' "$etiquetas" "$etiqueta" | grep -E '^v[0-9]+(\.[0-9]+)+$' | sort -uV | tail -n 1)"
+          ultima=false
+          [ "$mayor" != "$etiqueta" ] || ultima=true
+          gh release create "$etiqueta" --verify-tag --latest="$ultima" \
+            --title "Lázaro Linux $version" --notes-file notas.md \
+            version/lazaro-linux-"$version"-*

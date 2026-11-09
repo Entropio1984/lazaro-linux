@@ -222,9 +222,14 @@ else
 fi
 sh -n "$SCRIPT" || die "desktop-postinstall.sh tiene errores de sintaxis"
 chown constructor:abuild "$SCRIPT"
+# Con build.sh --dentro directo (sin Docker) nadie los calculó antes.
+if [ -z "${LAZARO_COMMIT:-}" ]; then
+	LAZARO_COMMIT="$(git -C "$LAZARO_DIR" rev-parse --short=12 HEAD 2>/dev/null)" || LAZARO_COMMIT=""
+fi
+LAZARO_FECHA="${LAZARO_FECHA:-$(date -u '+%Y-%m-%d %H:%M UTC')}"
 cat >> "$CONSTRUCTOR_HOME/version.env" <<EOF
 LAZARO_CANAL="${LAZARO_CANAL:-local}"
-LAZARO_FECHA="${LAZARO_FECHA:-desconocida}"
+LAZARO_FECHA="$LAZARO_FECHA"
 LAZARO_COMMIT="${LAZARO_COMMIT:-desconocido}"
 LAZARO_SCRIPT_COMMIT="$LAZARO_SCRIPT_COMMIT"
 LAZARO_SCRIPT_SHA256="$(sha256sum "$SCRIPT" | cut -c1-64)"
