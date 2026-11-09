@@ -134,7 +134,11 @@ prueba_live() {
 		-nic user,model=virtio-net-pci \
 		-spice "unix=on,addr=$SOCK_DIR/$nombre.spice,disable-ticketing=on" \
 		-device virtio-serial-pci -chardev spicevmc,id=vdagent,name=vdagent \
-		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0
+		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
+		-chardev null,id=lzprueba -device virtserialport,chardev=lzprueba,name=lazaro.prueba
+	# El puerto lazaro.prueba le dice a la sesión live que abra también el
+	# instalador: en un equipo real solo se abre la Bienvenida, y el
+	# instalador se abre con su botón "Instalar Lázaro".
 	ok=0
 	if ! esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
 		captura "$mon" "$RES/$nombre-fallo"
@@ -145,6 +149,9 @@ prueba_live() {
 		if ! esperar "$serie" "$pid" 30 LAZARO-MODULOS-OK LAZARO-MODULOS-FALLO; then
 			echo "FALLO: Calamares no pudo cargar alguna de sus pantallas o pasos ($MODO)." >&2
 			sed -n '/LAZARO-MODULOS-FALLO/,+6p' "$serie" >&2
+			ok=1
+		elif ! grep -q LAZARO-BIENVENIDA-ABIERTA "$serie"; then
+			echo "FALLO: la Bienvenida no se abrió al iniciar la sesión live ($MODO)." >&2
 			ok=1
 		elif ! grep -q '^LAZARO-CALAMARES-LANG es_' "$serie"; then
 			# Calamares abre en español (la sesión live trae LANG=C.UTF-8).

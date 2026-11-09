@@ -531,7 +531,7 @@ def main(argv):
     if orden == "--comprobar":
         return comprobar()
     if orden == "--sesion":
-        if not se_muestra_al_iniciar() or es_live():
+        if not se_muestra_al_iniciar():
             return 0
     elif orden:
         print("Uso: lazaro-bienvenida [--sesion|--listar|--comprobar]", file=sys.stderr)

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Bienvenida a Lázaro Linux
+# Al iniciar la sesión de prueba se abre la Bienvenida, que trae el botón
+# "Instalar Lázaro" (abre el instalador, Calamares).
+# Solo en las pruebas automáticas (pruebas/qemu.sh conecta un puerto
+# llamado lazaro.prueba) se abre además el instalador, para revisarlo.
+Exec=sh -c 'if [ -e /dev/virtio-ports/lazaro.prueba ]; then lazaro-abrir-instalador --esperar-red & fi; exec lazaro-bienvenida --sesion'
+Icon=lazaro-bienvenida
+Terminal=false
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
