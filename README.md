@@ -734,3 +734,16 @@ arranca el kernel compilado en QEMU y lo compara con el de Alpine.
 ## Pendiente
 
 - Cifrado de disco (desactivado por ahora).
+
+## Licencia
+
+Lázaro Linux es software libre: puedes usarlo, estudiarlo, compartirlo y
+modificarlo según los términos de la
+[Licencia Pública General de GNU, versión 3 o posterior](LICENSE)
+(GPL-3.0-or-later), la misma que usa Calamares. Si redistribuyes una
+versión modificada, debes compartir también su código con la misma
+licencia.
+
+Los programas que la ISO incluye o descarga (Alpine Linux, Calamares, el
+firmware, los escritorios y las aplicaciones) conservan cada uno su
+propia licencia.
