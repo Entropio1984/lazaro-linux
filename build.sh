@@ -37,7 +37,7 @@ if [ "${1:-}" != "--dentro" ]; then
 		LAZARO_COMMIT="$(git -C "$LAZARO_DIR" rev-parse --short=12 HEAD 2>/dev/null)" || LAZARO_COMMIT=""
 		if [ -z "$LAZARO_COMMIT" ]; then
 			LAZARO_COMMIT=desconocido
-		elif [ -n "$(git -C "$LAZARO_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+		elif [ -n "$(git -C "$LAZARO_DIR" status --porcelain 2>/dev/null)" ]; then
 			LAZARO_COMMIT="$LAZARO_COMMIT+cambios-locales"
 		fi
 	fi
