@@ -5,6 +5,7 @@
 #
 # Uso, en una terminal (en la sesión live o en el sistema instalado):
 #   lazaro-diagnostico
+# Con ventanas (botón de la Bienvenida): lazaro-diagnostico --ventana
 # En el sistema instalado pide la contraseña (doas) porque varios
 # registros solo los lee root; en la sesión live no la pide.
 #
@@ -14,11 +15,49 @@
 # se pierde al apagar: copia el archivo a otro USB o envíalo antes.
 # No guarda contraseñas: no lee /etc/shadow ni las claves del wifi.
 
+# --ventana: lo mismo con ventanas (botón de la Bienvenida y menú): pide
+# la contraseña con la ventana del escritorio (pkexec), muestra que está
+# trabajando y al final dice dónde quedó el archivo.
+if [ "${1:-}" = "--ventana" ]; then
+	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	t="Diagnóstico de Lázaro"
+	zenity --question --width=480 --title="$t" --ok-label="Crear el informe" --cancel-label="Cerrar" \
+		--text="Revisa el equipo y reúne en un archivo de texto su hardware, el estado del sistema y los errores del arranque, para compartirlo al pedir ayuda.\n\nNo guarda contraseñas ni claves del wifi. Suele tardar menos de un minuto." >/dev/null 2>&1 || exit 0
+	if [ "$(id -u)" = 0 ]; then como=""
+	elif [ -x /usr/sbin/lazaro-instalar ]; then como="doas -n"
+	elif command -v pkexec >/dev/null 2>&1; then como="pkexec"
+	else como="doas"
+	fi
+	sal="$(mktemp)" || exit 1
+	# shellcheck disable=SC2086
+	( $como sh "$0" > "$sal" 2>&1; echo $? > "$sal.rc" ) |
+		zenity --progress --pulsate --auto-close --no-cancel --width=380 --title="$t" \
+			--text="Revisando el equipo…" >/dev/null 2>&1
+	rc="$(cat "$sal.rc" 2>/dev/null || echo 1)"
+	informe="$(sed -n 's/^Listo: //p' "$sal" | tail -n 1)"
+	if [ "$rc" = 0 ] && [ -n "$informe" ]; then
+		nota=""
+		[ ! -x /usr/sbin/lazaro-instalar ] || nota="\n\nEstás en la sesión de prueba (live): copia el archivo a otro USB o envíalo antes de apagar."
+		zenity --question --width=480 --title="$t" --ok-label="Abrir la carpeta" --cancel-label="Cerrar" \
+			--text="Listo. El informe quedó en:\n\n$informe\n\nAdjunta ese archivo cuando pidas ayuda.$nota" >/dev/null 2>&1 &&
+			xdg-open "$(dirname "$informe")" >/dev/null 2>&1
+	else
+		zenity --error --width=460 --title="$t" \
+			--text="No se pudo crear el informe.\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
+	fi
+	rm -f "$sal" "$sal.rc"
+	exit 0
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
 	exec doas sh "$0" "$@"
 fi
 
+# Quién lo pidió: con doas, sudo o la ventana de contraseña (pkexec).
 usuario="${DOAS_USER:-${SUDO_USER:-}}"
+if [ -z "$usuario" ] && [ -n "${PKEXEC_UID:-}" ]; then
+	usuario="$(getent passwd "$PKEXEC_UID" 2>/dev/null | cut -d: -f1)"
+fi
 casa="/root"
 if [ -n "$usuario" ]; then
 	casa="$(getent passwd "$usuario" 2>/dev/null | cut -d: -f6)"

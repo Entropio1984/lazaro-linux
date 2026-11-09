@@ -1,0 +1,44 @@
+Cada botón de la Bienvenida de Lázaro es un archivo .conf de esta carpeta.
+Para agregar una función nueva se agrega un archivo; no hay que tocar el
+programa. Los archivos que no terminan en .conf (como este) no se leen.
+
+Ejemplo (25-ejemplo.conf):
+
+    [Funcion]
+    Nombre=Copias de seguridad
+    Descripcion=Guarda tus documentos en un disco externo.
+    Icono=drive-harddisk
+    Seccion=Tu equipo
+    Orden=250
+    Ejecutar=lazaro-copias --ventana
+    Requiere=lazaro-copias
+
+Claves:
+
+  Nombre       Título del botón. Obligatoria.
+  Descripcion  Una o dos frases, en lenguaje sencillo. Obligatoria.
+  Seccion      En qué página del menú de la izquierda aparece. Si la
+               sección no existe, se crea. Obligatoria.
+  Ejecutar     La orden que se corre al pulsar el botón. Obligatoria.
+  Icono        Nombre de un icono del tema del escritorio. Se pueden dar
+               varios separados por espacios: se usa el primero que exista.
+  Orden        Número: las funciones y las secciones se ordenan de menor a
+               mayor (500 si no se pone).
+  Requiere     Programas que deben existir para que el botón se muestre.
+               Separados por espacios hacen falta todos; con | basta uno
+               (por ejemplo: gnome-software|plasma-discover).
+  Donde        instalado, live o ambos (por defecto): si el botón se ve en
+               el sistema instalado, en la sesión de prueba o en los dos.
+  Mostrar      ventana: en vez de abrir un programa, muestra en una ventana
+               de texto lo que la orden escribe (con Copiar y Guardar).
+  Boton        Texto del botón (por defecto, Abrir).
+  Portada      si: además aparece como botón grande en la página de Inicio.
+
+El texto de la página de Inicio está en ../portada.txt (título, lema y
+párrafos, separados por una línea en blanco).
+
+Quien administra un equipo puede agregar o reemplazar funciones sin tocar
+las de Lázaro, en /etc/lazaro/bienvenida/funciones/ (un archivo con el
+mismo nombre reemplaza al de Lázaro).
+
+Para revisar que todo está bien escrito:  lazaro-bienvenida --comprobar

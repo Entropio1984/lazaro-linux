@@ -47,7 +47,8 @@ L="$LAZARO_DIR/live"
 # post-install los copia. Lo de /etc, igual: apk no reemplaza archivos de
 # /etc que ya existen (los equipos instalados antes del paquete los
 # tienen sueltos).
-for p in lazaro-diagnostico lazaro-controladores lazaro-afinador lazaro-kernel lazaro-repositorio; do
+for p in lazaro-diagnostico lazaro-controladores lazaro-afinador lazaro-kernel lazaro-repositorio \
+	lazaro-bienvenida lazaro-flatpak; do
 	install -Dm755 "$L/usr/sbin/$p" "$A/usr/share/lazaro/programas/$p"
 done
 for f in lazaro-controladores.initd lazaro-afinador.initd lazaro-kernel.initd; do
@@ -57,6 +58,14 @@ install -Dm644 "$L/usr/share/lazaro/firmware-paquetes.tsv" "$A/usr/share/lazaro/
 install -Dm644 "$L/usr/share/applications/lazaro-controladores.desktop" "$A/usr/share/applications/lazaro-controladores.desktop"
 install -Dm644 "$L/usr/share/lazaro/lazaro-afinador.desktop" "$A/usr/share/applications/lazaro-afinador.desktop"
 install -Dm644 "$L/etc/xdg/autostart/lazaro-controladores.desktop" "$A/usr/share/lazaro/lazaro-controladores-sesion.desktop"
+# Bienvenida: botones (un archivo por función), menú, icono y arranque
+# con la sesión.
+cp -r "$L/usr/share/lazaro/bienvenida" "$A/usr/share/lazaro/"
+install -Dm644 "$L/usr/share/applications/lazaro-bienvenida.desktop" "$A/usr/share/applications/lazaro-bienvenida.desktop"
+install -Dm644 "$L/usr/share/lazaro/lazaro-bienvenida-sesion.desktop" "$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"
+for t in 64x64 256x256; do
+	install -Dm644 "$L/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png" "$A/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png"
+done
 install -Dm644 "$LAZARO_DIR/repo/lazaro.rsa.pub" "$A/usr/share/lazaro/lazaro.rsa.pub"
 [ ! -e "$A/etc" ] && [ ! -e "$A/usr/local" ] || die "el paquete no debe llevar archivos en /etc ni en /usr/local"
 # Lectores de huellas que reconoce libfprint (igual que build.sh).

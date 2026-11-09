@@ -318,6 +318,36 @@ normales del sistema (ver
 contraseña** (la que elegiste al instalar); mientras la escribes no se ve
 nada en la pantalla, es normal: escríbela y pulsa Enter.
 
+### Bienvenida: todo en una ventana
+
+Al iniciar sesión se abre la **Bienvenida**, una ventana con botones para
+todo lo que trae Lázaro: instalar (en la sesión de prueba), actualizar,
+controladores, tienda de aplicaciones y Flatpak, revisión del hardware,
+Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
+letras e iconos del escritorio que hayas elegido. Si no quieres verla en
+cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
+siempre queda en el menú como **Bienvenida**.
+
+Cada botón solo aparece si sirve en tu equipo: por ejemplo, la tienda se
+muestra cuando hay una tienda instalada.
+
+**Agregar un botón** es crear un archivo de texto, sin tocar el programa.
+Los de Lázaro están en `/usr/share/lazaro/bienvenida/funciones/` y los
+tuyos van en `/etc/lazaro/bienvenida/funciones/`. Por ejemplo
+`50-calculadora.conf`:
+
+```ini
+[Funcion]
+Nombre=Calculadora
+Descripcion=Abre la calculadora.
+Seccion=Programas
+Ejecutar=galculator
+Icono=accessories-calculator
+```
+
+El archivo `LEEME` de esa carpeta explica todas las opciones, y
+`lazaro-bienvenida --comprobar` avisa si algún archivo quedó mal escrito.
+
 ### Afinador: que el equipo responda mejor
 
 El afinador revisa tu equipo (procesador, memoria, discos) y ajusta el

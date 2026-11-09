@@ -553,6 +553,8 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 	pe_paq="libcap-setcap"
 	# Las mismas tipografías que el script pone con cualquier escritorio.
 	[ "$pe_grafico" = no ] || pe_paq="$pe_paq font-dejavu font-liberation font-liberation-sans-narrow font-noto font-noto-emoji"
+	# La Bienvenida (lazaro-bienvenida) es Python con GTK 3.
+	[ "$pe_grafico" = no ] || pe_paq="$pe_paq python3 py3-gobject3 gtk+3.0"
 	for e in $3; do
 		case "$e" in
 			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
@@ -641,6 +643,30 @@ $(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar "$pc_c" </dev/
 	# Las pruebas en QEMU buscan estas líneas en la consola.
 	printf '%s\n' "$pc_salida" | grep '^LAZARO-CONTROLADOR-' | while read -r pc_l; do log "$pc_l"; done
 	[ "$pc_rc" = 0 ] || log "Aviso: faltaron controladores; se instalarán al arrancar con internet."
+}
+
+# Bienvenida: la ventana que presenta Lázaro y reúne sus herramientas
+# (menú "Bienvenida"; se abre sola al iniciar sesión hasta que la persona
+# desmarca la casilla). Los botones son los archivos de
+# /usr/share/lazaro/bienvenida/funciones. lazaro-flatpak es su botón para
+# activar Flatpak y abrir la tienda.
+paso_bienvenida() { # RAIZ
+	[ -x /usr/sbin/lazaro-bienvenida ] || return 0
+	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || return 0
+	install -Dm755 /usr/sbin/lazaro-bienvenida "$1/usr/local/sbin/lazaro-bienvenida"
+	install -Dm755 /usr/sbin/lazaro-flatpak "$1/usr/local/sbin/lazaro-flatpak"
+	mkdir -p "$1/usr/share/lazaro"
+	rm -rf "$1/usr/share/lazaro/bienvenida"
+	cp -a "$DATOS/bienvenida" "$1/usr/share/lazaro/"
+	for pb_t in 64x64 256x256; do
+		install -Dm644 "/usr/share/icons/hicolor/$pb_t/apps/lazaro-bienvenida.png" \
+			"$1/usr/share/icons/hicolor/$pb_t/apps/lazaro-bienvenida.png"
+	done
+	install -Dm644 /usr/share/applications/lazaro-bienvenida.desktop \
+		"$1/usr/share/applications/lazaro-bienvenida.desktop"
+	install -Dm644 "$DATOS/lazaro-bienvenida-sesion.desktop" \
+		"$1/etc/xdg/autostart/lazaro-bienvenida.desktop"
+	log "LAZARO-BIENVENIDA-INSTALADA"
 }
 
 # Afinador (lazaro-afinador): ajustes para que el equipo responda mejor,
@@ -812,6 +838,7 @@ paso_ajustes() {
 	fi
 
 	paso_afinador "$raiz"
+	paso_bienvenida "$raiz"
 
 	cp "$LOG" "$raiz/var/log/lazaro-instalar.log" 2>/dev/null || true
 	log "Instalación terminada."

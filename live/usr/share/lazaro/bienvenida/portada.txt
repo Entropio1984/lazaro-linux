@@ -1,0 +1,18 @@
+Te damos la bienvenida a Lázaro Linux
+
+Tu hardware aún tiene pulso
+
+Lázaro Linux es un sistema operativo libre y gratuito, hecho para darle una
+segunda vida a los computadores que otros sistemas ya dejaron atrás.
+
+Está construido sobre Alpine Linux, uno de los sistemas más livianos que
+existen, y viene listo para usar: escritorio, navegador, sonido, wifi e
+impresoras, sin pasos técnicos y sin depender de internet para instalarse.
+
+Creemos que un computador que todavía enciende todavía sirve. Usarlo unos
+años más ahorra dinero, evita basura electrónica y pone la tecnología al
+alcance de más personas.
+
+En el menú de la izquierda están las herramientas de Lázaro. Esta ventana
+se puede volver a abrir cuando quieras desde el menú de aplicaciones:
+«Bienvenida».

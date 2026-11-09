@@ -482,6 +482,11 @@ prueba_instalar() {
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
 			ok=1
+		elif grep -q LAZARO-BIENVENIDA-NO "$serie2" ||
+			{ [ "$de" != ninguno ] && ! grep -q LAZARO-BIENVENIDA-OK "$serie2"; }; then
+			echo "FALLO: la Bienvenida no quedó lista en el sistema instalado (programa, funciones o GTK para Python)." >&2
+			grep LAZARO-BIENVENIDA "$serie2" >&2 || true
+			ok=1
 		elif grep -q LAZARO-BTOP-GPU-NO "$serie2"; then
 			echo "FALLO: btop quedó sin el permiso para medir la GPU sin doas:" >&2
 			grep LAZARO-BTOP-GPU-NO "$serie2" >&2

@@ -6,7 +6,7 @@
 pkgname=lazaro-herramientas
 pkgver=${LAZARO_VER:-0.1}
 pkgrel=${LAZARO_REL:-0}
-pkgdesc="Herramientas de Lázaro Linux: afinador, controladores, diagnóstico, kernel Lázaro y repositorio"
+pkgdesc="Herramientas de Lázaro Linux: bienvenida, afinador, controladores, diagnóstico, kernel Lázaro y repositorio"
 url="https://github.com/Entropio1984/lazaro-linux"
 arch="noarch"
 license="custom"
