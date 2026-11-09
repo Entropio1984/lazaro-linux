@@ -81,6 +81,14 @@ varias épocas.
 mayoría. Elige la Completa si el equipo no va a tener internet o si la
 conexión es lenta. No hace falta crear ninguna cuenta para descargar.
 
+## Manual de Lázaro
+
+Además de esta guía hay un **manual completo en PDF**, con todo lo que
+hace falta para instalar y usar Lázaro en el día a día. Viene dentro de
+la ISO (icono **Manual de Lázaro** en el escritorio de la sesión de prueba
+y en el menú del sistema instalado) y se descarga suelto junto a cada
+ISO. Su código (LaTeX) está en la carpeta [`manual/`](manual/LEEME.md).
+
 ## Guía de instalación paso a paso
 
 ### Paso 1: descargar

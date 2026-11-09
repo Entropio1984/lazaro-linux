@@ -1,0 +1,15 @@
+#!/bin/sh
+# Abre el Manual de Lázaro Linux (PDF) con el visor que haya: el
+# predeterminado del escritorio y, si no, Firefox, que lee PDF solo.
+MANUAL=/usr/share/doc/lazaro/manual-lazaro.pdf
+if [ ! -r "$MANUAL" ]; then
+	msg="No se encontró el manual en $MANUAL. Se puede leer en https://github.com/Entropio1984/lazaro-linux/releases"
+	command -v zenity >/dev/null 2>&1 && zenity --error --text="$msg" 2>/dev/null || echo "$msg" >&2
+	exit 1
+fi
+command -v xdg-open >/dev/null 2>&1 && xdg-open "$MANUAL" 2>/dev/null && exit 0
+for v in evince okular atril qpdfview mupdf firefox; do
+	command -v "$v" >/dev/null 2>&1 && exec "$v" "$MANUAL"
+done
+echo "No hay ningún programa para abrir PDF. El manual está en $MANUAL" >&2
+exit 1

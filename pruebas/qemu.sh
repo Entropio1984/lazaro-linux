@@ -478,6 +478,9 @@ prueba_instalar() {
 			echo "FALLO: el sistema instalado no arrancó con los ajustes del afinador." >&2
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
+		elif ! grep -q LAZARO-MANUAL-OK "$serie2"; then
+			echo "FALLO: el Manual de Lázaro (PDF y acceso en el menú) no quedó en el sistema instalado (en una compilación local, compílalo antes con manual/compilar.sh)." >&2
+			ok=1
 		elif ! grep -q LAZARO-DIAGNOSTICO-OK "$serie2"; then
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true

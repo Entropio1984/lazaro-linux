@@ -189,6 +189,11 @@ start() {
 	mkdir -p "$escritorio"
 	cp /usr/share/applications/lazaro-instalador.desktop "$escritorio"/
 	chmod +x "$escritorio"/lazaro-instalador.desktop
+	# El manual, al lado del instalador (si la ISO se compiló con él).
+	if [ -r /usr/share/doc/lazaro/manual-lazaro.pdf ]; then
+		cp /usr/share/applications/lazaro-manual.desktop "$escritorio"/
+		chmod +x "$escritorio"/lazaro-manual.desktop
+	fi
 	chown -R lazaro:lazaro /home/lazaro
 	serie "LAZARO-LIVE-LISTO"
 	# Cuánto ocupa la sesión live en la RAM y cuánto le queda.

@@ -1,0 +1,116 @@
+% Estilo del Manual de Lázaro Linux.
+% Aquí solo va la apariencia; el texto está en capitulos/.
+
+% --- Idioma y letras -------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-noshorthands,es-tabla]{babel}
+\usepackage{tgpagella}            % texto: Pagella, fácil de leer en pantalla y papel
+\usepackage{tgheros}              % títulos y recuadros: Heros (sin remates)
+\renewcommand{\ttdefault}{lmtt}  % comandos de la terminal: Latin Modern Mono
+\usepackage{microtype}
+\linespread{1.08}
+
+% --- Página ---------------------------------------------------------------
+\usepackage[a4paper,top=2.4cm,bottom=2.6cm,inner=2.6cm,outer=2.4cm,headheight=15pt]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\graphicspath{{imagenes/}{imagenes/capturas/}{../live/usr/share/calamares/branding/lazaro/}}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\setlist{itemsep=0.25em}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{csquotes}
+\usepackage{menukeys}             % \menu{Archivo > Guardar}, \keys{\ctrl + C}
+\usepackage[backend=biber,style=numeric,sorting=none,refsegment=chapter,defernumbers=true]{biblatex}
+\addbibresource{referencias.bib}
+\usepackage{hyperref}
+
+% --- Colores de Lázaro ----------------------------------------------------
+\definecolor{pulso}{HTML}{C62828}     % rojo del logo (el pulso)
+\definecolor{tinta}{HTML}{263238}
+\definecolor{consejo}{HTML}{2E7D32}
+\definecolor{cuidado}{HTML}{E65100}
+\definecolor{nota}{HTML}{1565C0}
+
+\hypersetup{
+  colorlinks=true, linkcolor=tinta, urlcolor=nota, citecolor=consejo,
+  pdftitle={Manual de Lázaro Linux},
+  pdfauthor={Proyecto Lázaro Linux},
+  pdfsubject={Guía de uso de Lázaro Linux para todos},
+  pdflang={es},
+  bookmarksnumbered=true,
+}
+
+% --- Títulos ----------------------------------------------------------------
+\titleformat{\chapter}[display]
+  {\sffamily\bfseries\color{tinta}}
+  {\color{pulso}\Large Capítulo \thechapter}
+  {0.4em}
+  {\Huge}
+  [\vspace{0.3em}{\color{pulso}\titlerule[1.5pt]}]
+\titlespacing*{\chapter}{0pt}{-1.5em}{1.8em}
+\titleformat{\section}{\sffamily\bfseries\Large\color{tinta}}{\color{pulso}\thesection}{0.8em}{}
+\titleformat{\subsection}{\sffamily\bfseries\large\color{tinta}}{\thesubsection}{0.8em}{}
+\titleformat{\part}[display]{\centering\sffamily\bfseries\color{tinta}}
+  {\color{pulso}\huge Parte \thepart}{0.6em}{\Huge}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[LE]{\sffamily\small\leftmark}
+\fancyhead[RO]{\sffamily\small\rightmark}
+\fancyfoot[C]{\sffamily\small\thepage}
+\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}\fancyfoot[C]{\sffamily\small\thepage}}
+
+% --- Recuadros --------------------------------------------------------------
+% \begin{consejo} ... \end{consejo}   algo que ayuda
+% \begin{cuidado} ... \end{cuidado}   algo que puede salir mal
+% \begin{nota} ... \end{nota}         un dato extra
+\newcommand{\recuadro}[3]{%
+  \newtcolorbox{#1}{enhanced,breakable,colback=#2!6,colframe=#2,
+    boxrule=0pt,leftrule=3pt,arc=0pt,outer arc=0pt,
+    left=8pt,right=8pt,top=6pt,bottom=6pt,
+    fonttitle=\sffamily\bfseries\color{#2},coltitle=#2,colbacktitle=#2!6,
+    title={#3},attach title to upper={\par\smallskip}}}
+\recuadro{consejo}{consejo}{Consejo}
+\recuadro{cuidado}{cuidado}{Cuidado}
+\recuadro{nota}{nota}{Para saber más}
+
+% Pasos numerados grandes: \begin{pasos} \item ... \end{pasos}
+\newlist{pasos}{enumerate}{1}
+\setlist[pasos]{label=\protect\tcbox[on line,colback=pulso,colframe=pulso,coltext=white,
+  boxsep=1pt,left=3pt,right=3pt,top=1pt,bottom=1pt,arc=2pt]{\sffamily\bfseries\arabic*},
+  leftmargin=2.2em,itemsep=0.5em}
+
+% Lo que se escribe en la terminal.
+\newtcolorbox{terminal}{enhanced,colback=tinta,colupper=white,boxrule=0pt,arc=2pt,
+  left=8pt,right=8pt,top=5pt,bottom=5pt,fontupper=\ttfamily\small}
+\newcommand{\comando}[1]{\texttt{#1}}
+
+% --- Capturas de pantalla ----------------------------------------------------
+% \captura{archivo}{pie de foto}
+% Si la imagen todavía no existe, deja un recuadro gris para no frenar la
+% escritura: el PDF se compila igual y se ve qué capturas faltan.
+\newcommand{\captura}[3][0.85\textwidth]{%
+  \begin{figure}[htbp]\centering
+  \IfFileExists{imagenes/capturas/#2.png}{%
+    \fcolorbox{black!25}{white}{\includegraphics[width=#1]{#2}}}{%
+    \IfFileExists{imagenes/capturas/#2.jpg}{%
+      \fcolorbox{black!25}{white}{\includegraphics[width=#1]{#2}}}{%
+      \fcolorbox{black!30}{black!5}{\parbox[c][0.28\textheight][c]{#1}{\centering
+        \sffamily\color{black!55}Captura pendiente:\\\texttt{#2}}}}}
+  \caption{#3}\label{fig:#2}
+  \end{figure}}
+
+% Términos del glosario: \termino{UEFI} pone la palabra en cursiva la
+% primera vez; el glosario completo está en el apéndice.
+\newcommand{\termino}[1]{\emph{#1}}
+
+% Referencias al final de cada capítulo: \fuentes imprime solo las citadas
+% en ese capítulo. La lista completa va en el apéndice.
+\newcommand{\fuentes}{\printbibliography[segment=\therefsegment,
+  heading=subbibliography,title={Fuentes y lecturas del capítulo}]}

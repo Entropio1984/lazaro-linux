@@ -33,11 +33,61 @@ env:
   SF_PROYECTO: lazaro-linux
 
 jobs:
+  # Manual de Lázaro (manual/, LaTeX): se compila primero porque el PDF va
+  # dentro de las dos ediciones de la ISO. Si no compila, no hay ISO.
+  manual:
+    name: Manual (PDF)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Instalar LaTeX
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends latexmk \
+            texlive-latex-extra texlive-lang-spanish texlive-fonts-recommended \
+            tex-gyre lmodern texlive-bibtex-extra biber ghostscript
+
+      - name: Compilar el manual
+        run: |
+          ./manual/compilar.sh
+          b=$(stat -c %s manual/lazaro-manual.pdf)
+          echo "Manual: $((b / 1024)) KB, $(pdfinfo manual/lazaro-manual.pdf 2>/dev/null | sed -n 's/^Pages: *//p') páginas"
+          # La Ligera está cerca del límite de 2 GB: el manual no debe
+          # pesar más de 25 MB (comprimir las capturas si pasa).
+          if [ "$b" -gt 26214400 ]; then
+            echo "::error::El manual pesa más de 25 MB: comprime las imágenes de manual/imagenes."
+            exit 1
+          fi
+
+      # Las páginas citadas en la bibliografía todavía existen. Solo avisa:
+      # algunos sitios rechazan a los robots aunque la página esté bien.
+      - name: Revisar los enlaces de la bibliografía
+        continue-on-error: true
+        run: |
+          rotos=0
+          for u in $(grep -o 'url *= {[^}]*}' manual/referencias.bib | sed 's/url *= {//; s/}$//'); do
+            c=$(curl -s -o /dev/null -L -m 30 -A "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0" -w '%{http_code}' "$u" || true)
+            case "$c" in
+              2??) echo "ok   $u" ;;
+              *) echo "::warning::Enlace del manual con respuesta $c: $u"; rotos=$((rotos + 1)) ;;
+            esac
+          done
+          echo "Enlaces con problemas: $rotos"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: manual
+          path: manual/lazaro-manual.pdf
+          retention-days: 30
+
   iso:
     # Los PR que vienen de forks no compilan: la caché guarda la llave que
     # firma Calamares y el índice de la ISO, y un fork podría leerla.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ISO (${{ matrix.alpine }})
+    needs: manual
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     continue-on-error: ${{ matrix.alpine == 'edge' }}
@@ -51,6 +101,11 @@ jobs:
         alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/'))) && '["estable", "edge"]' || '["estable"]') }}
     steps:
       - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: manual
+          path: manual
 
       - name: Versión de Alpine
         id: version
@@ -110,10 +165,16 @@ jobs:
   iso-completa:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ISO Completa (estable)
+    needs: manual
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: manual
+          path: manual
 
       # La Completa necesita unos 15 GB libres; el equipo de GitHub trae
       # herramientas que aquí no se usan.
@@ -360,7 +421,7 @@ jobs:
   todo-en-verde:
     name: Todo en verde
     if: always()
-    needs: [iso, pruebas, graficas, iso-completa, pruebas-completa]
+    needs: [manual, iso, pruebas, graficas, iso-completa, pruebas-completa]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -396,6 +457,17 @@ jobs:
         with:
           name: iso-estable
           path: iso
+
+      # El manual también se descarga suelto, junto a la ISO.
+      - uses: actions/download-artifact@v7
+        with:
+          name: manual
+          path: manual
+
+      - name: Manual junto a la ISO
+        run: |
+          . ./config.env
+          cp manual/lazaro-manual.pdf "iso/$ISO_NAME-$ISO_VERSION-manual.pdf"
 
       - name: Actualizar la Release
         env:
@@ -505,6 +577,16 @@ jobs:
         with:
           name: iso-completa
           path: iso-completa
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: manual
+          path: manual
+
+      - name: Manual junto a la ISO
+        run: |
+          . ./config.env
+          cp manual/lazaro-manual.pdf "iso/$ISO_NAME-$ISO_VERSION-manual.pdf"
 
       # Las dos ediciones en Versiones/X.Y. Sin reemplazar lo que ya
       # esté allí con el mismo nombre.

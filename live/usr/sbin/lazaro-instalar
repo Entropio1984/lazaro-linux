@@ -478,6 +478,12 @@ paso_base() {
 	# de la ISO con que se instaló, que el informe muestra.
 	install -Dm755 /usr/sbin/lazaro-diagnostico "$raiz/usr/local/sbin/lazaro-diagnostico"
 	install -Dm644 "$DATOS/version.env" "$raiz/usr/share/lazaro/version.env"
+	# Manual de Lázaro (PDF) y su acceso en el menú, "Manual de Lázaro".
+	if [ -r /usr/share/doc/lazaro/manual-lazaro.pdf ]; then
+		install -Dm644 /usr/share/doc/lazaro/manual-lazaro.pdf "$raiz/usr/share/doc/lazaro/manual-lazaro.pdf"
+		install -Dm755 /usr/bin/lazaro-manual "$raiz/usr/local/bin/lazaro-manual"
+		install -Dm644 /usr/share/applications/lazaro-manual.desktop "$raiz/usr/share/applications/lazaro-manual.desktop"
+	fi
 	# btop mide la GPU Intel sin doas: un gancho de apk le da el permiso
 	# CAP_PERFMON cada vez que se instala o actualiza (libcap-setcap se
 	# instala siempre con los programas adicionales).

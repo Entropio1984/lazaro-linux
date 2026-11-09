@@ -1,0 +1,140 @@
+\chapter{Bienvenida}\label{cap:01-bienvenida}
+
+\section{Qué es Lázaro Linux}
+
+Lázaro Linux es un \termino{sistema operativo}: el programa principal de la
+computadora, el que se enciende primero y deja usar todos los demás. Cumple
+el mismo papel que Windows o macOS. Es gratuito, se instala desde una
+memoria USB y está pensado para darle una segunda vida a computadoras y
+portátiles viejos que con Windows ya van demasiado lentos o que dejaron de
+recibir actualizaciones.
+
+Con Lázaro puedes, sin instalar nada más:
+\begin{itemize}
+  \item navegar por internet con Firefox;
+  \item escribir cartas, hacer planillas y presentaciones con LibreOffice, y
+        abrir y guardar archivos de Word, Excel y PowerPoint;
+  \item abrir, leer, rellenar e imprimir archivos PDF;
+  \item ver YouTube sin que el video se trabe, incluso en equipos muy lentos;
+  \item escuchar música, ver películas y fotos;
+  \item imprimir y escanear;
+  \item hacer videollamadas desde el navegador.
+\end{itemize}
+
+El nombre viene del Lázaro de la historia que vuelve a la vida. El lema,
+\emph{Tu hardware aún tiene pulso}, quiere decir eso: tu equipo todavía
+sirve.
+
+\section{Linux, Alpine y Lázaro}
+
+\termino{Linux} es una familia de sistemas operativos libres. Hay muchos,
+llamados \termino{distribuciones}: Ubuntu, Linux Mint, Fedora, Debian y
+cientos más. Todos comparten el mismo corazón, el \termino{kernel} Linux,
+y se diferencian en los programas que traen y en cómo se ven
+\cite{gnu-linux}.
+
+Lázaro está construido sobre \textbf{Alpine Linux}, una distribución
+pensada para ser pequeña, simple y segura \cite{alpine-about}. Alpine se
+usa sobre todo en servidores, porque gasta muy poca memoria y muy poco
+disco. Lázaro toma esa base liviana y le agrega lo que una persona
+necesita en su casa: un instalador gráfico en español, un escritorio listo
+para usar, los programas de todos los días y unas herramientas propias para
+que el equipo funcione bien sin tocar nada.
+
+\begin{nota}
+\textbf{Libre} no solo quiere decir gratis. Quiere decir que cualquiera
+puede usar el programa para lo que quiera, ver cómo está hecho, mejorarlo
+y compartirlo \cite{fsf-software-libre}. Por eso Lázaro puede existir:
+reúne programas libres que miles de personas hacen y mejoran en todo el
+mundo.
+\end{nota}
+
+\section{Qué tiene de distinto}
+
+\begin{description}
+  \item[Hecho para equipos viejos.] Al arrancar revisa tu equipo y te
+    recomienda el escritorio que mejor le va según la memoria y la tarjeta
+    gráfica.
+  \item[Sin pasos técnicos.] Idioma, teclado, sonido, wifi, impresoras y
+    controladores de video quedan listos solos.
+  \item[Funciona sin internet.] La edición Completa trae todo en el USB y
+    se instala en un equipo sin red.
+  \item[YouTube ligero.] Un reproductor que no usa el navegador y gasta
+    mucho menos procesador (capítulo~\ref{cap:10-multimedia}).
+  \item[Siempre hay un plan B.] Si el escritorio no llega a abrir, hay un
+    instalador en modo texto que hace lo mismo con el teclado.
+  \item[Afinado para tu equipo.] El \emph{Afinador} ajusta el sistema para
+    que no se congele con muchas pestañas abiertas ni al copiar a un
+    pendrive (capítulo~\ref{cap:15-herramientas}).
+  \item[Avisa de las actualizaciones.] Un icono en la barra te avisa cuando
+    hay novedades, y se instalan con un clic.
+\end{description}
+
+\section{¿Funciona en mi equipo?}\label{sec:requisitos}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}lX}
+\toprule
+Procesador & De 64 bits (x86\_64). Casi todos los equipos desde 2008 lo son.
+             Los muy antiguos de 32 bits (por ejemplo, muchos netbooks con
+             Intel Atom N270 o N280) no sirven. \\
+Memoria (RAM) & 2 GB o más es lo cómodo. Con 1 GB puede funcionar con el
+             escritorio LXQt; con menos, el instalador no deja seguir. \\
+Disco & 10 GB como mínimo (el instalador no deja seguir con menos); 32 GB o
+             más si vas a guardar fotos y videos. \\
+Arranque & BIOS o UEFI: sirven los dos, también los equipos muy viejos. \\
+Memoria USB & De 4 GB para la edición Ligera o de 8 GB para la Completa. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Ya se probó en equipos reales como un Lenovo ideapad 110 (Celeron, 4 GB),
+un HP Compaq CQ50 (Sempron de un núcleo) y PC con tarjetas NVIDIA de
+varias épocas.
+
+\begin{consejo}
+¿No sabes cuánta memoria tiene tu equipo? En Windows, pulsa
+\keys{Windows + Pausa} o busca \enquote{Acerca de} en el menú Inicio: aparece
+como \enquote{RAM instalada}. Ahí mismo dice si el sistema es \enquote{de 64
+bits}.
+\end{consejo}
+
+\section{Las dos ediciones}\label{sec:ediciones}
+
+Lázaro se descarga en dos versiones, llamadas \emph{ediciones}. Las dos
+instalan el mismo sistema; cambia lo que traen dentro del USB.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{lXX}
+\toprule
+ & \textbf{Ligera} & \textbf{Completa} \\
+\midrule
+Tamaño & menos de 2 GB & unos 4,6 GB \\
+¿Necesita internet al instalar? & Para GNOME, KDE Plasma y las aplicaciones
+  de Flathub, sí & No (solo para Google Chrome) \\
+Escritorios sin internet & XFCE, MATE, LXQt, Sway, XFCE Wayland & Los 7, en
+  todos los idiomas \\
+Controladores (firmware) & Los de red & Todos \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Si dudas, elige la Ligera}: se descarga más rápido y alcanza para la
+mayoría. Elige la Completa si el equipo no va a tener internet o si tu
+conexión es lenta.
+
+\section{Antes de seguir}
+
+Lázaro está todavía en desarrollo. Ya se instala bien en muchos equipos
+reales, pero:
+\begin{cuidado}
+Instalar Lázaro \textbf{borra el disco que elijas}. Antes de instalar,
+guarda una copia de tus fotos, documentos y todo lo que te importe en un
+pendrive, un disco externo o en la nube. El capítulo~\ref{cap:02-antes-de-instalar}
+explica cómo.
+\end{cuidado}
+
+Si es tu primera vez, sigue el orden del libro: el capítulo~2 prepara todo,
+el~3 te deja probar Lázaro sin tocar nada del equipo, y el~4 lo instala.
+
+\fuentes

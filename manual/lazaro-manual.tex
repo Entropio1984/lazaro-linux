@@ -1,0 +1,48 @@
+% Manual de Lázaro Linux
+% Compilar:  ./compilar.sh   (o: latexmk lazaro-manual.tex)
+% Licencia del texto y las imágenes: CC BY-SA 4.0 (ver LICENCIA.md)
+\documentclass[12pt,a4paper,openany]{book}
+\input{preambulo}
+\input{version}% la crea compilar.sh con la versión de config.env
+
+\begin{document}
+\frontmatter
+\input{portada}
+\tableofcontents
+\input{capitulos/00-como-usar}
+
+\mainmatter
+\part{Empezar}
+\input{capitulos/01-bienvenida}
+\input{capitulos/02-antes-de-instalar}
+\input{capitulos/03-sesion-de-prueba}
+\input{capitulos/04-instalar}
+\input{capitulos/05-primer-arranque}
+
+\part{Uso diario}
+\input{capitulos/06-escritorio}
+\input{capitulos/07-internet}
+\input{capitulos/08-documentos}
+\input{capitulos/09-pdf}
+\input{capitulos/10-multimedia}
+\input{capitulos/11-archivos}
+\input{capitulos/12-imprimir}
+\input{capitulos/13-programas}
+\input{capitulos/14-ajustes}
+
+\part{Herramientas de Lázaro}
+\input{capitulos/15-herramientas}
+
+\part{Cuando algo falla}
+\input{capitulos/16-problemas}
+\input{capitulos/17-pedir-ayuda}
+\input{capitulos/18-terminal}
+
+\appendix
+\input{capitulos/a-glosario}
+\input{capitulos/b-teclas-arranque}
+\input{capitulos/c-equivalencias}
+\input{capitulos/d-atajos}
+\backmatter
+\printbibliography[heading=bibintoc,title={Bibliografía}]
+\end{document}
