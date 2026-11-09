@@ -1,5 +1,161 @@
 \chapter{Solución de problemas}\label{cap:16-problemas}
 
-\begin{nota}
-Capítulo en preparación.
-\end{nota}
+Busca el síntoma que más se parece al tuyo. Si nada de esto lo arregla,
+el capítulo~\ref{cap:17-pedir-ayuda} explica cómo pedir ayuda.
+
+\section{Antes de instalar}
+
+\subsection{El equipo no arranca desde el USB}\label{sec:prob-no-arranca}
+\begin{itemize}
+  \item Comprueba la descarga (sección~\ref{sec:sha256}) y graba el USB
+        otra vez, o prueba con otro USB y en otro puerto.
+  \item Con Ventoy, repite la comprobación sobre la copia que está en el
+        USB: si no coincide o da \enquote{error de entrada/salida}, esa copia
+        está dañada. Bórrala, cópiala de nuevo y expulsa el USB antes de
+        sacarlo.
+  \item Si el USB no aparece en el menú de arranque, ponlo primero en la
+        sección \emph{Boot} de la configuración del equipo. En equipos UEFI,
+        desactiva el arranque seguro (sección~\ref{sec:bios-uefi}).
+  \item Si el equipo es muy viejo y tiene una opción \emph{Legacy} o
+        \emph{CSM}, actívala.
+\end{itemize}
+
+\subsection{La pantalla se queda en negro}
+Reinicia y elige \textbf{Lazaro Linux (modo grafico seguro)} en el menú de
+arranque. Pasa sobre todo con tarjetas NVIDIA antiguas: mira
+la sección~\ref{sec:nvidia}.
+
+\subsection{El escritorio de prueba no aparece}
+A los 5 minutos la pantalla pasa sola a modo texto. Usa el instalador en
+modo texto (sección~\ref{sec:instalar-texto}).
+
+\subsection{La instalación se detiene con un error}\label{sec:prob-instalacion}
+\begin{pasos}
+  \item No reinicies todavía: el registro del error está en la memoria.
+  \item Abre una terminal (\menu{Aplicaciones > Sistema > Terminal}) y
+        escribe \texttt{lazaro-diagnostico}.
+  \item Copia el archivo que genera (queda en la carpeta personal) a otro
+        pendrive y pide ayuda con él (capítulo~\ref{cap:17-pedir-ayuda}).
+\end{pasos}
+Lo más común: se cortó internet a mitad de la descarga (vuelve a
+intentarlo con la edición Completa o con cable) o el disco está dañado.
+
+\section{Internet}
+
+\subsection{No hay wifi}\label{sec:prob-wifi}
+\begin{itemize}
+  \item Revisa que el wifi esté encendido: muchos portátiles tienen un
+        botón o una combinación como \keys{Fn + F2} (con el dibujo de una
+        antena). En algunos, como el HP Compaq CQ50, es un botón físico
+        en el borde.
+  \item Si aparece el aviso \emph{Falta algo para tu hardware}, acéptalo
+        (sección~\ref{sec:controladores}).
+  \item Wifi Broadcom en la sesión de prueba: no funciona hasta instalar.
+        Usa cable o el celular por USB mientras tanto.
+  \item Si las redes aparecen pero no conecta, revisa la clave (mayúsculas
+        y minúsculas) y prueba olvidar la red y volver a conectar.
+  \item Como último recurso, un adaptador wifi USB barato suele funcionar
+        sin instalar nada.
+\end{itemize}
+
+\subsection{Hay wifi pero las páginas no cargan}
+Prueba con otra red (por ejemplo, la del celular). Si con esa funciona, el
+problema está en el router: apágalo 30 segundos y vuelve a encenderlo.
+
+\subsection{El wifi se corta seguido}
+Acércate al router y, si puedes, conéctate a la red de 2,4~GHz en lugar de
+la de 5~GHz: llega más lejos. Algunos wifi antiguos son inestables con
+ciertos routers; un adaptador USB lo resuelve.
+
+\section{Sonido e imagen}
+
+\subsection{No se escucha nada}\label{sec:prob-sonido}
+\begin{pasos}
+  \item Sube el volumen en el icono del altavoz y revisa que no esté
+        silenciado.
+  \item Con clic derecho, \menu{Configuración del sonido}: elige la salida
+        correcta (parlantes, audífonos o HDMI).
+  \item Si conectaste audífonos, sácalos y vuelve a ponerlos.
+  \item Reinicia el equipo.
+\end{pasos}
+
+\subsection{La pantalla se ve borrosa o del tamaño equivocado}
+Elige la resolución más alta en \menu{Configuración > Pantalla}
+(capítulo~\ref{cap:14-ajustes}). Con NVIDIA en modo seguro, usa
+\menu{Resolución de pantalla (modo seguro)}.
+
+\subsection{Los videos se traban}
+Usa YouTube ligero en lugar del navegador y, si hace falta, bájalo a 360p
+(sección~\ref{sec:youtube-ligero}). Para videos guardados, mpv es el
+reproductor más liviano.
+
+\section{El equipo}
+
+\subsection{El equipo va lento o se congela}
+\begin{itemize}
+  \item Cierra pestañas del navegador: cada una gasta memoria. Con 2 GB,
+        más de 5 o 6 pestañas abiertas ya se notan.
+  \item Comprueba que el Afinador tenga todo lo recomendado puesto
+        (sección~\ref{sec:afinador}).
+  \item Abre \textbf{Btop} (en la terminal: \texttt{btop}) para ver qué
+        programa está usando el procesador o la memoria. \keys{Q} lo cierra.
+  \item Un bloqueador de anuncios en Firefox ayuda mucho
+        (sección~\ref{sec:firefox}).
+  \item Si tienes un disco mecánico (HDD), cambiarlo por uno sólido (SSD),
+        aunque sea pequeño y barato, es la mejora más grande que puede
+        recibir un equipo viejo.
+\end{itemize}
+
+\subsection{El disco se llenó}
+Vacía la Papelera y revisa la carpeta \emph{Descargas}: suele estar llena
+de instaladores y archivos que ya no se usan. Desinstala los programas que
+no uses (sección~\ref{sec:tienda}). Si usas Flathub, esta orden borra los
+componentes que ya no necesita ningún programa:
+\begin{terminal}
+flatpak uninstall --unused
+\end{terminal}
+Para ver cuánto espacio queda: \texttt{df -h} en la terminal (la línea
+que termina en \texttt{/}).
+
+\subsection{La hora está mal}\label{sec:prob-hora}
+En el primer arranque, la hora puede estar corrida unas horas: se corrige
+sola en unos minutos con internet. Si el equipo también tiene Windows y la
+hora cambia cada vez que pasas de uno al otro, es porque Windows guarda la
+hora local en el reloj del equipo y Linux, la hora universal. La forma
+más simple: deja que los dos la corrijan por internet.
+
+\subsection{Olvidé mi contraseña}
+Si otra persona tiene un usuario administrador en el equipo, puede
+cambiarla con \texttt{doas passwd tu\_usuario}. Si no, se puede recuperar
+arrancando desde el USB de Lázaro, pero son pasos técnicos: pide ayuda
+(capítulo~\ref{cap:17-pedir-ayuda}). Tus archivos no se pierden.
+
+\subsection{Windows ya no aparece al encender}
+Si instalaste junto a Windows y el menú negro (GRUB) no lo muestra, abre
+una terminal y escribe:
+\begin{terminal}
+doas apk add os-prober\\
+echo GRUB\_DISABLE\_OS\_PROBER=false | doas tee -a /etc/default/grub\\
+doas grub-mkconfig -o /boot/grub/grub.cfg
+\end{terminal}
+y reinicia.
+
+\subsection{Un programa no abre o se cierra solo}
+Ciérralo del todo y vuelve a abrirlo. Si sigue, reinicia el equipo e
+instala las actualizaciones. Si un programa de Flathub falla, prueba la
+versión de Alpine del mismo programa, o al revés.
+
+\subsection{Al encender aparece una pantalla de texto}
+Si instalaste la Ligera sin internet, es normal la primera vez: conecta
+internet y espera (sección~\ref{sec:primer-arranque-texto}). Si pasa
+después, entra con tu usuario y contraseña, escribe
+\texttt{lazaro-diagnostico} y pide ayuda.
+
+\section{Mensajes que no son errores}
+
+Algunos avisos aparecen al encender o al apagar y no indican ningún
+problema: \emph{sddm failed to start} (la pantalla de inicio aparece
+igual), \emph{Process crashed} al apagar con SDDM, o avisos de
+\emph{Bluetooth rfkill}. Si el equipo funciona, puedes ignorarlos.
+
+\fuentes

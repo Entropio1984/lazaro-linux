@@ -1,5 +1,67 @@
 \chapter{La terminal sin miedo}\label{cap:18-terminal}
 
+La \termino{terminal} es una ventana donde se le dan órdenes al equipo
+escribiendo, en lugar de hacer clic. Para casi todo lo de este libro no
+hace falta, pero a veces es el camino más corto, y es como suelen
+responder quienes te ayudan.
+
+Se abre desde \menu{Aplicaciones > Sistema > Terminal} (o el icono del
+panel de abajo en XFCE).
+
+\section{Cómo se usa}
+
+\begin{itemize}
+  \item Escribe la orden y pulsa \keys{Enter}.
+  \item Las mayúsculas, las minúsculas y los espacios importan.
+  \item \keys{\arrowkeyup} trae la orden anterior; así no hay que escribirla
+        de nuevo.
+  \item \keys{Tab} completa nombres de archivos y órdenes: escribe las
+        primeras letras y pulsa \keys{Tab}.
+  \item Para pegar, usa \keys{\ctrl + Mayús + V} o clic derecho,
+        \menu{Pegar} (\keys{\ctrl + V} solo no funciona aquí).
+  \item \keys{\ctrl + C} detiene la orden que está corriendo.
+  \item Cuando una orden pide la contraseña, lo que escribes no se ve.
+        Escríbela igual y pulsa \keys{Enter}.
+\end{itemize}
+
+\section{Órdenes útiles}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\ttfamily}lX}
+\toprule
+\normalfont Orden & Qué hace \\
+\midrule
+ls & Muestra los archivos de la carpeta actual \\
+cd Documentos & Entra en la carpeta \emph{Documentos} \\
+cd & Vuelve a la carpeta personal \\
+pwd & Dice en qué carpeta estás \\
+fastfetch & Resumen del equipo y del sistema \\
+btop & Qué está usando el procesador y la memoria (\keys{Q} para salir) \\
+df -h & Cuánto espacio queda en los discos \\
+free -h & Cuánta memoria está en uso \\
+ip addr & Las conexiones de red y sus direcciones \\
+nmcli device wifi list & Las redes wifi que se ven \\
+doas apk upgrade & Actualiza todo lo de Alpine \\
+lazaro-diagnostico & El informe para pedir ayuda \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ser administrador: doas}
+
+Las órdenes que cambian el sistema se escriben con \texttt{doas} delante:
+\begin{terminal}
+doas apk add gimp
+\end{terminal}
+\texttt{doas} pide tu contraseña y ejecuta la orden con permisos de
+administrador. Es el equivalente a \enquote{Ejecutar como administrador} de
+Windows o al \texttt{sudo} de otras distribuciones. Úsalo solo con órdenes
+que entiendas o que vengan de una fuente de confianza.
+
 \begin{nota}
-Capítulo en preparación.
+Para aprender más, la wiki de Alpine explica cada parte del sistema
+\cite{alpine-wiki}, y el gestor de paquetes \texttt{apk} tiene su propia
+página \cite{alpine-apk}.
 \end{nota}
+
+\fuentes

@@ -1,5 +1,78 @@
 \chapter{Pedir ayuda}\label{cap:17-pedir-ayuda}
 
-\begin{nota}
-Capítulo en preparación.
-\end{nota}
+\section{El informe de diagnóstico}
+
+Cuando algo no funciona, \texttt{lazaro-diagnostico} arma un informe con
+los datos del equipo para que otra persona pueda ayudarte sin tener que
+preguntarte todo.
+
+\begin{pasos}
+  \item Abre una terminal.
+  \item Escribe \texttt{lazaro-diagnostico} y pulsa \keys{Enter}.
+  \item En el sistema instalado te pide tu contraseña; en la sesión de
+        prueba, no.
+  \item Espera; suele tardar menos de un minuto. Al final dice
+        \emph{Listo:} y el nombre del archivo.
+  \item El archivo queda en tu \emph{carpeta personal} y se llama
+        \texttt{lazaro-diagnostico-} con la fecha y la hora, por ejemplo
+        \texttt{lazaro-diagnostico-20261103-142530.txt}.
+\end{pasos}
+
+En la sesión de prueba esa carpeta se borra al apagar: copia el archivo a
+otro pendrive antes.
+
+\paragraph{Qué trae.} Qué versión de Lázaro tienes y con qué código se
+armó tu ISO; los datos del equipo, la memoria y los discos; el hardware y
+lo que le falta según Controladores; la red, el sonido y la pantalla; y
+los errores del arranque y de la instalación. \textbf{No guarda
+contraseñas.}
+
+\section{Dónde preguntar}
+
+Abre un reporte en \url{https://github.com/Entropio1984/lazaro-linux/issues}.
+Necesitas una cuenta de GitHub, que es gratis. Pulsa \menu{New issue},
+cuenta qué pasa y adjunta el informe arrastrándolo al cuadro de texto.
+
+\begin{cuidado}
+Los reportes son \textbf{públicos}. El informe trae datos de la red (como
+las direcciones IP y los nombres de las redes wifi guardadas) y registros
+del sistema. Ábrelo antes con doble clic y borra lo que no quieras
+mostrar.
+\end{cuidado}
+
+\section{Cómo contar el problema}
+
+Un buen reporte se resuelve mucho más rápido. Responde estas preguntas:
+\begin{enumerate}
+  \item \textbf{¿Qué hiciste?} Los pasos, en orden: \enquote{Abrí Firefox,
+        entré a tal página, pulsé Imprimir}.
+  \item \textbf{¿Qué esperabas que pasara?}
+  \item \textbf{¿Qué pasó en cambio?} Copia el mensaje de error tal cual,
+        o saca una captura de pantalla (\keys{ImprPant}).
+  \item \textbf{¿Pasa siempre o solo a veces?} ¿Desde cuándo? ¿Cambiaste
+        algo antes?
+  \item \textbf{¿Qué equipo es?} Marca y modelo; el informe completa el
+        resto.
+\end{enumerate}
+
+\section{Otras fuentes de ayuda}
+
+Lázaro está hecho sobre Alpine Linux y usa programas conocidos, así que
+mucha ayuda que encuentres en internet sirve:
+\begin{itemize}
+  \item la wiki de Alpine, para dudas del sistema \cite{alpine-wiki};
+  \item la ayuda de cada programa: Firefox \cite{firefox-ayuda},
+        LibreOffice \cite{libreoffice-ayuda}, y la de tu escritorio
+        (capítulo~\ref{cap:06-escritorio});
+  \item buscar el mensaje de error, entre comillas, junto con la palabra
+        \texttt{Alpine} o \texttt{Linux}.
+\end{itemize}
+
+\begin{cuidado}
+Desconfía de las órdenes para la terminal que encuentres en internet si no
+sabes qué hacen, sobre todo si empiezan con \texttt{doas} o \texttt{sudo},
+y nunca pegues una orden que alguien te mande por mensaje sin saber de
+dónde viene. Una sola orden puede borrar todo el disco.
+\end{cuidado}
+
+\fuentes

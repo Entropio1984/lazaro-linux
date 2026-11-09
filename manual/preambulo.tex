@@ -9,6 +9,7 @@
 \usepackage{tgheros}              % títulos y recuadros: Heros (sin remates)
 \renewcommand{\ttdefault}{lmtt}  % comandos de la terminal: Latin Modern Mono
 \usepackage{microtype}
+\usepackage{amssymb}
 \linespread{1.08}
 
 % --- Página ---------------------------------------------------------------
@@ -88,7 +89,7 @@
 
 % Lo que se escribe en la terminal.
 \newtcolorbox{terminal}{enhanced,colback=tinta,colupper=white,boxrule=0pt,arc=2pt,
-  left=8pt,right=8pt,top=5pt,bottom=5pt,fontupper=\ttfamily\small}
+  left=8pt,right=8pt,top=5pt,bottom=5pt,fontupper=\ttfamily\footnotesize}
 \newcommand{\comando}[1]{\texttt{#1}}
 
 % --- Capturas de pantalla ----------------------------------------------------
