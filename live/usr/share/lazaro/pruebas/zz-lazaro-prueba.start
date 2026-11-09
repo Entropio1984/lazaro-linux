@@ -435,11 +435,14 @@ idioma_sesion() {
 	# escritorio), que el kernel confirma con "Dynamic Preempt: full".
 	echo "LAZARO-AFINADOR-ARRANQUE $(dmesg | grep -o 'Dynamic Preempt: [a-z]*' | tail -n 1) ttl=$(cat /sys/kernel/mm/lru_gen/min_ttl_ms 2>/dev/null)"
 	# Informe de diagnóstico (lazaro-diagnostico, como root): debe dejar
-	# un archivo con sus secciones y el sello de compilación de la ISO.
+	# un archivo con sus secciones. Y la ISO dejó su sello de compilación
+	# (con fecha) en el sistema instalado. Se mira el archivo y no el
+	# informe: con internet, lazaro-diagnostico puede venir del
+	# repositorio de Lázaro (la versión publicada de main).
 	if [ -z "$reiniciar" ]; then
 		diag_sal="$(timeout 300 /usr/local/sbin/lazaro-diagnostico 2>&1 | sed -n 's/^Listo: //p')"
 		if [ -n "$diag_sal" ] && grep -q '==== Servicios (OpenRC)' "$diag_sal" 2>/dev/null &&
-			grep -q '^Compilación: [0-9]' "$diag_sal"; then
+			grep -q '^LAZARO_FECHA="[0-9]' /usr/share/lazaro/version.env; then
 			echo "LAZARO-DIAGNOSTICO-OK $(wc -l < "$diag_sal") líneas"
 			rm -f "$diag_sal"
 		else
