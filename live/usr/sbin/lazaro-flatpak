@@ -41,6 +41,12 @@ activar() {
 		# Con un portal que no exista en esta versión de Alpine, lo básico.
 		apk add flatpak xdg-desktop-portal xdg-desktop-portal-gtk || exit 1
 	}
+	# Para que la tienda que haya muestre lo de Flathub. Si el complemento
+	# no existe en esta versión de Alpine, Flatpak sirve igual.
+	! command -v gnome-software >/dev/null 2>&1 || apk add gnome-software-plugin-flatpak ||
+		echo "Aviso: no se pudo instalar el complemento de Flatpak para la tienda." >&2
+	! command -v plasma-discover >/dev/null 2>&1 || apk add discover-backend-flatpak ||
+		echo "Aviso: no se pudo instalar el complemento de Flatpak para Discover." >&2
 	n=0
 	while [ "$n" -lt 3 ]; do
 		flatpak remote-add --system --if-not-exists flathub "$FLATHUB" && return 0

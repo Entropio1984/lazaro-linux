@@ -84,7 +84,10 @@ seccion() { printf '\n==================== %s ====================\n' "$*"; }
 archivo() { # RUTA [LÍNEAS]
 	if [ -r "$1" ]; then
 		echo "--- $1"
-		if [ -n "${2:-}" ]; then tail -n "$2" "$1"; else cat "$1"; fi
+		# Sin contraseñas: una dirección como https://usuario:clave@sitio
+		# queda https://***@sitio.
+		if [ -n "${2:-}" ]; then tail -n "$2" "$1"; else cat "$1"; fi |
+			sed 's|://[^/@[:space:]]*@|://***@|g'
 	else
 		echo "--- $1 (no existe)"
 	fi

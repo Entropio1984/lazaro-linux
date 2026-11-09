@@ -63,6 +63,13 @@ install -Dm644 "$L/etc/xdg/autostart/lazaro-controladores.desktop" "$A/usr/share
 cp -r "$L/usr/share/lazaro/bienvenida" "$A/usr/share/lazaro/"
 install -Dm644 "$L/usr/share/applications/lazaro-bienvenida.desktop" "$A/usr/share/applications/lazaro-bienvenida.desktop"
 install -Dm644 "$L/usr/share/lazaro/lazaro-bienvenida-sesion.desktop" "$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"
+# Con la ruta completa: hay sesiones gráficas que no traen
+# /usr/local/sbin en el PATH y no encontrarían el programa.
+sed -i 's|^Exec=lazaro-bienvenida|Exec=/usr/local/sbin/lazaro-bienvenida|' \
+	"$A/usr/share/applications/lazaro-bienvenida.desktop" \
+	"$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"
+grep -q '^Exec=/usr/local/sbin/lazaro-bienvenida --sesion$' "$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop" ||
+	die "el arranque de la Bienvenida no quedó con la ruta completa"
 for t in 64x64 256x256; do
 	install -Dm644 "$L/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png" "$A/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png"
 done

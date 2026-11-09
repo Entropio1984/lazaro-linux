@@ -666,6 +666,11 @@ paso_bienvenida() { # RAIZ
 		"$1/usr/share/applications/lazaro-bienvenida.desktop"
 	install -Dm644 "$DATOS/lazaro-bienvenida-sesion.desktop" \
 		"$1/etc/xdg/autostart/lazaro-bienvenida.desktop"
+	# Con la ruta completa: hay sesiones gráficas que no traen
+	# /usr/local/sbin en el PATH y no encontrarían el programa.
+	sed -i 's|^Exec=lazaro-bienvenida|Exec=/usr/local/sbin/lazaro-bienvenida|' \
+		"$1/usr/share/applications/lazaro-bienvenida.desktop" \
+		"$1/etc/xdg/autostart/lazaro-bienvenida.desktop"
 	log "LAZARO-BIENVENIDA-INSTALADA"
 }
 

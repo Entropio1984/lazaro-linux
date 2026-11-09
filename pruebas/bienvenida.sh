@@ -107,6 +107,9 @@ rc=0
 XDG_CONFIG_HOME="$TMP/cfg" LAZARO_BIENVENIDA_DONDE=instalado DISPLAY='' WAYLAND_DISPLAY='' python3 "$PROG" --sesion || rc=$?
 es "--sesion no abre si la persona desmarcó la casilla" '[ "$rc" = 0 ]'
 
+# El informe del Diagnóstico no lleva contraseñas de direcciones.
+es "el Diagnóstico tapa las contraseñas de las direcciones" '[ "$(echo "https://ana:secreto@sitio.org/alpine/v3.24/main" | sed "$(sed -n "s/^[[:space:]]*sed '"'"'\(s|:\/\/.*\)'"'"'$/\1/p" "$DIR/live/usr/sbin/lazaro-diagnostico")")" = "https://***@sitio.org/alpine/v3.24/main" ]'
+
 # 9. Los archivos del menú y del arranque con la sesión.
 es "entrada del menú" 'grep -qx "Exec=lazaro-bienvenida" "$DIR/live/usr/share/applications/lazaro-bienvenida.desktop"'
 es "arranque con la sesión" 'grep -qx "Exec=lazaro-bienvenida --sesion" "$DIR/live/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"'
