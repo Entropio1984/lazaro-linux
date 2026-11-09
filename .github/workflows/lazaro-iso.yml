@@ -3,11 +3,17 @@
 # al lanzarla a mano, también con edge, para enterarse a tiempo de lo que
 # rompería la siguiente versión. El cron semanal también recoge los
 # cambios de desktop-postinstall.sh.
+#
+# Versiones numeradas: una etiqueta vX.Y (la crea el flujo "Sacar una
+# versión", lazaro-version.yml) compila, prueba y publica una versión fija
+# en su propia Release de GitHub y en la carpeta Versiones/X.Y de
+# SourceForge. La versión es ISO_VERSION de config.env.
 name: Lázaro Linux ISO
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   schedule:
     # Cada lunes: detecta cambios de Alpine aunque nadie toque el repo.
@@ -19,6 +25,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Canal que queda en el sello de compilación de la ISO (version.env).
+  LAZARO_CANAL: ${{ startsWith(github.ref, 'refs/tags/v') && 'versión' || (github.event_name == 'pull_request' && 'prueba' || 'en-desarrollo') }}
   # Proyecto de SourceForge donde se publican las dos ediciones
   # (sourceforge.net/projects/lazaro-linux, carpetas Ligera y Completa).
   SF_USUARIO: entropio
@@ -40,17 +48,22 @@ jobs:
         # Alpine) solo en la compilación de los lunes y al lanzarla a mano:
         # avisa con tiempo qué se romperá al cambiar de versión, sin
         # demorar ni ensuciar cada PR (decisión de Julián, 2026-11-03).
-        alpine: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["estable", "edge"]' || '["estable"]') }}
+        alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/'))) && '["estable", "edge"]' || '["estable"]') }}
     steps:
       - uses: actions/checkout@v5
 
       - name: Versión de Alpine
         id: version
         run: |
+          . config.env
+          # Una versión numerada debe coincidir con config.env.
+          if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ] && [ "$GITHUB_REF_NAME" != "v$ISO_VERSION" ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con ISO_VERSION=$ISO_VERSION de config.env."
+            exit 1
+          fi
           if [ "${{ matrix.alpine }}" = edge ]; then
             echo "branch=edge" >> "$GITHUB_OUTPUT"
           else
-            . config.env
             echo "branch=$ALPINE_BRANCH" >> "$GITHUB_OUTPUT"
           fi
 
@@ -114,6 +127,10 @@ jobs:
         id: version
         run: |
           . config.env
+          if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ] && [ "$GITHUB_REF_NAME" != "v$ISO_VERSION" ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con ISO_VERSION=$ISO_VERSION de config.env."
+            exit 1
+          fi
           echo "branch=$ALPINE_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Caché de Calamares compilado
@@ -276,7 +293,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["estable", "edge"]' || '["estable"]') }}
+        alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/'))) && '["estable", "edge"]' || '["estable"]') }}
         prueba:
           - live bios
           - live uefi
@@ -342,9 +359,9 @@ jobs:
   # (prerelease): descarga directa del .iso, sin iniciar sesión en GitHub
   # y reanudable, a diferencia de los Artifacts.
   publicar:
-    name: Publicar ISO en desarrollo
+    name: Publicar ISO Ligera
     needs: [pruebas, graficas]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -362,6 +379,7 @@ jobs:
           path: iso
 
       - name: Actualizar la Release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -381,20 +399,64 @@ jobs:
           gh api -X PATCH "repos/$GH_REPO/git/$git_ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
           gh release upload "$etiqueta" iso/* --clobber
 
-      # Copia en SourceForge (carpeta Ligera). Si falla, la Release de
-      # GitHub ya quedó publicada: solo se avisa.
+      # Versión numerada: una Release propia, fija (no se reemplaza), con
+      # las novedades desde la versión anterior (los títulos de los PR).
+      - name: Publicar la versión
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          etiqueta="$GITHUB_REF_NAME"
+          version="${etiqueta#v}"
+          # Versión numerada anterior (la que va justo antes en orden).
+          etiquetas="$(gh api "repos/$GH_REPO/tags" --paginate --jq '.[].name')"
+          anterior="$(printf '%s\n' "$etiquetas" "$etiqueta" | grep -E '^v[0-9]+(\.[0-9]+)+$' | sort -uV | grep -B1 -x "$etiqueta" | grep -vx "$etiqueta" || true)"
+          {
+            echo "Versión $version de Lázaro Linux, compilada desde el commit $GITHUB_SHA y probada en máquinas virtuales (BIOS y UEFI)."
+            echo
+            echo "- **Ligera** (menos de 2 GB): el archivo .iso de abajo, o en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Versiones/$version/"
+            echo "- **Completa** (unos 4,6 GB, se instala sin internet): solo en SourceForge, misma carpeta."
+            echo
+            echo "Cómo instalarla: https://github.com/$GH_REPO#guía-de-instalación-paso-a-paso"
+            echo
+            if [ -n "$anterior" ]; then
+              echo "## Novedades desde $anterior"
+              echo
+              gh api "repos/$GH_REPO/releases/generate-notes" -f tag_name="$etiqueta" -f previous_tag_name="$anterior" --jq .body
+            else
+              echo "Primera versión numerada de Lázaro Linux."
+            fi
+          } > notas.md
+          cat notas.md
+          if gh release view "$etiqueta" >/dev/null 2>&1; then
+            gh release edit "$etiqueta" --notes-file notas.md
+          else
+            gh release create "$etiqueta" --verify-tag --latest \
+              --title "Lázaro Linux $version" --notes-file notas.md
+          fi
+          gh release upload "$etiqueta" iso/* --clobber
+
+      # Copia en SourceForge: carpeta Ligera (en desarrollo) o
+      # Versiones/X.Y (versión numerada). Si falla, la Release de GitHub ya
+      # quedó publicada: solo se avisa.
       - name: Subir a SourceForge
         continue-on-error: true
         env:
           SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
-        run: sh .github/subir-sourceforge.sh Ligera iso
+        run: |
+          if [ "$GITHUB_REF" = refs/heads/main ]; then
+            sh .github/subir-sourceforge.sh Ligera iso
+          else
+            sh .github/subir-sourceforge.sh "Versiones/${GITHUB_REF_NAME#v}" iso
+          fi
 
   # La Completa no cabe en una Release de GitHub (2 GB por archivo): se
   # publica solo en SourceForge, carpeta Completa.
   publicar-completa:
     name: Publicar ISO Completa en SourceForge
     needs: [pruebas-completa, graficas]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-24.04
     concurrency:
       group: lazaro-publicar-completa
@@ -415,4 +477,9 @@ jobs:
       - name: Subir a SourceForge
         env:
           SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
-        run: sh .github/subir-sourceforge.sh Completa iso
+        run: |
+          if [ "$GITHUB_REF" = refs/heads/main ]; then
+            sh .github/subir-sourceforge.sh Completa iso
+          else
+            sh .github/subir-sourceforge.sh "Versiones/${GITHUB_REF_NAME#v}" iso
+          fi
