@@ -416,6 +416,12 @@ jobs:
           git_ref="refs/tags/$etiqueta"
           gh api -X PATCH "repos/$GH_REPO/git/$git_ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
           gh release upload "$etiqueta" iso/* --clobber
+          # Al subir ISO_VERSION, la ISO con el número anterior se quita:
+          # en-desarrollo solo guarda la última.
+          gh release view "$etiqueta" --json assets --jq '.assets[].name' \
+            | while read -r archivo; do
+              [ -e "iso/$archivo" ] || gh release delete-asset "$etiqueta" "$archivo" --yes
+            done
 
       # Copia en SourceForge (carpeta Ligera). Si falla, la Release de
       # GitHub ya quedó publicada: solo se avisa.

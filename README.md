@@ -657,8 +657,8 @@ Solo en máquinas virtuales o en un equipo de sobra: el instalador borra
 el disco que se elija.
 
 ```sh
-./pruebas/qemu.sh live salida/lazaro-linux-0.1-3.24-x86_64.iso bios
-./pruebas/qemu.sh instalar salida/lazaro-linux-0.1-3.24-x86_64.iso uefi xfce con-red
+./pruebas/qemu.sh live salida/lazaro-linux-0.2-3.24-x86_64.iso bios
+./pruebas/qemu.sh instalar salida/lazaro-linux-0.2-3.24-x86_64.iso uefi xfce con-red
 ```
 
 Las capturas de pantalla y los registros quedan en
