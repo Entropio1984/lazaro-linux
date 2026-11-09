@@ -22,6 +22,13 @@
 #       Igual, haciendo como si hubiera una wifi Broadcom que necesita
 #       broadcom-wl: el driver debe quedar compilado en el disco.
 #
+#   pruebas/qemu.sh capturas ISO uefi
+#       Capturas de pantalla para el Manual de Lázaro: el menú de
+#       arranque, la sesión de prueba y las pantallas del instalador
+#       (pulsando teclas como una persona), y después instala XFCE con
+#       todo el software adicional y fotografía cada programa. Quedan en
+#       pruebas/resultados/capturas/ (PNG, necesita ImageMagick).
+#
 # Resultados (registro del puerto serie y capturas) en pruebas/resultados/.
 # Nunca toca discos reales: todo ocurre en archivos dentro de esa carpeta.
 
@@ -566,6 +573,123 @@ prueba_instalar() {
 	return $ok
 }
 
+# --- Capturas para el manual ---------------------------------------------
+# tecla SOCKET TECLA...: pulsa teclas en la máquina (sendkey de QEMU).
+tecla() {
+	t_mon="$1"; shift
+	for t_k in "$@"; do
+		printf 'sendkey %s\n' "$t_k" | socat - "UNIX-CONNECT:$t_mon" >/dev/null 2>&1 || true
+		sleep 1
+	done
+}
+
+prueba_capturas() {
+	CAP="$RES/capturas"
+	mkdir -p "$CAP/otras"
+	ok=0
+
+	# 1. Sesión de prueba: menú de arranque, escritorio e instalador.
+	nombre="capturas-live"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	disco="$RES/$nombre.qcow2"
+	rm -f "$serie" "$mon" "$disco" "$RES/$nombre-vars.fd"
+	qemu-img create -q -f qcow2 "$disco" 20G
+	arrancar "$nombre" "$MEM" "$serie" -cdrom "$ISO" -boot d \
+		-drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci
+	# El menú de arranque dura unos segundos: varias fotos seguidas, y
+	# la de más detalle (el PNG más grande) queda como menu-arranque.
+	for n in 1 2 3 4 5 6 7 8 9 10; do
+		sleep 2
+		captura "$mon" "$CAP/otras/menu-arranque-$n"
+	done
+	mejor="$(ls -S "$CAP"/otras/menu-arranque-*.png 2>/dev/null | head -n 1)"
+	[ -z "$mejor" ] || cp "$mejor" "$CAP/menu-arranque.png"
+	if esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
+		sleep 40
+		captura "$mon" "$CAP/sesion-prueba"
+		cp "$CAP/sesion-prueba.png" "$CAP/instalador-bienvenida.png" 2>/dev/null || true
+		# Pantallas del instalador con el botón Siguiente (Alt+S).
+		for p in instalador-ubicacion instalador-teclado instalador-escritorio instalador-software instalador-disco; do
+			tecla "$mon" alt-s
+			sleep 6
+			captura "$mon" "$CAP/$p"
+		done
+	else
+		captura "$mon" "$CAP/otras/live-fallo"
+		echo "FALLO: Calamares no se abrió en la sesión de prueba." >&2
+		ok=1
+	fi
+	terminar "$pid"
+	rm -f "$disco"
+
+	# 2. Sistema instalado con XFCE: cada programa.
+	nombre="capturas-instalado"
+	disco="$RES/$nombre.qcow2"
+	serie="$RES/$nombre-instalacion.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	rm -f "$disco" "$serie" "$mon" "$RES/$nombre-vars.fd"
+	qemu-img create -q -f qcow2 "$disco" 20G
+	extraer_kernel
+	mods="loop,squashfs,sd-mod,usb-storage"
+	if [ "$MODO" = uefi ]; then
+		set -- -device virtio-scsi-pci,id=scsi0 \
+			-drive "id=cd0,if=none,media=cdrom,readonly=on,file=$ISO" \
+			-device scsi-cd,drive=cd0,bus=scsi0.0
+		mods="$mods,virtio_scsi,sr-mod"
+	else
+		set -- -cdrom "$ISO"
+	fi
+	echo "Instalando XFCE para las capturas..."
+	arrancar "$nombre" "$MEM" "$serie" \
+		-kernel "$k" -initrd "$i" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=xfce lazaro.disco=/dev/vda lazaro.capturas=si" \
+		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci
+	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
+		captura "$mon" "$CAP/otras/instalacion-fallo"
+		terminar "$pid"
+		tail -n 120 "$serie" >&2 || true
+		echo "FALLO: la instalación para las capturas no terminó." >&2
+		return 1
+	fi
+	t=0
+	while kill -0 "$pid" 2>/dev/null && [ $t -lt 120 ]; do sleep 2; t=$((t + 2)); done
+	terminar "$pid"
+	rm -f "$k" "$i"
+
+	serie="$RES/$nombre-arranque.log"
+	rm -f "$serie" "$mon"
+	arrancar "$nombre" 4096 "$serie" \
+		-drive "file=$disco,if=virtio,format=qcow2" -boot c -nic user,model=virtio-net-pci
+	# El sistema avisa "LAZARO-CAPTURA nombre" con cada programa abierto.
+	hechas=""
+	t=0
+	while [ $t -lt 2400 ] && kill -0 "$pid" 2>/dev/null; do
+		for c in $(sed -n 's/^LAZARO-CAPTURA \([a-z0-9-]*\).*/\1/p' "$serie" 2>/dev/null | tr -d '\r'); do
+			case " $hechas " in *" $c "*) continue ;; esac
+			captura "$mon" "$CAP/$c"
+			tecla "$mon" esc
+			hechas="$hechas $c"
+			echo "Captura: $c"
+		done
+		grep -q 'LAZARO-CAPTURAS-FIN\|LAZARO-CAPTURAS-SIN-SESION' "$serie" 2>/dev/null && break
+		sleep 2
+		t=$((t + 2))
+	done
+	grep 'LAZARO-CAPTURA-FALTA' "$serie" >&2 || true
+	if ! grep -q LAZARO-CAPTURAS-FIN "$serie"; then
+		captura "$mon" "$CAP/otras/instalado-fallo"
+		echo "FALLO: el sistema instalado no terminó las capturas." >&2
+		tail -n 60 "$serie" >&2 || true
+		ok=1
+	fi
+	terminar "$pid"
+	rm -f "$disco"
+	echo "Capturas en $CAP:"
+	ls -l "$CAP"
+	return $ok
+}
+
 case "$orden" in
 	live)
 		[ $# -eq 3 ] || [ $# -eq 4 ] || uso
@@ -579,5 +703,8 @@ case "$orden" in
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac
 		case "${6:-}" in "" | broadcom) ;; *) uso ;; esac
 		prueba_instalar "$4" "$5" "${6:-}" ;;
+	capturas)
+		[ $# -eq 3 ] || uso
+		prueba_capturas ;;
 	*) uso ;;
 esac

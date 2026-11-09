@@ -1,0 +1,80 @@
+#!/bin/sh
+# Capturas de pantalla para el Manual de Lázaro (pruebas/qemu.sh
+# capturas). Lo deja lazaro-instalar en el sistema instalado cuando la
+# instalación desatendida lleva lazaro.capturas=si. Abre los programas de
+# a uno en la sesión de "prueba" y avisa por el puerto serie
+# ("LAZARO-CAPTURA nombre"); QEMU, desde afuera, fotografía la pantalla.
+# Al terminar apaga el equipo.
+
+serie() { printf '%s\n' "$*" > /dev/ttyS0 2>/dev/null || true; }
+
+capturas() {
+	# La sesión de "prueba": el panel de XFCE y su entorno gráfico.
+	t=0
+	panel=""
+	while [ -z "$panel" ] && [ $t -lt 900 ]; do
+		for c in /proc/[0-9]*/comm; do
+			[ "$(cat "$c" 2>/dev/null)" = xfce4-panel ] || continue
+			[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] || continue
+			panel="${c%/comm}"
+			break
+		done
+		[ -n "$panel" ] || { sleep 5; t=$((t + 5)); }
+	done
+	if [ -z "$panel" ]; then
+		serie "LAZARO-CAPTURAS-SIN-SESION"
+		poweroff
+		return
+	fi
+	entorno="$(tr '\0' '\n' < "$panel/environ" | grep -E '^(DISPLAY|XAUTHORITY|DBUS_SESSION_BUS_ADDRESS|LANG|LANGUAGE|XDG_[A-Z_]*)=' | tr '\n' ' ')"
+	como_prueba() { su -s /bin/sh prueba -c "cd; env $entorno $*" >/dev/null 2>&1; }
+
+	# Pantalla de portátil típica y un rato para que termine de arrancar
+	# todo (avisos de bienvenida, tienda, actualizaciones).
+	como_prueba "xrandr -s 1280x800" || true
+	sleep 60
+
+	# foto NOMBRE ESPERA ORDEN...: abre la orden, espera, pide la captura
+	# y la cierra.
+	foto() {
+		f_nombre="$1"; f_espera="$2"; shift 2
+		if [ $# -gt 0 ]; then
+			command -v "$1" >/dev/null 2>&1 || [ -x "$1" ] || { serie "LAZARO-CAPTURA-FALTA $f_nombre $1"; return 0; }
+			como_prueba "$*" &
+		fi
+		sleep "$f_espera"
+		serie "LAZARO-CAPTURA $f_nombre"
+		sleep 10
+		if [ $# -gt 0 ]; then
+			pkill -u prueba -f "$1" 2>/dev/null || true
+			sleep 3
+		fi
+	}
+
+	foto xfce-escritorio 5
+	# El menú queda abierto: QEMU pulsa Esc después de cada captura.
+	foto xfce-menu 5 xfce4-popup-applicationsmenu
+	foto thunar 10 thunar
+	foto firefox 40 firefox https://www.wikipedia.org
+	foto writer 40 libreoffice --writer
+	foto calc 30 libreoffice --calc
+	foto pdf-visor 15 evince /usr/share/doc/lazaro/manual-lazaro.pdf
+	foto tienda 40 gnome-software
+	foto impresoras 15 system-config-printer
+	foto gestor-configuracion 10 xfce4-settings-manager
+	foto youtube-ligero 20 gtk-pipe-viewer
+	foto vlc 15 vlc
+	foto afinador 15 /usr/local/sbin/lazaro-afinador --ventana
+	foto controladores 15 /usr/local/sbin/lazaro-controladores --ventana
+	foto actualizar 15 /usr/local/bin/alpine-update-launcher.sh
+	foto terminal 10 xfce4-terminal
+	foto ristretto 10 ristretto /usr/share/backgrounds
+	foto mousepad 10 mousepad
+	foto bienvenida 15 lazaro-bienvenida
+
+	serie "LAZARO-CAPTURAS-FIN"
+	sleep 15
+	poweroff
+}
+
+capturas </dev/null >/dev/null 2>&1 &

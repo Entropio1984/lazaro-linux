@@ -1,0 +1,122 @@
+# Capturas de pantalla para el Manual de Lázaro. Se lanza a mano
+# (Actions > "Capturas del manual" > Run workflow) cuando cambia el
+# aspecto de Lázaro. Compila la ISO de la rama elegida, la arranca en
+# QEMU y fotografía el menú de arranque, la sesión de prueba, las
+# pantallas del instalador y cada programa del sistema instalado (XFCE).
+# Las imágenes quedan en manual/imagenes/capturas/:
+#   - en una rama que no es main, con un commit en esa misma rama;
+#   - en main, en una rama nueva "capturas/FECHA" con su PR.
+# Siempre quedan también en los Artifacts ("capturas-manual").
+name: Capturas del manual
+
+on:
+  workflow_dispatch:
+  # También al cambiar el propio recorrido de capturas en una rama de
+  # trabajo (no en main): así se prueba antes de fusionarlo.
+  push:
+    branches-ignore: [main]
+    paths:
+      - .github/workflows/manual-capturas.yml
+      - live/usr/share/lazaro/pruebas/zz-lazaro-capturas.start
+
+concurrency:
+  group: manual-capturas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capturas:
+    name: Capturas del manual
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Instalar LaTeX, QEMU e ImageMagick
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends latexmk \
+            texlive-latex-extra texlive-lang-spanish texlive-fonts-recommended \
+            tex-gyre lmodern texlive-bibtex-extra biber ghostscript
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf xorriso socat imagemagick optipng
+
+      - name: Activar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # La ISO lleva el manual: el visor de PDF también sale en las fotos.
+      - name: Compilar el manual
+        run: ./manual/compilar.sh
+
+      - name: Versión de Alpine
+        id: version
+        run: |
+          . ./config.env
+          echo "branch=$ALPINE_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Caché de Calamares compilado
+        uses: actions/cache@v5
+        with:
+          path: cache
+          key: calamares-${{ steps.version.outputs.branch }}-${{ hashFiles('paquetes/**', 'config.env', 'build.sh') }}
+
+      - name: Compilar la ISO
+        env:
+          LAZARO_CANAL: capturas
+        run: ./build.sh
+
+      - name: Permisos de la caché
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" cache salida || true
+
+      - name: Sacar las capturas
+        run: |
+          iso="$(ls salida/*.iso | head -n 1)"
+          sh pruebas/qemu.sh capturas "$iso" uefi
+
+      - name: Achicar las imágenes
+        if: always()
+        run: |
+          cd pruebas/resultados/capturas 2>/dev/null || exit 0
+          for f in *.png; do
+            [ -f "$f" ] || continue
+            convert "$f" -strip "$f"
+            optipng -quiet -o2 "$f" || true
+          done
+          du -sh .
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: capturas-manual
+          path: |
+            pruebas/resultados/capturas/
+            pruebas/resultados/*.log
+          retention-days: 30
+
+      - name: Guardar en manual/imagenes/capturas
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp pruebas/resultados/capturas/*.png manual/imagenes/capturas/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manual/imagenes/capturas/*.png
+          if git diff --cached --quiet; then
+            echo "Las capturas no cambiaron."
+            exit 0
+          fi
+          git commit -m "Manual: capturas de pantalla nuevas ($(date -u +%Y-%m-%d))"
+          if [ "$GITHUB_REF_NAME" = main ]; then
+            rama="capturas/$(date -u +%Y%m%d-%H%M)"
+            git push origin "HEAD:refs/heads/$rama"
+            gh pr create --base main --head "$rama" \
+              --title "Manual: capturas de pantalla nuevas" \
+              --body "Capturas sacadas por el flujo \"Capturas del manual\" (run $GITHUB_RUN_ID)."
+          else
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi

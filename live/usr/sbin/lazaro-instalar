@@ -1181,6 +1181,20 @@ paso_auto() {
 	# Usuario "prueba", contraseña "lazaro". Fastfetch, el programa
 	# adicional más liviano: la prueba comprueba que lo marcado en
 	# "Software adicional" se instala.
+	# lazaro.capturas=si (pruebas/qemu.sh capturas): en lugar de las
+	# pruebas, el sistema instalado fotografía sus programas para el
+	# Manual de Lázaro. Lleva todo el software adicional y entra solo.
+	if grep -qw 'lazaro.capturas=si' /proc/cmdline 2>/dev/null; then
+		LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
+			es_ES.UTF-8 es "" Europe/Madrid "base flatpak fastfetch btop youtube libreoffice vlc" no
+		paso_autologin "$raiz" prueba
+		mkdir -p "$raiz/etc/local.d"
+		install -m 755 "$PRUEBAS/zz-lazaro-capturas.start" "$raiz/etc/local.d/zz-lazaro-capturas.start"
+		ln -sf /etc/init.d/local "$raiz/etc/runlevels/default/local"
+		desmontar_destino
+		log "Instalación desatendida terminada (capturas para el manual)."
+		return 0
+	fi
 	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
 		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch btop youtube$auto_flathub" no
 	auto_revisar_flatpak
