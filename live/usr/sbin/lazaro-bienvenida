@@ -41,9 +41,14 @@ if os.environ.get("LAZARO_BIENVENIDA_DIR"):
 
 # Los programas de Lázaro viven en /usr/local/sbin (instalado) o /usr/sbin
 # (live); algunas sesiones gráficas no traen esas carpetas en el PATH.
+# LAZARO_BIENVENIDA_SOLO_PATH=1 (para las pruebas) busca solo en el PATH.
 RUTA = os.pathsep.join(
     [os.environ.get("PATH", "")]
-    + ["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"]
+    + (
+        []
+        if os.environ.get("LAZARO_BIENVENIDA_SOLO_PATH")
+        else ["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"]
+    )
 )
 
 CLAVES = {

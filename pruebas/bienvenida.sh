@@ -21,6 +21,10 @@ ok() { n=$((n + 1)); echo "ok   $n $1"; }
 mal() { n=$((n + 1)); fallos=$((fallos + 1)); echo "FALLO $n $1" >&2; }
 es() { if eval "$2"; then ok "$1"; else mal "$1"; fi; }
 
+# Que el resultado no dependa de lo que tenga instalado esta máquina
+# (por ejemplo xdg-open en /usr/bin): buscar programas solo en el PATH.
+export LAZARO_BIENVENIDA_SOLO_PATH=1
+
 # Programas de mentira: los que piden las funciones con Requiere.
 mkdir -p "$TMP/bin" "$TMP/vacio"
 for p in python3 sh; do ln -s "$(command -v "$p")" "$TMP/vacio/$p"; done
