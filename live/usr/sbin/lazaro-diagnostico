@@ -60,6 +60,17 @@ errores() { # RUTA: solo las líneas con errores o avisos (últimas 80)
 echo "Reuniendo información... (suele tardar menos de un minuto)"
 {
 	seccion "Resumen"
+	# Sello de compilación: qué ISO es (versión, edición, de qué código y
+	# cuándo se compiló). Una ISO anterior a este dato dice "sin dato".
+	if [ -r /usr/share/lazaro/version.env ]; then
+		(
+			. /usr/share/lazaro/version.env
+			echo "Lázaro: ${ISO_VERSION:-sin dato}, edición ${LAZARO_EDICION:-sin dato}, ${LAZARO_CANAL:-sin dato}, Alpine ${ALPINE_BRANCH:-sin dato}"
+			echo "Compilación: ${LAZARO_FECHA:-sin dato} (código ${LAZARO_COMMIT:-sin dato}, script ${LAZARO_SCRIPT_COMMIT:-sin dato})"
+		)
+	else
+		echo "Lázaro: sin dato (no existe /usr/share/lazaro/version.env)"
+	fi
 	echo "Fecha: $(date)"
 	echo "Equipo: $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null) $(cat /sys/class/dmi/id/product_version 2>/dev/null)"
 	echo "BIOS: $(cat /sys/class/dmi/id/bios_version 2>/dev/null) ($(cat /sys/class/dmi/id/bios_date 2>/dev/null))"

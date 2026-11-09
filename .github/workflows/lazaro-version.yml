@@ -1,0 +1,78 @@
+# Sacar una versión numerada de Lázaro Linux.
+#
+# Se lanza a mano desde GitHub: pestaña Actions → "Sacar una versión" →
+# Run workflow (rama main). No pide nada: la versión es ISO_VERSION de
+# config.env. Antes revisa que esa versión no exista y que main, tal como
+# está ahora, ya haya pasado todas las pruebas. Luego crea la etiqueta
+# vX.Y y lanza "Lázaro Linux ISO" sobre ella, que compila las dos
+# ediciones, las prueba y las publica como versión fija (Release de
+# GitHub y SourceForge, carpeta Versiones/X.Y).
+#
+# Después, ISO_VERSION de config.env se sube a la siguiente versión en un
+# PR, para que las compilaciones en desarrollo no lleven el mismo número.
+name: Sacar una versión
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: lazaro-version
+  cancel-in-progress: false
+
+jobs:
+  etiquetar:
+    name: Etiquetar y compilar
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Revisar y crear la etiqueta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          . ./config.env
+          etiqueta="v$ISO_VERSION"
+          echo "Versión: $ISO_VERSION (commit $GITHUB_SHA)"
+          if ! printf '%s\n' "$ISO_VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)+$'; then
+            echo "::error::ISO_VERSION='$ISO_VERSION' en config.env no es un número de versión (por ejemplo 0.2)."
+            exit 1
+          fi
+          # Nunca una versión menor que la más alta que ya existe.
+          etiquetas="$(git ls-remote --tags --refs origin 'refs/tags/v*' | sed 's#.*refs/tags/##')"
+          mayor="$(printf '%s\n' $etiquetas | grep -E '^v[0-9]+(\.[0-9]+)+$' | sort -V | tail -n 1 || true)"
+          if [ -n "$mayor" ] && [ "$mayor" != "$etiqueta" ] &&
+            [ "$(printf '%s\n' "$mayor" "$etiqueta" | sort -V | tail -n 1)" != "$etiqueta" ]; then
+            echo "::error::ISO_VERSION=$ISO_VERSION es menor que la versión $mayor, que ya existe. Pon en config.env un número mayor."
+            exit 1
+          fi
+          existe="$(git ls-remote --tags --refs origin "refs/tags/$etiqueta" | cut -c1-40)"
+          if [ -n "$existe" ]; then
+            # Si la etiqueta quedó de un intento anterior en este mismo
+            # commit y la versión no llegó a publicarse, se reintenta.
+            if [ "$existe" = "$GITHUB_SHA" ] && ! gh release view "$etiqueta" >/dev/null 2>&1; then
+              echo "La etiqueta $etiqueta ya existe en este commit y no está publicada: se vuelve a lanzar la compilación."
+              gh workflow run lazaro-iso.yml --ref "$etiqueta"
+              exit 0
+            fi
+            echo "::error::La versión $ISO_VERSION ya existe. Sube ISO_VERSION en config.env para sacar otra."
+            exit 1
+          fi
+          # Solo se publica un main que ya pasó todas las pruebas.
+          ok="$(gh run list --workflow lazaro-iso.yml --branch main --commit "$GITHUB_SHA" \
+            --json conclusion,event --jq '[.[] | select(.conclusion == "success" and .event != "pull_request")] | length')"
+          if [ "${ok:-0}" -eq 0 ]; then
+            echo "::error::Este commit de main ($GITHUB_SHA) todavía no pasó las pruebas de \"Lázaro Linux ISO\" (o fallaron). Espera a que terminen en verde y vuelve a lanzarlo."
+            exit 1
+          fi
+          gh api "repos/$GH_REPO/git/refs" -f ref="refs/tags/$etiqueta" -f sha="$GITHUB_SHA" >/dev/null
+          # Una etiqueta creada desde aquí no dispara otros flujos solos:
+          # se lanza la compilación a mano sobre ella.
+          gh workflow run lazaro-iso.yml --ref "$etiqueta"
+          echo "Listo: $etiqueta creada. La compilación tarda unas 2 horas; la versión aparecerá en https://github.com/$GH_REPO/releases/tag/$etiqueta"

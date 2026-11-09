@@ -1,3 +1,5 @@
 salida/
 cache/
 pruebas/resultados/
+flatpak-usb/
+__pycache__/

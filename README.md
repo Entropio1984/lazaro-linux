@@ -528,7 +528,9 @@ equipo para que otra persona pueda ayudarte.
 6. En la sesión de prueba esa carpeta se borra al apagar: copia el
    archivo a otro USB o envíalo antes.
 
-**Qué trae:** los datos del equipo y del procesador, la memoria y los
+**Qué trae:** primero, qué Lázaro tienes (versión, edición y el
+**sello de compilación**: la fecha y el código exacto con que se armó tu
+ISO, para saber si un arreglo ya te llegó); después, los datos del equipo y del procesador, la memoria y los
 discos, el hardware (incluido lo que dice el afinador y lo que le falta
 según Controladores), la red, el sonido, la pantalla y los errores del
 arranque y de la instalación. No guarda contraseñas y solo tú puedes
@@ -598,6 +600,8 @@ prueban y publican solas en cada cambio de la rama principal.
 | Pruebas | `pruebas/qemu.sh` | Arranque live e instalación en QEMU, BIOS y UEFI |
 | Comprobaciones dentro del sistema de prueba | `live/usr/share/lazaro/pruebas/` | Solo las usa la instalación desatendida |
 | Compilación automática | `.github/workflows/lazaro-iso.yml` | Estable en cada cambio; edge solo los lunes y a mano |
+| Versiones numeradas | `.github/workflows/lazaro-version.yml` + `ISO_VERSION` en `config.env` | Ver [Sacar una versión](#sacar-una-versión) |
+| Sello de compilación | `build.sh` → `/usr/share/lazaro/version.env` | Versión, edición, canal (`en-desarrollo`, `versión`, `prueba` o `local`), fecha, commit de la ISO y del script; lo muestra `lazaro-diagnostico` |
 
 ### Qué pasa al instalar
 
@@ -724,6 +728,29 @@ al desactivarlo) y, del kernel, la instalación, el arranque de prueba (bien y m
 actualización y la vuelta al kernel de Alpine; `pruebas/kernel-arranque.sh`
 arranca el kernel compilado en QEMU y lo compara con el de Alpine.
 
+## Sacar una versión
+
+Cada cambio en main se publica solo como **en-desarrollo** (se reemplaza
+cada vez). Una **versión numerada** (0.2, 0.3... y 1.0 cuando esté lista
+para cualquiera) es una foto fija de una compilación que ya funcionó en
+equipos reales: tiene su propia Release en GitHub, que no se borra, y su
+carpeta `Versiones/X.Y` en SourceForge con las dos ediciones.
+
+1. Revisa que `ISO_VERSION` en `config.env` sea el número que quieres
+   sacar y que la última compilación de main esté en verde.
+2. En GitHub: pestaña **Actions** → **Sacar una versión** → **Run
+   workflow** (rama main).
+3. El flujo revisa que esa versión no exista y que ese main haya pasado
+   las pruebas, crea la etiqueta `vX.Y` y lanza la compilación. En unas
+   2 horas la versión aparece en
+   [Releases](https://github.com/Entropio1984/lazaro-linux/releases), con
+   la lista de cambios (los títulos de los PR) desde la versión anterior.
+4. Después, en un PR, sube `ISO_VERSION` a la siguiente versión.
+
+Los números: se sube el último (0.2 → 0.3) con cada versión, y se pasa a
+1.0 cuando Lázaro esté listo para cualquiera. Al cambiar de versión de
+Alpine conviene sacar una versión nueva.
+
 ## Versiones probadas
 
 | Alpine | Calamares | Estado |
@@ -734,3 +761,16 @@ arranca el kernel compilado en QEMU y lo compara con el de Alpine.
 ## Pendiente
 
 - Cifrado de disco (desactivado por ahora).
+
+## Licencia
+
+Lázaro Linux es software libre: puedes usarlo, estudiarlo, compartirlo y
+modificarlo según los términos de la
+[Licencia Pública General de GNU, versión 3 o posterior](LICENSE)
+(GPL-3.0-or-later), la misma que usa Calamares. Si redistribuyes una
+versión modificada, debes compartir también su código con la misma
+licencia.
+
+Los programas que la ISO incluye o descarga (Alpine Linux, Calamares, el
+firmware, los escritorios y las aplicaciones) conservan cada uno su
+propia licencia.

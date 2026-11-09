@@ -31,6 +31,18 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 if [ "${1:-}" != "--dentro" ]; then
 	mkdir -p "$SALIDA" "$CACHE"
+	# Sello de compilación (va a /usr/share/lazaro/version.env y lo muestra
+	# lazaro-diagnostico): de qué código y cuándo salió esta ISO.
+	if [ -z "${LAZARO_COMMIT:-}" ]; then
+		LAZARO_COMMIT="$(git -C "$LAZARO_DIR" rev-parse --short=12 HEAD 2>/dev/null)" || LAZARO_COMMIT=""
+		if [ -z "$LAZARO_COMMIT" ]; then
+			LAZARO_COMMIT=desconocido
+		elif [ -n "$(git -C "$LAZARO_DIR" status --porcelain 2>/dev/null)" ]; then
+			LAZARO_COMMIT="$LAZARO_COMMIT+cambios-locales"
+		fi
+	fi
+	LAZARO_FECHA="${LAZARO_FECHA:-$(date -u '+%Y-%m-%d %H:%M UTC')}"
+	export LAZARO_COMMIT LAZARO_FECHA
 	msg "Compilando en alpine:$ALPINE_DOCKER_TAG (Alpine $ALPINE_BRANCH)"
 	# Copia local del script (opcional): se monta dentro del contenedor.
 	set --
@@ -43,6 +55,7 @@ if [ "${1:-}" != "--dentro" ]; then
 	exec docker run --rm "$@" \
 		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR \
 		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL -e LAZARO_EDICION \
+		-e LAZARO_COMMIT -e LAZARO_FECHA -e LAZARO_CANAL -e LAZARO_SCRIPT_COMMIT \
 		-e SALIDA=/salida -e CACHE=/cache \
 		-v "$LAZARO_DIR:/src:ro" \
 		-v "$SALIDA:/salida" \
@@ -178,12 +191,51 @@ SCRIPT="$CONSTRUCTOR_HOME/desktop-postinstall.sh"
 if [ -n "${LAZARO_SCRIPT:-}" ]; then
 	msg "Usando desktop-postinstall.sh local: $LAZARO_SCRIPT"
 	cp "$LAZARO_SCRIPT" "$SCRIPT"
+	LAZARO_SCRIPT_COMMIT="${LAZARO_SCRIPT_COMMIT:-copia-local}"
 else
 	msg "Descargando desktop-postinstall.sh"
-	curl -fsSL --retry 3 -o "$SCRIPT" "$POSTINSTALL_URL"
+	# Se sigue tomando la última versión de la rama (sin fijar), pero se
+	# anota qué commit era: se lee el commit de la rama en ese momento y
+	# se descarga justo ese. Si no se puede, se usa la URL tal cual.
+	script_url="$POSTINSTALL_URL"
+	LAZARO_SCRIPT_COMMIT=desconocido
+	case "$POSTINSTALL_URL" in
+	https://raw.githubusercontent.com/*/*/*/*)
+		s_resto="${POSTINSTALL_URL#https://raw.githubusercontent.com/}"
+		s_dueno="${s_resto%%/*}"; s_resto="${s_resto#*/}"
+		s_repo="${s_resto%%/*}"; s_resto="${s_resto#*/}"
+		s_rama="${s_resto%%/*}"; s_archivo="${s_resto#*/}"
+		s_commit="$(git ls-remote "https://github.com/$s_dueno/$s_repo" "refs/heads/$s_rama" 2>/dev/null | cut -c1-40)" || s_commit=""
+		case "$s_commit" in
+		*[!0-9a-f]* | "") ;;
+		*)
+			if [ "${#s_commit}" -eq 40 ]; then
+				script_url="https://raw.githubusercontent.com/$s_dueno/$s_repo/$s_commit/$s_archivo"
+				LAZARO_SCRIPT_COMMIT="$(printf '%s' "$s_commit" | cut -c1-12)"
+			fi
+			;;
+		esac
+		;;
+	esac
+	echo "Script: $script_url"
+	curl -fsSL --retry 3 -o "$SCRIPT" "$script_url"
 fi
 sh -n "$SCRIPT" || die "desktop-postinstall.sh tiene errores de sintaxis"
 chown constructor:abuild "$SCRIPT"
+# Con build.sh --dentro directo (sin Docker) nadie los calculó antes.
+if [ -z "${LAZARO_COMMIT:-}" ]; then
+	LAZARO_COMMIT="$(git -C "$LAZARO_DIR" rev-parse --short=12 HEAD 2>/dev/null)" || LAZARO_COMMIT=""
+fi
+LAZARO_FECHA="${LAZARO_FECHA:-$(date -u '+%Y-%m-%d %H:%M UTC')}"
+cat >> "$CONSTRUCTOR_HOME/version.env" <<EOF
+LAZARO_CANAL="${LAZARO_CANAL:-local}"
+LAZARO_FECHA="$LAZARO_FECHA"
+LAZARO_COMMIT="${LAZARO_COMMIT:-desconocido}"
+LAZARO_SCRIPT_COMMIT="$LAZARO_SCRIPT_COMMIT"
+LAZARO_SCRIPT_SHA256="$(sha256sum "$SCRIPT" | cut -c1-64)"
+EOF
+msg "Sello de compilación"
+cat "$CONSTRUCTOR_HOME/version.env"
 
 # --- Edición Completa ----------------------------------------------------
 PAQUETES_COMPLETA="$CONSTRUCTOR_HOME/paquetes-completa.txt"

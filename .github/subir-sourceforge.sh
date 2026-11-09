@@ -4,7 +4,10 @@
 #
 #   sh .github/subir-sourceforge.sh CARPETA_SF CARPETA_LOCAL
 #
-# CARPETA_SF: Ligera o Completa (dentro de /home/frs/project/PROYECTO).
+# CARPETA_SF: Ligera o Completa (dentro de /home/frs/project/PROYECTO), o
+# Versiones/X.Y para una versión numerada (se crea si no existe).
+# Con SF_SIN_REEMPLAZAR=1 (versiones numeradas) no se toca ningún archivo
+# que ya esté en SourceForge con el mismo nombre.
 # Variables: SF_USUARIO y SF_PROYECTO (del flujo) y SF_LLAVE, la llave
 # privada SSH (secreto SOURCEFORGE_SSH_KEY del repositorio). Su parte
 # pública va en https://sourceforge.net/auth/shell_services.
@@ -34,10 +37,12 @@ mkdir -p "$HOME/.ssh"
 ssh-keyscan -t rsa,ecdsa,ed25519 frs.sourceforge.net >> "$HOME/.ssh/known_hosts" 2>/dev/null
 
 ls -l "$origen"
+set --
+[ "${SF_SIN_REEMPLAZAR:-}" != 1 ] || set -- --ignore-existing
 # --partial: una subida cortada continúa donde quedó en el reintento.
 intento=1
 while :; do
-	if rsync -rtv --partial --chmod=F644 \
+	if rsync -rtv --partial --mkpath --chmod=F644 "$@" \
 		-e "ssh -i $llave -o BatchMode=yes -o ServerAliveInterval=30" \
 		"$origen"/ "$SF_USUARIO@frs.sourceforge.net:/home/frs/project/$SF_PROYECTO/$destino/"; then
 		break
