@@ -355,6 +355,25 @@ jobs:
             pruebas/resultados/*.ppm
           retention-days: 14
 
+  # Un solo resultado para la regla que protege main: queda en verde solo
+  # si todo lo demás pasó (lo de edge no cuenta: sus fallas solo avisan).
+  todo-en-verde:
+    name: Todo en verde
+    if: always()
+    needs: [iso, pruebas, graficas, iso-completa, pruebas-completa]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Revisar los resultados
+        run: |
+          echo '${{ toJSON(needs) }}'
+          case '${{ join(needs.*.result, ' ') }}' in
+            *failure* | *cancelled*)
+              echo "::error::Alguna compilación o prueba falló."
+              exit 1
+              ;;
+          esac
+
   # Deja la ISO estable, ya probada, en una Release pública "en-desarrollo"
   # (prerelease): descarga directa del .iso, sin iniciar sesión en GitHub
   # y reanudable, a diferencia de los Artifacts.
