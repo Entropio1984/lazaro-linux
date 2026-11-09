@@ -1,5 +1,63 @@
 \chapter{Imprimir y escanear}\label{cap:12-imprimir}
 
-\begin{nota}
-Capítulo en preparación.
-\end{nota}
+Lázaro usa \termino{CUPS}, el sistema de impresión de Linux y de macOS
+\cite{cups}. Al instalar revisa las impresoras conectadas y deja puestos
+los controladores de las marcas más comunes: HP, Epson, Brother, Samsung y
+Xerox.
+
+\section{Agregar la impresora}
+
+\subsection{Por cable USB}
+Conéctala y enciéndela. En la mayoría de los casos se agrega sola en
+unos segundos. Para comprobarlo, imprime cualquier cosa: la impresora
+debe aparecer en la lista.
+
+\subsection{Por wifi o red}
+Las impresoras modernas que están en la misma red wifi se detectan solas
+y aparecen en la lista al imprimir. Si no aparece:
+\begin{pasos}
+  \item Abre \menu{Aplicaciones > Sistema > Configuración de impresión}.
+  \item Pulsa \menu{Añadir} y escribe tu contraseña.
+  \item Elige la impresora en la lista \emph{Impresora de red}. Si no
+        está, escribe la dirección IP que muestra la propia impresora en su
+        pantalla o en la hoja de configuración que imprime.
+  \item Elige la marca y el modelo, y pulsa \menu{Aplicar}.
+  \item Imprime una página de prueba.
+\end{pasos}
+
+\captura{impresoras}{La ventana de Configuración de impresión}
+
+\begin{consejo}
+Si conectas una impresora después de instalar y le falta su controlador,
+aparece el aviso \enquote{Falta algo para tu hardware}: pulsa
+\menu{Instalar} (sección~\ref{sec:controladores}). ¿Tu modelo funciona en
+Linux? La base de datos de OpenPrinting lo dice \cite{openprinting}.
+\end{consejo}
+
+\section{Imprimir}
+
+En cualquier programa: \menu{Archivo > Imprimir} o \keys{\ctrl + P}.
+Revisa la impresora elegida, la cantidad de copias y las páginas (por
+ejemplo, \texttt{1-3,5}). En \emph{Propiedades} o \emph{Configuración de
+página} se elige doble cara, blanco y negro o la calidad.
+
+\section{Escanear}
+
+Lázaro instala el programa \emph{Escáner de documentos} (Simple Scan) y
+los controladores de escáner de Linux, llamados \termino{SANE}
+\cite{sane}. Funciona con la mayoría de los escáneres USB y de las
+impresoras multifunción en red.
+
+\begin{pasos}
+  \item Abre \menu{Aplicaciones > Gráficos > Escáner de documentos}.
+  \item Pon la hoja y pulsa \menu{Escanear}. Elige arriba \emph{Texto} para
+        documentos o \emph{Foto} para fotografías.
+  \item Para varias hojas, pulsa \menu{Escanear} otra vez: se agregan como
+        páginas nuevas.
+  \item Pulsa \menu{Guardar}: elige PDF para documentos, JPG para fotos.
+\end{pasos}
+
+Las multifunción HP necesitan además su paquete \emph{hplip}, que Lázaro
+instala cuando detecta una impresora HP.
+
+\fuentes

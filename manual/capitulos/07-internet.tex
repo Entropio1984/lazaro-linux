@@ -1,5 +1,119 @@
 \chapter{Internet}\label{cap:07-internet}
 
-\begin{nota}
-Capítulo en preparación.
-\end{nota}
+\section{Conectarse}\label{sec:conectarse}
+
+Lázaro usa \termino{NetworkManager}, el mismo sistema de casi todas las
+distribuciones, para manejar la red \cite{networkmanager}. Su icono está
+en la bandeja del panel, junto al reloj.
+
+\subsection{Por cable}
+Enchufa el cable de red. Se conecta solo en unos segundos.
+
+\subsection{Por wifi}
+\begin{pasos}
+  \item Haz clic en el icono de red de la bandeja.
+  \item Elige tu red en la lista.
+  \item Escribe la clave y pulsa \menu{Conectar}. Respeta mayúsculas y
+        minúsculas.
+\end{pasos}
+La próxima vez se conecta sola.
+
+\captura{wifi-lista}{La lista de redes wifi en el icono de red}
+
+Si no aparece ninguna red, revisa que el wifi del portátil esté encendido:
+muchos tienen un botón o una combinación de teclas, como \keys{Fn + F2}
+(el dibujo de una antena). Si sigue sin aparecer, mira la
+sección~\ref{sec:prob-wifi}.
+
+\subsection{Con el celular}
+Si no tienes otra conexión, el celular puede prestar su internet:
+\begin{description}
+  \item[Por cable USB] (lo más fácil). Conecta el celular con su cable. En
+    Android, ve a \menu{Ajustes > Redes > Zona Wi-Fi y conexión compartida}
+    y activa \menu{Conexión compartida por USB}. En iPhone, activa
+    \menu{Compartir Internet}. El equipo lo toma como una conexión por
+    cable.
+  \item[Como punto de acceso wifi] Activa la \emph{zona wifi} del celular y
+    conéctate a ella como a cualquier red.
+  \item[Por Bluetooth] También funciona en el sistema instalado, pero es
+    más lento.
+\end{description}
+
+\begin{cuidado}
+Compartir internet gasta los datos del plan del celular. Las
+actualizaciones grandes pueden consumir cientos de megas.
+\end{cuidado}
+
+\subsection{Módems USB 3G/4G y ADSL}
+Los módems USB de las compañías de celular funcionan en el sistema
+instalado: al conectarlo aparece en el icono de red como
+\emph{Banda ancha móvil} y un asistente pregunta el país y la compañía.
+Para un módem ADSL que pide usuario y clave (\emph{PPPoE}), ve al icono de
+red, \menu{Editar las conexiones}, el botón \menu{+} y elige
+\menu{DSL/PPPoE}.
+
+\section{Firefox}\label{sec:firefox}
+
+Firefox es el navegador de Lázaro: viene siempre. Lo hace Mozilla, una
+organización sin fines de lucro, y su ayuda en español es muy completa
+\cite{firefox-ayuda}.
+
+\subsection{Lo básico}
+\begin{itemize}
+  \item Escribe una dirección o lo que quieras buscar en la barra de
+        arriba y pulsa \keys{Enter}.
+  \item \keys{\ctrl + T} abre una pestaña nueva; \keys{\ctrl + W} la cierra.
+  \item \keys{\ctrl + D} guarda la página en \emph{marcadores} (favoritos).
+  \item \keys{\ctrl + +} y \keys{\ctrl + -} agrandan y achican la página;
+        \keys{\ctrl + 0} la deja como estaba.
+  \item \keys{\ctrl + Mayús + T} vuelve a abrir la última pestaña que
+        cerraste sin querer.
+\end{itemize}
+
+\subsection{Traer tus marcadores y contraseñas}
+Si tus datos estaban en una cuenta de Google o Microsoft, entra en esa
+cuenta desde la página web correspondiente. Si exportaste los marcadores
+antes de instalar (sección~\ref{sec:copia-antes}):
+\menu{Menú (las tres rayas) > Marcadores > Administrar marcadores >
+Importar y respaldar > Importar marcadores desde HTML}.
+
+\subsection{Sincronizar con otros equipos}
+Con una \emph{cuenta de Mozilla} (gratis) Firefox guarda tus marcadores,
+contraseñas y pestañas, y los recupera en otro equipo o en el celular:
+\menu{Menú > Iniciar sesión}.
+
+\subsection{Menos publicidad y más velocidad}
+En equipos viejos, la publicidad de las páginas gasta mucho procesador. Un
+bloqueador de anuncios, como \emph{uBlock Origin}, hace que las páginas
+carguen más rápido. Se instala desde \menu{Menú > Complementos y temas},
+buscándolo por su nombre. Instala solo complementos que muestren el sello
+de \enquote{Recomendado} y tengan muchas valoraciones.
+
+\subsection{Videollamadas}
+Google Meet, Zoom (en su versión web), Jitsi y WhatsApp Web funcionan en
+Firefox sin instalar nada. La primera vez la página pide permiso para usar
+la cámara y el micrófono: pulsa \menu{Permitir}.
+
+\begin{consejo}
+Otros navegadores: si al instalar marcaste Google Chrome o Brave, están en
+el menú \menu{Internet}. Si no, se instalan desde la tienda
+(capítulo~\ref{cap:13-programas}). Brave bloquea anuncios de fábrica.
+\end{consejo}
+
+\section{Navegar seguro}
+
+\begin{itemize}
+  \item Fíjate en el candado junto a la dirección antes de escribir
+        contraseñas o datos de tarjetas.
+  \item Desconfía de los correos y mensajes que piden con urgencia tu clave,
+        aunque parezcan de tu banco: entra tú mismo a la página escribiendo
+        la dirección.
+  \item Usa una contraseña distinta para cada servicio importante. El
+        administrador de contraseñas de Firefox las recuerda por ti
+        \cite{incibe-contrasenas}.
+  \item Mantén el sistema al día con el aviso de actualizaciones
+        (sección~\ref{sec:actualizar}): muchas actualizaciones de Firefox
+        corrigen fallas de seguridad.
+\end{itemize}
+
+\fuentes

@@ -1,5 +1,88 @@
 \chapter{Videos, música y fotos}\label{cap:10-multimedia}
 
-\begin{nota}
-Capítulo en preparación.
-\end{nota}
+\section{YouTube ligero}\label{sec:youtube-ligero}
+
+Ver YouTube en el navegador gasta mucho procesador: en equipos viejos el
+video se traba aunque la conexión sea buena. \textbf{YouTube ligero}
+busca los videos en una ventana sencilla (\emph{Pipe Viewer}) y los
+reproduce con \emph{mpv}, un reproductor muy liviano, en 480p, el formato
+que menos procesador gasta \cite{mpv,ytdlp}. No necesita navegador ni
+cuenta.
+
+\begin{pasos}
+  \item Abre \menu{Aplicaciones > Multimedia > YouTube}.
+  \item Escribe lo que buscas arriba y pulsa \keys{Enter}.
+  \item Haz doble clic en un video. Se abre en una ventana de mpv.
+\end{pasos}
+
+\captura{youtube-ligero}{YouTube ligero: la búsqueda en Pipe Viewer}
+
+Mientras se reproduce: \keys{Espacio} pausa, \keys{\arrowkeyleft} y
+\keys{\arrowkeyright} retroceden y adelantan 5 segundos, \keys{F} pone
+pantalla completa, \keys{9} y \keys{0} bajan y suben el volumen, \keys{Q}
+cierra.
+
+\begin{description}
+  \item[Si el video se traba] (procesadores de un solo núcleo): en Pipe
+    Viewer, abre el menú de preferencias y elige resolución \emph{360}. Se
+    guarda al cerrar la ventana.
+  \item[Si deja de funcionar] YouTube cambia seguido y a veces rompe los
+    programas que lo leen. Instala las actualizaciones
+    (sección~\ref{sec:actualizar}); si no alcanza, abre una terminal y
+    escribe:
+\begin{terminal}
+doas apk upgrade yt-dlp yt-dlp-ejs pipe-viewer
+\end{terminal}
+\end{description}
+
+\section{Videos y música}
+
+Lázaro abre los videos y los audios con \textbf{mpv}: haz doble clic en el
+archivo. Reproduce casi cualquier formato, incluidos los audios de
+WhatsApp. Las teclas son las mismas de YouTube ligero.
+
+Si al instalar marcaste \textbf{VLC}, tienes un reproductor más completo,
+con menús, listas de reproducción y subtítulos \cite{vlc}. Para abrir un
+archivo con VLC: clic derecho, \menu{Abrir con > VLC}. Para que sea el
+predeterminado, en esa misma ventana marca la casilla para usarlo siempre.
+
+\begin{consejo}
+¿Una película con subtítulos en un archivo aparte (\texttt{.srt})? Ponle el
+mismo nombre que al video y déjalo en la misma carpeta: mpv y VLC lo
+cargan solos.
+\end{consejo}
+
+\subsection{El sonido}
+El icono del altavoz en la bandeja sube y baja el volumen; con clic
+derecho (o \menu{Configuración del sonido}) se elige la salida: los
+parlantes, los audífonos, la pantalla por HDMI o unos audífonos
+Bluetooth. Si no se escucha nada, mira la sección~\ref{sec:prob-sonido}.
+
+\section{Fotos}
+
+Haz doble clic en una foto para verla. Con las flechas pasas a la
+siguiente. En XFCE se abre con \emph{Ristretto}; en los demás escritorios,
+con su visor propio.
+
+\begin{description}
+  \item[Pasar las fotos del celular] Conecta el celular por cable. En
+    Android, desliza la barra de arriba, toca la notificación del USB y
+    elige \emph{Transferencia de archivos}. El celular aparece en el
+    gestor de archivos como un disco más (capítulo~\ref{cap:11-archivos}).
+  \item[Retocar] Para recortar, girar o mejorar el color, la tienda
+    ofrece programas como \emph{GIMP} (completo) o \emph{Pinta} (sencillo).
+\end{description}
+
+\section{Capturas de pantalla}
+
+En XFCE, la tecla \keys{ImprPant} abre \emph{Captura de pantalla}: elige si
+quieres toda la pantalla, una ventana o un área, y dónde guardarla. En
+GNOME y KDE Plasma esa misma tecla abre su herramienta propia.
+
+\section{Cámara web}
+
+Para probar la cámara, abre una videollamada de prueba en el navegador
+(por ejemplo, \url{https://meet.jit.si}). Si la página pide permiso para
+usar la cámara, pulsa \menu{Permitir}.
+
+\fuentes

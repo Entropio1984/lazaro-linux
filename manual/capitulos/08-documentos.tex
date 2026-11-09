@@ -1,5 +1,121 @@
 \chapter{Documentos}\label{cap:08-documentos}
 
+Para escribir cartas, hacer planillas o preparar presentaciones, Lázaro
+trae \textbf{LibreOffice}, un paquete de oficina libre y gratuito que hace
+lo mismo que Microsoft Office y abre y guarda sus archivos
+\cite{libreoffice-ayuda}. Si al instalar marcaste \textbf{OnlyOffice},
+tienes además una segunda opción, con un aspecto muy parecido al de
+Office.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}lXl}
+\toprule
+LibreOffice & Para qué & En Office \\
+\midrule
+Writer & Cartas, trabajos, currículum & Word \\
+Calc & Planillas, cuentas, listas & Excel \\
+Impress & Presentaciones & PowerPoint \\
+Draw & Dibujos, diagramas, editar PDF sencillos & --- \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Todos están en \menu{Aplicaciones > Oficina}.
+
+\section{Writer: escribir un documento}
+
+\captura{writer}{LibreOffice Writer con un documento abierto}
+
+\subsection{Lo básico}
+\begin{itemize}
+  \item La barra de arriba tiene lo de siempre: tipo y tamaño de letra,
+        \textbf{negrita}, \emph{cursiva}, subrayado, alineación, listas con
+        viñetas y numeradas.
+  \item \keys{\ctrl + Z} deshace lo último; \keys{\ctrl + Y} lo rehace.
+  \item \keys{\ctrl + C} copia, \keys{\ctrl + X} corta, \keys{\ctrl + V}
+        pega.
+  \item \menu{Formato > Página} cambia el tamaño del papel (A4 o Carta) y
+        los márgenes.
+  \item \menu{Herramientas > Ortografía} revisa la ortografía; las palabras
+        mal escritas aparecen subrayadas en rojo.
+\end{itemize}
+
+\begin{consejo}
+Para que el texto de todo el documento se vea igual y el índice se haga
+solo, usa los \emph{estilos}: elige \enquote{Título 1} o \enquote{Título 2}
+en la lista de la izquierda de la barra en lugar de agrandar la letra a
+mano. Después, \menu{Insertar > Índice y tablas > Índice general} arma el
+índice.
+\end{consejo}
+
+\subsection{Guardar}
+\begin{pasos}
+  \item \menu{Archivo > Guardar como} (o \keys{\ctrl + Mayús + S}).
+  \item Elige la carpeta (normalmente \emph{Documentos}) y escribe el
+        nombre.
+  \item Abajo, en el tipo de archivo, elige:
+    \begin{itemize}
+      \item \textbf{ODF (.odt)}, el formato propio de LibreOffice, si el
+            documento es para ti;
+      \item \textbf{Word 2007-365 (.docx)} si lo vas a enviar a alguien que
+            usa Word. Cuando LibreOffice pregunte, elige \menu{Usar formato
+            Word}.
+    \end{itemize}
+\end{pasos}
+
+\subsection{Enviar como PDF}
+Para mandar un documento que nadie debe modificar (un currículum, una
+carta formal), conviértelo a PDF: \menu{Archivo > Exportar a PDF}. Se ve
+igual en cualquier equipo o celular.
+
+\section{Calc: planillas}
+
+\begin{itemize}
+  \item Cada casilla se llama \emph{celda} y tiene un nombre: la columna
+        (letra) y la fila (número), por ejemplo \texttt{B3}.
+  \item Para sumar una columna, haz clic en la celda de abajo y pulsa el
+        botón $\Sigma$ de la barra, o escribe \texttt{=SUMA(B2:B10)}.
+  \item Las fórmulas empiezan siempre con \texttt{=}. Las más usadas:
+        \texttt{=SUMA()}, \texttt{=PROMEDIO()}, \texttt{=MAX()},
+        \texttt{=MIN()}.
+  \item \menu{Datos > Ordenar} ordena la tabla por una columna.
+  \item Para guardar en formato de Excel, elige \textbf{Excel 2007-365
+        (.xlsx)} al guardar.
+\end{itemize}
+
+\section{Impress: presentaciones}
+
+Al abrir Impress, elige una plantilla o empieza en blanco. Cada página se
+llama \emph{diapositiva}: \menu{Diapositiva > Nueva diapositiva} agrega
+otra. \keys{F5} empieza la presentación a pantalla completa; \keys{Esc}
+la termina. Para guardar en formato de PowerPoint, elige
+\textbf{PowerPoint 2007-365 (.pptx)}.
+
+\section{Abrir archivos de Word, Excel y PowerPoint}
+
+Haz doble clic en el archivo: se abre en LibreOffice. La gran mayoría se
+ve igual que en Office. Puede cambiar algo en documentos con diseños muy
+complicados o con letras que no vienen en Lázaro.
+
+\begin{consejo}
+Si un documento de Word se ve desacomodado, prueba abrirlo con OnlyOffice
+(clic derecho sobre el archivo, \menu{Abrir con}). Suele respetar mejor el
+diseño original \cite{onlyoffice-ayuda}.
+\end{consejo}
+
+\section{Si LibreOffice va lento}
+
+En equipos con poca memoria:
+\begin{itemize}
+  \item cierra las pestañas del navegador que no estés usando;
+  \item en \menu{Herramientas > Opciones > LibreOffice > Avanzado}, desmarca
+        \emph{Activar entorno de ejecución de Java} (no hace falta para lo
+        de todos los días).
+\end{itemize}
+
 \begin{nota}
-Capítulo en preparación.
+La Fundación The Document Foundation publica guías completas en español,
+gratuitas, para cada programa de LibreOffice \cite{libreoffice-guias}.
 \end{nota}
+
+\fuentes

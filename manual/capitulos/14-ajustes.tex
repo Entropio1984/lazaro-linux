@@ -1,5 +1,110 @@
 \chapter{Ajustes del equipo}\label{cap:14-ajustes}
 
-\begin{nota}
-Capítulo en preparación.
-\end{nota}
+En XFCE todos los ajustes están en \menu{Aplicaciones > Configuración >
+Gestor de configuración}. En los demás escritorios: \menu{Sistema >
+Preferencias} (MATE), \menu{Preferencias > Configuración de LXQt} (LXQt),
+\emph{Configuración} (GNOME) o \emph{Preferencias del sistema} (KDE
+Plasma).
+
+\captura{gestor-configuracion}{El Gestor de configuración de XFCE}
+
+\section{Pantalla}
+
+\menu{Configuración > Pantalla} cambia la resolución (el tamaño de todo en
+la pantalla) y, si conectas un monitor o un proyector, si se ve lo mismo
+en los dos o si se extiende el escritorio.
+
+\begin{consejo}
+Si todo se ve demasiado pequeño en una pantalla grande, en lugar de bajar
+la resolución sube el tamaño de letra en \menu{Apariencia > Tipos de
+letra} y, en \menu{Apariencia > Configuración}, la \emph{escala}.
+\end{consejo}
+
+\section{Sonido}
+
+El icono del altavoz de la bandeja sube y baja el volumen. Con clic
+derecho, \menu{Configuración del sonido} muestra todas las salidas y
+entradas: elige ahí los audífonos, el parlante Bluetooth o el micrófono
+para las videollamadas.
+
+\section{Teclado y ratón}
+
+\begin{itemize}
+  \item \menu{Configuración > Teclado > Distribución} cambia el idioma del
+        teclado. Para usar dos (por ejemplo, español e inglés), agrégalos
+        aquí y elige una combinación para cambiar entre ellos.
+  \item \menu{Configuración > Ratón y panel táctil}: velocidad del puntero,
+        \emph{tocar para hacer clic} y el desplazamiento con dos dedos en el
+        touchpad.
+\end{itemize}
+
+\section{Fecha y hora}
+
+La hora se ajusta sola por internet. Para cambiar la zona horaria, haz
+clic derecho en el reloj del panel, \menu{Propiedades}. Si la hora está mal
+después de usar Windows en el mismo equipo, mira la
+sección~\ref{sec:prob-hora}.
+
+\section{Idioma}
+
+Lázaro queda en el idioma que elegiste al instalar, y todos los programas
+lo siguen. Cambiar el idioma de un sistema ya instalado todavía no tiene un
+botón: si lo necesitas, pide ayuda (capítulo~\ref{cap:17-pedir-ayuda}).
+Para escribir en otro idioma no hace falta cambiarlo: basta con agregar
+otra distribución de teclado (arriba) y, en LibreOffice, elegir el idioma
+del texto en \menu{Herramientas > Idioma}.
+
+\section{Usuarios y contraseñas}
+
+\subsection{Cambiar tu contraseña}
+Abre una terminal, escribe \texttt{passwd} y pulsa \keys{Enter}. Pide la
+contraseña actual y dos veces la nueva. Mientras escribes no se ve nada: es
+normal.
+
+\subsection{Entrar sin contraseña al encender}
+Lázaro recuerda esta opción en el archivo \texttt{/etc/lazaro/autologin}.
+Para dejar de entrar solo, en la terminal:
+\begin{terminal}
+doas rm /etc/lazaro/autologin
+\end{terminal}
+Para empezar a entrar solo con tu usuario:
+\begin{terminal}
+echo "\$USER" | doas tee /etc/lazaro/autologin
+\end{terminal}
+En los dos casos, reinicia para que tome efecto.
+
+\subsection{Otra persona en el mismo equipo}
+Cada persona puede tener su propio usuario, con su carpeta y su
+configuración. En la terminal, cambiando \texttt{ana} por el nombre:
+\begin{terminal}
+doas adduser ana
+\end{terminal}
+
+\subsection{Qué es doas}
+Algunas órdenes cambian el sistema y necesitan permiso de administrador.
+Se escriben con \texttt{doas} delante, que pide tu contraseña. Es lo mismo
+que el \emph{sudo} de otras distribuciones o el \enquote{Ejecutar como
+administrador} de Windows. Usa \texttt{doas} solo con órdenes que
+entiendas o que vengan de una fuente de confianza, como este manual.
+
+\section{Energía y batería}
+
+\menu{Configuración > Gestor de energía} decide cuándo se apaga la
+pantalla, qué pasa al cerrar la tapa del portátil y a qué nivel de batería
+se suspende. Si el equipo tiene batería, Lázaro instala los \emph{modos de
+energía}: en el icono de la batería se elige entre \emph{ahorro},
+\emph{equilibrado} y \emph{rendimiento}.
+
+\section{Bluetooth}
+
+En KDE Plasma y GNOME, el Bluetooth está en la configuración del sistema y
+en el menú de arriba a la derecha (GNOME) o en la bandeja (Plasma). En
+XFCE, MATE y LXQt, instala desde la tienda el \emph{Gestor de Bluetooth}
+(Blueman): agrega un icono a la bandeja para buscar y emparejar
+audífonos, parlantes, ratones y teclados.
+
+Para emparejar, pon el aparato en modo de emparejamiento (casi siempre,
+manteniendo apretado su botón de encendido hasta que parpadee) y elígelo
+en la lista.
+
+\fuentes

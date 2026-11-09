@@ -1,5 +1,119 @@
 \chapter{Instalar, quitar y actualizar programas}\label{cap:13-programas}
 
+En Lázaro no se descargan programas de páginas web, como en Windows. Todo
+se instala desde fuentes revisadas y firmadas: los \termino{repositorios} de
+Alpine y la tienda \termino{Flathub}. Así es mucho más difícil que se cuele
+un virus, y todo se actualiza junto con un solo clic.
+
+\section{La tienda de aplicaciones}\label{sec:tienda}
+
+\begin{pasos}
+  \item Abre la tienda: \menu{Aplicaciones > Sistema > Software}
+        (\emph{Discover} en KDE Plasma y LXQt).
+  \item Busca el programa por su nombre o por lo que hace, por ejemplo
+        \texttt{dibujo} o \texttt{pdf}.
+  \item Abre su página, lee la descripción y pulsa \menu{Instalar}.
+  \item Escribe tu contraseña. Al terminar, el programa aparece en el menú
+        de aplicaciones.
+\end{pasos}
+
+\captura{tienda}{La tienda de aplicaciones (GNOME Software)}
+
+Para quitar un programa, búscalo en la tienda (o en la pestaña
+\emph{Instalado}) y pulsa \menu{Desinstalar}.
+
+\subsection{Dos orígenes: Alpine y Flathub}
+La tienda muestra programas de dos lugares:
+\begin{description}
+  \item[Alpine] los paquetes oficiales de Alpine \cite{alpine-apk}. Son
+    pequeños y se integran perfecto con el sistema.
+  \item[Flathub] una tienda con miles de programas de escritorio,
+    empaquetados para funcionar en cualquier Linux \cite{flathub,flatpak-docs}.
+    Ocupan más espacio, pero suelen estar más al día. Programas como
+    Google Chrome, Spotify, Zoom o Telegram vienen de aquí.
+\end{description}
+Si un programa aparece dos veces, cualquiera sirve. En un disco pequeño,
+prefiere la de Alpine.
+
 \begin{nota}
-Capítulo en preparación.
+Flathub está disponible si al instalar dejaste marcado \emph{Flatpak +
+tienda Flathub}. Si lo desmarcaste, la tienda solo muestra programas de
+Alpine.
 \end{nota}
+
+\subsection{Programas recomendados}
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}lX}
+\toprule
+Para & Busca \\
+\midrule
+Retocar fotos & GIMP (completo), Pinta (sencillo) \\
+Unir y ordenar PDF & PDF Arranger \\
+Copias de seguridad & Déjà Dup \\
+Mensajería & Telegram; WhatsApp funciona en \url{https://web.whatsapp.com} \\
+Videollamadas & Zoom; Meet y Jitsi funcionan en el navegador \\
+Música en línea & Spotify \\
+Grabar la pantalla & SimpleScreenRecorder, OBS Studio \\
+Juegos sencillos & Aisleriot (cartas), Mines, Sudoku \\
+Leer libros electrónicos & Foliate \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Actualizar}\label{sec:actualizar}
+
+Las actualizaciones corrigen fallas de seguridad y errores, y a veces
+traen mejoras. Lázaro te avisa: cuando hay novedades, aparece un
+\textbf{icono en la bandeja} del panel y una notificación.
+
+\begin{pasos}
+  \item Haz clic en el icono o en \menu{Actualizar ahora} en la
+        notificación. También puedes abrir \menu{Aplicaciones > Sistema >
+        Actualizar el sistema} cuando quieras.
+  \item Escribe tu contraseña.
+  \item Espera a que termine. Actualiza tanto los programas de Alpine como
+        los de Flathub.
+  \item Si al final dice \emph{Reinicio necesario}, reinicia cuando puedas:
+        se instaló un kernel nuevo.
+\end{pasos}
+
+En KDE Plasma las actualizaciones se avisan y se instalan desde Discover.
+
+\begin{cuidado}
+No apagues el equipo mientras se actualiza. En un portátil, conéctalo a
+la corriente antes de empezar.
+\end{cuidado}
+
+\subsection{Una versión nueva de Alpine}
+Alpine saca una versión nueva dos veces al año, y cada una recibe
+actualizaciones de seguridad durante un tiempo limitado
+\cite{alpine-releases}. Cuando hay una versión nueva, \emph{Actualizar el
+sistema} lo pregunta antes de empezar:
+\begin{itemize}
+  \item \menu{Cambiar a Alpine X.Y} pasa a la versión nueva. Descarga
+        bastante y puede tardar: deja el equipo conectado a la corriente y a
+        internet, y reinicia al terminar.
+  \item \menu{Solo actualizar} hace la actualización de siempre y lo vuelve
+        a preguntar la próxima vez.
+\end{itemize}
+
+\begin{consejo}
+Haz una copia de tus archivos antes de cambiar de versión
+(sección~\ref{sec:copias}). Casi nunca hace falta, pero es el mejor
+momento para tener una al día.
+\end{consejo}
+
+\section{Desde la terminal}
+
+Todo lo anterior se puede hacer también escribiendo órdenes con
+\texttt{apk}, el gestor de paquetes de Alpine (capítulo~\ref{cap:18-terminal}):
+
+\begin{terminal}
+apk search editor            \# buscar\\
+doas apk add gimp            \# instalar\\
+doas apk del gimp            \# quitar\\
+doas apk upgrade             \# actualizar todo lo de Alpine\\
+flatpak update               \# actualizar lo de Flathub
+\end{terminal}
+
+\fuentes
