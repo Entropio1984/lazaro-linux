@@ -29,7 +29,8 @@ if [ -z "${SF_LLAVE:-}" ]; then
 fi
 
 llave="$(mktemp)"
-trap 'rm -f "$llave"' EXIT
+carpetas="$(mktemp -d)"
+trap 'rm -rf "$llave" "$carpetas"' EXIT
 # El secreto puede venir pegado con saltos de línea de Windows.
 printf '%s\n' "$SF_LLAVE" | tr -d '\r' > "$llave"
 chmod 600 "$llave"
@@ -39,12 +40,18 @@ ssh-keyscan -t rsa,ecdsa,ed25519 frs.sourceforge.net >> "$HOME/.ssh/known_hosts"
 ls -l "$origen"
 set --
 [ "${SF_SIN_REEMPLAZAR:-}" != 1 ] || set -- --ignore-existing
+# El rsync de SourceForge (3.1) no conoce --mkpath: las carpetas que
+# falten (por ejemplo Versiones/X.Y) se crean antes copiando un árbol de
+# carpetas vacías; las que ya existen no se tocan.
+mkdir -p "$carpetas/$destino"
+ssh_sf="ssh -i $llave -o BatchMode=yes -o ServerAliveInterval=30"
+raiz="$SF_USUARIO@frs.sourceforge.net:/home/frs/project/$SF_PROYECTO"
 # --partial: una subida cortada continúa donde quedó en el reintento.
 intento=1
 while :; do
-	if rsync -rtv --partial --mkpath --chmod=F644 "$@" \
-		-e "ssh -i $llave -o BatchMode=yes -o ServerAliveInterval=30" \
-		"$origen"/ "$SF_USUARIO@frs.sourceforge.net:/home/frs/project/$SF_PROYECTO/$destino/"; then
+	if rsync -r -e "$ssh_sf" "$carpetas"/ "$raiz/" \
+		&& rsync -rtv --partial --chmod=F644 "$@" -e "$ssh_sf" \
+			"$origen"/ "$raiz/$destino/"; then
 		break
 	fi
 	if [ "$intento" -ge 4 ]; then
