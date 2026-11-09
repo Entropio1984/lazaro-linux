@@ -1,5 +1,81 @@
 \chapter{La sesión de prueba}\label{cap:03-sesion-de-prueba}
 
+Después del menú aparece el logo de Lázaro con un pulso y, al cabo de uno
+o dos minutos (más en equipos lentos), un escritorio con el instalador
+abierto. Es la \termino{sesión de prueba} o \emph{sesión live}: Lázaro
+funcionando desde el USB y la memoria del equipo, \textbf{sin tocar el
+disco}. Nada de lo que hagas aquí cambia tu equipo.
+
+\captura{sesion-prueba}{La sesión de prueba, con el instalador abierto}
+
+\section{Para qué sirve}
+
+Es la ocasión de comprobar que el equipo se lleva bien con Lázaro antes
+de instalarlo. Cierra el instalador (la \texttt{X} de su esquina) y prueba:
+
+\begin{itemize}
+  \item \textbf{El wifi.} Haz clic en el icono de red de la barra, elige tu
+        red y escribe la clave. Si no aparece ninguna red, mira
+        la sección~\ref{sec:prob-wifi}.
+  \item \textbf{El sonido.} Abre un video en Firefox y sube el volumen desde
+        el icono del altavoz.
+  \item \textbf{La pantalla.} Que se vea nítida y con el tamaño correcto.
+  \item \textbf{El touchpad y el teclado}, incluidas la ñ y las tildes.
+\end{itemize}
+
+Para volver al instalador, haz doble clic en el icono \textbf{Instalar Lázaro
+Linux} del escritorio o búscalo en el menú de aplicaciones. En el escritorio
+también está el \textbf{Manual de Lázaro}, este mismo libro.
+
+\begin{cuidado}
+Lo que guardes en la sesión de prueba se pierde al apagar. Si descargas o
+creas algo que quieras conservar, cópialo a otro pendrive antes.
+\end{cuidado}
+
 \begin{nota}
-Capítulo en preparación.
+La sesión de prueba va más lenta que el sistema instalado: todo se lee del
+USB y vive en la memoria. Si aquí va aceptable, instalado irá mejor.
 \end{nota}
+
+\section{Avisos que pueden aparecer}
+
+\begin{description}
+  \item[Aviso de la tarjeta gráfica.] Lázaro revisa la tarjeta de video
+    antes de mostrar el escritorio. Con algunas tarjetas NVIDIA antiguas
+    usa una imagen básica para evitar la pantalla negra, y lo avisa. No es
+    un error: el equipo funciona igual, con menos efectos. Detalles en la
+    sección~\ref{sec:nvidia}.
+  \item[\enquote{Falta algo para tu hardware}.] Algunos wifi muy viejos
+    necesitan un firmware que no se puede incluir en el USB sin permiso. El
+    aviso te ofrece descargarlo o, en los Intel antiguos, aceptar su
+    licencia. Acéptalo para tener wifi antes de instalar.
+  \item[Wifi Broadcom.] Muchos portátiles de 2008 a 2015 traen un wifi
+    Broadcom que solo funciona con un controlador cerrado. En la sesión de
+    prueba ese wifi no aparece: conéctate por cable o comparte el internet
+    del celular por USB. Al instalar, Lázaro lo detecta y lo deja
+    funcionando.
+\end{description}
+
+\section{Si el escritorio no llega a abrir}\label{sec:instalar-texto}
+
+En equipos con muy poca memoria o una tarjeta de video problemática, puede
+que el escritorio no aparezca. Lázaro tiene un plan B: si a los 5 minutos
+no apareció, la pantalla pasa sola a modo texto con un aviso.
+
+\begin{pasos}
+  \item Donde dice \texttt{login:}, escribe \texttt{lazaro} y pulsa
+        \keys{Enter}. No pide contraseña.
+  \item Si quieres internet durante la instalación y no tienes cable,
+        conecta el wifi escribiendo (con las comillas):
+\begin{terminal}
+nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"
+\end{terminal}
+  \item Escribe \texttt{doas lazaro-instalar-texto} y pulsa \keys{Enter}.
+\end{pasos}
+
+Es el mismo instalador, con menús que se manejan con las flechas, la barra
+espaciadora (para marcar) y \keys{Enter}. Hace las mismas preguntas que el
+gráfico, en el mismo orden (capítulo~\ref{cap:04-instalar}), y no borra nada
+hasta que confirmas el resumen.
+
+\fuentes

@@ -81,10 +81,10 @@
 \recuadro{nota}{nota}{Para saber más}
 
 % Pasos numerados grandes: \begin{pasos} \item ... \end{pasos}
+\newcommand{\numpaso}[1]{\tcbox[on line,colback=pulso,colframe=pulso,coltext=white,
+  boxsep=1pt,left=3pt,right=3pt,top=1pt,bottom=1pt,arc=2pt]{\sffamily\bfseries #1}}
 \newlist{pasos}{enumerate}{1}
-\setlist[pasos]{label=\protect\tcbox[on line,colback=pulso,colframe=pulso,coltext=white,
-  boxsep=1pt,left=3pt,right=3pt,top=1pt,bottom=1pt,arc=2pt]{\sffamily\bfseries\arabic*},
-  leftmargin=2.2em,itemsep=0.5em}
+\setlist[pasos]{label=\protect\numpaso{\arabic*},leftmargin=2.2em,itemsep=0.5em}
 
 % Lo que se escribe en la terminal.
 \newtcolorbox{terminal}{enhanced,colback=tinta,colupper=white,boxrule=0pt,arc=2pt,

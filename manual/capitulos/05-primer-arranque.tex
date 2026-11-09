@@ -1,5 +1,65 @@
 \chapter{El primer arranque}\label{cap:05-primer-arranque}
 
+\section{Qué vas a ver}
+
+Al encender aparece el logo de Lázaro con el pulso y, después, la pantalla
+para entrar: elige tu usuario y escribe la contraseña. Si marcaste
+\emph{Iniciar sesión automáticamente}, entra solo al escritorio.
+
 \begin{nota}
-Capítulo en preparación.
+Si en el disco también está Windows, al encender aparece primero un menú
+negro, llamado \termino{GRUB}. La primera línea arranca Lázaro (se elige sola
+a los pocos segundos); para Windows, baja con las flechas hasta
+\emph{Windows Boot Manager} y pulsa \keys{Enter}.
 \end{nota}
+
+\section{Lo que pasa solo en los primeros minutos}
+
+\begin{itemize}
+  \item \textbf{La hora.} Si aparece corrida, se corrige sola en unos minutos
+        al conectarse a internet.
+  \item \textbf{Las aplicaciones de Flathub} que marcaste (OnlyOffice,
+        Chrome, Brave) se descargan en segundo plano cuando hay internet.
+        Dales unos minutos; aparecerán en el menú.
+  \item \textbf{Las herramientas de Lázaro} se conectan a su repositorio para
+        recibir mejoras con las actualizaciones normales
+        (capítulo~\ref{cap:15-herramientas}).
+\end{itemize}
+
+\section{Si instalaste la Ligera sin internet}\label{sec:primer-arranque-texto}
+
+Con la edición Ligera, una parte de la configuración final necesita
+internet. Si instalaste sin conexión, el equipo arranca en una
+\textbf{pantalla de texto} con un aviso. No es un error:
+
+\begin{pasos}
+  \item Conecta el cable de red, si tienes. Si no, entra con tu usuario y
+        contraseña y conecta el wifi escribiendo:
+\begin{terminal}
+nmcli device wifi connect "NOMBRE DE LA RED" --ask
+\end{terminal}
+        Te pide la clave del wifi. Mientras la escribes no se ve nada en la
+        pantalla: es normal.
+  \item Espera. En unos minutos la configuración termina sola y aparece la
+        pantalla de inicio. No hace falta reiniciar.
+\end{pasos}
+
+\section{Primeros pasos recomendados}
+
+\begin{pasos}
+  \item \textbf{Conecta el wifi} desde el icono de red de la barra
+        (capítulo~\ref{cap:07-internet}). Se recuerda para siempre.
+  \item \textbf{Actualiza.} Si aparece el icono de actualizaciones en la
+        barra, haz clic y sigue los pasos (sección~\ref{sec:actualizar}).
+  \item \textbf{Prueba la impresora}, si tienes (capítulo~\ref{cap:12-imprimir}).
+  \item \textbf{Trae tus archivos} de la copia que hiciste
+        (capítulo~\ref{cap:11-archivos}).
+  \item \textbf{Abre Firefox} e inicia sesión en tu correo y tus cuentas.
+  \item \textbf{Hojea la Parte II} de este manual para conocer lo que
+        trae Lázaro.
+\end{pasos}
+
+El \textbf{Manual de Lázaro} queda siempre en el menú de aplicaciones, por
+si lo necesitas.
+
+\fuentes

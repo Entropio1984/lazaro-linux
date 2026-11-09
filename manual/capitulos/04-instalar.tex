@@ -1,5 +1,178 @@
 \chapter{Instalar paso a paso}\label{cap:04-instalar}
 
+El instalador de Lázaro es \termino{Calamares}, el mismo que usan muchas
+otras distribuciones \cite{calamares}. Hace unas pocas preguntas y después
+trabaja solo. Puedes ir hacia atrás con el botón \menu{Atrás} cuantas veces
+quieras: \textbf{no se toca el disco hasta que pulsas \menu{Instalar}} en el
+resumen final.
+
+\begin{consejo}
+Si puedes, conecta el equipo a internet antes de empezar (cable o wifi
+desde el icono de red). No es obligatorio, pero con la edición Ligera
+algunos escritorios y programas se descargan, y la instalación queda
+completa de una vez.
+\end{consejo}
+
+\section{Bienvenida e idioma}
+
+\captura{instalador-bienvenida}{La pantalla de bienvenida del instalador}
+
+Elige el idioma (ya viene \emph{Español}) y pulsa \menu{Siguiente}. Si
+aparece un aviso en amarillo, léelo: por ejemplo, que el equipo no está
+enchufado a la corriente. Un aviso en rojo, en cambio, impide seguir: el
+disco tiene menos de 10 GB o la memoria es menor de 1 GB.
+
+\section{Ubicación}
+
+Haz clic en tu país en el mapa, o elige la región y la zona en las listas.
+De esto depende la hora del equipo y el formato de las fechas, los números
+y la moneda.
+
+\section{Teclado}
+
+Elige la distribución de tu teclado. Para la mayoría de los teclados de
+América Latina es \emph{Español (Latinoamérica)}; para los comprados en
+España, \emph{Español}. Hay un recuadro para probar: escribe \texttt{ñ},
+\texttt{@} y unas tildes y comprueba que salen bien.
+
+\begin{consejo}
+¿No sabes cuál es? Mira la tecla a la derecha de la \texttt{L}: si dice
+\texttt{Ñ} y la tecla de al lado tiene una llave \texttt{\{} y \texttt{[}, suele
+ser Latinoamérica; si tiene tildes (\texttt{´} y \texttt{¨}), suele ser España.
+\end{consejo}
+
+\section{Escritorio}\label{sec:elegir-escritorio}
+
+El \termino{escritorio} es el aspecto del sistema: la barra, el menú y la
+forma de las ventanas. Lázaro revisa tu equipo y deja marcado el que mejor
+le va según la memoria y la tarjeta de video. \textbf{Si no sabes cuál
+elegir, deja el que viene marcado.}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}lX}
+\toprule
+Escritorio & Para quién \\
+\midrule
+XFCE & Rápido y parecido a Windows. Bueno para casi todos. Es el de fábrica. \\
+LXQt & El más liviano, para equipos con muy poca memoria (menos de 2 GB). \\
+MATE & Clásico y estable, parecido a XFCE. \\
+KDE Plasma & El más completo y vistoso; pide un equipo más nuevo. \\
+GNOME & Moderno y distinto a Windows; pide un equipo más nuevo. \\
+XFCE Wayland & XFCE con tecnología gráfica nueva, todavía en prueba. \\
+Sway & Para quien maneja todo con el teclado. No recomendado para empezar. \\
+Sin escritorio & Solo pantalla de texto, para servidores. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=0.48\textwidth]{escritorio-xfce}\hfill
+\includegraphics[width=0.48\textwidth]{escritorio-lxqt}\\[0.6em]
+\includegraphics[width=0.48\textwidth]{escritorio-mate}\hfill
+\includegraphics[width=0.48\textwidth]{escritorio-plasma}
+\caption{XFCE, LXQt, MATE y KDE Plasma, tal como se ven en el instalador}
+\end{figure}
+
+Con la edición Ligera, GNOME y KDE Plasma se descargan durante la
+instalación: necesitan internet. Los demás vienen en el USB. Con la
+Completa, todos vienen en el USB. Más adelante se puede cambiar de
+escritorio, pero es más sencillo elegir bien ahora. El
+capítulo~\ref{cap:06-escritorio} enseña a usar cada uno.
+
+\section{Software adicional}\label{sec:software-adicional}
+
+Una lista de casillas con programas para agregar. Si no sabes, deja lo
+que viene marcado.
+
+\begin{description}
+  \item[Fastfetch y Btop] muestran en la terminal los datos del equipo y
+    cuánto procesador y memoria se está usando.
+  \item[VLC] reproduce casi cualquier video o música \cite{vlc}.
+  \item[YouTube ligero] para ver YouTube sin abrir el navegador, gastando
+    mucho menos (sección~\ref{sec:youtube-ligero}).
+  \item[LibreOffice] procesador de textos, hojas de cálculo y
+    presentaciones, como Word, Excel y PowerPoint
+    (capítulo~\ref{cap:08-documentos}).
+  \item[Flatpak + tienda Flathub] una tienda con miles de programas gratuitos
+    (capítulo~\ref{cap:13-programas}). Recomendado.
+  \item[OnlyOffice] otra alternativa a Office, muy parecida en su aspecto.
+    Ocupa bastante espacio.
+  \item[Google Chrome y Brave] otros navegadores. Firefox viene siempre.
+\end{description}
+
 \begin{nota}
-Capítulo en preparación.
+OnlyOffice, Chrome y Brave vienen de Flathub. Con la edición Ligera se
+instalan solos en segundo plano unos minutos después del primer arranque,
+cuando el equipo tenga internet. Con la Completa, OnlyOffice y Brave vienen
+en el USB; Chrome siempre se descarga, porque Google no permite
+incluirlo.
 \end{nota}
+
+\section{Disco}\label{sec:particiones}
+
+Aquí se decide dónde se instala Lázaro. Arriba, elige el disco (si el
+equipo tiene más de uno, fíjate en el tamaño). Abajo aparecen las opciones:
+
+\begin{description}
+  \item[Borrar disco] Lázaro ocupa el disco entero. Es lo más sencillo y
+    lo recomendado si ya hiciste la copia de tus archivos.
+  \item[Instalar junto a] aparece si el disco ya tiene otro sistema, como
+    Windows. Deja los dos: arrastra la barra para repartir el espacio. Al
+    encender, un menú te dejará elegir cuál usar.
+  \item[Reemplazar una partición] instala Lázaro en lugar de una de las
+    partes del disco, sin tocar las demás.
+  \item[Particionado manual] para quien sabe lo que hace.
+\end{description}
+
+\captura{instalador-disco}{La pantalla del disco, con la opción Borrar disco}
+
+\begin{cuidado}
+\textbf{Borrar disco} borra todo lo que tiene: Windows, fotos, documentos.
+Con \textbf{Instalar junto a}, Windows queda, pero achicar su espacio tiene
+un riesgo pequeño: haz la copia de todas formas. Antes de instalar junto
+a Windows, apágalo con \enquote{Reiniciar} (no con \enquote{Apagar}) o
+desactiva el \emph{inicio rápido} de Windows; si no, el instalador puede no
+poder achicarlo.
+\end{cuidado}
+
+\section{Usuario}
+
+\begin{description}
+  \item[Tu nombre] como quieres que aparezca, por ejemplo \emph{María
+    Pérez}.
+  \item[Nombre de usuario] el nombre corto para entrar, en minúsculas y sin
+    espacios ni tildes (se completa solo, por ejemplo \texttt{maria}).
+  \item[Nombre del equipo] cómo se verá en la red. Puedes dejar el que
+    propone.
+  \item[Contraseña] la que pedirá el equipo para entrar y para cambios
+    importantes. Escríbela dos veces.
+  \item[Iniciar sesión automáticamente] si la marcas, el equipo entra
+    directo al escritorio sin pedir la contraseña al encender. Cómodo en un
+    equipo de casa que usa una sola persona.
+\end{description}
+
+\begin{consejo}
+Elige una contraseña que recuerdes pero que no sea fácil de adivinar: por
+ejemplo, tres o cuatro palabras sueltas con un número
+\cite{incibe-contrasenas}. Anótala en un papel guardado en un lugar
+seguro. Sin ella no podrás instalar programas ni actualizar.
+\end{consejo}
+
+\section{Resumen e instalación}
+
+La última pantalla muestra todo lo que elegiste. Revísalo con calma, sobre
+todo el disco. Pulsa \menu{Instalar} y confirma.
+
+Mientras instala, una presentación cuenta qué trae Lázaro. Puede tardar
+desde 15 minutos hasta más de una hora en equipos lentos, o si se
+descargan cosas de internet. No apagues el equipo ni saques el USB.
+
+Al terminar aparece \emph{Todo listo}. Marca \menu{Reiniciar ahora}, pulsa
+\menu{Hecho} y, cuando la pantalla se apague, \textbf{saca el USB}.
+
+\captura{instalador-listo}{La instalación terminó}
+
+Si la instalación se detiene con un error, no reinicies todavía: mira
+la sección~\ref{sec:prob-instalacion}.
+
+\fuentes
