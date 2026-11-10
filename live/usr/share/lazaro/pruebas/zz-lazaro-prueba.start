@@ -99,6 +99,27 @@ idioma_sesion() {
 			echo "LAZARO-YOUTUBE-NO$falta"
 		fi
 	fi
+	# Tienda de aplicaciones: el servicio que usa GNOME Software para los
+	# paquetes de Alpine (apk-polkit-server) activo y en marcha, y la
+	# lista de programas para instalar (catálogo AppStream) descargada.
+	# Solo cuando desktop-postinstall.sh ya corrió y hubo internet.
+	if [ ! -e /etc/runlevels/default/lazaro-primer-arranque ] \
+		&& { command -v gnome-software || command -v plasma-discover; } >/dev/null 2>&1; then
+		falta=""
+		if command -v gnome-software >/dev/null 2>&1; then
+			[ -e /etc/runlevels/default/apk-polkit-server ] || falta="$falta servicio-sin-activar"
+			rc-service apk-polkit-server status >/dev/null 2>&1 || falta="$falta servicio-detenido"
+		fi
+		[ -x /etc/periodic/hourly/alpine-tienda-catalogo ] || falta="$falta sin-tarea-diaria"
+		programas="$(appstreamcli status 2>/dev/null | sed -n 's/.* \([0-9][0-9]*\) software components.*/\1/p')"
+		[ "${programas:-0}" -ge 300 ] || falta="$falta catalogo-con-${programas:-0}-programas"
+		if [ -z "$falta" ]; then
+			echo "LAZARO-TIENDA-OK $programas programas"
+		else
+			echo "LAZARO-TIENDA-NO$falta"
+			ls -la /var/lib/swcatalog/xml 2>&1 | head -n 5
+		fi
+	fi
 	if [ -z "$ajenos" ]; then
 		echo "LAZARO-HOME-OK"
 	else
