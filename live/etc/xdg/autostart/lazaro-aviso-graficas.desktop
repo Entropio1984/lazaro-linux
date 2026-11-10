@@ -1,6 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Aviso de tarjeta gráfica
+Name[en]=Graphics card notice
+Name[pt_BR]=Aviso da placa de vídeo
 Exec=lazaro-graficas --aviso
 Terminal=false
 NoDisplay=true

@@ -49,6 +49,9 @@
 
 set -eu
 
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
 SYS="${LAZARO_SYS:-/sys}"
 PROC="${LAZARO_PROC:-/proc}"
 RAIZ=""
@@ -374,61 +377,61 @@ revisar() {
 	en_marcha() { [ -z "$RAIZ" ] && [ "$act" = si ]; }
 
 	if ! sirve_preempt; then
-		linea no-aplica preempt "Respuesta del escritorio: el kernel no tiene el modo dinámico (o no hay escritorio)"
+		linea no-aplica preempt "$(_ 'Respuesta del escritorio: el kernel no tiene el modo dinámico (o no hay escritorio)')"
 	elif cmdline_tiene preempt=full && [ -z "$RAIZ" ]; then
-		linea aplicado preempt "Respuesta del escritorio: el kernel atiende antes a las ventanas (preempt=full)"
+		linea aplicado preempt "$(_ 'Respuesta del escritorio: el kernel atiende antes a las ventanas (preempt=full)')"
 	elif [ "$act" = si ]; then
-		linea pendiente preempt "Respuesta del escritorio (preempt=full): se activa al reiniciar"
+		linea pendiente preempt "$(_ 'Respuesta del escritorio (preempt=full): se activa al reiniciar')"
 	else
-		linea pendiente preempt "Respuesta del escritorio: el kernel atendería antes a las ventanas (preempt=full)"
+		linea pendiente preempt "$(_ 'Respuesta del escritorio: el kernel atendería antes a las ventanas (preempt=full)')"
 	fi
 
 	if ! sirve_memoria; then
-		linea no-aplica memoria "Memoria: el kernel no tiene Multi-Gen LRU"
+		linea no-aplica memoria "$(_ 'Memoria: el kernel no tiene Multi-Gen LRU')"
 	elif en_marcha && [ "$(leer "$SYS/kernel/mm/lru_gen/min_ttl_ms")" = "$MGLRU_TTL" ]; then
-		linea aplicado memoria "Memoria: Multi-Gen LRU con protección contra congelones al quedarse sin RAM"
+		linea aplicado memoria "$(_ 'Memoria: Multi-Gen LRU con protección contra congelones al quedarse sin RAM')"
 	else
-		linea pendiente memoria "Memoria: protección contra congelones al quedarse sin RAM (Multi-Gen LRU)"
+		linea pendiente memoria "$(_ 'Memoria: protección contra congelones al quedarse sin RAM (Multi-Gen LRU)')"
 	fi
 
 	if [ "$act" = si ] && [ -e "$RAIZ/$SYSCTL_REL" ]; then
-		linea aplicado escritura "Discos y pendrives: copiar archivos grandes no congela el escritorio"
+		linea aplicado escritura "$(_ 'Discos y pendrives: copiar archivos grandes no congela el escritorio')"
 	else
-		linea pendiente escritura "Discos y pendrives: que copiar archivos grandes no congele el escritorio"
+		linea pendiente escritura "$(_ 'Discos y pendrives: que copiar archivos grandes no congele el escritorio')"
 	fi
 
 	if ! sirve_paginas; then
-		linea no-aplica paginas "Páginas gigantes: con más de 4 GB de RAM no hace falta cambiarlas"
+		linea no-aplica paginas "$(_ 'Páginas gigantes: con más de 4 GB de RAM no hace falta cambiarlas')"
 	elif en_marcha && grep -q '\[madvise\]' "$SYS/kernel/mm/transparent_hugepage/enabled" 2>/dev/null; then
-		linea aplicado paginas "Páginas gigantes solo para quien las pide: ahorra memoria"
+		linea aplicado paginas "$(_ 'Páginas gigantes solo para quien las pide: ahorra memoria')"
 	else
-		linea pendiente paginas "Páginas gigantes solo para quien las pide: ahorra memoria"
+		linea pendiente paginas "$(_ 'Páginas gigantes solo para quien las pide: ahorra memoria')"
 	fi
 
 	drv="$(cpufreq_driver)"
 	if [ -z "$drv" ]; then
-		linea no-aplica cpu "Procesador: el equipo no deja cambiar su velocidad"
+		linea no-aplica cpu "$(_ 'Procesador: el equipo no deja cambiar su velocidad')"
 	elif [ "$drv" != acpi-cpufreq ]; then
-		linea no-aplica cpu "Procesador: lo maneja $drv junto con el perfil de energía; no hace falta tocarlo"
+		linea no-aplica cpu "$(printf "$(_ 'Procesador: lo maneja %s junto con el perfil de energía; no hace falta tocarlo')" "$drv")"
 	elif [ "$(cpufreq_gov)" = schedutil ]; then
-		linea aplicado cpu "Procesador: sube la velocidad en cuanto hay trabajo (schedutil)"
+		linea aplicado cpu "$(_ 'Procesador: sube la velocidad en cuanto hay trabajo (schedutil)')"
 	elif sirve_cpu; then
-		linea pendiente cpu "Procesador: que suba la velocidad en cuanto hay trabajo (schedutil)"
+		linea pendiente cpu "$(_ 'Procesador: que suba la velocidad en cuanto hay trabajo (schedutil)')"
 	else
-		linea no-aplica cpu "Procesador: modo $(cpufreq_gov), elegido a mano; no se toca"
+		linea no-aplica cpu "$(printf "$(_ 'Procesador: modo %s, elegido a mano; no se toca')" "$(cpufreq_gov)")"
 	fi
 
 	if [ "$(conf_valor MITIGACIONES)" = apagadas ]; then
-		linea aplicado mitigaciones "Protecciones del procesador APAGADAS (más rápido, menos seguro al navegar)"
+		linea aplicado mitigaciones "$(_ 'Protecciones del procesador APAGADAS (más rápido, menos seguro al navegar)')"
 	else
-		linea info mitigaciones "Protecciones del procesador encendidas (recomendado)"
+		linea info mitigaciones "$(_ 'Protecciones del procesador encendidas (recomendado)')"
 	fi
 
 	# Lo que deja desktop-postinstall.sh: solo se informa.
 	if [ -e "$RAIZ/etc/runlevels/default/zram-init" ] || grep -q zram "$PROC/swaps" 2>/dev/null; then
-		linea info zram "Memoria comprimida (zram) activa"
+		linea info zram "$(_ 'Memoria comprimida (zram) activa')"
 	else
-		linea info zram "Memoria comprimida (zram) todavía no está activa (la pone la configuración final)"
+		linea info zram "$(_ 'Memoria comprimida (zram) todavía no está activa (la pone la configuración final)')"
 	fi
 }
 
@@ -495,38 +498,42 @@ ventana() {
 			s = ($1 == "aplicado") ? "✔" : ($1 == "pendiente") ? "○" : "·"
 			printf "%s %s\n", s, $3 }')"
 		if activo; then
-			b1="Quitar los ajustes"; a1=deshacer
+			b1="$(_ 'Quitar los ajustes')"; a1=deshacer
 		else
-			b1="Aplicar lo recomendado"; a1=aplicar
+			b1="$(_ 'Aplicar lo recomendado')"; a1=aplicar
 		fi
-		eleccion="$(zenity --list --title="Afinador" --width=640 --height=420 \
-			--text="Ajustes para que el equipo responda mejor. Todos se pueden quitar.\n\n$estado\n\n✔ puesto   ○ se puede poner   · no hace falta\nQué quieres hacer:" \
-			--column="Acción" --hide-header "$b1" "Protecciones del procesador (avanzado)" "Kernel Lázaro (experimental)" "Ver el informe del hardware" "Cerrar" 2>/dev/null)" || return 0
+		o_mit="$(_ 'Protecciones del procesador (avanzado)')"
+		o_ker="$(_ 'Kernel Lázaro (experimental)')"
+		o_inf="$(_ 'Ver el informe del hardware')"
+		o_cer="$(_ 'Cerrar')"
+		eleccion="$(zenity --list --title="$(_ 'Afinador')" --width=640 --height=420 \
+			--text="$(_ 'Ajustes para que el equipo responda mejor. Todos se pueden quitar.')\n\n$estado\n\n$(_ '✔ puesto   ○ se puede poner   · no hace falta')\n$(_ 'Qué quieres hacer:')" \
+			--column="$(_ 'Acción')" --hide-header "$b1" "$o_mit" "$o_ker" "$o_inf" "$o_cer" 2>/dev/null)" || return 0
 		case "$eleccion" in
 			"$b1")
 				if salida="$(como_root "$0" --"$a1" 2>&1)"; then
-					zenity --info --width=420 --title="Afinador" \
-						--text="Listo. Algunos ajustes se notan después de reiniciar." >/dev/null 2>&1 || true
+					zenity --info --width=420 --title="$(_ 'Afinador')" \
+						--text="$(_ 'Listo. Algunos ajustes se notan después de reiniciar.')" >/dev/null 2>&1 || true
 				else
-					zenity --error --width=420 --title="Afinador" \
-						--text="No se pudo.\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+					zenity --error --width=420 --title="$(_ 'Afinador')" \
+						--text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
 				fi ;;
-			"Protecciones del procesador (avanzado)")
+			"$o_mit")
 				if [ "$(conf_valor MITIGACIONES)" = apagadas ]; then
-					zenity --question --width=480 --title="Protecciones del procesador" --ok-label="Encenderlas" --cancel-label="Dejarlas apagadas" \
-						--text="Las protecciones del procesador están APAGADAS.\n\nRecomendado: encenderlas si usas el equipo para navegar, el banco o el correo." >/dev/null 2>&1 &&
+					zenity --question --width=480 --title="$(_ 'Protecciones del procesador')" --ok-label="$(_ 'Encenderlas')" --cancel-label="$(_ 'Dejarlas apagadas')" \
+						--text="$(_ 'Las protecciones del procesador están APAGADAS.\n\nRecomendado: encenderlas si usas el equipo para navegar, el banco o el correo.')" >/dev/null 2>&1 &&
 						como_root "$0" --mitigaciones no >/dev/null 2>&1 || true
 				else
-					zenity --question --width=520 --title="Protecciones del procesador" --ok-label="Apagarlas" --cancel-label="Dejarlas encendidas" \
-						--text="El kernel protege al procesador de fallos de diseño (Spectre, Meltdown y otros). Esas protecciones lo frenan un poco: en procesadores Intel de 2ª a 7ª generación, entre un 5 % y un 15 %.\n\nApagarlas lo hace más rápido, pero una página web maliciosa podría leer datos de otros programas, como contraseñas.\n\nApágalas solo si el equipo no se usa para navegar, el banco o el correo. Se aplica al reiniciar y se puede volver a encender aquí." >/dev/null 2>&1 &&
+					zenity --question --width=520 --title="$(_ 'Protecciones del procesador')" --ok-label="$(_ 'Apagarlas')" --cancel-label="$(_ 'Dejarlas encendidas')" \
+						--text="$(_ 'El kernel protege al procesador de fallos de diseño (Spectre, Meltdown y otros). Esas protecciones lo frenan un poco: en procesadores Intel de 2ª a 7ª generación, entre un 5 % y un 15 %.\n\nApagarlas lo hace más rápido, pero una página web maliciosa podría leer datos de otros programas, como contraseñas.\n\nApágalas solo si el equipo no se usa para navegar, el banco o el correo. Se aplica al reiniciar y se puede volver a encender aquí.')" >/dev/null 2>&1 &&
 						como_root "$0" --mitigaciones si >/dev/null 2>&1 || true
 				fi ;;
-			"Kernel Lázaro (experimental)")
+			"$o_ker")
 				lk=/usr/local/sbin/lazaro-kernel
 				[ -x "$lk" ] || lk=lazaro-kernel
 				"$lk" --ventana || true ;;
-			"Ver el informe del hardware")
-				perfil | zenity --text-info --width=720 --height=560 --title="Hardware del equipo" >/dev/null 2>&1 || true ;;
+			"$o_inf")
+				perfil | zenity --text-info --width=720 --height=560 --title="$(_ 'Hardware del equipo')" >/dev/null 2>&1 || true ;;
 			*) return 0 ;;
 		esac
 	done

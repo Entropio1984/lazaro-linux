@@ -23,7 +23,15 @@ import shutil
 import subprocess
 import sys
 
-NOMBRE = "Idioma y teclado"
+# Traducciones (idiomas/*.po junto a lazaro_texto.py). Sin ellas, español.
+sys.path.insert(0, os.environ.get("LAZARO_TEXTO_DIR", "/usr/share/lazaro"))
+try:
+    from lazaro_texto import _
+except ImportError:
+    def _(texto):
+        return texto
+
+NOMBRE = _("Idioma y teclado")
 ID_APP = "io.github.entropio1984.lazaro.Idioma"
 RAIZ = os.environ.get("LAZARO_IDIOMA_RAIZ", "/")
 PERFIL = "etc/profile.d/00-idioma.sh"
@@ -57,17 +65,17 @@ IDIOMAS = [
 
 # (distribución[:variante], nombre)
 TECLADOS = [
-    ("latam", "Español de Latinoamérica"),
-    ("es", "Español de España"),
-    ("es:cat", "Catalán"),
-    ("us", "Inglés (Estados Unidos)"),
-    ("us:intl", "Inglés internacional, con acentos (EE. UU. internacional)"),
-    ("gb", "Inglés (Reino Unido)"),
-    ("br", "Portugués de Brasil (ABNT2)"),
-    ("pt", "Portugués de Portugal"),
-    ("fr", "Francés"),
-    ("de", "Alemán"),
-    ("it", "Italiano"),
+    ("latam", _("Español de Latinoamérica")),
+    ("es", _("Español de España")),
+    ("es:cat", _("Catalán")),
+    ("us", _("Inglés (Estados Unidos)")),
+    ("us:intl", _("Inglés internacional, con acentos (EE. UU. internacional)")),
+    ("gb", _("Inglés (Reino Unido)")),
+    ("br", _("Portugués de Brasil (ABNT2)")),
+    ("pt", _("Portugués de Portugal")),
+    ("fr", _("Francés")),
+    ("de", _("Alemán")),
+    ("it", _("Italiano")),
 ]
 
 IDIOMA_PREDETERMINADO = "es_CO.UTF-8"
@@ -82,11 +90,11 @@ def existe(programa):
 
 
 def valido_idioma(codigo):
-    return any(codigo == c for c, _, _ in IDIOMAS)
+    return any(codigo == c for c, _n, _s in IDIOMAS)
 
 
 def valido_teclado(clave):
-    return any(clave == c for c, _ in TECLADOS)
+    return any(clave == c for c, _n in TECLADOS)
 
 
 def idioma_guardado():
@@ -109,7 +117,7 @@ def idioma_actual():
         if valido_idioma(codigo):
             return codigo
         base = codigo.split(".")[0]
-        for c, _, _ in IDIOMAS:
+        for c, _n, _s in IDIOMAS:
             if base and c.split(".")[0] == base:
                 return c
     return IDIOMA_PREDETERMINADO
@@ -124,7 +132,7 @@ def teclado_actual():
         return None
     datos = {}
     for linea in salida.splitlines():
-        clave, _, valor = linea.partition(":")
+        clave, _sep, valor = linea.partition(":")
         datos[clave.strip()] = valor.strip()
     distribucion = datos.get("layout", "").split(",")[0]
     variante = datos.get("variant", "").split(",")[0]
@@ -214,7 +222,7 @@ def ventana(argv):
         d.run()
         d.destroy()
 
-    def pregunta(padre, titulo, texto, si, no="Cancelar"):
+    def pregunta(padre, titulo, texto, si, no=_("Cancelar")):
         d = Gtk.MessageDialog(transient_for=padre, modal=True,
                               message_type=Gtk.MessageType.QUESTION,
                               buttons=Gtk.ButtonsType.NONE, text=titulo)
@@ -253,17 +261,17 @@ def ventana(argv):
         # Idioma
         caja.pack_start(titulo("Idioma · Language · Idioma"), False, False, 0)
         caja.pack_start(etiqueta(
-            "El idioma de los menús y de los programas. Para cambiarlo se reinicia "
-            "solo la sesión de prueba: los programas abiertos se cierran.",
+            _("El idioma de los menús y de los programas. Para cambiarlo se reinicia "
+            "solo la sesión de prueba: los programas abiertos se cierran."),
             ("dim-label",), max_width_chars=60), False, False, 0)
         combo_idioma = Gtk.ComboBoxText()
-        for codigo, nombre, _ in IDIOMAS:
+        for codigo, nombre, _s in IDIOMAS:
             combo_idioma.append(codigo, nombre)
         actual = idioma_actual()
         combo_idioma.set_active_id(actual)
         fila_idioma = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         fila_idioma.pack_start(combo_idioma, True, True, 0)
-        boton_idioma = Gtk.Button(label="Cambiar idioma")
+        boton_idioma = Gtk.Button(label=_("Cambiar idioma"))
         boton_idioma.set_sensitive(False)
         fila_idioma.pack_start(boton_idioma, False, False, 0)
         caja.pack_start(fila_idioma, False, False, 0)
@@ -277,24 +285,24 @@ def ventana(argv):
         caja.pack_start(Gtk.Separator(margin_top=8, margin_bottom=4), False, False, 0)
 
         # Teclado
-        caja.pack_start(titulo("Teclado · Keyboard"), False, False, 0)
+        caja.pack_start(titulo(_("Teclado · Keyboard")), False, False, 0)
         caja.pack_start(etiqueta(
-            "Cambia al instante. Si al escribir no salen la ñ, los acentos o la @ "
-            "donde deberían, prueba otra distribución.",
+            _("Cambia al instante. Si al escribir no salen la ñ, los acentos o la @ "
+            "donde deberían, prueba otra distribución."),
             ("dim-label",), max_width_chars=60), False, False, 0)
         combo_teclado = Gtk.ComboBoxText()
         for clave, nombre in TECLADOS:
             combo_teclado.append(clave, nombre)
         tec = teclado_actual()
         if tec and not combo_teclado.set_active_id(tec):
-            combo_teclado.append(tec, "Actual: %s" % tec.replace(":", " "))
+            combo_teclado.append(tec, _("Actual: %s") % tec.replace(":", " "))
             combo_teclado.set_active_id(tec)
         caja.pack_start(combo_teclado, False, False, 0)
-        prueba = Gtk.Entry(placeholder_text="Escribe aquí para probar: ñ á é ¿? @ ¡!")
+        prueba = Gtk.Entry(placeholder_text=_("Escribe aquí para probar: ñ á é ¿? @ ¡!"))
         caja.pack_start(prueba, False, False, 0)
 
         pie = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, margin_top=10)
-        cerrar = Gtk.Button(label="Cerrar")
+        cerrar = Gtk.Button(label=_("Cerrar"))
         cerrar.set_size_request(96, -1)
         cerrar.connect("clicked", lambda _b: v.close())
         pie.pack_end(cerrar, False, False, 0)
@@ -321,18 +329,18 @@ def ventana(argv):
             clave = combo.get_active_id()
             if not clave or not valido_teclado(clave):
                 return
-            distribucion, _, variante = clave.partition(":")
+            distribucion, _sep, variante = clave.partition(":")
             orden = ["setxkbmap", "-layout", distribucion]
             orden += ["-variant", variante] if variante else ["-variant", ""]
             if subprocess.call(orden, env=entorno) != 0:
-                aviso(v, "No se pudo cambiar el teclado.")
+                aviso(v, _("No se pudo cambiar el teclado."))
                 return
             # Guardado para el resto de la sesión y para el instalador.
             if subprocess.call(como_root([sys.executable, os.path.abspath(__file__), "--guardar",
                                           "-", distribucion] + ([variante] if variante else [])),
                                env=entorno) != 0:
-                aviso(v, "El teclado cambió en esta ventana, pero no se pudo guardar: "
-                         "al reiniciar la sesión o abrir el instalador volverá el anterior.",
+                aviso(v, _("El teclado cambió en esta ventana, pero no se pudo guardar: "
+                         "al reiniciar la sesión o abrir el instalador volverá el anterior."),
                       Gtk.MessageType.WARNING)
             prueba.grab_focus()
 
@@ -342,7 +350,7 @@ def ventana(argv):
             codigo = combo.get_active_id()
             boton_idioma.set_sensitive(codigo != actual)
             # El teclado sigue al idioma (se puede volver a cambiar).
-            for c, _, sugerido in IDIOMAS:
+            for c, _n, sugerido in IDIOMAS:
                 if c == codigo and combo_teclado.get_active_id() != sugerido:
                     combo_teclado.set_active_id(sugerido)
 
@@ -356,15 +364,15 @@ def ventana(argv):
             # sesión lo cerraría a mitad de una instalación.
             if instalador_abierto():
                 ocupado(False)
-                aviso(v, "El instalador está abierto: no se cambió el idioma para no "
+                aviso(v, _("El instalador está abierto: no se cambió el idioma para no "
                          "interrumpirlo. Ciérralo y vuelve a pulsar «Cambiar idioma» "
-                         "(las traducciones ya quedaron descargadas).",
+                         "(las traducciones ya quedaron descargadas)."),
                       Gtk.MessageType.WARNING)
                 return
             if subprocess.call(como_root([sys.executable, os.path.abspath(__file__),
                                           "--guardar", codigo, "-"]), env=entorno) != 0:
                 ocupado(False)
-                aviso(v, "No se pudo guardar el idioma.")
+                aviso(v, _("No se pudo guardar el idioma."))
                 return
             if os.environ.get("LAZARO_IDIOMA_SIN_REINICIO"):
                 app.quit()
@@ -376,28 +384,28 @@ def ventana(argv):
             subprocess.Popen(["setsid", "-f", "sh", "-c", "sleep 1; exec " + orden],
                              env=entorno, stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            texto_espera.set_text("Reiniciando la sesión…")
+            texto_espera.set_text(_("Reiniciando la sesión…"))
 
         def cambiar_idioma(_boton):
             codigo = combo_idioma.get_active_id()
             if not codigo or codigo == actual:
                 return
             if instalador_abierto():
-                aviso(v, "Cierra primero el instalador y luego vuelve a cambiar el idioma.",
+                aviso(v, _("Cierra primero el instalador y luego vuelve a cambiar el idioma."),
                       Gtk.MessageType.WARNING)
                 return
             nombre = combo_idioma.get_active_text()
-            if not pregunta(v, "¿Cambiar el idioma a %s?" % nombre,
-                            "La sesión de prueba se cierra y vuelve a abrirse sola en unos "
+            if not pregunta(v, _("¿Cambiar el idioma a %s?") % nombre,
+                            _("La sesión de prueba se cierra y vuelve a abrirse sola en unos "
                             "segundos, ya en el idioma nuevo. Se cierran los programas "
-                            "abiertos: guarda antes lo que estés haciendo.",
-                            "Cambiar y reiniciar la sesión"):
+                            "abiertos: guarda antes lo que estés haciendo."),
+                            _("Cambiar y reiniciar la sesión")):
                 return
             if subprocess.call(["lazaro-traducciones", "tiene", codigo], env=entorno) == 0:
-                ocupado(True, "Cambiando el idioma…")
+                ocupado(True, _("Cambiando el idioma…"))
                 reiniciar_sesion(codigo)
                 return
-            ocupado(True, "Descargando las traducciones de %s… (puede tardar unos minutos)" % nombre)
+            ocupado(True, _("Descargando las traducciones de %s… (puede tardar unos minutos)") % nombre)
 
             def listo(proc, res):
                 try:
@@ -410,12 +418,12 @@ def ventana(argv):
                     return
                 ocupado(False)
                 print(error or "", file=sys.stderr)
-                if pregunta(v, "No se pudieron descargar las traducciones",
-                            "Este idioma no viene en el USB y hace falta internet para "
+                if pregunta(v, _("No se pudieron descargar las traducciones"),
+                            _("Este idioma no viene en el USB y hace falta internet para "
                             "descargarlo. Conéctate a una red y vuelve a intentar, o "
-                            "cambia igual: el escritorio quedará casi todo en inglés.",
-                            "Cambiar igual", "Volver"):
-                    ocupado(True, "Cambiando el idioma…")
+                            "cambia igual: el escritorio quedará casi todo en inglés."),
+                            _("Cambiar igual"), _("Volver")):
+                    ocupado(True, _("Cambiando el idioma…"))
                     reiniciar_sesion(codigo)
 
             try:
@@ -426,7 +434,7 @@ def ventana(argv):
                 proc.communicate_utf8_async(None, None, listo)
             except GLib.Error as e:
                 ocupado(False)
-                aviso(v, "No se pudo descargar: %s" % e.message)
+                aviso(v, _("No se pudo descargar: %s") % e.message)
 
         def no_cerrar(_v, _e):
             return estado["trabajando"]
