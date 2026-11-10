@@ -27,7 +27,17 @@ capturas() {
 		return
 	fi
 	entorno="$(tr '\0' '\n' < "$panel/environ" | grep -E '^(DISPLAY|XAUTHORITY|DBUS_SESSION_BUS_ADDRESS|LANG|LANGUAGE|XDG_[A-Z_]*)=' | tr '\n' ' ')"
-	como_prueba() { su -s /bin/sh prueba -c "cd; env $entorno $*" >/dev/null 2>&1; }
+	# Los programas entran en la sesión de "prueba" (su grupo de elogind):
+	# sin eso, polkit no deja pedir la contraseña (Actualizar, la tienda).
+	grupo=""
+	linea="$(grep -m1 'elogind' "$panel/cgroup" 2>/dev/null)"
+	[ -z "$linea" ] || grupo="/sys/fs/cgroup/elogind${linea##*:}"
+	[ -w "$grupo/cgroup.procs" ] || grupo=""
+	como_prueba() {
+		[ -z "$grupo" ] || echo $$ > "$grupo/cgroup.procs" 2>/dev/null || true
+		su -s /bin/sh prueba -c "cd; env $entorno $*" >/dev/null 2>&1
+	}
+	serie "LAZARO-CAPTURAS-SESION ${grupo:-sin-grupo}"
 
 	# Pantalla de portátil típica y un rato para que termine de arrancar
 	# todo (avisos de bienvenida, tienda, actualizaciones).
@@ -43,7 +53,8 @@ capturas() {
 			como_prueba "$*" &
 		fi
 		sleep "$f_espera"
-		serie "LAZARO-CAPTURA $f_nombre"
+		serie "LAZARO-CAPTURA $f_nombre${f_esc:+ esc}"
+		f_esc=""
 		sleep 10
 		if [ $# -gt 0 ]; then
 			pkill -u prueba -f "$1" 2>/dev/null || true
@@ -55,18 +66,21 @@ capturas() {
 	# El menú queda abierto: QEMU pulsa Esc después de cada captura.
 	foto xfce-menu 5 xfce4-popup-applicationsmenu
 	foto thunar 10 thunar
-	foto firefox 40 firefox https://www.wikipedia.org
-	foto writer 40 libreoffice --writer
-	foto calc 30 libreoffice --calc
+	# Thunar queda como servicio de la sesión: se cierra aparte.
+	como_prueba "thunar -q" || true
+	foto firefox 40 firefox https://es.wikipedia.org
+	# f_esc=si: QEMU pulsa Esc antes de la foto (aviso de primer uso).
+	f_esc=si foto writer 40 libreoffice --writer
+	f_esc=si foto calc 30 libreoffice --calc
 	foto pdf-visor 15 evince /usr/share/doc/lazaro/manual-lazaro.pdf
-	foto tienda 40 gnome-software
+	foto tienda 90 gnome-software
 	foto impresoras 15 system-config-printer
 	foto gestor-configuracion 10 xfce4-settings-manager
 	foto youtube-ligero 20 gtk-pipe-viewer
-	foto vlc 15 vlc
+	f_esc=si foto vlc 15 vlc
 	foto afinador 15 /usr/local/sbin/lazaro-afinador --ventana
 	foto controladores 15 /usr/local/sbin/lazaro-controladores --ventana
-	foto actualizar 15 /usr/local/bin/alpine-update-launcher.sh
+	foto actualizar 30 /usr/local/bin/alpine-update-launcher.sh
 	foto terminal 10 xfce4-terminal
 	foto ristretto 10 ristretto /usr/share/backgrounds
 	foto mousepad 10 mousepad

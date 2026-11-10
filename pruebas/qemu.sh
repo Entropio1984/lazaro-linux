@@ -597,14 +597,15 @@ prueba_capturas() {
 	qemu-img create -q -f qcow2 "$disco" 20G
 	arrancar "$nombre" "$MEM" "$serie" -cdrom "$ISO" -boot d \
 		-drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci
-	# El menú de arranque dura unos segundos: varias fotos seguidas, y
-	# la de más detalle (el PNG más grande) queda como menu-arranque.
-	for n in 1 2 3 4 5 6 7 8 9 10; do
-		sleep 2
+	# El menú de arranque se elige solo a los 5 s. La flecha arriba (ya
+	# está en la primera opción) detiene la cuenta sin cambiar nada: el
+	# menú queda quieto para la foto y Enter sigue el arranque normal.
+	for n in 1 2 3 4 5 6 7 8; do
+		tecla "$mon" up
 		captura "$mon" "$CAP/otras/menu-arranque-$n"
 	done
-	mejor="$(ls -S "$CAP"/otras/menu-arranque-*.png 2>/dev/null | head -n 1)"
-	[ -z "$mejor" ] || cp "$mejor" "$CAP/menu-arranque.png"
+	cp "$CAP/otras/menu-arranque-8.png" "$CAP/menu-arranque.png" 2>/dev/null || true
+	tecla "$mon" ret
 	if esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
 		sleep 40
 		captura "$mon" "$CAP/sesion-prueba"
@@ -665,8 +666,15 @@ prueba_capturas() {
 	hechas=""
 	t=0
 	while [ $t -lt 2400 ] && kill -0 "$pid" 2>/dev/null; do
-		for c in $(sed -n 's/^LAZARO-CAPTURA \([a-z0-9-]*\).*/\1/p' "$serie" 2>/dev/null | tr -d '\r'); do
+		# "LAZARO-CAPTURA nombre esc": antes de la foto, Esc cierra el
+		# aviso de primer uso (LibreOffice, VLC).
+		for c in $(sed -n 's/^LAZARO-CAPTURA \([a-z0-9-]*\)\( esc\)\{0,1\}.*/\1\2/p' "$serie" 2>/dev/null | tr -d '\r' | tr ' ' ':'); do
+			esc="${c#*:}"; c="${c%%:*}"
 			case " $hechas " in *" $c "*) continue ;; esac
+			if [ "$esc" = esc ]; then
+				tecla "$mon" esc
+				sleep 3
+			fi
 			captura "$mon" "$CAP/$c"
 			tecla "$mon" esc
 			hechas="$hechas $c"
