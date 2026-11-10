@@ -33,12 +33,16 @@ diagnostico_en_terminal() {
 	for _dt in xfce4-terminal mate-terminal lxterminal qterminal konsole gnome-terminal kgx foot xterm; do
 		command -v "$_dt" >/dev/null 2>&1 || continue
 		echo "Se abre $_dt" >> "${registro:-/dev/null}"
+		# Cada terminal recibe la orden a su manera; si una no arranca, se
+		# prueba la siguiente.
 		case "$_dt" in
+			xfce4-terminal|mate-terminal) "$_dt" -x sh "$_dt_guion" ;;
+			lxterminal|qterminal) "$_dt" -e "sh $_dt_guion" ;;
 			gnome-terminal|kgx) "$_dt" -- sh "$_dt_guion" ;;
 			foot) foot sh "$_dt_guion" ;;
-			*) "$_dt" -e "sh $_dt_guion" ;;
-		esac
-		return $?
+			*) "$_dt" -e sh "$_dt_guion" ;;
+		esac && return 0
+		echo "$_dt no arrancó" >> "${registro:-/dev/null}"
 	done
 	rm -f "$_dt_guion"
 	echo "No hay ninguna terminal para mostrar el diagnóstico" >> "${registro:-/dev/null}"
@@ -52,7 +56,7 @@ if [ "${1:-}" = "--ventana" ]; then
 	# Lo que digan las ventanas (zenity) y por qué fallan queda en
 	# ~/.cache/lazaro-diagnostico-ventana.log: si no aparece nada en
 	# pantalla, ahí está la causa.
-	registro="${XDG_CACHE_HOME:-$HOME/.cache}/lazaro-diagnostico-ventana.log"
+	registro="$HOME/.cache/lazaro-diagnostico-ventana.log"
 	mkdir -p "$(dirname "$registro")" 2>/dev/null
 	{ [ -w "$(dirname "$registro")" ] && : >> "$registro"; } 2>/dev/null || registro=/dev/null
 	echo "== $(date '+%F %T') $0 --ventana DISPLAY=${DISPLAY:-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} LANG=${LANG:-}" >> "$registro"
