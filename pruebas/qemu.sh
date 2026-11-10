@@ -134,7 +134,11 @@ prueba_live() {
 		-nic user,model=virtio-net-pci \
 		-spice "unix=on,addr=$SOCK_DIR/$nombre.spice,disable-ticketing=on" \
 		-device virtio-serial-pci -chardev spicevmc,id=vdagent,name=vdagent \
-		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0
+		-device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
+		-chardev null,id=lzprueba -device virtserialport,chardev=lzprueba,name=lazaro.prueba
+	# El puerto lazaro.prueba le dice a la sesión live que abra también el
+	# instalador: en un equipo real solo se abre la Bienvenida, y el
+	# instalador se abre con su botón "Instalar Lázaro".
 	ok=0
 	if ! esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
 		captura "$mon" "$RES/$nombre-fallo"
@@ -145,6 +149,9 @@ prueba_live() {
 		if ! esperar "$serie" "$pid" 30 LAZARO-MODULOS-OK LAZARO-MODULOS-FALLO; then
 			echo "FALLO: Calamares no pudo cargar alguna de sus pantallas o pasos ($MODO)." >&2
 			sed -n '/LAZARO-MODULOS-FALLO/,+6p' "$serie" >&2
+			ok=1
+		elif ! grep -q LAZARO-BIENVENIDA-ABIERTA "$serie"; then
+			echo "FALLO: la Bienvenida no se abrió al iniciar la sesión live ($MODO)." >&2
 			ok=1
 		elif ! grep -q '^LAZARO-CALAMARES-LANG es_' "$serie"; then
 			# Calamares abre en español (la sesión live trae LANG=C.UTF-8).
@@ -481,6 +488,11 @@ prueba_instalar() {
 		elif ! grep -q LAZARO-DIAGNOSTICO-OK "$serie2"; then
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
+			ok=1
+		elif grep -q LAZARO-BIENVENIDA-NO "$serie2" ||
+			{ [ "$de" != ninguno ] && ! grep -q LAZARO-BIENVENIDA-OK "$serie2"; }; then
+			echo "FALLO: la Bienvenida no quedó lista en el sistema instalado (programa, funciones o GTK para Python)." >&2
+			grep LAZARO-BIENVENIDA "$serie2" >&2 || true
 			ok=1
 		elif grep -q LAZARO-BTOP-GPU-NO "$serie2"; then
 			echo "FALLO: btop quedó sin el permiso para medir la GPU sin doas:" >&2

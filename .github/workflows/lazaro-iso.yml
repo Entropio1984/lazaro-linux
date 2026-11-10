@@ -279,6 +279,11 @@ jobs:
       # aplicar y deshacer dejen GRUB y sysctl.d como estaban.
       - run: sh pruebas/afinador.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh pruebas/afinador.sh
+      # lazaro-bienvenida: los archivos de funciones (un botón cada uno)
+      # están bien escritos y se muestran donde corresponde. También con
+      # el Python de Alpine.
+      - run: sh pruebas/bienvenida.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
       # lazaro-kernel: instalar, arranque de prueba bien y mal, actualizar
       # y quitar, con GRUB y apk falsos.
       - run: sh pruebas/kernel.sh

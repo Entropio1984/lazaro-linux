@@ -59,6 +59,7 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	wpa_supplicant calamares doas musl-locales tzdata kbd-bkeymaps
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
 	gparted xhost zenity spice-vdagent spice-vdagent-openrc pciutils
+	py3-gobject3 gtk+3.0
 	xf86-video-vesa dialog
 	plymouth plymouth-drm plymouth-openrc-plugin
 	$LAZARO_RED_LIVE"
