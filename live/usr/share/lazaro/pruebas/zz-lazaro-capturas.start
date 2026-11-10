@@ -77,8 +77,8 @@ capturas() {
 	f_esc=si foto writer 40 libreoffice --writer
 	f_esc=si foto calc 30 libreoffice --calc
 	foto pdf-visor 15 evince /usr/share/doc/lazaro/manual-lazaro.pdf
-	# La tienda (sale en blanco sin su catálogo) y Actualizar (pide la
-	# contraseña) se fotografían en un equipo real.
+	# La tienda sale en blanco sin su catálogo: se fotografía en un equipo real.
+	foto actualizar 20 /usr/local/sbin/lazaro-actualizador
 	foto impresoras 15 system-config-printer
 	foto gestor-configuracion 10 xfce4-settings-manager
 	foto youtube-ligero 20 gtk-pipe-viewer
