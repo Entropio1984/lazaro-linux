@@ -473,6 +473,25 @@ doas lazaro-kernel --instalar     # instalar y preparar el arranque de prueba
 doas lazaro-kernel --quitar       # volver al kernel de Alpine
 ```
 
+### Actualizar el sistema
+
+**Actualizar el sistema** (en el menú, en la Bienvenida o desde el aviso
+de actualizaciones) abre una ventana con el mismo aspecto de la
+Bienvenida. Pide tu contraseña, muestra en una línea lo que va haciendo y
+al final dice si hay que reiniciar. En **Ver los detalles** está todo el
+avance, por si hay que pedir ayuda. Si existe una versión nueva de Alpine,
+antes de empezar pregunta si quieres pasar a ella o solo actualizar.
+
+Puedes cerrar la ventana mientras trabaja: la actualización sigue y la
+ventana vuelve a aparecer cuando termina. No apagues el equipo mientras
+tanto.
+
+La ventana es solo la cara: el trabajo lo hace el mismo actualizador de
+siempre (el de `desktop-postinstall.sh`). En un equipo instalado antes de
+que existiera esta ventana, el botón de la Bienvenida ya la usa; el del
+menú la usará cuando ese equipo se reinstale o se le vuelva a pasar el
+script.
+
 ### Actualizaciones de las herramientas
 
 Las herramientas de Lázaro (Afinador, Controladores, Diagnóstico y el
