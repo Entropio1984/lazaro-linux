@@ -73,6 +73,18 @@ con Biber).
   secciones de otros escritorios.
 - Sin datos personales (nombres de red wifi, correos, archivos propios).
 
+Casi todas se sacan solas en una máquina virtual: en GitHub, pestaña
+**Actions** → **Capturas del manual** → **Run workflow**. Tarda alrededor
+de una hora y deja las imágenes en `imagenes/capturas/` (en `main`, como
+un PR). El recorrido está en
+`live/usr/share/lazaro/pruebas/zz-lazaro-capturas.start`.
+
+Estas hay que sacarlas a mano en un equipo real, porque la máquina
+virtual no las puede mostrar bien: `wifi-lista` (redes wifi),
+`tienda` (la tienda necesita su catálogo de internet) y `actualizar`
+(pide la contraseña). En XFCE: tecla **Impr Pant**, que abre la
+herramienta de capturas.
+
 ## Licencia
 
 Texto e imágenes: CC BY-SA 4.0 (ver `LICENCIA.md`).

@@ -72,19 +72,19 @@ capturas() {
 	foto thunar 10 thunar
 	# Thunar queda como servicio de la sesión: se cierra aparte.
 	como_prueba "thunar -q" || true
-	foto firefox 40 firefox https://es.wikipedia.org
+	f_esc=si foto firefox 40 firefox https://es.wikipedia.org
 	# f_esc=si: QEMU pulsa Esc antes de la foto (aviso de primer uso).
 	f_esc=si foto writer 40 libreoffice --writer
 	f_esc=si foto calc 30 libreoffice --calc
 	foto pdf-visor 15 evince /usr/share/doc/lazaro/manual-lazaro.pdf
-	foto tienda 90 gnome-software
+	# La tienda (sale en blanco sin su catálogo) y Actualizar (pide la
+	# contraseña) se fotografían en un equipo real.
 	foto impresoras 15 system-config-printer
 	foto gestor-configuracion 10 xfce4-settings-manager
 	foto youtube-ligero 20 gtk-pipe-viewer
 	f_esc=si foto vlc 15 vlc
 	foto afinador 15 /usr/local/sbin/lazaro-afinador --ventana
 	foto controladores 15 /usr/local/sbin/lazaro-controladores --ventana
-	foto actualizar 30 /usr/local/bin/alpine-update-launcher.sh
 	foto terminal 10 xfce4-terminal
 	foto ristretto 10 ristretto /usr/share/backgrounds
 	foto mousepad 10 mousepad
