@@ -1,0 +1,127 @@
+#!/bin/sh
+# Capturas de pantalla para el Manual de Lázaro (pruebas/qemu.sh
+# capturas). Lo deja lazaro-instalar en el sistema instalado cuando la
+# instalación desatendida lleva lazaro.capturas=si. Abre los programas de
+# a uno en la sesión de "prueba" y avisa por el puerto serie
+# ("LAZARO-CAPTURA nombre"); QEMU, desde afuera, fotografía la pantalla.
+# Al terminar apaga el equipo.
+
+serie() { printf '%s\n' "$*" > /dev/ttyS0 2>/dev/null || true; }
+
+capturas() {
+	# La sesión de "prueba": el panel de XFCE y su entorno gráfico.
+	t=0
+	panel=""
+	while [ -z "$panel" ] && [ $t -lt 900 ]; do
+		for c in /proc/[0-9]*/comm; do
+			[ "$(cat "$c" 2>/dev/null)" = xfce4-panel ] || continue
+			[ "$(awk '/^Uid:/ { print $2 }' "${c%/comm}/status" 2>/dev/null)" = "$(id -u prueba)" ] || continue
+			panel="${c%/comm}"
+			break
+		done
+		[ -n "$panel" ] || { sleep 5; t=$((t + 5)); }
+	done
+	if [ -z "$panel" ]; then
+		serie "LAZARO-CAPTURAS-SIN-SESION"
+		poweroff
+		return
+	fi
+	entorno="$(tr '\0' '\n' < "$panel/environ" | grep -E '^(DISPLAY|XAUTHORITY|DBUS_SESSION_BUS_ADDRESS|LANG|LANGUAGE|XDG_[A-Z_]*)=' | tr '\n' ' ')"
+	# Los programas entran en la sesión de "prueba" (su grupo de elogind):
+	# sin eso, polkit no deja pedir la contraseña (Actualizar, la tienda).
+	grupo=""
+	linea="$(grep -m1 'elogind' "$panel/cgroup" 2>/dev/null)"
+	[ -z "$linea" ] || grupo="/sys/fs/cgroup/elogind${linea##*:}"
+	[ -w "$grupo/cgroup.procs" ] || grupo=""
+	como_prueba() {
+		[ -z "$grupo" ] || echo $$ > "$grupo/cgroup.procs" 2>/dev/null || true
+		su -s /bin/sh prueba -c "cd; env $entorno $*" >/dev/null 2>&1
+	}
+	serie "LAZARO-CAPTURAS-SESION ${grupo:-sin-grupo}"
+
+	# Pantalla de portátil típica y un rato para que termine de arrancar
+	# todo (avisos de bienvenida, tienda, actualizaciones).
+	como_prueba "xrandr -s 1280x800" || true
+	sleep 60
+	# La Bienvenida se abre sola al entrar: se cierra para que no salga
+	# en todas las fotos (tiene la suya al final).
+	pkill -u prueba -f lazaro-bienvenida 2>/dev/null || true
+	sleep 3
+
+	# foto NOMBRE ESPERA ORDEN...: abre la orden, espera, pide la captura
+	# y la cierra.
+	foto() {
+		f_nombre="$1"; f_espera="$2"; shift 2
+		if [ $# -gt 0 ]; then
+			command -v "$1" >/dev/null 2>&1 || [ -x "$1" ] || { serie "LAZARO-CAPTURA-FALTA $f_nombre $1"; return 0; }
+			como_prueba "$*" &
+		fi
+		sleep "$f_espera"
+		serie "LAZARO-CAPTURA $f_nombre${f_esc:+ esc}"
+		f_esc=""
+		sleep 10
+		if [ $# -gt 0 ]; then
+			pkill -u prueba -f "$1" 2>/dev/null || true
+			sleep 3
+		fi
+	}
+
+	foto xfce-escritorio 5
+	# El menú queda abierto: QEMU pulsa Esc después de cada captura.
+	foto xfce-menu 5 xfce4-popup-applicationsmenu
+	foto thunar 10 thunar
+	# Thunar queda como servicio de la sesión: se cierra aparte.
+	como_prueba "thunar -q" || true
+	f_esc=si foto firefox 40 firefox https://es.wikipedia.org
+	# f_esc=si: QEMU pulsa Esc antes de la foto (aviso de primer uso).
+	f_esc=si foto writer 40 libreoffice --writer
+	f_esc=si foto calc 30 libreoffice --calc
+	foto pdf-visor 15 evince /usr/share/doc/lazaro/manual-lazaro.pdf
+	# La tienda sale en blanco sin su catálogo: se fotografía en un equipo real.
+	# Actualizar: la contraseña la pide polkit, que en esta sesión
+	# automática no se puede escribir. La ventana es la de verdad; la
+	# actualización se simula (las variables de prueba del actualizador)
+	# con líneas como las que escribe apk.
+	cat > /tmp/lazaro-act-simulada <<-'SIM'
+		#!/bin/sh
+		echo aceptada > /tmp/lazaro-act-marca
+		for l in "===== Actualizando Alpine (apk) =====" \
+			"fetch https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/APKINDEX.tar.gz" \
+			"(1/9) Upgrading tzdata (2026a-r0 -> 2026b-r0)" \
+			"(2/9) Upgrading libxml2 (2.13.8-r0 -> 2.13.9-r0)" \
+			"(3/9) Upgrading firefox (144.0-r0 -> 144.0.2-r0)"; do
+			echo "# $l" >> /tmp/lazaro-act-registro
+			sleep 2
+		done
+		sleep 120
+	SIM
+	chmod 755 /tmp/lazaro-act-simulada
+	cat > /tmp/lazaro-act-captura <<-'ACT'
+		#!/bin/sh
+		: > /tmp/lazaro-act-registro
+		LAZARO_ACTUALIZADOR_ORDEN=/tmp/lazaro-act-simulada \
+		LAZARO_ACTUALIZADOR_REGISTRO=/tmp/lazaro-act-registro \
+		LAZARO_ACTUALIZADOR_MARCA=/tmp/lazaro-act-marca \
+		LAZARO_ACTUALIZADOR_SIGUIENTE="" LAZARO_ACTUALIZADOR_REINICIO=no \
+			/usr/local/sbin/lazaro-actualizador
+	ACT
+	chmod 755 /tmp/lazaro-act-captura
+	foto actualizar 25 /tmp/lazaro-act-captura
+	pkill -u prueba -f 'lazaro-actualizador|lazaro-act-' 2>/dev/null || true
+	foto impresoras 15 system-config-printer
+	foto gestor-configuracion 10 xfce4-settings-manager
+	foto youtube-ligero 20 gtk-pipe-viewer
+	f_esc=si foto vlc 15 vlc
+	foto afinador 15 /usr/local/sbin/lazaro-afinador --ventana
+	foto controladores 15 /usr/local/sbin/lazaro-controladores --ventana
+	foto terminal 10 xfce4-terminal
+	foto ristretto 10 ristretto /usr/share/icons/hicolor/256x256/apps/lazaro-bienvenida.png
+	foto mousepad 10 mousepad
+	foto bienvenida 15 /usr/local/sbin/lazaro-bienvenida
+
+	serie "LAZARO-CAPTURAS-FIN"
+	sleep 15
+	poweroff
+}
+
+capturas </dev/null >/dev/null 2>&1 &

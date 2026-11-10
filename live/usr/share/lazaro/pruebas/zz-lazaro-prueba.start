@@ -434,6 +434,14 @@ idioma_sesion() {
 	# protección de memoria y el arranque trae preempt=full (con
 	# escritorio), que el kernel confirma con "Dynamic Preempt: full".
 	echo "LAZARO-AFINADOR-ARRANQUE $(dmesg | grep -o 'Dynamic Preempt: [a-z]*' | tail -n 1) ttl=$(cat /sys/kernel/mm/lru_gen/min_ttl_ms 2>/dev/null)"
+	# Manual de Lázaro: el PDF y su acceso en el menú, en el sistema
+	# instalado (la ISO de GitHub Actions siempre lo trae).
+	if [ "$(head -c 5 /usr/share/doc/lazaro/manual-lazaro.pdf 2>/dev/null)" = "%PDF-" ] &&
+		[ -x /usr/local/bin/lazaro-manual ] && [ -r /usr/share/applications/lazaro-manual.desktop ]; then
+		echo "LAZARO-MANUAL-OK $(wc -c < /usr/share/doc/lazaro/manual-lazaro.pdf) bytes"
+	else
+		echo "LAZARO-MANUAL-NO"
+	fi
 	# Informe de diagnóstico (lazaro-diagnostico, como root): debe dejar
 	# un archivo con sus secciones. Y la ISO dejó su sello de compilación
 	# (con fecha) en el sistema instalado. Se mira el archivo y no el

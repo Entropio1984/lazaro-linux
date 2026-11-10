@@ -22,6 +22,13 @@
 #       Igual, haciendo como si hubiera una wifi Broadcom que necesita
 #       broadcom-wl: el driver debe quedar compilado en el disco.
 #
+#   pruebas/qemu.sh capturas ISO uefi
+#       Capturas de pantalla para el Manual de Lázaro: el menú de
+#       arranque, la sesión de prueba y las pantallas del instalador
+#       (pulsando teclas como una persona), y después instala XFCE con
+#       todo el software adicional y fotografía cada programa. Quedan en
+#       pruebas/resultados/capturas/ (PNG, necesita ImageMagick).
+#
 # Resultados (registro del puerto serie y capturas) en pruebas/resultados/.
 # Nunca toca discos reales: todo ocurre en archivos dentro de esa carpeta.
 
@@ -509,6 +516,9 @@ prueba_instalar() {
 			echo "FALLO: el sistema instalado no arrancó con los ajustes del afinador." >&2
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
+		elif ! grep -q LAZARO-MANUAL-OK "$serie2"; then
+			echo "FALLO: el Manual de Lázaro (PDF y acceso en el menú) no quedó en el sistema instalado (en una compilación local, compílalo antes con manual/compilar.sh)." >&2
+			ok=1
 		elif ! grep -q LAZARO-DIAGNOSTICO-OK "$serie2"; then
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
@@ -599,6 +609,155 @@ prueba_instalar() {
 	return $ok
 }
 
+# --- Capturas para el manual ---------------------------------------------
+# tecla SOCKET TECLA...: pulsa teclas en la máquina (sendkey de QEMU).
+tecla() {
+	t_mon="$1"; shift
+	for t_k in "$@"; do
+		printf 'sendkey %s\n' "$t_k" | socat - "UNIX-CONNECT:$t_mon" >/dev/null 2>&1 || true
+		sleep 1
+	done
+}
+
+prueba_capturas() {
+	CAP="$RES/capturas"
+	mkdir -p "$CAP/otras"
+	ok=0
+
+	# 1. Sesión de prueba: menú de arranque y la Bienvenida, como la ve
+	# cualquiera (sin el puerto lazaro.prueba, el instalador no se abre
+	# solo).
+	nombre="capturas-live"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	disco="$RES/$nombre.qcow2"
+	rm -f "$serie" "$mon" "$disco" "$RES/$nombre-vars.fd"
+	qemu-img create -q -f qcow2 "$disco" 20G
+	arrancar "$nombre" "$MEM" "$serie" -cdrom "$ISO" -boot d \
+		-drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci
+	# El menú de arranque se elige solo a los 5 s. La flecha arriba (ya
+	# está en la primera opción) detiene la cuenta sin cambiar nada: el
+	# menú queda quieto para la foto y Enter sigue el arranque normal.
+	for n in 1 2 3 4 5 6 7 8; do
+		tecla "$mon" up
+		captura "$mon" "$CAP/otras/menu-arranque-$n"
+	done
+	cp "$CAP/otras/menu-arranque-8.png" "$CAP/menu-arranque.png" 2>/dev/null || true
+	tecla "$mon" ret
+	if esperar "$serie" "$pid" 900 LAZARO-LIVE-LISTO LAZARO-LIVE-NO-LISTO; then
+		# El escritorio y la Bienvenida tardan en abrir después.
+		sleep 120
+		captura "$mon" "$CAP/sesion-prueba"
+	else
+		captura "$mon" "$CAP/otras/live-fallo"
+		echo "FALLO: la sesión de prueba no arrancó." >&2
+		ok=1
+	fi
+	terminar "$pid"
+	rm -f "$disco"
+
+	# 2. El instalador, abierto por el puerto lazaro.prueba como en las
+	# pruebas, recorrido con el botón Siguiente (Alt+S).
+	nombre="capturas-instalador"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	disco="$RES/$nombre.qcow2"
+	rm -f "$serie" "$mon" "$disco" "$RES/$nombre-vars.fd"
+	qemu-img create -q -f qcow2 "$disco" 20G
+	arrancar "$nombre" "$MEM" "$serie" -cdrom "$ISO" -boot d \
+		-drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci \
+		-device virtio-serial-pci \
+		-chardev null,id=lzprueba -device virtserialport,chardev=lzprueba,name=lazaro.prueba
+	if esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO LAZARO-CALAMARES-NO-ABRIO; then
+		sleep 40
+		captura "$mon" "$CAP/instalador-bienvenida"
+		for p in instalador-ubicacion instalador-teclado instalador-escritorio instalador-software instalador-disco; do
+			tecla "$mon" alt-s
+			sleep 6
+			captura "$mon" "$CAP/$p"
+		done
+	else
+		captura "$mon" "$CAP/otras/instalador-fallo"
+		echo "FALLO: Calamares no se abrió en la sesión de prueba." >&2
+		ok=1
+	fi
+	terminar "$pid"
+	rm -f "$disco"
+
+	# 3. Sistema instalado con XFCE: cada programa.
+	nombre="capturas-instalado"
+	disco="$RES/$nombre.qcow2"
+	serie="$RES/$nombre-instalacion.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	rm -f "$disco" "$serie" "$mon" "$RES/$nombre-vars.fd"
+	qemu-img create -q -f qcow2 "$disco" 20G
+	extraer_kernel
+	mods="loop,squashfs,sd-mod,usb-storage"
+	if [ "$MODO" = uefi ]; then
+		set -- -device virtio-scsi-pci,id=scsi0 \
+			-drive "id=cd0,if=none,media=cdrom,readonly=on,file=$ISO" \
+			-device scsi-cd,drive=cd0,bus=scsi0.0
+		mods="$mods,virtio_scsi,sr-mod"
+	else
+		set -- -cdrom "$ISO"
+	fi
+	echo "Instalando XFCE para las capturas..."
+	arrancar "$nombre" "$MEM" "$serie" \
+		-kernel "$k" -initrd "$i" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=xfce lazaro.disco=/dev/vda lazaro.capturas=si" \
+		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci
+	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
+		captura "$mon" "$CAP/otras/instalacion-fallo"
+		terminar "$pid"
+		tail -n 120 "$serie" >&2 || true
+		echo "FALLO: la instalación para las capturas no terminó." >&2
+		return 1
+	fi
+	t=0
+	while kill -0 "$pid" 2>/dev/null && [ $t -lt 120 ]; do sleep 2; t=$((t + 2)); done
+	terminar "$pid"
+	rm -f "$k" "$i"
+
+	serie="$RES/$nombre-arranque.log"
+	rm -f "$serie" "$mon"
+	arrancar "$nombre" 4096 "$serie" \
+		-drive "file=$disco,if=virtio,format=qcow2" -boot c -nic user,model=virtio-net-pci
+	# El sistema avisa "LAZARO-CAPTURA nombre" con cada programa abierto.
+	hechas=""
+	t=0
+	while [ $t -lt 2400 ] && kill -0 "$pid" 2>/dev/null; do
+		# "LAZARO-CAPTURA nombre esc": antes de la foto, Esc cierra el
+		# aviso de primer uso (LibreOffice, VLC).
+		for c in $(sed -n 's/^LAZARO-CAPTURA \([a-z0-9-]*\)\( esc\)\{0,1\}.*/\1\2/p' "$serie" 2>/dev/null | tr -d '\r' | tr ' ' ':'); do
+			esc="${c#*:}"; c="${c%%:*}"
+			case " $hechas " in *" $c "*) continue ;; esac
+			if [ "$esc" = esc ]; then
+				tecla "$mon" esc
+				sleep 3
+			fi
+			captura "$mon" "$CAP/$c"
+			tecla "$mon" esc
+			hechas="$hechas $c"
+			echo "Captura: $c"
+		done
+		grep -q 'LAZARO-CAPTURAS-FIN\|LAZARO-CAPTURAS-SIN-SESION' "$serie" 2>/dev/null && break
+		sleep 2
+		t=$((t + 2))
+	done
+	grep 'LAZARO-CAPTURA-FALTA' "$serie" >&2 || true
+	if ! grep -q LAZARO-CAPTURAS-FIN "$serie"; then
+		captura "$mon" "$CAP/otras/instalado-fallo"
+		echo "FALLO: el sistema instalado no terminó las capturas." >&2
+		tail -n 60 "$serie" >&2 || true
+		ok=1
+	fi
+	terminar "$pid"
+	rm -f "$disco"
+	echo "Capturas en $CAP:"
+	ls -l "$CAP"
+	return $ok
+}
+
 case "$orden" in
 	live)
 		[ $# -eq 3 ] || [ $# -eq 4 ] || uso
@@ -612,5 +771,8 @@ case "$orden" in
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac
 		case "${6:-}" in "" | broadcom) ;; *) uso ;; esac
 		prueba_instalar "$4" "$5" "${6:-}" ;;
+	capturas)
+		[ $# -eq 3 ] || uso
+		prueba_capturas ;;
 	*) uso ;;
 esac

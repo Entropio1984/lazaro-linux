@@ -1,0 +1,258 @@
+\chapter{Las herramientas de Lázaro}\label{cap:15-herramientas}
+
+Lázaro trae unos programas propios para que el equipo funcione bien sin
+tener que saber de computación. Todos se abren desde el menú de
+aplicaciones o desde una terminal, y \textbf{se actualizan solos} con el
+aviso de actualizaciones de siempre.
+
+\begin{nota}
+Cuando una orden empieza con \texttt{doas}, te pide tu contraseña (la que
+elegiste al instalar). Mientras la escribes no se ve nada: es normal.
+Escríbela y pulsa \keys{Enter}.
+\end{nota}
+
+\section{Bienvenida: todo a mano}\label{sec:bienvenida}
+
+La \textbf{Bienvenida} es la ventana que se abre al entrar al escritorio.
+Arriba cuenta qué es Lázaro; a la izquierda reúne sus herramientas, cada
+una con una frase que dice para qué sirve y un botón para abrirla.
+
+\captura{bienvenida}{La Bienvenida en el sistema instalado}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}lX}
+\toprule
+Grupo & Qué hay \\
+\midrule
+Primeros pasos & Instalar Lázaro (solo en la sesión de prueba), el Manual,
+  Actualizar el sistema (sección~\ref{sec:actualizar}) y Controladores
+  (sección~\ref{sec:controladores}). \\
+Programas & La tienda de aplicaciones, activar Flathub y YouTube ligero
+  (capítulos~\ref{cap:13-programas} y~\ref{cap:10-multimedia}). \\
+Tu equipo & Ver el hardware, el Afinador, el Kernel Lázaro y, con
+  tarjetas NVIDIA antiguas, la resolución del modo seguro. \\
+Ayuda & El Diagnóstico, contar un problema y la página del proyecto
+  (capítulo~\ref{cap:17-pedir-ayuda}). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Solo aparecen las herramientas que tienen sentido en tu equipo: por
+ejemplo, la resolución del modo seguro solo sale en los equipos que usan ese
+modo.
+
+Si no quieres que se abra cada vez, desmarca \menu{Mostrar esta ventana al
+iniciar sesión}, abajo. Para volver a abrirla, búscala en el menú de
+aplicaciones como \textbf{Bienvenida}.
+
+\section{Afinador: que el equipo responda mejor}\label{sec:afinador}
+
+El Afinador revisa tu equipo (procesador, memoria, discos) y ajusta el
+sistema para que vaya más suelto, sobre todo con poca memoria. \textbf{Al
+instalar Lázaro ya queda aplicado lo recomendado para tu equipo}: no tienes
+que hacer nada. Esta sección sirve para ver qué hizo, quitarlo o usar las
+opciones avanzadas.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{>{\bfseries}lX}
+\toprule
+Ajuste & Para qué sirve \\
+\midrule
+Respuesta del escritorio & El sistema atiende antes a las ventanas y al
+  ratón aunque esté ocupado, por ejemplo actualizando. \\
+Memoria & Evita que el equipo se congele cuando se acaba la memoria por
+  tener muchas pestañas abiertas. \\
+Discos y pendrives & Copiar un archivo grande a un pendrive no congela el
+  escritorio. \\
+Páginas gigantes & Con 4 GB de memoria o menos, ahorra memoria. \\
+Procesador & En procesadores viejos, sube la velocidad en cuanto hay
+  trabajo. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Además revisa que estén activas la memoria comprimida (\termino{zram}
+\cite{zram}) y las mejoras de disco que deja la instalación.
+
+\subsection{Paso a paso}
+\begin{pasos}
+  \item Abre el menú de aplicaciones y busca \textbf{Afinador} (en
+        \menu{Sistema} o \menu{Configuración}).
+  \item Arriba ves la lista de ajustes: $\checkmark$ quiere decir que ya está
+        puesto, $\circ$ que se puede poner y $\cdot$ que tu equipo no
+        lo necesita.
+  \item Elige una opción y pulsa \menu{Aceptar}:
+    \begin{itemize}
+      \item \menu{Aplicar lo recomendado}: pone los ajustes que le sirven a
+            tu equipo.
+      \item \menu{Quitar los ajustes}: deja todo como venía en Alpine.
+      \item \menu{Protecciones del procesador (avanzado)}: ver más abajo.
+      \item \menu{Kernel Lázaro (experimental)}: ver la sección siguiente.
+      \item \menu{Ver el informe del hardware}: lo que encontró en tu
+            equipo.
+    \end{itemize}
+  \item Te pide tu contraseña. Algunos ajustes se notan \textbf{después de
+        reiniciar}.
+\end{pasos}
+
+\captura{afinador}{El Afinador de Lázaro}
+
+Desde la terminal:
+\begin{terminal}
+lazaro-afinador --revisar          \# qué ajustes hay y cuáles están puestos\\
+lazaro-afinador --perfil           \# informe del hardware\\
+doas lazaro-afinador --aplicar     \# poner lo recomendado\\
+doas lazaro-afinador --deshacer    \# quitarlo todo
+\end{terminal}
+
+\begin{consejo}
+Si algo va peor después de un ajuste, usa \menu{Quitar los ajustes} y
+reinicia: el equipo queda exactamente como venía. Ningún ajuste del
+Afinador puede impedir que el equipo arranque.
+\end{consejo}
+
+\subsection{Protecciones del procesador (avanzado)}
+Los procesadores tienen fallos de diseño conocidos, con nombres como
+\emph{Spectre} y \emph{Meltdown}, y el sistema los tapa con unas
+protecciones que lo frenan un poco \cite{spectre-meltdown,kernel-mitigations}:
+en procesadores Intel Core de 2.\textordfeminine{} a 7.\textordfeminine{}
+generación (de 2011 a 2017, aproximadamente), entre un 5~\% y un 15~\%. Se
+pueden apagar para ganar esa velocidad.
+
+\begin{cuidado}
+Con las protecciones apagadas, una página web maliciosa podría leer datos
+de otros programas, como contraseñas. Hazlo solo en un equipo que
+\textbf{no} se use para navegar, el banco o el correo.
+\end{cuidado}
+
+Se apaga desde el Afinador o con \texttt{doas lazaro-afinador
+--mitigaciones si}, y se vuelve a encender con \texttt{doas
+lazaro-afinador --mitigaciones no}. En los dos casos hay que reiniciar.
+
+\section{Kernel Lázaro (experimental)}\label{sec:kernel-lazaro}
+
+El \termino{kernel} es la parte central del sistema, la que habla con el
+hardware. Lázaro usa de fábrica el de Alpine. Si quieres, puedes cambiarlo
+por el \textbf{kernel Lázaro}: el mismo kernel de Alpine, con el mismo
+código y las mismas actualizaciones de seguridad, pero sin las piezas que
+solo usan los servidores (así pesa menos) y con el escritorio más atento al
+ratón y al teclado cuando el equipo está ocupado. La mejora es pequeña y se
+nota más en equipos lentos. \textbf{El kernel de Alpine queda siempre
+instalado como respaldo.}
+
+\begin{pasos}
+  \item Conéctate a internet.
+  \item Abre el \textbf{Afinador} y elige \menu{Kernel Lázaro
+        (experimental)}.
+  \item Pulsa \menu{Instalar y probar} y escribe tu contraseña. Tarda unos
+        minutos.
+  \item Pulsa \menu{Reiniciar ahora}. Ese arranque es \textbf{de prueba}:
+    \begin{itemize}
+      \item si el equipo enciende bien, el kernel Lázaro queda como el de
+            siempre;
+      \item si se queda colgado o en negro, apágalo (mantén apretado el
+            botón de encendido) y vuelve a encenderlo: arranca solo con el
+            kernel de Alpine, como antes.
+    \end{itemize}
+  \item Para ver en qué quedó, abre otra vez \menu{Kernel Lázaro
+        (experimental)}.
+\end{pasos}
+
+Para volver al kernel de Alpine, pulsa ahí mismo \menu{Volver al kernel de
+Alpine} y reinicia. Si el equipo no llega al escritorio: en el menú negro
+que aparece al encender, elige con las flechas la línea que termina en
+\textbf{lts} (puede estar dentro de \emph{Advanced options}) y pulsa
+\keys{Enter}.
+
+\begin{terminal}
+lazaro-kernel --estado            \# si está instalado y cómo salió la prueba\\
+doas lazaro-kernel --instalar     \# instalar y preparar el arranque de prueba\\
+doas lazaro-kernel --quitar       \# volver al kernel de Alpine
+\end{terminal}
+
+\section{Controladores: lo que le falta al hardware}\label{sec:controladores}
+
+\captura{controladores}{Controladores: lo que le falta al equipo}
+
+Un \termino{controlador} es lo que el sistema necesita para usar una pieza:
+el wifi, la impresora, un lector de huellas. Lázaro revisa el equipo al
+instalar y deja puesto lo que hace falta: impresoras HP, Epson, Brother y
+Samsung, escáneres, lectores de huellas y de tarjetas (como el DNI
+electrónico), el sonido de los portátiles Intel nuevos, el ahorro de
+batería y el \termino{firmware} que le falte a cualquier pieza.
+
+Si después conectas algo que necesita un controlador, aparece el aviso
+\textbf{Falta algo para tu hardware}:
+\begin{pasos}
+  \item Pulsa \menu{Instalar}. Si no ves el aviso, abre
+        \textbf{Controladores} desde el menú.
+  \item En la lista viene todo marcado; desmarca lo que no quieras.
+  \item Pulsa \menu{Aceptar} y escribe tu contraseña. Lo que se descarga
+        necesita internet.
+  \item Si alguno es el firmware de un wifi Intel antiguo, primero aparece
+        su licencia: léela y acéptala para poder instalarlo.
+  \item Cuando diga \emph{Listo}, reinicia si la pieza todavía no funciona.
+\end{pasos}
+
+Si dice \emph{No falta nada} y una pieza sigue sin funcionar, pide ayuda
+con el informe de diagnóstico (capítulo~\ref{cap:17-pedir-ayuda}).
+
+\begin{terminal}
+lazaro-controladores --revisar               \# lista lo que falta\\
+doas lazaro-controladores --instalar-alpine  \# instala lo que falta de Alpine
+\end{terminal}
+
+\section{Tarjetas de video NVIDIA}\label{sec:nvidia}
+
+NVIDIA no ofrece su controlador oficial para Alpine, así que Lázaro usa
+el controlador libre, llamado \termino{nouveau} \cite{nouveau}. Antes de
+activarlo revisa qué tarjeta es \cite{nouveau-codenames}:
+
+\begin{itemize}
+  \item \textbf{GeForce 8 o más nuevas}: lo activa. También en los
+        portátiles con dos tarjetas (Intel o AMD más NVIDIA).
+  \item \textbf{Más antiguas} (GeForce FX, 6 y 7) o una
+        \textbf{desconocida} que maneja la pantalla sola: usa una imagen
+        básica y muestra un aviso, para evitar la pantalla negra o los
+        bloqueos.
+\end{itemize}
+
+Con la imagen básica (\emph{modo seguro}) la pantalla funciona, sin
+efectos ni aceleración. Para elegir su resolución, abre
+\menu{Resolución de pantalla (modo seguro)} en el menú.
+
+\subsection{Forzar la decisión al arrancar desde el USB}
+Si aun así falla, se puede elegir a mano en el menú de arranque:
+\begin{description}
+  \item[Menú gris con dos opciones (UEFI)] Con las flechas, ponte en la
+    primera opción y pulsa \keys{E}. Baja hasta la línea que empieza con
+    \texttt{linux}, ve al final con \keys{Fin}, escribe un espacio y
+    \texttt{lazaro.nvidia=seguro}. Arranca con \keys{\ctrl + X} o
+    \keys{F10}.
+  \item[Pantalla negra que dice \texttt{boot:} (BIOS)] Escribe
+    \texttt{lazaro lazaro.nvidia=seguro} y pulsa \keys{Enter}.
+\end{description}
+Con \texttt{lazaro.nvidia=activa} en lugar de \texttt{seguro} se fuerza el
+controlador. El sistema instalado recuerda esta elección.
+
+\section{De dónde vienen las mejoras}\label{sec:repositorio-lazaro}
+
+Las herramientas de Lázaro (Afinador, Controladores, Diagnóstico y el
+kernel Lázaro) llegan por el \textbf{repositorio de Lázaro}: un lugar en
+internet, en GitHub, de donde el sistema baja paquetes igual que de los
+de Alpine. Todo lo que viene de ahí está \textbf{firmado} con la clave de
+Lázaro: el sistema rechaza cualquier paquete que no tenga esa firma.
+
+En un equipo instalado con una ISO reciente no tienes que hacer nada: en
+el primer arranque con internet se conecta solo. Si tu equipo tiene
+Lázaro desde antes de esta novedad, hay que conectarlo una sola vez. Abre
+una terminal, pega esta línea entera (clic derecho, \menu{Pegar}, o
+\keys{\ctrl + Mayús + V}) y pulsa \keys{Enter}:
+\begin{terminal}
+\path{wget -qO /tmp/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh /tmp/lr --activar}
+\end{terminal}
+Al terminar dice \emph{Listo: las herramientas de Lázaro se actualizarán
+con las actualizaciones del sistema}. Si dice que no pudo descargar,
+revisa la conexión y vuelve a pegarla: se puede repetir sin problema.
+
+\fuentes

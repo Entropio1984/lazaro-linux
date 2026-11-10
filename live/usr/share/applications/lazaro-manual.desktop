@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Manual de Lázaro
+GenericName=Guía de uso
+Comment=Cómo instalar y usar Lázaro Linux, paso a paso
+Exec=lazaro-manual
+Icon=help-browser
+Terminal=false
+Categories=Documentation;Utility;
+Keywords=ayuda;manual;guía;tutorial;help;

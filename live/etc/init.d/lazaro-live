@@ -245,10 +245,31 @@ start() {
 		  </property>
 		</channel>
 	EOF
+	# Carpetas personales en español. Sin user-dirs.dirs, XFCE usa
+	# ~/Desktop y no muestra lo que se deja en ~/Escritorio.
+	mkdir -p /home/lazaro/.config
+	cat > /home/lazaro/.config/user-dirs.dirs <<-'EOF'
+		XDG_DESKTOP_DIR="$HOME/Escritorio"
+		XDG_DOWNLOAD_DIR="$HOME/Descargas"
+		XDG_DOCUMENTS_DIR="$HOME/Documentos"
+		XDG_PICTURES_DIR="$HOME/Imágenes"
+		XDG_MUSIC_DIR="$HOME/Música"
+		XDG_VIDEOS_DIR="$HOME/Vídeos"
+		XDG_TEMPLATES_DIR="$HOME/Plantillas"
+		XDG_PUBLICSHARE_DIR="$HOME/Público"
+	EOF
+	for d in Escritorio Descargas Documentos Imágenes Música Vídeos Plantillas Público; do
+		mkdir -p "/home/lazaro/$d"
+	done
 	escritorio=/home/lazaro/Escritorio
 	mkdir -p "$escritorio"
 	cp /usr/share/applications/lazaro-instalador.desktop "$escritorio"/
 	chmod +x "$escritorio"/lazaro-instalador.desktop
+	# El manual, al lado del instalador (si la ISO se compiló con él).
+	if [ -r /usr/share/doc/lazaro/manual-lazaro.pdf ]; then
+		cp /usr/share/applications/lazaro-manual.desktop "$escritorio"/
+		chmod +x "$escritorio"/lazaro-manual.desktop
+	fi
 	chown -R lazaro:lazaro /home/lazaro
 	serie "LAZARO-LIVE-LISTO"
 	# Cuánto ocupa la sesión live en la RAM y cuánto le queda.

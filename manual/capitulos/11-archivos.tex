@@ -1,0 +1,96 @@
+\chapter{Archivos, pendrives y copias de seguridad}\label{cap:11-archivos}
+
+\section{El gestor de archivos}
+
+Tus archivos se manejan con el \termino{gestor de archivos}: en XFCE se
+llama \emph{Thunar}; en otros escritorios, Caja (MATE), PCManFM-Qt
+(LXQt), Archivos (GNOME) o Dolphin (KDE Plasma). Se abre desde el panel de
+abajo, con el icono de la carpeta, o haciendo doble clic en \emph{Carpeta
+personal} del escritorio.
+
+\captura{thunar}{Thunar, el gestor de archivos de XFCE}
+
+\subsection{Tu carpeta personal}
+Cada usuario tiene su \emph{carpeta personal}, el equivalente a la carpeta
+de usuario de Windows. Dentro están \emph{Documentos}, \emph{Descargas},
+\emph{Imágenes}, \emph{Música}, \emph{Videos} y \emph{Escritorio}. Guarda
+ahí lo tuyo: el resto del disco es del sistema y no hace falta tocarlo.
+
+\subsection{Lo de todos los días}
+\begin{itemize}
+  \item \textbf{Copiar}: clic derecho sobre el archivo, \menu{Copiar}; ve a
+        la otra carpeta, clic derecho en un espacio vacío, \menu{Pegar}.
+        También se puede arrastrar.
+  \item \textbf{Cambiar el nombre}: clic sobre el archivo y \keys{F2}.
+  \item \textbf{Borrar}: \keys{Supr} lo manda a la \emph{Papelera}; desde
+        ahí se puede recuperar hasta que la vacías.
+  \item \textbf{Crear una carpeta}: clic derecho en un espacio vacío,
+        \menu{Crear carpeta}.
+  \item \textbf{Buscar}: \keys{\ctrl + F} y escribe parte del nombre.
+  \item \textbf{Ver los archivos ocultos}: \keys{\ctrl + H}. Los archivos
+        cuyo nombre empieza con un punto son configuraciones; mejor no
+        tocarlos.
+\end{itemize}
+
+\subsection{Archivos comprimidos (.zip, .rar, .7z)}
+Clic derecho sobre el archivo, \menu{Extraer aquí}. Para comprimir:
+selecciona los archivos, clic derecho, \menu{Crear un archivador} (o
+\menu{Comprimir}) y elige el formato \texttt{.zip}, el que se abre en
+cualquier equipo.
+
+\section{Pendrives, discos externos y el celular}
+
+Al conectar un pendrive o un disco externo aparece solo en la columna de
+la izquierda del gestor de archivos. Haz clic para abrirlo.
+
+\begin{cuidado}
+Antes de sacar el pendrive, haz clic en el triángulo de expulsar que
+aparece al lado de su nombre (o clic derecho, \menu{Expulsar}) y espera a
+que desaparezca. Si lo sacas mientras se está copiando algo, el archivo
+y a veces todo el pendrive pueden quedar dañados.
+\end{cuidado}
+
+\begin{nota}
+Copiar archivos grandes a un pendrive lento puede tardar: el sistema
+copia primero a la memoria y después al pendrive. El Afinador de Lázaro
+ajusta esto para que el equipo no se congele mientras tanto
+(capítulo~\ref{cap:15-herramientas}). Espera siempre a expulsar.
+\end{nota}
+
+\subsection{El celular}
+Conecta el celular por cable y, en Android, elige \emph{Transferencia de
+archivos} en la notificación del USB. Aparece en el gestor de archivos y
+puedes copiar las fotos de la carpeta \texttt{DCIM}. Con un iPhone,
+desbloquéalo y toca \emph{Confiar} cuando lo pregunte.
+
+\subsection{Formatear un pendrive}
+Formatear borra todo y lo deja como nuevo. En el gestor de archivos, clic
+derecho sobre el pendrive, \menu{Formatear} (si tu escritorio no lo
+ofrece, instala \emph{Discos} desde la tienda). Elige \textbf{exFAT} si
+lo vas a usar también en Windows, Mac o un televisor con archivos de más
+de 4 GB; \textbf{FAT} para lo más compatible con equipos antiguos.
+
+\section{Copias de seguridad}\label{sec:copias}
+
+Un disco puede fallar sin avisar, sobre todo en un equipo viejo. La regla
+que recomiendan los especialistas es simple: tener \textbf{al menos dos
+copias} de lo importante, en lugares distintos \cite{incibe-copias}.
+
+\begin{pasos}
+  \item Consigue un disco externo o un pendrive grande que uses solo para
+        esto.
+  \item Una vez por semana (o cada vez que guardes algo importante),
+        conéctalo y copia tus carpetas \emph{Documentos} e \emph{Imágenes}
+        dentro de una carpeta con la fecha, por ejemplo
+        \texttt{Copia 2026-11-09}.
+  \item Expúlsalo y guárdalo en otro lugar.
+\end{pasos}
+
+\begin{consejo}
+Si prefieres que se haga sola, la tienda de aplicaciones ofrece
+\emph{Déjà Dup} (\enquote{Copias de seguridad}), que guarda una copia
+programada en un disco externo o en la nube y permite recuperar versiones
+anteriores de un archivo.
+\end{consejo}
+
+\fuentes

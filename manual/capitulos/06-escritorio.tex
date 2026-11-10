@@ -1,0 +1,115 @@
+\chapter{Tu escritorio}\label{cap:06-escritorio}
+
+El \termino{escritorio} es lo que ves después de entrar: el fondo, la barra
+con el menú y el reloj, y las ventanas de los programas. Este capítulo
+explica XFCE, el que viene marcado de fábrica, y al final resume las
+diferencias de los demás.
+
+\section{XFCE de un vistazo}\label{sec:xfce}
+
+\captura{xfce-escritorio}{El escritorio XFCE de Lázaro}
+
+XFCE trae dos barras, que XFCE llama \termino{paneles} \cite{xfce-docs}:
+
+\begin{description}
+  \item[El panel de arriba.] A la izquierda, el menú \menu{Aplicaciones}
+    con todos los programas, ordenados por tipo (Internet, Oficina,
+    Multimedia, Sistema\ldots). En el medio, un botón por cada ventana
+    abierta: haz clic para ir a ella o para minimizarla. A la derecha, la
+    \termino{bandeja}: los iconos de la red, el volumen, la batería, el
+    aviso de actualizaciones y el reloj.
+  \item[El panel de abajo.] Un pequeño \enquote{muelle} con accesos a los
+    programas más usados: mostrar el escritorio, la terminal, la carpeta
+    personal, el navegador y la búsqueda de programas.
+\end{description}
+
+\captura{xfce-menu}{El menú Aplicaciones de XFCE}
+
+\subsection{Abrir un programa}
+\begin{pasos}
+  \item Haz clic en \menu{Aplicaciones}, arriba a la izquierda.
+  \item Pasa el ratón por una categoría, por ejemplo \menu{Oficina}.
+  \item Haz clic en el programa.
+\end{pasos}
+
+\begin{consejo}
+Más rápido: pulsa \keys{Alt + F2} (o la lupa del panel de abajo), escribe
+las primeras letras del programa, por ejemplo \texttt{fire} para Firefox, y
+pulsa \keys{Enter}.
+\end{consejo}
+
+\subsection{Las ventanas}
+Cada ventana tiene arriba a la derecha tres botones: \emph{minimizar}
+(la esconde en el panel), \emph{maximizar} (ocupa toda la pantalla) y
+\emph{cerrar}. Para moverla, arrástrala desde la barra del título. Para
+cambiar su tamaño, arrastra un borde o una esquina. Para pasar de una
+ventana a otra con el teclado: \keys{Alt + Tab}.
+
+\subsection{Poner un programa en el panel o en el escritorio}
+Abre el menú \menu{Aplicaciones}, haz clic derecho sobre el programa y
+elige \menu{Añadir al panel} o \menu{Añadir al escritorio}.
+
+\subsection{Cambiar el fondo, la letra y los colores}
+\begin{itemize}
+  \item \textbf{Fondo:} clic derecho en el escritorio, \menu{Configuración del
+        escritorio}. Elige una imagen; para usar una foto tuya, cambia la
+        carpeta de arriba.
+  \item \textbf{Tamaño de letra y tema claro u oscuro:}
+        \menu{Aplicaciones > Configuración > Apariencia}. En la pestaña
+        \menu{Estilo} eliges el tema; en \menu{Tipos de letra}, el tamaño.
+  \item \textbf{Todo lo demás:} \menu{Aplicaciones > Configuración >
+        Gestor de configuración} reúne todos los ajustes en una ventana
+        (capítulo~\ref{cap:14-ajustes}).
+\end{itemize}
+
+\begin{consejo}
+¿Te cuesta leer? Sube el tamaño de letra a 12 o 13 en \menu{Apariencia >
+Tipos de letra}, y en Firefox usa \keys{\ctrl + +} para agrandar la página.
+\end{consejo}
+
+\subsection{Apagar, reiniciar y cerrar sesión}
+En el menú \menu{Aplicaciones}, abajo, está \menu{Salir}. Ofrece
+\emph{Apagar}, \emph{Reiniciar}, \emph{Cerrar la sesión} y, en portátiles,
+\emph{Suspender}. Apaga siempre así: cortar la corriente de golpe puede
+dañar archivos que se estaban guardando.
+
+\section{Los otros escritorios}
+
+Si elegiste otro escritorio al instalar, todo lo de este libro sigue
+valiendo: los programas son los mismos. Cambian el aspecto y los nombres
+de algunos menús.
+
+\begin{description}
+  \item[LXQt] Muy parecido a XFCE pero con una sola barra, abajo, como en
+    Windows. El menú está en el botón de la izquierda; la configuración, en
+    \menu{Preferencias > Configuración de LXQt} \cite{lxqt-wiki}. Su
+    gestor de archivos se llama \emph{PCManFM-Qt}.
+  \item[MATE] Dos paneles como XFCE. Arriba, los menús \menu{Aplicaciones},
+    \menu{Lugares} y \menu{Sistema}; la configuración está en
+    \menu{Sistema > Preferencias} \cite{mate-docs}. Su gestor de archivos se
+    llama \emph{Caja}.
+  \item[KDE Plasma] Una barra abajo, como Windows, y un menú que se abre con
+    el botón de la izquierda o con la tecla \keys{Windows}. Todo se ajusta
+    en \emph{Preferencias del sistema}. Los archivos se manejan con
+    \emph{Dolphin} \cite{kde-userbase}.
+  \item[GNOME] Una barra fina arriba. Pulsa \keys{Windows} (o
+    \emph{Actividades}, arriba a la izquierda) para ver las ventanas
+    abiertas y buscar programas escribiendo su nombre. La configuración
+    está en \emph{Configuración}; los archivos, en \emph{Archivos}
+    \cite{gnome-help}.
+  \item[Sway] No tiene menús: todo se hace con el teclado. Las ventanas
+    se acomodan solas una al lado de la otra. Lo básico: \keys{Windows +
+    Enter} abre una terminal, \keys{Windows + D} busca programas,
+    \keys{Windows + Mayús + Q} cierra la ventana. Recomendado solo para
+    quien ya lo conoce \cite{sway-wiki}.
+  \item[XFCE Wayland] Se ve y se usa igual que XFCE. Usa una tecnología
+    gráfica más nueva, todavía en prueba: si algo falla, XFCE es la opción
+    segura.
+\end{description}
+
+\begin{nota}
+En los escritorios KDE Plasma y LXQt la tienda de aplicaciones se llama
+\emph{Discover}; en los demás, \emph{Software} (capítulo~\ref{cap:13-programas}).
+\end{nota}
+
+\fuentes

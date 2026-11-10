@@ -478,6 +478,12 @@ paso_base() {
 	# de la ISO con que se instaló, que el informe muestra.
 	install -Dm755 /usr/sbin/lazaro-diagnostico "$raiz/usr/local/sbin/lazaro-diagnostico"
 	install -Dm644 "$DATOS/version.env" "$raiz/usr/share/lazaro/version.env"
+	# Manual de Lázaro (PDF) y su acceso en el menú, "Manual de Lázaro".
+	if [ -r /usr/share/doc/lazaro/manual-lazaro.pdf ]; then
+		install -Dm644 /usr/share/doc/lazaro/manual-lazaro.pdf "$raiz/usr/share/doc/lazaro/manual-lazaro.pdf"
+		install -Dm755 /usr/bin/lazaro-manual "$raiz/usr/local/bin/lazaro-manual"
+		install -Dm644 /usr/share/applications/lazaro-manual.desktop "$raiz/usr/share/applications/lazaro-manual.desktop"
+	fi
 	# btop mide la GPU Intel sin doas: un gancho de apk le da el permiso
 	# CAP_PERFMON cada vez que se instala o actualiza (libcap-setcap se
 	# instala siempre con los programas adicionales).
@@ -1209,6 +1215,20 @@ paso_auto() {
 	# Usuario "prueba", contraseña "lazaro". Fastfetch, el programa
 	# adicional más liviano: la prueba comprueba que lo marcado en
 	# "Software adicional" se instala.
+	# lazaro.capturas=si (pruebas/qemu.sh capturas): en lugar de las
+	# pruebas, el sistema instalado fotografía sus programas para el
+	# Manual de Lázaro. Lleva todo el software adicional y entra solo.
+	if grep -qw 'lazaro.capturas=si' /proc/cmdline 2>/dev/null; then
+		LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
+			es_ES.UTF-8 es "" Europe/Madrid "base flatpak fastfetch btop youtube libreoffice vlc" no
+		paso_autologin "$raiz" prueba
+		mkdir -p "$raiz/etc/local.d"
+		install -m 755 "$PRUEBAS/zz-lazaro-capturas.start" "$raiz/etc/local.d/zz-lazaro-capturas.start"
+		ln -sf /etc/init.d/local "$raiz/etc/runlevels/default/local"
+		desmontar_destino
+		log "Instalación desatendida terminada (capturas para el manual)."
+		return 0
+	fi
 	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
 		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch btop youtube$auto_flathub" no
 	auto_revisar_flatpak

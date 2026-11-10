@@ -1,0 +1,230 @@
+\chapter{Antes de instalar}\label{cap:02-antes-de-instalar}
+
+Este capítulo prepara todo lo necesario: una copia de tus archivos, la
+descarga de Lázaro y la memoria USB desde la que arrancará el equipo.
+Calcula una hora, casi toda esperando a que termine la descarga.
+
+Vas a necesitar:
+\begin{itemize}
+  \item el equipo donde quieres instalar Lázaro, enchufado a la corriente;
+  \item otra computadora con internet para descargar (puede ser la misma,
+        si todavía funciona con Windows);
+  \item una memoria USB de 4 GB o más (8 GB para la edición Completa) que
+        no tenga nada importante: \textbf{se va a borrar}.
+\end{itemize}
+
+\section{Guarda una copia de tus archivos}\label{sec:copia-antes}
+
+\begin{cuidado}
+Al instalar Lázaro se borra el disco que elijas, con todo lo que tiene. No
+hay forma de recuperar lo borrado. Haz la copia \textbf{antes} de seguir.
+\end{cuidado}
+
+Lo que suele importar está en estas carpetas de Windows: \emph{Documentos},
+\emph{Imágenes}, \emph{Música}, \emph{Videos}, \emph{Descargas} y
+\emph{Escritorio}. Cópialas a un pendrive o a un disco externo (no al
+mismo pendrive que usarás para Lázaro). Revisa también:
+\begin{itemize}
+  \item \textbf{Las contraseñas y marcadores del navegador.} Si usas Chrome
+        o Edge con una cuenta, ya están guardados en esa cuenta. Si no,
+        expórtalos: en Chrome, \menu{Marcadores > Administrador de marcadores
+        > \ldots > Exportar marcadores}.
+  \item \textbf{El correo.} Si lo lees en una página web (Gmail, Outlook.com,
+        Yahoo) no tienes que hacer nada: sigue en internet.
+  \item \textbf{Las fotos del celular} que hayas pasado al equipo.
+  \item \textbf{Claves de wifi}: anota la de tu casa; la vas a necesitar.
+\end{itemize}
+
+Para hacer una copia de seguridad bien hecha y conservarla en el tiempo,
+el capítulo~\ref{cap:11-archivos} da más detalles. El Instituto Nacional de
+Ciberseguridad de España tiene una buena guía para no expertos
+\cite{incibe-copias}.
+
+\section{Descarga Lázaro}\label{sec:descargar}
+
+Primero elige la edición (sección~\ref{sec:ediciones}): \textbf{Ligera} si
+tienes buena conexión, \textbf{Completa} si el equipo no va a tener
+internet. Luego descarga \emph{dos} archivos de la misma carpeta:
+
+\begin{itemize}
+  \item el archivo que termina en \texttt{.iso}: es el \termino{archivo ISO}, un
+        \enquote{disco} con todo el sistema dentro. Pesa entre 2 y 4,6 GB;
+  \item el archivo del mismo nombre que termina en \texttt{.sha256}: es muy
+        pequeño y sirve para comprobar que la descarga llegó bien.
+\end{itemize}
+
+Los dos están en:
+\begin{itemize}
+  \item \textbf{Ligera:} \url{https://github.com/Entropio1984/lazaro-linux/releases}
+        o \url{https://sourceforge.net/projects/lazaro-linux/files/Ligera/}
+  \item \textbf{Completa:} \url{https://sourceforge.net/projects/lazaro-linux/files/Completa/}
+  \item \textbf{Versiones numeradas} (fijas, las más probadas):
+        \url{https://sourceforge.net/projects/lazaro-linux/files/Versiones/}
+\end{itemize}
+
+No hace falta crear ninguna cuenta. Si la descarga se corta, vuelve a
+empezarla: el navegador suele poder continuarla desde donde quedó.
+
+\section{Comprueba que la descarga llegó entera}\label{sec:sha256}
+
+Una descarga dañada es la causa más común de que el USB no arranque, y
+tiene arreglo fácil si se detecta a tiempo. El archivo \texttt{.sha256}
+trae una \termino{suma de comprobación}: un número largo que se calcula a
+partir de cada byte de la ISO. Si cambia un solo byte, cambia el número
+entero.
+
+\subsection*{En Windows}
+\begin{pasos}
+  \item Abre la carpeta donde quedó la descarga (normalmente \emph{Descargas}).
+  \item Haz clic derecho en un espacio vacío de la carpeta y elige
+        \menu{Abrir en Terminal} (en Windows 10: mantén \keys{\shift}
+        apretada mientras haces clic derecho y elige \menu{Abrir la ventana
+        de PowerShell aquí}).
+  \item Escribe esto y pulsa \keys{Enter}:
+\begin{terminal}
+Get-FileHash .\textbackslash lazaro-linux-*.iso
+\end{terminal}
+  \item Tarda un minuto. Aparece una línea con el número (la columna
+        \emph{Hash}). Abre el archivo \texttt{.sha256} con el Bloc de notas y
+        compara: deben ser iguales. Basta con mirar los primeros y los
+        últimos 6 caracteres \cite{ms-gethash}.
+\end{pasos}
+
+\subsection*{En Linux (otra distribución, o Lázaro ya instalado)}
+Abre una terminal en la carpeta de la descarga y escribe:
+\begin{terminal}
+sha256sum -c lazaro-linux-*.sha256
+\end{terminal}
+Debe decir \texttt{La suma coincide} o \texttt{OK}.
+
+\begin{cuidado}
+Si los números \textbf{no coinciden}, la descarga está dañada: bórrala y
+descárgala de nuevo, mejor desde la otra página (GitHub o SourceForge). No
+sigas con una ISO dañada: el equipo podría no arrancar o fallar a mitad de
+la instalación.
+\end{cuidado}
+
+\section{Prepara la memoria USB}\label{sec:usb}
+
+Grabar la ISO en el USB no es lo mismo que copiarla: hace falta un programa
+que la convierta en una memoria \emph{arrancable}. Elige uno de estos tres,
+todos gratuitos.
+
+\begin{cuidado}
+Esto borra todo lo que tenga la memoria USB.
+\end{cuidado}
+
+\subsection{balenaEtcher (Windows, Mac y Linux): el más sencillo}
+\begin{pasos}
+  \item Descárgalo de \url{https://etcher.balena.io} e instálalo
+        \cite{etcher}.
+  \item Ábrelo y pulsa \menu{Flash from file}. Elige la ISO de Lázaro.
+  \item Pulsa \menu{Select target} y elige tu memoria USB. Fíjate bien en
+        el tamaño para no elegir otro disco.
+  \item Pulsa \menu{Flash!} y espera. Al final Etcher comprueba la copia
+        solo.
+\end{pasos}
+
+\subsection{Rufus (Windows)}
+\begin{pasos}
+  \item Descárgalo de \url{https://rufus.ie/es/}: no necesita instalarse
+        \cite{rufus}.
+  \item En \emph{Dispositivo}, elige tu memoria USB.
+  \item Pulsa \menu{Seleccionar} y elige la ISO de Lázaro.
+  \item Pulsa \menu{Empezar}. Si pregunta cómo escribir la imagen, elige
+        \textbf{Escribir en modo Imagen DD}. Ese modo copia la ISO tal cual
+        y es el que funciona con Lázaro.
+\end{pasos}
+
+\subsection{Ventoy: varias ISO en un mismo USB}
+Ventoy prepara el USB una sola vez; después basta con copiar los archivos
+ISO dentro, como a cualquier pendrive, y al arrancar te deja elegir cuál
+usar \cite{ventoy}. Es cómodo si quieres llevar Lázaro junto a otros
+sistemas.
+
+\begin{cuidado}
+Con Ventoy, después de copiar la ISO usa siempre \menu{Quitar el
+dispositivo de forma segura} antes de sacar el USB. Si lo sacas de golpe,
+la copia puede quedar dañada y el equipo no arranca o se detiene con un
+\enquote{error de entrada/salida}. Copia también el archivo \texttt{.sha256} al
+USB: así puedes repetir la comprobación sobre la copia que quedó en él.
+\end{cuidado}
+
+\section{BIOS, UEFI y el arranque seguro}\label{sec:bios-uefi}
+
+Cuando se enciende, todo equipo ejecuta primero un pequeño programa propio
+que revisa el hardware y busca desde dónde arrancar. En los equipos de
+antes de 2012, aproximadamente, se llama \termino{BIOS}. En los más nuevos
+es \termino{UEFI}, su reemplazo moderno \cite{uefi-org}. Lázaro funciona con
+los dos y no tienes que hacer nada especial.
+
+Muchos equipos con UEFI traen activado el \termino{arranque seguro}
+(\emph{Secure Boot}), que solo deja arrancar sistemas firmados con llaves
+de Microsoft \cite{ms-secureboot}. Si el equipo se niega a arrancar desde
+el USB con un mensaje como \enquote{Secure Boot violation} o \enquote{imagen no
+autorizada}, hay que desactivarlo:
+
+\begin{pasos}
+  \item Apaga el equipo. Enciéndelo y pulsa varias veces la tecla de la
+        configuración (suele ser \keys{F2}, \keys{Supr} o \keys{Esc}; ver el
+        apéndice~\ref{cap:b-teclas-arranque}).
+  \item Busca la pestaña \emph{Security} o \emph{Boot} y la opción
+        \emph{Secure Boot}. Ponla en \emph{Disabled}.
+  \item Guarda y sal con \keys{F10} y confirma con \emph{Yes}.
+\end{pasos}
+
+\begin{nota}
+Desactivar el arranque seguro no daña el equipo ni borra nada. Si más
+adelante vuelves a Windows, puedes activarlo otra vez.
+\end{nota}
+
+\section{Arranca el equipo desde el USB}\label{sec:arrancar-usb}
+
+\begin{pasos}
+  \item Con el equipo apagado, conecta la memoria USB. En una PC de
+        escritorio, mejor en un puerto de atrás.
+  \item Enciéndelo y, apenas aparezca el logo de la marca, pulsa
+        repetidamente la tecla del \textbf{menú de arranque}. Las más comunes
+        están en la tabla~\ref{tab:teclas-cortas}; la lista completa, en el
+        apéndice~\ref{cap:b-teclas-arranque}.
+  \item En la lista que aparece, elige el USB con las flechas (puede
+        aparecer con su marca, como \emph{SanDisk} o \emph{Kingston}, o como
+        \emph{USB HDD}) y pulsa \keys{Enter}. Si aparece dos veces, una con
+        \emph{UEFI} delante, elige esa.
+\end{pasos}
+
+\begin{table}[htbp]\centering
+\caption{Tecla del menú de arranque en las marcas más comunes}\label{tab:teclas-cortas}
+\begin{tabular}{ll}
+\toprule
+Marca & Tecla habitual \\
+\midrule
+Acer, Dell, Lenovo, Toshiba & \keys{F12} \\
+Asus & \keys{Esc} o \keys{F8} \\
+HP y Compaq & \keys{Esc} y luego \keys{F9} \\
+Sony Vaio & \keys{F11} o el botón \emph{Assist} \\
+PC de escritorio & \keys{F8}, \keys{F11} o \keys{F12} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Si en la lista no aparece el USB, entra a la configuración del equipo
+(sección anterior), busca la sección \emph{Boot} y pon el USB primero en
+el orden de arranque.
+
+\subsection{El menú de Lázaro}
+Si todo va bien, aparece un menú con dos opciones (escritas sin tildes,
+porque ese menú no las muestra bien):
+\begin{description}
+  \item[Lazaro Linux] la normal. Se elige sola a los pocos segundos.
+  \item[Lazaro Linux (modo grafico seguro)] úsala solo si con la primera la
+    pantalla se queda en negro. Arranca con una imagen más básica que
+    funciona con casi cualquier tarjeta de video.
+\end{description}
+
+\captura{menu-arranque}{El menú de arranque de Lázaro en un equipo con UEFI}
+
+Si el USB no arranca, o se detiene con un error, revisa la
+sección~\ref{sec:prob-no-arranca} de \emph{Solución de problemas}.
+
+\fuentes
