@@ -67,13 +67,26 @@ filtrar() {
 }
 
 # Saca de un paquete .apk (formato de Alpine: varios tar.gz seguidos)
-# solo los archivos del idioma. extraer_apk ARCHIVO DESTINO IDIOMA
+# solo los archivos del idioma y dice cuántos son. Falla si alguno no
+# quedó en DESTINO: así nunca se marca un idioma a medias.
+# extraer_apk ARCHIVO DESTINO IDIOMA
 extraer_apk() {
 	lista="$(mktemp)"
 	# Los .apk llevan cabeceras que GNU tar no conoce (avisa y sigue).
-	tar -tzf "$1" 2>/dev/null | filtrar "$3" > "$lista" || true
+	if ! tar -tzf "$1" 2>/dev/null | filtrar "$3" > "$lista"; then
+		rm -f "$lista"
+		echo "lazaro-traducciones: no se pudo leer $(basename "$1")" >&2
+		return 1
+	fi
 	if [ -s "$lista" ]; then
 		tar -xzf "$1" -C "$2" -T "$lista" 2>/dev/null || true
+		while IFS= read -r a; do
+			if [ ! -e "$2/$a" ] && [ ! -L "$2/$a" ]; then
+				rm -f "$lista"
+				echo "lazaro-traducciones: no se pudo sacar $a de $(basename "$1")" >&2
+				return 1
+			fi
+		done < "$lista"
 	fi
 	wc -l < "$lista"
 	rm -f "$lista"
@@ -110,7 +123,10 @@ extraer() {
 			fi
 			for f in "$tmp"/*.apk; do
 				[ -e "$f" ] || continue
-				n="$(extraer_apk "$f" "$destino" "$base")"
+				if ! n="$(extraer_apk "$f" "$destino" "$base")"; then
+					rm -rf "$tmp"
+					return 1
+				fi
 				total=$((total + n))
 				rm -f "$f"
 			done

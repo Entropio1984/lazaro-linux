@@ -152,8 +152,15 @@ probar_cambio_idioma() {
 		j=$((j + 1))
 		sleep 5
 	done
+	# La distribución que usa de verdad el servidor gráfico nuevo (se lo
+	# pregunta setxkbmap, con la llave de LightDM o la del usuario).
 	teclado=no
-	grep -qs 'XkbLayout.*"br"' /var/log/Xorg.0.log /var/log/lightdm/x-0.log && teclado=br
+	for xa in /var/run/lightdm/root/:0 /run/lightdm/root/:0 /home/lazaro/.Xauthority; do
+		[ -r "$xa" ] || continue
+		capa=$(DISPLAY=:0 XAUTHORITY="$xa" setxkbmap -query 2>/dev/null | sed -n 's/^layout: *//p')
+		[ -z "$capa" ] || { teclado="$capa"; break; }
+	done
+	[ "$teclado" != no ] || grep -hi xkb /var/log/Xorg.0.log /var/log/lightdm/x-0.log 2>/dev/null | head -n 8 | serie
 	serie "LAZARO-IDIOMA-CAMBIO sesion=$(idioma_de xfce4-panel) calamares=$(idioma_de calamares) teclado=$teclado traducciones=$trad"
 }
 

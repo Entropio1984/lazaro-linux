@@ -79,6 +79,8 @@ rc=0; LAZARO_IDIOMA_RAIZ="$R" python3 "$IDIOMA" --guardar 'es_CO.UTF-8; rm -rf /
 es "guardar: un idioma que no está en la lista se rechaza" '[ "$rc" = 2 ] && grep -qx "export LANG=pt_BR.UTF-8" "$R/etc/profile.d/00-idioma.sh"'
 rc=0; LAZARO_IDIOMA_RAIZ="$R" python3 "$IDIOMA" --guardar - 'us"' 2>/dev/null || rc=$?
 es "guardar: un teclado que no está en la lista se rechaza" '[ "$rc" = 2 ]'
+rc=0; LAZARO_IDIOMA_RAIZ="$R" python3 "$IDIOMA" --guardar es_ES.UTF-8 'xx' 2>/dev/null || rc=$?
+es "guardar: con un teclado malo tampoco cambia el idioma" '[ "$rc" = 2 ] && grep -qx "export LANG=pt_BR.UTF-8" "$R/etc/profile.d/00-idioma.sh"'
 es "la live arranca en español" 'grep -qx "export LANG=es_CO.UTF-8" "$DIR/live/etc/profile.d/00-idioma.sh"'
 es "el idioma de la live es el predeterminado de lazaro-idioma" 'LAZARO_IDIOMA_RAIZ="$DIR/live" LANG=C python3 "$IDIOMA" --listar | grep -q "^idioma	es_CO.UTF-8	.*	actual$"'
 

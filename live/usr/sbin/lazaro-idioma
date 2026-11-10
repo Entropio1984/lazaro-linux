@@ -144,11 +144,16 @@ def escribir(rel, texto):
 
 
 def guardar(idioma, distribucion, variante=""):
-    """Escribe la elección (como root). "-" deja ese dato como está."""
+    """Escribe la elección (como root). "-" deja ese dato como está.
+    Primero se revisan los dos: si uno no vale, no se escribe nada."""
+    clave = distribucion + (":" + variante if variante else "")
+    if idioma != "-" and not valido_idioma(idioma):
+        print("Idioma desconocido: %s" % idioma, file=sys.stderr)
+        return 2
+    if distribucion != "-" and not valido_teclado(clave):
+        print("Teclado desconocido: %s" % clave, file=sys.stderr)
+        return 2
     if idioma != "-":
-        if not valido_idioma(idioma):
-            print("Idioma desconocido: %s" % idioma, file=sys.stderr)
-            return 2
         escribir(PERFIL, (
             "# Idioma de la sesión de prueba de Lázaro Linux. Se cambia desde la\n"
             "# Bienvenida (botón \"Idioma y teclado\", programa lazaro-idioma), que\n"
@@ -156,10 +161,6 @@ def guardar(idioma, distribucion, variante=""):
             "# /etc/profile.d/locale.sh solo si no hay otro: este va antes.\n"
             "export LANG=%s\n" % idioma))
     if distribucion != "-":
-        clave = distribucion + (":" + variante if variante else "")
-        if not valido_teclado(clave):
-            print("Teclado desconocido: %s" % clave, file=sys.stderr)
-            return 2
         lineas = [
             "# Teclado elegido en la Bienvenida de Lázaro Linux (lazaro-idioma).",
             'Section "InputClass"',
@@ -327,9 +328,12 @@ def ventana(argv):
                 aviso(v, "No se pudo cambiar el teclado.")
                 return
             # Guardado para el resto de la sesión y para el instalador.
-            subprocess.call(como_root([sys.executable, os.path.abspath(__file__), "--guardar",
-                                       "-", distribucion] + ([variante] if variante else [])),
-                            env=entorno)
+            if subprocess.call(como_root([sys.executable, os.path.abspath(__file__), "--guardar",
+                                          "-", distribucion] + ([variante] if variante else [])),
+                               env=entorno) != 0:
+                aviso(v, "El teclado cambió en esta ventana, pero no se pudo guardar: "
+                         "al reiniciar la sesión o abrir el instalador volverá el anterior.",
+                      Gtk.MessageType.WARNING)
             prueba.grab_focus()
 
         def idioma_elegido(combo):
@@ -342,7 +346,21 @@ def ventana(argv):
                 if c == codigo and combo_teclado.get_active_id() != sugerido:
                     combo_teclado.set_active_id(sugerido)
 
+        def instalador_abierto():
+            return subprocess.call(["pgrep", "-x", "calamares"], stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL) == 0
+
         def reiniciar_sesion(codigo):
+            # Otra vez justo antes de reiniciar: mientras se descargaban
+            # las traducciones pudo abrirse el instalador, y reiniciar la
+            # sesión lo cerraría a mitad de una instalación.
+            if instalador_abierto():
+                ocupado(False)
+                aviso(v, "El instalador está abierto: no se cambió el idioma para no "
+                         "interrumpirlo. Ciérralo y vuelve a pulsar «Cambiar idioma» "
+                         "(las traducciones ya quedaron descargadas).",
+                      Gtk.MessageType.WARNING)
+                return
             if subprocess.call(como_root([sys.executable, os.path.abspath(__file__),
                                           "--guardar", codigo, "-"]), env=entorno) != 0:
                 ocupado(False)
@@ -364,8 +382,7 @@ def ventana(argv):
             codigo = combo_idioma.get_active_id()
             if not codigo or codigo == actual:
                 return
-            if subprocess.call(["pgrep", "-x", "calamares"], stdout=subprocess.DEVNULL,
-                               stderr=subprocess.DEVNULL) == 0:
+            if instalador_abierto():
                 aviso(v, "Cierra primero el instalador y luego vuelve a cambiar el idioma.",
                       Gtk.MessageType.WARNING)
                 return
