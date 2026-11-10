@@ -5,7 +5,7 @@ Name=Bienvenida a Lázaro Linux
 # "Instalar Lázaro" (abre el instalador, Calamares).
 # Solo en las pruebas automáticas (pruebas/qemu.sh conecta un puerto
 # llamado lazaro.prueba) se abre además el instalador, para revisarlo.
-Exec=sh -c 'if [ -e /dev/virtio-ports/lazaro.prueba ]; then lazaro-abrir-instalador --esperar-red & fi; exec lazaro-bienvenida --sesion'
+Exec=sh -c 'if [ -e /dev/virtio-ports/lazaro.prueba ]; then lazaro-abrir-instalador --esperar-red & exec lazaro-bienvenida --sesion >/tmp/lazaro-bienvenida.log 2>&1; fi; exec lazaro-bienvenida --sesion'
 Icon=lazaro-bienvenida
 Terminal=false
 OnlyShowIn=XFCE;
