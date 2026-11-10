@@ -274,14 +274,33 @@ def ventana_principal(argv):
     live = es_live()
 
     def icono(nombres, tamano):
-        """El primer icono de la lista que exista en el tema del escritorio."""
+        """El primer icono de la lista que exista en el tema del escritorio.
+
+        Se carga aquí y no se le deja a GTK: si un icono no se puede leer
+        (pasa con muy poca memoria libre), GTK cierra el programa entero;
+        así, a lo sumo ese botón queda sin icono."""
         tema = Gtk.IconTheme.get_default()
+        img = Gtk.Image()
+        img.set_size_request(tamano, tamano)
+        escala = max(1, img.get_scale_factor())
         for n in list(nombres) + ["application-x-executable"]:
-            if tema.has_icon(n):
-                img = Gtk.Image.new_from_icon_name(n, Gtk.IconSize.DIALOG)
-                img.set_pixel_size(tamano)
-                return img
-        return Gtk.Image()
+            if not tema.has_icon(n):
+                continue
+            try:
+                pb = tema.load_icon_for_scale(n, tamano, escala, Gtk.IconLookupFlags.FORCE_SIZE)
+            except GLib.Error:
+                continue
+            if pb is None:
+                continue
+            try:
+                # Nítido en pantallas de alta densidad (necesita py3-cairo).
+                img.set_from_surface(Gdk.cairo_surface_create_from_pixbuf(pb, escala, None))
+            except TypeError:
+                if escala > 1:
+                    pb = pb.scale_simple(tamano, tamano, GdkPixbuf.InterpType.BILINEAR)
+                img.set_from_pixbuf(pb)
+            break
+        return img
 
     def aviso(ventana, texto, tipo=None):
         d = Gtk.MessageDialog(transient_for=ventana, modal=True,
