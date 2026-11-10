@@ -754,6 +754,8 @@ prueba_capturas() {
 		t=$((t + 2))
 	done
 	grep 'LAZARO-CAPTURA-FALTA' "$serie" >&2 || true
+	# Registro de las ventanas del Diagnóstico (por qué no abrirían).
+	grep 'LAZARO-DIAGNOSTICO-VENTANA' "$serie" | tr '|' '\n' >&2 || true
 	if ! grep -q LAZARO-CAPTURAS-FIN "$serie"; then
 		captura "$mon" "$CAP/otras/instalado-fallo"
 		echo "FALLO: el sistema instalado no terminó las capturas." >&2

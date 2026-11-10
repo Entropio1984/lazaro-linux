@@ -1400,3 +1400,6 @@ msgstr "Acreditamos que um computador que ainda liga ainda serve. Usá-lo por ma
 #: live/usr/share/lazaro/bienvenida/portada.txt
 msgid "En el menú de la izquierda están las herramientas de Lázaro. Esta ventana se puede volver a abrir cuando quieras desde el menú de aplicaciones: «Bienvenida»."
 msgstr "As ferramentas do Lázaro estão no menu da esquerda. Esta janela pode ser aberta de novo quando quiser pelo menu de aplicativos: “Boas-vindas”."
+
+msgid "Pulsa Intro para cerrar esta ventana."
+msgstr "Pressione Enter para fechar esta janela."

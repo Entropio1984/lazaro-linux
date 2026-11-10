@@ -17,14 +17,70 @@
 # Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
 if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
 
+# Plan B de --ventana, si zenity no puede abrir ventanas: el mismo
+# informe en una terminal del escritorio (pide la contraseña ahí mismo).
+diagnostico_en_terminal() {
+	_dt_yo="$0"
+	case "$_dt_yo" in /*) ;; *) _dt_yo="$PWD/$_dt_yo" ;; esac
+	_dt_guion="$(mktemp)" || return 1
+	{
+		printf 'sh %s\n' "'$_dt_yo'"
+		echo 'echo'
+		printf "printf '%%s' '%s'\n" "$(_ 'Pulsa Intro para cerrar esta ventana.' | sed "s/'/'\\\\''/g")"
+		echo 'read _'
+		printf 'rm -f %s\n' "'$_dt_guion'"
+	} > "$_dt_guion"
+	for _dt in xfce4-terminal mate-terminal lxterminal qterminal konsole gnome-terminal kgx foot xterm; do
+		command -v "$_dt" >/dev/null 2>&1 || continue
+		echo "Se abre $_dt" >> "${registro:-/dev/null}"
+		case "$_dt" in
+			gnome-terminal|kgx) "$_dt" -- sh "$_dt_guion" ;;
+			foot) foot sh "$_dt_guion" ;;
+			*) "$_dt" -e "sh $_dt_guion" ;;
+		esac
+		return $?
+	done
+	rm -f "$_dt_guion"
+	echo "No hay ninguna terminal para mostrar el diagnóstico" >> "${registro:-/dev/null}"
+	return 1
+}
+
 # --ventana: lo mismo con ventanas (botón de la Bienvenida y menú): pide
 # la contraseña con la ventana del escritorio (pkexec), muestra que está
 # trabajando y al final dice dónde quedó el archivo.
 if [ "${1:-}" = "--ventana" ]; then
-	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	# Lo que digan las ventanas (zenity) y por qué fallan queda en
+	# ~/.cache/lazaro-diagnostico-ventana.log: si no aparece nada en
+	# pantalla, ahí está la causa.
+	registro="${XDG_CACHE_HOME:-$HOME/.cache}/lazaro-diagnostico-ventana.log"
+	mkdir -p "$(dirname "$registro")" 2>/dev/null
+	{ [ -w "$(dirname "$registro")" ] && : >> "$registro"; } 2>/dev/null || registro=/dev/null
+	echo "== $(date '+%F %T') $0 --ventana DISPLAY=${DISPLAY:-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} LANG=${LANG:-}" >> "$registro"
+	if ! command -v zenity >/dev/null 2>&1; then
+		echo "Falta zenity" | tee -a "$registro" >&2
+		diagnostico_en_terminal
+		exit $?
+	fi
 	t="$(_ 'Diagnóstico de Lázaro')"
+	explica="$(_ 'Revisa el equipo y reúne en un archivo de texto su hardware, el estado del sistema y los errores del arranque, para compartirlo al pedir ayuda.\n\nNo guarda contraseñas ni claves del wifi. Suele tardar menos de un minuto.')"
+	# zenity: 0 = Aceptar, 1 = Cerrar (o la ventana cerrada con la X),
+	# otro número = no pudo abrir la ventana. Si no pudo, se prueba sin
+	# los botones con nombre propio y, si tampoco, en una terminal: el
+	# botón nunca debe quedar "sin hacer nada".
+	rc=0
 	zenity --question --width=480 --title="$t" --ok-label="$(_ 'Crear el informe')" --cancel-label="$(_ 'Cerrar')" \
-		--text="$(_ 'Revisa el equipo y reúne en un archivo de texto su hardware, el estado del sistema y los errores del arranque, para compartirlo al pedir ayuda.\n\nNo guarda contraseñas ni claves del wifi. Suele tardar menos de un minuto.')" >/dev/null 2>&1 || exit 0
+		--text="$explica" >/dev/null 2>>"$registro" || rc=$?
+	if [ "$rc" -gt 1 ]; then
+		echo "zenity --question terminó con $rc; se prueba sin botones propios" >> "$registro"
+		rc=0
+		zenity --question --title="$t" --text="$explica" >/dev/null 2>>"$registro" || rc=$?
+		if [ "$rc" -gt 1 ]; then
+			echo "zenity no abre ventanas ($rc); se usa una terminal" >> "$registro"
+			diagnostico_en_terminal
+			exit $?
+		fi
+	fi
+	[ "$rc" = 0 ] || exit 0
 	if [ "$(id -u)" = 0 ]; then como=""
 	elif [ -x /usr/sbin/lazaro-instalar ]; then como="doas -n"
 	elif command -v pkexec >/dev/null 2>&1; then como="pkexec"
@@ -34,7 +90,7 @@ if [ "${1:-}" = "--ventana" ]; then
 	# shellcheck disable=SC2086
 	( $como sh "$0" > "$sal" 2>&1; echo $? > "$sal.rc" ) |
 		zenity --progress --pulsate --auto-close --no-cancel --width=380 --title="$t" \
-			--text="$(_ 'Revisando el equipo…')" >/dev/null 2>&1
+			--text="$(_ 'Revisando el equipo…')" >/dev/null 2>>"$registro"
 	rc="$(cat "$sal.rc" 2>/dev/null || echo 1)"
 	# La ruta del informe, del renglón "Listo: RUTA" (que sale traducido):
 	# se busca por el nombre del archivo, no por la palabra.
@@ -43,11 +99,11 @@ if [ "${1:-}" = "--ventana" ]; then
 		nota=""
 		[ ! -x /usr/sbin/lazaro-instalar ] || nota="\n\n$(_ 'Estás en la sesión de prueba (live): copia el archivo a otro USB o envíalo antes de apagar.')"
 		zenity --question --width=480 --title="$t" --ok-label="$(_ 'Abrir la carpeta')" --cancel-label="$(_ 'Cerrar')" \
-			--text="$(_ 'Listo. El informe quedó en:')\n\n$informe\n\n$(_ 'Adjunta ese archivo cuando pidas ayuda.')$nota" >/dev/null 2>&1 &&
+			--text="$(_ 'Listo. El informe quedó en:')\n\n$informe\n\n$(_ 'Adjunta ese archivo cuando pidas ayuda.')$nota" >/dev/null 2>>"$registro" &&
 			xdg-open "$(dirname "$informe")" >/dev/null 2>&1
 	else
 		zenity --error --width=460 --title="$t" \
-			--text="$(_ 'No se pudo crear el informe.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
+			--text="$(_ 'No se pudo crear el informe.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>>"$registro" || true
 	fi
 	rm -f "$sal" "$sal.rc"
 	exit 0

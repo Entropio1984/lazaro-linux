@@ -1400,3 +1400,6 @@ msgstr "We believe a computer that still turns on is still useful. Using it a fe
 #: live/usr/share/lazaro/bienvenida/portada.txt
 msgid "En el menú de la izquierda están las herramientas de Lázaro. Esta ventana se puede volver a abrir cuando quieras desde el menú de aplicaciones: «Bienvenida»."
 msgstr "The Lázaro tools are in the menu on the left. You can open this window again whenever you want from the applications menu: “Welcome”."
+
+msgid "Pulsa Intro para cerrar esta ventana."
+msgstr "Press Enter to close this window."

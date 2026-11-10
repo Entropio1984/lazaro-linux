@@ -114,6 +114,14 @@ capturas() {
 	f_esc=si foto vlc 15 vlc
 	foto afinador 15 /usr/local/sbin/lazaro-afinador --ventana
 	foto controladores 15 /usr/local/sbin/lazaro-controladores --ventana
+	# Diagnóstico: la primera ventana (la pregunta) y lo que dejó en su
+	# registro, para ver por qué no abriría.
+	foto diagnostico 15 /usr/local/sbin/lazaro-diagnostico --ventana
+	pkill -u prueba -x zenity 2>/dev/null || true
+	pkill -u prueba -f lazaro-diagnostico 2>/dev/null || true
+	sleep 2
+	r_diag="$(getent passwd prueba | cut -d: -f6)/.cache/lazaro-diagnostico-ventana.log"
+	serie "LAZARO-DIAGNOSTICO-VENTANA $(tr '\n' '|' < "$r_diag" 2>/dev/null | cut -c1-800)"
 	foto terminal 10 xfce4-terminal
 	foto ristretto 10 ristretto /usr/share/icons/hicolor/256x256/apps/lazaro-bienvenida.png
 	foto mousepad 10 mousepad

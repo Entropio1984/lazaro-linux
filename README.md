@@ -586,7 +586,16 @@ doas lazaro-controladores --instalar-alpine  # instala lo que falta de Alpine
 Si algo no funciona, el diagnóstico arma un informe con los datos del
 equipo para que otra persona pueda ayudarte.
 
-**Paso a paso:**
+**Con un botón:** abre la **Bienvenida** (está en el menú), entra en
+**Ayuda** y pulsa **Crear informe** junto a Diagnóstico. Una ventana
+explica qué hace; pulsa **Crear el informe**, escribe tu contraseña si la
+pide y al final otra ventana dice dónde quedó el archivo. Si en tu equipo
+esas ventanas no pueden abrirse, el Diagnóstico se abre en una terminal y
+hace lo mismo. Lo que haya fallado queda anotado en
+`~/.cache/lazaro-diagnostico-ventana.log` (adjúntalo también al pedir
+ayuda).
+
+**Paso a paso, desde una terminal:**
 
 1. Abre una terminal.
 2. Escribe `lazaro-diagnostico` y pulsa Enter.
