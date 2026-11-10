@@ -136,7 +136,8 @@ from lazaro_texto import leer_po  # noqa: E402
 
 
 def marcas(t):
-    return sorted(re.findall(r"%[sd%]", t))
+    # En orden: los datos se ponen por posición.
+    return re.findall(r"%[sd%]", t)
 
 
 def revisar():

@@ -36,7 +36,9 @@ if [ "${1:-}" = "--ventana" ]; then
 		zenity --progress --pulsate --auto-close --no-cancel --width=380 --title="$t" \
 			--text="$(_ 'Revisando el equipo…')" >/dev/null 2>&1
 	rc="$(cat "$sal.rc" 2>/dev/null || echo 1)"
-	informe="$(sed -n 's/^Listo: //p' "$sal" | tail -n 1)"
+	# La ruta del informe, del renglón "Listo: RUTA" (que sale traducido):
+	# se busca por el nombre del archivo, no por la palabra.
+	informe="$(sed -n 's|^[^/]*\(/.*/lazaro-diagnostico-[0-9]*-[0-9]*\.txt\)[^/]*$|\1|p' "$sal" | tail -n 1)"
 	if [ "$rc" = 0 ] && [ -n "$informe" ]; then
 		nota=""
 		[ ! -x /usr/sbin/lazaro-instalar ] || nota="\n\n$(_ 'Estás en la sesión de prueba (live): copia el archivo a otro USB o envíalo antes de apagar.')"

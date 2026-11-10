@@ -3,9 +3,11 @@
 Las herramientas de Lázaro (Bienvenida, Idioma y teclado, Actualizar,
 Afinador, Controladores, Kernel Lázaro, Diagnóstico, Flatpak, el aviso de
 la tarjeta gráfica y el instalador en modo texto) muestran sus textos en
-el idioma de la sesión. Hoy hay **inglés** y **portugués de Brasil**;
-con cualquier otro idioma salen en inglés, y en español salen tal cual
-están escritos en los programas.
+el idioma de la sesión. Hoy hay **inglés** y **portugués de Brasil**.
+Otra variante de un idioma traducido usa esa traducción (portugués de
+Portugal → portugués de Brasil, más cercano que el inglés); cualquier
+otro idioma sale en inglés, y en español salen tal cual están escritos
+en los programas.
 
 ## Dónde está cada cosa
 

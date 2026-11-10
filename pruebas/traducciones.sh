@@ -72,15 +72,18 @@ for po in "$LAZARO_TEXTO_DIR"/idiomas/*.po; do
 	python3 - "$DIR" "$idioma" "$TMP/$idioma" <<-'PY'
 		import os, sys
 		sys.path.insert(0, os.path.join(sys.argv[1], "traducciones"))
+		# Por la función de los programas, con el idioma de la sesión.
+		os.environ["LANG"] = sys.argv[2] + ".UTF-8"
+		for v in ("LC_ALL", "LC_MESSAGES"):
+		    os.environ.pop(v, None)
 		import extraer
-		from lazaro_texto import leer_po
-		tabla = leer_po(os.path.join(extraer.IDIOMAS, sys.argv[2] + ".po"))
+		from lazaro_texto import _
 		os.makedirs(sys.argv[3])
 		for i, (t, _r) in enumerate(extraer.todos()):
 		    with open(os.path.join(sys.argv[3], "%03d.id" % i), "w", encoding="utf-8") as f:
 		        f.write(t)
 		    with open(os.path.join(sys.argv[3], "%03d.py" % i), "w", encoding="utf-8") as f:
-		        f.write(tabla.get(t, t))
+		        f.write(_(t))
 	PY
 	distintos=0
 	for id in "$TMP/$idioma"/*.id; do
@@ -124,7 +127,8 @@ fi
 for f in "$DIR"/live/usr/share/applications/lazaro-*.desktop "$DIR"/live/etc/xdg/autostart/lazaro-*.desktop \
 	"$DIR"/live/usr/share/lazaro/lazaro-*.desktop; do
 	for i in en pt_BR; do
-		grep -q "^Name\[$i\]=" "$f" || mal "$(basename "$f"): falta Name[$i]"
+		# Con texto: un nombre vacío deja el menú en blanco.
+		grep -q "^Name\[$i\]=." "$f" || mal "$(basename "$f"): falta Name[$i]"
 	done
 done
 ok "menús con nombre en inglés y portugués"
