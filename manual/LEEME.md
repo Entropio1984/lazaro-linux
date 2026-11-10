@@ -80,10 +80,10 @@ un PR). El recorrido está en
 `live/usr/share/lazaro/pruebas/zz-lazaro-capturas.start`.
 
 Estas hay que sacarlas a mano en un equipo real, porque la máquina
-virtual no las puede mostrar bien: `wifi-lista` (redes wifi),
-`tienda` (la tienda necesita su catálogo de internet) y `actualizar`
-(pide la contraseña). En XFCE: tecla **Impr Pant**, que abre la
-herramienta de capturas.
+virtual no las puede mostrar bien: `wifi-lista` (redes wifi) y
+`tienda` (la tienda necesita su catálogo de internet). En XFCE: tecla
+**Impr Pant**, que abre la herramienta de capturas. La de `actualizar`
+sale sola con una actualización simulada (la ventana es la real).
 
 ## Licencia
 
