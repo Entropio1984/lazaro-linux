@@ -70,7 +70,7 @@ msg "Preparando el entorno de compilación"
 printf '%s\n%s\n' "$ALPINE_REPO_MAIN" "$ALPINE_REPO_COMMUNITY" > /etc/apk/repositories
 apk update
 apk add alpine-sdk alpine-conf apk-tools busybox fakeroot syslinux xorriso \
-	squashfs-tools mtools grub grub-efi dosfstools git curl
+	squashfs-tools mtools grub grub-efi dosfstools git curl tar
 
 # abuild no compila como root: se usa un usuario del grupo abuild.
 id constructor >/dev/null 2>&1 || adduser -D -G abuild constructor
@@ -237,15 +237,18 @@ EOF
 msg "Sello de compilación"
 cat "$CONSTRUCTOR_HOME/version.env"
 
+# Índices de los repositorios de Alpine: para la lista de la Completa y
+# para saber qué traducciones necesita la sesión de prueba.
+INDICES="$CONSTRUCTOR_HOME/indices"
+mkdir -p "$INDICES"
+curl -fsSL --retry 3 -o "$INDICES/main.tar.gz" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz"
+curl -fsSL --retry 3 -o "$INDICES/community.tar.gz" "$ALPINE_REPO_COMMUNITY/$ALPINE_ARCH/APKINDEX.tar.gz"
+
 # --- Edición Completa ----------------------------------------------------
 PAQUETES_COMPLETA="$CONSTRUCTOR_HOME/paquetes-completa.txt"
 rm -f "$PAQUETES_COMPLETA"
 if [ "$LAZARO_EDICION" = completa ]; then
 	msg "Edición Completa: lista de paquetes para instalar sin internet"
-	INDICES="$CONSTRUCTOR_HOME/indices"
-	mkdir -p "$INDICES"
-	curl -fsSL --retry 3 -o "$INDICES/main.tar.gz" "$ALPINE_REPO_MAIN/$ALPINE_ARCH/APKINDEX.tar.gz"
-	curl -fsSL --retry 3 -o "$INDICES/community.tar.gz" "$ALPINE_REPO_COMMUNITY/$ALPINE_ARCH/APKINDEX.tar.gz"
 	# Las listas del perfil (LAZARO_LIVE, LAZARO_DESTINO...).
 	perfil_paquetes=$(LAZARO_DIR="$LAZARO_DIR" sh -c '. "$LAZARO_DIR/perfil/mkimg.lazaro.sh"
 		echo $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS $LAZARO_ESCRITORIOS $LAZARO_COMPLETA')
@@ -303,6 +306,29 @@ else
 	rm -rf "$ipw_d"
 fi
 rm -rf "$t_hw"
+
+# --- Español en la sesión de prueba --------------------------------------
+# La sesión de prueba no instala los paquetes de traducción (-lang): cada
+# uno trae todos los idiomas y juntos ocupan más de 100 MB de RAM. Se
+# copia solo el español de los que corresponden a sus programas (los que
+# apk agregaría con "lang"); entran en la live con el resto de estos
+# datos. Otro idioma se descarga desde la Bienvenida (lazaro-idioma).
+msg "Español para la sesión de prueba"
+LANG_LIVE="$CONSTRUCTOR_HOME/lang-live.txt"
+live_paquetes=$(LAZARO_DIR="$LAZARO_DIR" sh -c '. "$LAZARO_DIR/perfil/mkimg.lazaro.sh"; echo $LAZARO_LIVE')
+# shellcheck disable=SC2086
+sh "$LAZARO_DIR/perfil/paquetes-completa.sh" "$LANG_LIVE.todos" /dev/null \
+	"$INDICES/main.tar.gz" "$INDICES/community.tar.gz" -- lang $live_paquetes >/dev/null
+grep -- '-lang$' "$LANG_LIVE.todos" > "$LANG_LIVE" || true
+rm -f "$LANG_LIVE.todos"
+[ -s "$LANG_LIVE" ] || die "no se encontraron paquetes de traducción para la sesión de prueba"
+echo "  paquetes de traducción: $(wc -l < "$LANG_LIVE")"
+# shellcheck disable=SC2046
+sh "$LAZARO_DIR/live/usr/sbin/lazaro-traducciones" extraer "$DATOS_HW" es $(cat "$LANG_LIVE") \
+	|| die "no se pudo sacar el español de los paquetes de traducción"
+echo "  español: $(du -sh "$DATOS_HW/usr/share" | cut -f1) en total con los datos de hardware"
+[ -e "$DATOS_HW/usr/share/locale/es/LC_MESSAGES/xfce4-panel.mo" ] \
+	|| die "falta la traducción al español de XFCE (xfce4-panel.mo)"
 chown -R constructor:abuild "$DATOS_HW"
 
 # --- ISO ----------------------------------------------------------------

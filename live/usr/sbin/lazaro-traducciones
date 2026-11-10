@@ -1,0 +1,193 @@
+#!/bin/sh
+# lazaro-traducciones: traducciones de un solo idioma, sacadas de los
+# paquetes de traducción de Alpine (los que terminan en "-lang").
+#
+# Cada paquete -lang de Alpine trae TODOS los idiomas a la vez (las
+# traducciones de un escritorio XFCE completo ocupan unos 160 MB). La
+# sesión de prueba vive en la memoria RAM y la Ligera tiene que caber en
+# 2 GB: aquí se descargan esos paquetes y se copia solo el idioma pedido
+# (unos pocos MB).
+#
+#   lazaro-traducciones extraer DESTINO IDIOMA PAQUETE...
+#       Descarga los PAQUETEs (-lang) y deja en DESTINO solo los archivos
+#       de IDIOMA (por ejemplo es, pt_BR). Lo usa build.sh al compilar.
+#   lazaro-traducciones instalar IDIOMA
+#       En la sesión de prueba (como root): busca el paquete -lang de cada
+#       programa instalado y copia en / solo IDIOMA. Usa los repositorios
+#       del USB y, si hay internet, los de Alpine.
+#   lazaro-traducciones tiene IDIOMA
+#       Termina bien si ese idioma ya está (o si no hace falta, como el
+#       inglés, que viene dentro de cada programa).
+#   lazaro-traducciones filtrar IDIOMA
+#       Lee rutas de archivos y escribe las que son de IDIOMA (pruebas).
+#
+# IDIOMA puede ser es_CO.UTF-8, es_CO o es: siempre se toma todo el
+# idioma (es, es_CO, es_MX...), porque los programas buscan primero la
+# variante del país y después el idioma general.
+
+set -eu
+
+MARCAS="${LAZARO_TRADUCCIONES_MARCAS:-/usr/share/lazaro/traducciones}"
+
+uso() {
+	sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2
+	exit 2
+}
+
+# es_CO.UTF-8 -> es ; pt_BR -> pt ; ca@valencia -> ca
+idioma_base() {
+	b="${1%%.*}"
+	b="${b%%@*}"
+	b="${b%%_*}"
+	printf '%s' "$b" | tr 'A-Z' 'a-z'
+}
+
+valida() {
+	case "$1" in
+		"" | *[!a-z]*) echo "lazaro-traducciones: idioma no válido: '$1'" >&2; exit 2 ;;
+	esac
+}
+
+# Rutas (una por línea) que pertenecen al idioma $1 (base, como "es"):
+#  - una carpeta o archivo con el nombre del idioma: locale/es/...,
+#    locale/es_MX/..., locales/musl/es_ES.UTF-8, help/es/...
+#  - archivos de Qt y otros con el idioma al final: lxqt-panel_es.qm,
+#    qtbase_pt_BR.qm
+# Los archivos de control del paquete (.PKGINFO, .SIGN...) nunca.
+filtrar() {
+	awk -v l="$1" '
+		{ sub(/^\.\//, "") }
+		/^\./ || /\/$/ || $0 == "" { next }
+		{
+			n = split($0, c, "/")
+			for (i = 1; i <= n; i++)
+				if (c[i] ~ ("^" l "([_.@-]|$)")) { print; next }
+			if (c[n] ~ ("[_-]" l "([_@][A-Za-z0-9]+)?\\.[A-Za-z]+$")) print
+		}'
+}
+
+# Saca de un paquete .apk (formato de Alpine: varios tar.gz seguidos)
+# solo los archivos del idioma. extraer_apk ARCHIVO DESTINO IDIOMA
+extraer_apk() {
+	lista="$(mktemp)"
+	# Los .apk llevan cabeceras que GNU tar no conoce (avisa y sigue).
+	tar -tzf "$1" 2>/dev/null | filtrar "$3" > "$lista" || true
+	if [ -s "$lista" ]; then
+		tar -xzf "$1" -C "$2" -T "$lista" 2>/dev/null || true
+	fi
+	wc -l < "$lista"
+	rm -f "$lista"
+}
+
+# extraer DESTINO IDIOMA PAQUETE... [-- OPCIONES DE APK]
+extraer() {
+	destino="$1"
+	base="$(idioma_base "$2")"
+	valida "$base"
+	shift 2
+	paquetes=""
+	while [ $# -gt 0 ] && [ "$1" != -- ]; do
+		paquetes="$paquetes $1"
+		shift
+	done
+	[ "${1:-}" != -- ] || shift
+	[ -n "$paquetes" ] || { echo "lazaro-traducciones: no hay paquetes que descargar" >&2; return 1; }
+	mkdir -p "$destino"
+	tmp="$(mktemp -d)"
+	# De a 10 paquetes: en la sesión de prueba la carpeta temporal está en
+	# la RAM, y así nunca hay más de unos pocos MB descargados a la vez.
+	total=0
+	tanda=""
+	k=0
+	for p in $paquetes __fin__; do
+		[ "$p" = __fin__ ] || { tanda="$tanda $p"; k=$((k + 1)); }
+		if [ -n "$tanda" ] && { [ "$k" -ge 10 ] || [ "$p" = __fin__ ]; }; then
+			# shellcheck disable=SC2086
+			if ! apk fetch -q "$@" -o "$tmp" $tanda; then
+				rm -rf "$tmp"
+				echo "lazaro-traducciones: no se pudieron descargar los paquetes de traducción" >&2
+				return 1
+			fi
+			for f in "$tmp"/*.apk; do
+				[ -e "$f" ] || continue
+				n="$(extraer_apk "$f" "$destino" "$base")"
+				total=$((total + n))
+				rm -f "$f"
+			done
+			tanda=""
+			k=0
+		fi
+	done
+	rm -rf "$tmp"
+	if [ "$total" -eq 0 ]; then
+		echo "lazaro-traducciones: los paquetes no traen el idioma '$base'" >&2
+		return 1
+	fi
+	mkdir -p "$destino$MARCAS"
+	printf '%s\n' $paquetes > "$destino$MARCAS/$base"
+	echo "lazaro-traducciones: $total archivos del idioma '$base' en $destino"
+}
+
+# Nombres sin la versión: gtk+3.0-lang-3.24.43-r0 -> gtk+3.0-lang
+sin_version() {
+	sed -E 's/-[0-9][^-]*-r[0-9]+( .*)?$//'
+}
+
+# El paquete -lang de cada programa instalado que tenga uno.
+paquetes_lang() {
+	instalados="$(mktemp)"
+	disponibles="$(mktemp)"
+	if [ -r /lib/apk/db/installed ]; then
+		sed -n 's/^P://p' /lib/apk/db/installed
+	else
+		apk info 2>/dev/null | sin_version
+	fi | sed 's/$/-lang/' | sort -u > "$instalados"
+	# shellcheck disable=SC2086
+	apk search -q "$@" '*-lang' 2>/dev/null | sin_version | sort -u > "$disponibles"
+	comm -12 "$instalados" "$disponibles"
+	rm -f "$instalados" "$disponibles"
+}
+
+tiene() {
+	base="$(idioma_base "$1")"
+	case "$base" in en | c | posix | "") return 0 ;; esac
+	[ -e "$MARCAS/$base" ]
+}
+
+instalar() {
+	base="$(idioma_base "$1")"
+	valida "$base"
+	if tiene "$base"; then
+		echo "lazaro-traducciones: el idioma '$base' ya está."
+		return 0
+	fi
+	[ "$(id -u)" -eq 0 ] || { echo "lazaro-traducciones: hay que ejecutarlo como root (doas)" >&2; return 1; }
+	# Repositorios de Alpine en internet además de los del USB (la
+	# Completa trae todas las traducciones en el USB; la Ligera no).
+	repos=""
+	if [ -r /usr/share/lazaro/version.env ]; then
+		# shellcheck disable=SC1091
+		. /usr/share/lazaro/version.env
+		if [ -n "${ALPINE_MIRROR:-}" ] && [ -n "${ALPINE_BRANCH:-}" ]; then
+			repos="--repository $ALPINE_MIRROR/$ALPINE_BRANCH/main --repository $ALPINE_MIRROR/$ALPINE_BRANCH/community"
+		fi
+	fi
+	# shellcheck disable=SC2086
+	paquetes="$(paquetes_lang -U $repos)"
+	if [ -z "$paquetes" ]; then
+		echo "lazaro-traducciones: no se encontraron paquetes de traducción (¿hay internet?)" >&2
+		return 1
+	fi
+	# shellcheck disable=SC2086
+	extraer / "$base" $paquetes -- $repos
+}
+
+orden="${1:-}"
+[ $# -gt 0 ] && shift
+case "$orden" in
+	extraer) [ $# -ge 3 ] || uso; extraer "$@" ;;
+	instalar) [ $# -eq 1 ] || uso; instalar "$1" ;;
+	tiene) [ $# -eq 1 ] || uso; tiene "$1" ;;
+	filtrar) [ $# -eq 1 ] || uso; b="$(idioma_base "$1")"; valida "$b"; filtrar "$b" ;;
+	*) uso ;;
+esac

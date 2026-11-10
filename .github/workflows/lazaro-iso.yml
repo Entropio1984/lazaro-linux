@@ -284,6 +284,11 @@ jobs:
       # el Python de Alpine.
       - run: sh pruebas/bienvenida.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
+      # Idioma de la sesión de prueba: qué traducciones se guardan de cada
+      # paquete -lang (en Alpine, con uno de verdad) y lo que escribe el
+      # selector de idioma y teclado de la Bienvenida.
+      - run: sh pruebas/idioma.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 tar && sh pruebas/idioma.sh'
       # lazaro-kernel: instalar, arranque de prueba bien y mal, actualizar
       # y quitar, con GRUB y apk falsos.
       - run: sh pruebas/kernel.sh

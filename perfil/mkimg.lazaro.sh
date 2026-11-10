@@ -34,6 +34,9 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 # si no hay otro.
 # dialog: menús en modo texto de lazaro-instalar-texto, el instalador
 # para cuando la sesión gráfica no abre.
+# tar (GNU, 0,5 MB): lazaro-traducciones saca de los paquetes de
+# traducción solo el idioma elegido en la Bienvenida; es el mismo tar que
+# hace ese trabajo al compilar.
 # Red más allá del wifi y el cable, en la live y en el sistema instalado
 # (la lista del instalado está en live/usr/share/lazaro/paquetes-base):
 # - modemmanager + networkmanager-wwan + usb-modeswitch: módems USB 3G/4G
@@ -60,7 +63,7 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	adwaita-icon-theme setxkbmap udev-init-scripts udev-init-scripts-openrc
 	gparted xhost zenity spice-vdagent spice-vdagent-openrc pciutils
 	py3-gobject3 gtk+3.0
-	xf86-video-vesa dialog
+	xf86-video-vesa dialog tar
 	plymouth plymouth-drm plymouth-openrc-plugin
 	$LAZARO_RED_LIVE"
 
