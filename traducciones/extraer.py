@@ -85,6 +85,9 @@ def todos():
     """[(texto, [archivos])] en el orden en que aparecen."""
     lista = []
     for ruta in sorted(glob.glob(os.path.join(SBIN, "*"))):
+        # Solo programas: otras pruebas pueden dejar __pycache__ aquí.
+        if not os.path.isfile(ruta):
+            continue
         with open(ruta, encoding="utf-8") as f:
             cod = f.read()
         if cod.startswith("#!/usr/bin/env python3") or cod.startswith("#!/usr/bin/python3"):
