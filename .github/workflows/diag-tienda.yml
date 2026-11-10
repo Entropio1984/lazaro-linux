@@ -1,0 +1,39 @@
+# TEMPORAL: diagnóstico de la tienda de aplicaciones. Se borra antes de fusionar.
+name: Diagnóstico tienda (temporal)
+on:
+  push:
+    branches: [claude/project-thread-qlb7v2]
+    paths: [.github/workflows/diag-tienda.yml]
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    container: alpine:3.24
+    steps:
+      - name: Diagnóstico
+        run: |
+          set -x
+          cat /etc/apk/repositories
+          sed -i 's|^#\(.*community\)|\1|' /etc/apk/repositories
+          apk update
+          apk add gnome-software gnome-software-plugin-apk2 apk-polkit-rs flatpak dbus polkit discover discover-backend-apk appstream file
+          apk info -R gnome-software-plugin-apk2 apk-polkit-rs
+          apk info -L apk-polkit-rs alpine-appstream-downloader gnome-software-plugin-apk2 apk-polkit-rs-openrc discover-backend-apk
+          for f in $(apk info -L alpine-appstream-downloader | grep -E 'bin/|\.py$'); do echo "==== /$f"; cat "/$f"; done
+          cat /usr/share/libdiscover/external-appstream-urls/alpine-appstream-data.json
+          ls /usr/share/dbus-1/system-services/ ; cat /usr/share/dbus-1/system-services/*apk* || true
+          cat /etc/init.d/apk-polkit-server || true
+          strings /usr/libexec/apk-polkit-server 2>/dev/null | grep -iE 'appstream|downloader' | head -20 || true
+          find / -xdev -name '*apk-polkit*' -type f 2>/dev/null
+          for b in $(apk info -L apk-polkit-rs | grep -E 'bin/|libexec/'); do echo "== $b"; strings "/$b" | grep -iE 'appstream|downloader|swcatalog' | head -20; done
+          for d in /var/cache/swcatalog /var/lib/swcatalog /usr/share/swcatalog /var/cache/app-info; do echo "== $d"; find $d -maxdepth 3 2>/dev/null | head -20; done
+          appstreamcli status || true
+          appstreamcli search firefox | head -20 || true
+          echo "######## EJECUTANDO alpine-appstream-downloader"
+          alpine-appstream-downloader -h || true
+          alpine-appstream-downloader || echo "rc=$?"
+          for d in /var/cache/swcatalog /var/lib/swcatalog /usr/share/swcatalog; do echo "== $d"; find $d -maxdepth 3 2>/dev/null | head -20; du -sh $d 2>/dev/null; done
+          appstreamcli refresh-cache --force || true
+          appstreamcli status || true
+          appstreamcli search firefox | head -20 || true
+          appstreamcli search vlc | head -10 || true
+          gsettings list-recursively org.gnome.software 2>/dev/null | head -50 || cat /usr/share/glib-2.0/schemas/*software*override*
