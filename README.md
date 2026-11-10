@@ -153,10 +153,11 @@ primera se queda en negro.
 ### Paso 5: la sesión de prueba
 
 Primero aparece el logo de Lázaro con un pulso y, al rato, un escritorio
-con el instalador abierto. Esta es la **sesión de prueba (live)**: todo
-corre desde la memoria del equipo y no se toca el disco. Puedes
-cerrar el instalador, probar el wifi, el sonido y el navegador, y volver
-a abrirlo desde el menú de aplicaciones: **Instalar Lázaro Linux**.
+con la ventana de **Bienvenida** abierta. Esta es la **sesión de prueba
+(live)**: todo corre desde la memoria del equipo y no se toca el disco.
+Puedes cerrar la Bienvenida y probar el wifi, el sonido y el navegador.
+Cuando quieras instalar, pulsa **Instalar Lázaro** en la Bienvenida (o
+**Instalar Lázaro Linux** en el menú de aplicaciones o en el escritorio).
 
 Lo que guardes aquí se pierde al apagar.
 
@@ -325,6 +326,36 @@ normales del sistema (ver
 [Actualizaciones de las herramientas](#actualizaciones-de-las-herramientas)). Cuando una orden empieza con `doas`, te pide **tu
 contraseña** (la que elegiste al instalar); mientras la escribes no se ve
 nada en la pantalla, es normal: escríbela y pulsa Enter.
+
+### Bienvenida: todo en una ventana
+
+Al iniciar sesión (también en la sesión de prueba) se abre la **Bienvenida**, una ventana con botones para
+todo lo que trae Lázaro: instalar (en la sesión de prueba), actualizar,
+controladores, tienda de aplicaciones y Flatpak, revisión del hardware,
+Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
+letras e iconos del escritorio que hayas elegido. Si no quieres verla en
+cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
+siempre queda en el menú como **Bienvenida**.
+
+Cada botón solo aparece si sirve en tu equipo: por ejemplo, la tienda se
+muestra cuando hay una tienda instalada.
+
+**Agregar un botón** es crear un archivo de texto, sin tocar el programa.
+Los de Lázaro están en `/usr/share/lazaro/bienvenida/funciones/` y los
+tuyos van en `/etc/lazaro/bienvenida/funciones/`. Por ejemplo
+`50-calculadora.conf`:
+
+```ini
+[Funcion]
+Nombre=Calculadora
+Descripcion=Abre la calculadora.
+Seccion=Programas
+Ejecutar=galculator
+Icono=accessories-calculator
+```
+
+El archivo `LEEME` de esa carpeta explica todas las opciones, y
+`lazaro-bienvenida --comprobar` avisa si algún archivo quedó mal escrito.
 
 ### Afinador: que el equipo responda mejor
 
@@ -665,8 +696,8 @@ Solo en máquinas virtuales o en un equipo de sobra: el instalador borra
 el disco que se elija.
 
 ```sh
-./pruebas/qemu.sh live salida/lazaro-linux-0.1-3.24-x86_64.iso bios
-./pruebas/qemu.sh instalar salida/lazaro-linux-0.1-3.24-x86_64.iso uefi xfce con-red
+./pruebas/qemu.sh live salida/lazaro-linux-0.2-3.24-x86_64.iso bios
+./pruebas/qemu.sh instalar salida/lazaro-linux-0.2-3.24-x86_64.iso uefi xfce con-red
 ```
 
 Las capturas de pantalla y los registros quedan en
@@ -680,7 +711,7 @@ mano, también con la siguiente (edge):
 
 | Prueba | Arranque | Escritorio | Internet | Qué comprueba |
 |---|---|---|---|---|
-| Sesión live | BIOS | XFCE | Sí | El instalador se abre, ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona |
+| Sesión live | BIOS | XFCE | Sí | La Bienvenida y el instalador se abren, el instalador ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona |
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
 | Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, y la live trae `dialog` |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |

@@ -1,0 +1,105 @@
+#!/bin/sh
+# lazaro-flatpak: activa Flatpak y Flathub (la colección de aplicaciones
+# que no vienen en Alpine: OnlyOffice, Chrome, Brave, Spotify, Zoom...) en
+# un sistema que se instaló sin esa opción, y abre la tienda de
+# aplicaciones del escritorio. Hace lo mismo que la opción "Flatpak" del
+# instalador.
+#
+#   lazaro-flatpak --ventana   pregunta y activa (botón de la Bienvenida)
+#   lazaro-flatpak --tienda    abre la tienda de aplicaciones
+#   lazaro-flatpak --estado    dice "activo" o "falta"
+#   lazaro-flatpak --activar   lo activa (como administrador)
+
+FLATHUB=https://dl.flathub.org/repo/flathub.flatpakrepo
+TITULO="Flatpak y Flathub"
+
+estado() {
+	if command -v flatpak >/dev/null 2>&1 &&
+		flatpak remotes --system --columns=name 2>/dev/null | grep -qx flathub; then
+		echo activo
+	else
+		echo falta
+	fi
+}
+
+como_root() {
+	if [ "$(id -u)" = 0 ]; then "$@"
+	elif command -v pkexec >/dev/null 2>&1; then pkexec "$@"
+	else doas "$@"
+	fi
+}
+
+activar() {
+	[ "$(id -u)" = 0 ] || { echo "Hace falta ser administrador: doas lazaro-flatpak --activar" >&2; exit 1; }
+	paq="flatpak xdg-desktop-portal xdg-desktop-portal-gtk"
+	# El portal es lo que deja a las aplicaciones de Flathub abrir y
+	# guardar archivos con las ventanas del escritorio.
+	[ ! -e /usr/bin/startplasma-x11 ] && [ ! -e /usr/bin/startplasma-wayland ] || paq="$paq xdg-desktop-portal-kde"
+	[ ! -e /usr/bin/startlxqt ] || paq="$paq xdg-desktop-portal-lxqt"
+	# shellcheck disable=SC2086
+	apk add $paq || {
+		# Con un portal que no exista en esta versión de Alpine, lo básico.
+		apk add flatpak xdg-desktop-portal xdg-desktop-portal-gtk || exit 1
+	}
+	# Para que la tienda que haya muestre lo de Flathub. Si el complemento
+	# no existe en esta versión de Alpine, Flatpak sirve igual.
+	! command -v gnome-software >/dev/null 2>&1 || apk add gnome-software-plugin-flatpak ||
+		echo "Aviso: no se pudo instalar el complemento de Flatpak para la tienda." >&2
+	! command -v plasma-discover >/dev/null 2>&1 || apk add discover-backend-flatpak ||
+		echo "Aviso: no se pudo instalar el complemento de Flatpak para Discover." >&2
+	n=0
+	while [ "$n" -lt 3 ]; do
+		flatpak remote-add --system --if-not-exists flathub "$FLATHUB" && return 0
+		n=$((n + 1))
+		sleep 5
+	done
+	echo "No se pudo agregar Flathub (¿sin internet?)." >&2
+	exit 1
+}
+
+tienda() {
+	# La del escritorio en uso primero: Discover en Plasma y LXQt (Qt),
+	# GNOME Software en los demás (GTK).
+	case "${XDG_CURRENT_DESKTOP:-}" in
+		*KDE*|*LXQt*) orden="plasma-discover gnome-software" ;;
+		*) orden="gnome-software plasma-discover" ;;
+	esac
+	for t in $orden; do
+		command -v "$t" >/dev/null 2>&1 && exec "$t"
+	done
+	msg="Este sistema no tiene tienda de aplicaciones."
+	zenity --error --width=380 --title="Tienda de aplicaciones" --text="$msg" >/dev/null 2>&1 || echo "$msg" >&2
+	exit 1
+}
+
+ventana() {
+	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	if [ "$(estado)" = activo ]; then
+		zenity --question --width=440 --title="$TITULO" --ok-label="Abrir la tienda" --cancel-label="Cerrar" \
+			--text="Flatpak y Flathub ya están activos en este equipo.\n\nLas aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones." >/dev/null 2>&1 || return 0
+		tienda
+	fi
+	zenity --question --width=480 --title="$TITULO" --ok-label="Activar" --cancel-label="Cerrar" \
+		--text="Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala.\n\nAl activarlos, esas aplicaciones aparecen en la tienda de aplicaciones. Necesita internet y descarga unos 20 MB; cada aplicación de Flathub ocupa bastante más que una de Alpine.\n\n¿Activar Flatpak y Flathub?" >/dev/null 2>&1 || return 0
+	sal="$(mktemp)" || exit 1
+	( como_root "$0" --activar > "$sal" 2>&1; echo $? > "$sal.rc" ) |
+		zenity --progress --pulsate --auto-close --no-cancel --width=380 --title="$TITULO" \
+			--text="Activando Flatpak y Flathub…" >/dev/null 2>&1
+	rc="$(cat "$sal.rc" 2>/dev/null || echo 1)"
+	if [ "$rc" = 0 ]; then
+		zenity --info --width=440 --title="$TITULO" \
+			--text="Listo. Cierra la sesión y vuelve a entrar para que la tienda de aplicaciones muestre lo de Flathub." >/dev/null 2>&1 || true
+	else
+		zenity --error --width=460 --title="$TITULO" \
+			--text="No se pudo activar. Revisa la conexión a internet y vuelve a intentar.\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
+	fi
+	rm -f "$sal" "$sal.rc"
+}
+
+case "${1:-}" in
+	--estado) estado ;;
+	--activar) activar ;;
+	--tienda) tienda ;;
+	--ventana) ventana ;;
+	*) echo "Uso: lazaro-flatpak --ventana | --tienda | --estado | --activar" >&2; exit 2 ;;
+esac

@@ -43,6 +43,10 @@ capturas() {
 	# todo (avisos de bienvenida, tienda, actualizaciones).
 	como_prueba "xrandr -s 1280x800" || true
 	sleep 60
+	# La Bienvenida se abre sola al entrar: se cierra para que no salga
+	# en todas las fotos (tiene la suya al final).
+	pkill -u prueba -f lazaro-bienvenida 2>/dev/null || true
+	sleep 3
 
 	# foto NOMBRE ESPERA ORDEN...: abre la orden, espera, pide la captura
 	# y la cierra.
@@ -84,7 +88,7 @@ capturas() {
 	foto terminal 10 xfce4-terminal
 	foto ristretto 10 ristretto /usr/share/backgrounds
 	foto mousepad 10 mousepad
-	foto bienvenida 15 lazaro-bienvenida
+	foto bienvenida 15 /usr/local/sbin/lazaro-bienvenida
 
 	serie "LAZARO-CAPTURAS-FIN"
 	sleep 15

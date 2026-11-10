@@ -19,6 +19,10 @@ done
 install -Dm644 "$S/lazaro.rsa.pub" /etc/apk/keys/lazaro.rsa.pub
 [ -e /etc/lazaro/sin-escritorio ] ||
 	install -Dm644 "$S/lazaro-controladores-sesion.desktop" /etc/xdg/autostart/lazaro-controladores.desktop
+# La Bienvenida se abre al iniciar sesión hasta que la persona desmarca
+# la casilla (eso queda en su carpeta, no aquí).
+[ -e /etc/lazaro/sin-escritorio ] ||
+	install -Dm644 "$S/lazaro-bienvenida-sesion.desktop" /etc/xdg/autostart/lazaro-bienvenida.desktop
 if [ ! -e /etc/lazaro/afinador.conf ] && [ -x /usr/local/sbin/lazaro-afinador ]; then
 	/usr/local/sbin/lazaro-afinador --aplicar >/dev/null 2>&1 || true
 fi

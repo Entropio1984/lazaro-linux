@@ -253,6 +253,25 @@ start() {
 				else
 					serie "LAZARO-SALVAPANTALLAS-NO"
 				fi
+				# La Bienvenida se abre con la sesión (en las pruebas,
+				# junto con el instalador).
+				j=0
+				until grep -lqs lazaro-bienvenida /proc/[0-9]*/cmdline || [ $j -ge 12 ]; do
+					j=$((j + 1))
+					sleep 5
+				done
+				if grep -lqs lazaro-bienvenida /proc/[0-9]*/cmdline; then
+					serie "LAZARO-BIENVENIDA-ABIERTA"
+				else
+					serie "LAZARO-BIENVENIDA-NO-ABRIO"
+					# Para saber por qué: lo que dijo al abrir, la memoria
+					# y si el sistema la cerró por falta de memoria.
+					serie -- cat /tmp/lazaro-bienvenida.log
+					serie -- free -m
+					dmesg 2>/dev/null | grep -iE 'out of memory|oom|killed process' | tail -n 5 | serie
+					grep -ls earlyoom /proc/[0-9]*/cmdline | head -n 1 | serie
+					grep -iE 'earlyoom|bienvenida' /var/log/messages 2>/dev/null | tail -n 8 | serie
+				fi
 				revisar_energia
 				revisar_discos
 				# Portapapeles compartido: el servicio y el agente de la

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Bienvenida a Lázaro Linux
+Comment=Muestra la Bienvenida al iniciar sesión (se puede apagar desde la misma ventana)
+Exec=lazaro-bienvenida --sesion
+Icon=lazaro-bienvenida
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5

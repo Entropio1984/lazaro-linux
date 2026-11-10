@@ -340,6 +340,11 @@ jobs:
       # aplicar y deshacer dejen GRUB y sysctl.d como estaban.
       - run: sh pruebas/afinador.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh pruebas/afinador.sh
+      # lazaro-bienvenida: los archivos de funciones (un botón cada uno)
+      # están bien escritos y se muestran donde corresponde. También con
+      # el Python de Alpine.
+      - run: sh pruebas/bienvenida.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
       # lazaro-kernel: instalar, arranque de prueba bien y mal, actualizar
       # y quitar, con GRUB y apk falsos.
       - run: sh pruebas/kernel.sh
@@ -488,6 +493,15 @@ jobs:
           git_ref="refs/tags/$etiqueta"
           gh api -X PATCH "repos/$GH_REPO/git/$git_ref" -f sha="$GITHUB_SHA" -F force=true >/dev/null
           gh release upload "$etiqueta" iso/* --clobber
+          # Al subir ISO_VERSION, la ISO con el número anterior se quita:
+          # en-desarrollo solo guarda la última.
+          # Si la lista o un borrado fallan, el paso falla (bash -e).
+          archivos="$(gh release view "$etiqueta" --json assets --jq '.assets[].name')"
+          for archivo in $archivos; do
+            if [ ! -e "iso/$archivo" ]; then
+              gh release delete-asset "$etiqueta" "$archivo" --yes
+            fi
+          done
 
       # Copia en SourceForge (carpeta Ligera). Si falla, la Release de
       # GitHub ya quedó publicada: solo se avisa.
