@@ -456,6 +456,7 @@ idioma_sesion() {
 		bien="$(/usr/local/sbin/lazaro-bienvenida --comprobar 2>&1)" &&
 			bien="$bien; $(python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk; print("GTK", Gtk.get_minor_version())' 2>&1)" &&
 			[ -e /etc/xdg/autostart/lazaro-bienvenida.desktop ] &&
+			bien="$bien; $(/usr/local/sbin/lazaro-actualizador --comprobar 2>&1)" &&
 			echo "LAZARO-BIENVENIDA-OK $bien" ||
 			echo "LAZARO-BIENVENIDA-NO $(printf '%s' "$bien" | tail -n 2 | tr '\n' ' ')"
 	fi

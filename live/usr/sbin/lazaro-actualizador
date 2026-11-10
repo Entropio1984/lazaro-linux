@@ -1,0 +1,418 @@
+#!/usr/bin/python3
+# lazaro-actualizador: la ventana de "Actualizar el sistema", con el mismo
+# aspecto de la Bienvenida.
+#
+# Es solo la cara: el trabajo lo sigue haciendo el actualizador de siempre
+# (/usr/local/bin/alpine-update-root.sh, que instala desktop-postinstall.sh):
+# pide la contraseña con pkexec, actualiza apk y Flatpak y escribe su avance
+# en /var/log/alpine-update.log, una línea por paso con el prefijo "# ".
+# Esta ventana lee ese archivo; no está conectada al actualizador por una
+# tubería, así que cerrarla nunca corta una actualización a medias.
+#
+#   lazaro-actualizador              abre la ventana y actualiza
+#   lazaro-actualizador --comprobar  dice si puede abrir (sin ventana)
+#
+# Si a Python le falta GTK, abre el actualizador clásico (con Zenity).
+#
+# Para las pruebas:
+#   LAZARO_ACTUALIZADOR_ORDEN      orden que reemplaza a "pkexec alpine-update-root.sh"
+#   LAZARO_ACTUALIZADOR_REGISTRO   archivo de avance (en vez de /var/log/alpine-update.log)
+#   LAZARO_ACTUALIZADOR_MARCA      archivo que el actualizador llena al aceptar la contraseña
+#   LAZARO_ACTUALIZADOR_SIGUIENTE  "ACTUAL SIGUIENTE" para simular una versión nueva ("" = ninguna)
+#   LAZARO_ACTUALIZADOR_REINICIO   si|no, para simular si hace falta reiniciar
+
+import glob
+import os
+import re
+import shlex
+import subprocess
+import sys
+import threading
+import time
+import urllib.request
+
+NOMBRE = "Actualizar el sistema"
+ID_APP = "io.github.entropio1984.lazaro.Actualizador"
+RAIZ = "/usr/local/bin/alpine-update-root.sh"
+CLASICO = "/usr/local/bin/alpine-update-launcher.sh"
+REGISTRO = os.environ.get("LAZARO_ACTUALIZADOR_REGISTRO") or "/var/log/alpine-update.log"
+MARCA = os.environ.get("LAZARO_ACTUALIZADOR_MARCA") or "/tmp/.alpine-update-authenticated"
+LOGOS = [
+    "/etc/lazaro/bienvenida/logo.png",
+    "/usr/local/share/lazaro/bienvenida/logo.png",
+    "/usr/share/lazaro/bienvenida/logo.png",
+]
+if os.environ.get("LAZARO_BIENVENIDA_DIR"):
+    LOGOS = [os.path.join(c, "logo.png") for c in os.environ["LAZARO_BIENVENIDA_DIR"].split(":")]
+
+
+def orden_de_actualizar(modo):
+    """La orden que hace la actualización, como lista."""
+    if os.environ.get("LAZARO_ACTUALIZADOR_ORDEN"):
+        return shlex.split(os.environ["LAZARO_ACTUALIZADOR_ORDEN"]) + ([modo] if modo else [])
+    return ["pkexec", RAIZ] + ([modo] if modo else [])
+
+
+def siguiente_version(repositorios="/etc/apk/repositories", bajar=None):
+    """(actual, siguiente) si hay una versión estable de Alpine más nueva
+    que la instalada, o None. Igual que el actualizador clásico: se propone
+    solo la inmediatamente siguiente (3.23 -> 3.24) y solo si el espejo ya
+    la tiene. Sin internet, o con edge/latest-stable, None."""
+    simulada = os.environ.get("LAZARO_ACTUALIZADOR_SIGUIENTE")
+    if simulada is not None:
+        partes = simulada.split()
+        return (partes[0], partes[1]) if len(partes) == 2 else None
+
+    def descargar(url, solo_ver=False):
+        pedido = urllib.request.Request(url, method="HEAD" if solo_ver else "GET")
+        with urllib.request.urlopen(pedido, timeout=15) as r:
+            return "" if solo_ver else r.read(65536).decode("utf-8", "replace")
+
+    bajar = bajar or descargar
+    try:
+        with open(repositorios, encoding="utf-8", errors="replace") as f:
+            lineas = f.read().splitlines()
+    except OSError:
+        return None
+    for linea in lineas:
+        m = re.match(r"\s*(https?://\S+)/v3\.(\d+)/main", linea)
+        if m:
+            break
+    else:
+        return None
+    base, actual = m.group(1), int(m.group(2))
+    try:
+        arq = subprocess.run(["apk", "--print-arch"], capture_output=True, text=True,
+                             timeout=10).stdout.strip() or "x86_64"
+    except (OSError, subprocess.SubprocessError):
+        arq = "x86_64"
+    try:
+        texto = bajar("%s/latest-stable/releases/%s/latest-releases.yaml" % (base, arq))
+        m = re.search(r"^\s*branch:\s*v3\.(\d+)", texto, re.M)
+        if not m or int(m.group(1)) <= actual:
+            return None
+        bajar("%s/v3.%d/main/%s/APKINDEX.tar.gz" % (base, actual + 1, arq), True)
+    except Exception:  # sin internet, espejo caído, respuesta rara
+        return None
+    return ("3.%d" % actual, "3.%d" % (actual + 1))
+
+
+def falta_reiniciar():
+    """Sí cuando el kernel en uso ya no es el instalado (se actualizó)."""
+    simulado = os.environ.get("LAZARO_ACTUALIZADOR_REINICIO")
+    if simulado:
+        return simulado == "si"
+    en_uso = os.uname().release
+    if glob.glob("/lib/modules/*/modules.order"):
+        return not os.path.isfile("/lib/modules/%s/modules.order" % en_uso)
+    return not os.path.isdir("/lib/modules/" + en_uso)
+
+
+def version_de_alpine():
+    try:
+        with open("/etc/alpine-release", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def limpiar(linea):
+    """Una línea del registro, como se le muestra a la persona."""
+    linea = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", linea).replace("\r", "").strip()
+    return linea[2:] if linea.startswith("# ") else linea
+
+
+def archivo_de_registro():
+    """Dónde escribir el avance: el registro del sistema si se puede
+    (grupo wheel) o, si no, uno propio."""
+    try:
+        with open(REGISTRO, "a", encoding="utf-8"):
+            return REGISTRO
+    except OSError:
+        base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+        os.makedirs(base, exist_ok=True)
+        return os.path.join(base, "lazaro-actualizador.log")
+
+
+def clasico():
+    """El actualizador de siempre, si esta ventana no puede abrir."""
+    if os.access(CLASICO, os.X_OK):
+        # La marca evita que el clásico vuelva a llamar a esta ventana.
+        os.environ["ALPINE_UPDATE_CLASICO"] = "1"
+        os.execv(CLASICO, [CLASICO])
+    print("No se puede abrir la ventana (falta py3-gobject3) y no está " + CLASICO, file=sys.stderr)
+    return 1
+
+
+def comprobar():
+    problemas = []
+    if not os.environ.get("LAZARO_ACTUALIZADOR_ORDEN") and not os.access(RAIZ, os.X_OK):
+        problemas.append("falta " + RAIZ)
+    try:
+        import gi
+        gi.require_version("Gtk", "3.0")
+        from gi.repository import Gtk  # noqa: F401
+    except (ImportError, ValueError) as e:
+        problemas.append("Python no encuentra GTK 3: %s" % e)
+    for p in problemas:
+        print(p, file=sys.stderr)
+    print("actualizador: %s" % ("listo" if not problemas else "%d problemas" % len(problemas)))
+    return 1 if problemas else 0
+
+
+def ventana_principal():
+    try:
+        import gi
+        gi.require_version("Gtk", "3.0")
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf, Gio, GLib, Gtk, Pango
+    except (ImportError, ValueError):
+        return clasico()
+
+    estado = {"proc": None, "pos": 0, "registro": None, "fase": "buscar",
+              "antes": version_de_alpine(), "cerrar_al_terminar": False}
+
+    def al_activar(app):
+        if app.get_windows():
+            app.get_windows()[0].present()
+            return
+        v = Gtk.ApplicationWindow(application=app, title=NOMBRE)
+        v.set_default_size(620, 300)
+        v.set_position(Gtk.WindowPosition.CENTER)
+        v.set_icon_name("system-software-update")
+
+        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14,
+                       margin=24, margin_start=28, margin_end=28)
+        cab = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
+        for logo in LOGOS:
+            if os.path.isfile(logo):
+                try:
+                    pb = GdkPixbuf.Pixbuf.new_from_file_at_size(logo, 72, 72)
+                    cab.pack_start(Gtk.Image.new_from_pixbuf(pb), False, False, 0)
+                except GLib.Error:
+                    pass
+                break
+        textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, valign=Gtk.Align.CENTER)
+        titulo = Gtk.Label(xalign=0)
+        titulo.set_markup("<span size='x-large' weight='bold'>%s</span>" % NOMBRE)
+        paso = Gtk.Label(xalign=0, wrap=True, max_width_chars=60)
+        paso.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        paso.get_style_context().add_class("dim-label")
+        textos.pack_start(titulo, False, False, 0)
+        textos.pack_start(paso, False, False, 0)
+        cab.pack_start(textos, True, True, 0)
+        caja.pack_start(cab, False, False, 0)
+
+        barra = Gtk.ProgressBar()
+        caja.pack_start(barra, False, False, 0)
+
+        mensaje = Gtk.Label(xalign=0, wrap=True, max_width_chars=70)
+        mensaje.set_no_show_all(True)
+        caja.pack_start(mensaje, False, False, 0)
+
+        detalles = Gtk.Expander(label="Ver los detalles")
+        texto = Gtk.TextView(editable=False, cursor_visible=False, monospace=True,
+                             wrap_mode=Gtk.WrapMode.WORD_CHAR, left_margin=8, right_margin=8)
+        rollo = Gtk.ScrolledWindow(min_content_height=180, shadow_type=Gtk.ShadowType.IN)
+        rollo.add(texto)
+        detalles.add(rollo)
+        caja.pack_start(detalles, True, True, 0)
+
+        botones = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        b_cambiar = Gtk.Button(no_show_all=True)
+        b_cambiar.get_style_context().add_class("suggested-action")
+        b_solo = Gtk.Button(label="Solo actualizar", no_show_all=True)
+        b_cerrar = Gtk.Button(label="Cerrar")
+        botones.pack_end(b_cerrar, False, False, 0)
+        botones.pack_end(b_cambiar, False, False, 0)
+        botones.pack_end(b_solo, False, False, 0)
+        caja.pack_end(botones, False, False, 0)
+        v.add(caja)
+
+        def decir(t):
+            paso.set_text(t)
+
+        def aviso(t):
+            mensaje.set_text(t)
+            mensaje.show()
+
+        def agregar(t):
+            bufer = texto.get_buffer()
+            bufer.insert(bufer.get_end_iter(), t + "\n")
+            GLib.idle_add(lambda: texto.scroll_to_iter(bufer.get_end_iter(), 0, False, 0, 1) and False)
+
+        def pulso():
+            if estado["fase"] in ("buscar", "clave", "trabajo"):
+                barra.pulse()
+                return True
+            return False
+
+        def leer_registro():
+            """Lo nuevo del archivo de avance desde la última lectura."""
+            try:
+                with open(estado["registro"], "rb") as f:
+                    f.seek(estado["pos"])
+                    datos = f.read()
+            except OSError:
+                return
+            corte = datos.rfind(b"\n")
+            if corte < 0:
+                return
+            estado["pos"] += corte + 1
+            for cruda in datos[:corte].decode("utf-8", "replace").split("\n"):
+                linea = limpiar(cruda)
+                if linea:
+                    agregar(linea)
+                    if cruda.lstrip().startswith("# ") and not linea.startswith("====="):
+                        decir(linea)
+
+        def terminar(codigo):
+            leer_registro()
+            barra.set_fraction(1.0 if codigo == 0 else 0.0)
+            despues = version_de_alpine()
+            if codigo == 0:
+                decir("El sistema quedó al día.")
+            else:
+                decir("La actualización terminó con errores.")
+                aviso("Revisa la conexión a internet y vuelve a intentar. Los detalles "
+                      "quedaron en %s." % estado["registro"])
+                detalles.set_expanded(True)
+            if despues and despues != estado["antes"] and \
+                    despues.rsplit(".", 1)[0] != estado["antes"].rsplit(".", 1)[0]:
+                aviso("El sistema ahora es Alpine %s. Reinicia el equipo para terminar "
+                      "el cambio de versión." % despues)
+            elif codigo == 0 and falta_reiniciar():
+                aviso("Se instaló una versión nueva del kernel (el núcleo del sistema). "
+                      "Reinicia el equipo cuando puedas para empezar a usarla.")
+            estado["fase"] = "fin"
+            b_cerrar.set_label("Cerrar")
+            if estado["cerrar_al_terminar"]:
+                v.show_all()
+                v.present()
+
+        def vigilar():
+            proc = estado["proc"]
+            if estado["fase"] == "clave":
+                try:
+                    aceptada = os.path.getsize(MARCA) > 0
+                except OSError:
+                    aceptada = False
+                if aceptada:
+                    estado["fase"] = "trabajo"
+                    decir("Empezando…")
+                    try:
+                        os.unlink(MARCA)
+                    except OSError:
+                        pass
+                elif proc.poll() is not None:
+                    # Terminó sin llegar a trabajar como administrador:
+                    # contraseña cancelada o equivocada.
+                    leer_registro()
+                    barra.set_fraction(0.0)
+                    decir("No se actualizó: no se aceptó la contraseña.")
+                    estado["fase"] = "fin"
+                    return False
+                return True
+            leer_registro()
+            if proc.poll() is None:
+                return True
+            terminar(proc.returncode)
+            return False
+
+        def empezar(modo):
+            b_cambiar.hide()
+            b_solo.hide()
+            mensaje.hide()
+            estado["registro"] = archivo_de_registro()
+            try:
+                estado["pos"] = os.path.getsize(estado["registro"])
+            except OSError:
+                estado["pos"] = 0
+            # La marca la crea esta ventana (dueño: la persona) y el
+            # actualizador solo la llena cuando ya es administrador.
+            try:
+                if os.path.lexists(MARCA):
+                    os.unlink(MARCA)
+                os.close(os.open(MARCA, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644))
+            except OSError:
+                pass
+            salida = open(estado["registro"], "a", encoding="utf-8")
+            salida.write("===== Actualizacion iniciada: %s =====\n" % time.strftime("%c"))
+            salida.flush()
+            try:
+                # Sesión propia: si esta ventana se cierra, la actualización sigue.
+                estado["proc"] = subprocess.Popen(orden_de_actualizar(modo), stdout=salida,
+                                                  stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                                  start_new_session=True)
+            except OSError as e:
+                decir("No se pudo empezar la actualización.")
+                aviso(str(e))
+                estado["fase"] = "fin"
+                return
+            finally:
+                salida.close()
+            estado["fase"] = "clave"
+            decir("Escribe tu contraseña en la ventana que aparece…")
+            GLib.timeout_add(120, pulso)
+            GLib.timeout_add(300, vigilar)
+
+        def ofrecer(par):
+            if not par:
+                empezar("")
+                return False
+            estado["fase"] = "preguntar"
+            barra.set_fraction(0.0)
+            decir("Hay una versión nueva de Alpine: %s (tienes %s)." % (par[1], par[0]))
+            aviso("La versión actual pronto dejará de recibir arreglos de seguridad para el "
+                  "navegador y el escritorio. El cambio descarga bastante y puede tardar: "
+                  "mantén el equipo conectado a la corriente y a internet, y reinicia al terminar.")
+            b_cambiar.set_label("Cambiar a Alpine %s" % par[1])
+            b_cambiar.show()
+            b_solo.show()
+            return False
+
+        b_cambiar.connect("clicked", lambda *_: empezar("--nueva-version"))
+        b_solo.connect("clicked", lambda *_: empezar(""))
+
+        def al_cerrar(*_):
+            if estado["fase"] in ("clave", "trabajo"):
+                d = Gtk.MessageDialog(transient_for=v, modal=True, message_type=Gtk.MessageType.INFO,
+                                      buttons=Gtk.ButtonsType.OK, text="La actualización sigue")
+                d.format_secondary_text(
+                    "Sigue trabajando en segundo plano: cortarla a la mitad podría dejar el "
+                    "sistema a medio actualizar.\n\nNo apagues el equipo. Esta ventana vuelve "
+                    "a aparecer cuando termine.")
+                d.run()
+                d.destroy()
+                estado["cerrar_al_terminar"] = True
+                v.hide()
+                return True
+            app.quit()
+            return True
+
+        v.connect("delete-event", al_cerrar)
+        b_cerrar.connect("clicked", al_cerrar)
+
+        decir("Buscando si hay una versión nueva de Alpine…")
+        GLib.timeout_add(120, pulso)
+        threading.Thread(target=lambda: GLib.idle_add(ofrecer, siguiente_version()),
+                         daemon=True).start()
+        v.show_all()
+
+    app = Gtk.Application(application_id=ID_APP, flags=Gio.ApplicationFlags.FLAGS_NONE)
+    app.connect("activate", al_activar)
+    return app.run([sys.argv[0]])
+
+
+def main(argv):
+    orden = argv[1] if len(argv) > 1 else ""
+    if orden == "--comprobar":
+        return comprobar()
+    if orden:
+        print("Uso: lazaro-actualizador [--comprobar]", file=sys.stderr)
+        return 2
+    return ventana_principal()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
