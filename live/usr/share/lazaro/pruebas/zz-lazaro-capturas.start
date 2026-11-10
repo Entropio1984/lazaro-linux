@@ -78,7 +78,36 @@ capturas() {
 	f_esc=si foto calc 30 libreoffice --calc
 	foto pdf-visor 15 evince /usr/share/doc/lazaro/manual-lazaro.pdf
 	# La tienda sale en blanco sin su catálogo: se fotografía en un equipo real.
-	foto actualizar 20 /usr/local/sbin/lazaro-actualizador
+	# Actualizar: la contraseña la pide polkit, que en esta sesión
+	# automática no se puede escribir. La ventana es la de verdad; la
+	# actualización se simula (las variables de prueba del actualizador)
+	# con líneas como las que escribe apk.
+	cat > /tmp/lazaro-act-simulada <<-'SIM'
+		#!/bin/sh
+		echo aceptada > /tmp/lazaro-act-marca
+		for l in "===== Actualizando Alpine (apk) =====" \
+			"fetch https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/APKINDEX.tar.gz" \
+			"(1/9) Upgrading tzdata (2026a-r0 -> 2026b-r0)" \
+			"(2/9) Upgrading libxml2 (2.13.8-r0 -> 2.13.9-r0)" \
+			"(3/9) Upgrading firefox (144.0-r0 -> 144.0.2-r0)"; do
+			echo "# $l" >> /tmp/lazaro-act-registro
+			sleep 2
+		done
+		sleep 120
+	SIM
+	chmod 755 /tmp/lazaro-act-simulada
+	cat > /tmp/lazaro-act-captura <<-'ACT'
+		#!/bin/sh
+		: > /tmp/lazaro-act-registro
+		LAZARO_ACTUALIZADOR_ORDEN=/tmp/lazaro-act-simulada \
+		LAZARO_ACTUALIZADOR_REGISTRO=/tmp/lazaro-act-registro \
+		LAZARO_ACTUALIZADOR_MARCA=/tmp/lazaro-act-marca \
+		LAZARO_ACTUALIZADOR_SIGUIENTE="" LAZARO_ACTUALIZADOR_REINICIO=no \
+			/usr/local/sbin/lazaro-actualizador
+	ACT
+	chmod 755 /tmp/lazaro-act-captura
+	foto actualizar 25 /tmp/lazaro-act-captura
+	pkill -u prueba -f 'lazaro-actualizador|lazaro-act-' 2>/dev/null || true
 	foto impresoras 15 system-config-printer
 	foto gestor-configuracion 10 xfce4-settings-manager
 	foto youtube-ligero 20 gtk-pipe-viewer
