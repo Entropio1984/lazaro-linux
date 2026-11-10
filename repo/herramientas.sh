@@ -48,7 +48,7 @@ L="$LAZARO_DIR/live"
 # /etc que ya existen (los equipos instalados antes del paquete los
 # tienen sueltos).
 for p in lazaro-diagnostico lazaro-controladores lazaro-afinador lazaro-kernel lazaro-repositorio \
-	lazaro-bienvenida lazaro-flatpak; do
+	lazaro-bienvenida lazaro-flatpak lazaro-actualizador; do
 	install -Dm755 "$L/usr/sbin/$p" "$A/usr/share/lazaro/programas/$p"
 done
 for f in lazaro-controladores.initd lazaro-afinador.initd lazaro-kernel.initd; do

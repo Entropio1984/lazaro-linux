@@ -655,6 +655,8 @@ paso_bienvenida() { # RAIZ
 	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || return 0
 	install -Dm755 /usr/sbin/lazaro-bienvenida "$1/usr/local/sbin/lazaro-bienvenida"
 	install -Dm755 /usr/sbin/lazaro-flatpak "$1/usr/local/sbin/lazaro-flatpak"
+	# La ventana de "Actualizar el sistema", con el aspecto de la Bienvenida.
+	install -Dm755 /usr/sbin/lazaro-actualizador "$1/usr/local/sbin/lazaro-actualizador"
 	mkdir -p "$1/usr/share/lazaro"
 	rm -rf "$1/usr/share/lazaro/bienvenida"
 	cp -a "$DATOS/bienvenida" "$1/usr/share/lazaro/"

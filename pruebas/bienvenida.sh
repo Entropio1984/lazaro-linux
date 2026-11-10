@@ -28,7 +28,7 @@ export LAZARO_BIENVENIDA_SOLO_PATH=1
 # Programas de mentira: los que piden las funciones con Requiere.
 mkdir -p "$TMP/bin" "$TMP/vacio"
 for p in python3 sh; do ln -s "$(command -v "$p")" "$TMP/vacio/$p"; done
-falsos="lazaro-abrir-instalador lazaro-manual alpine-update-launcher.sh lazaro-controladores
+falsos="lazaro-abrir-instalador lazaro-manual alpine-update-root.sh lazaro-actualizador lazaro-controladores
 	lazaro-afinador lazaro-kernel lazaro-diagnostico lazaro-flatpak zenity xdg-open
 	gtk-pipe-viewer mpv resolucion-modo-seguro"
 for p in $falsos; do printf '#!/bin/sh\n' > "$TMP/bin/$p"; chmod +x "$TMP/bin/$p"; done
@@ -67,7 +67,7 @@ es "sin programas: ningún botón visible" '! grep -q "	visible	" "$TMP/nada.txt
 
 # 5. Todas las funciones tienen su orden en el repositorio: lo que abren
 #    existe en live/ o lo instala desktop-postinstall.sh (lista conocida).
-externos="alpine-update-launcher.sh resolucion-modo-seguro gtk-pipe-viewer xdg-open lazaro-manual"
+externos="resolucion-modo-seguro gtk-pipe-viewer xdg-open lazaro-manual"
 cut -f4 "$TMP/inst.txt" | while read -r prog _; do
 	[ -e "$DIR/live/usr/sbin/$prog" ] || [ -e "$DIR/live/usr/bin/$prog" ] && continue
 	case " $externos " in *" $prog "*) continue ;; esac
@@ -109,6 +109,55 @@ es "--sesion no abre si la persona desmarcó la casilla" '[ "$rc" = 0 ]'
 
 # El informe del Diagnóstico no lleva contraseñas de direcciones.
 es "el Diagnóstico tapa las contraseñas de las direcciones" '[ "$(echo "https://ana:secreto@sitio.org/alpine/v3.24/main" | sed "$(sed -n "s/^[[:space:]]*sed '"'"'\(s|:\/\/.*\)'"'"'$/\1/p" "$DIR/live/usr/sbin/lazaro-diagnostico")")" = "https://***@sitio.org/alpine/v3.24/main" ]'
+
+# El Actualizador (lazaro-actualizador), sin abrir la ventana: cuándo
+# ofrece pasar a la versión siguiente de Alpine y cómo limpia el avance.
+cat > "$TMP/act.py" <<'EOS'
+import importlib.machinery, importlib.util, os, sys, tempfile
+cargador = importlib.machinery.SourceFileLoader("act", sys.argv[1])
+act = importlib.util.module_from_spec(importlib.util.spec_from_loader("act", cargador))
+cargador.exec_module(act)
+os.environ.pop("LAZARO_ACTUALIZADOR_SIGUIENTE", None)
+d = tempfile.mkdtemp()
+def repos(texto):
+    r = os.path.join(d, "repositories")
+    open(r, "w").write(texto)
+    return r
+def espejo(ultima, tiene_siguiente=True):
+    def bajar(url, solo_ver=False):
+        if solo_ver:
+            if not tiene_siguiente:
+                raise OSError("404")
+            return ""
+        return "---\n-\n  branch: v3.%d\n  arch: x86_64\n" % ultima
+    return bajar
+def sin_red(url, solo_ver=False):
+    raise OSError("sin internet")
+fijo = repos("https://dl-cdn.alpinelinux.org/alpine/v3.24/main\nhttps://dl-cdn.alpinelinux.org/alpine/v3.24/community\n")
+casos = [
+    ("hay versión nueva", act.siguiente_version(fijo, espejo(25)), ("3.24", "3.25")),
+    ("dos versiones adelante: solo la siguiente", act.siguiente_version(fijo, espejo(26)), ("3.24", "3.25")),
+    ("ya es la última", act.siguiente_version(fijo, espejo(24)), None),
+    ("el espejo aún no tiene la siguiente", act.siguiente_version(fijo, espejo(25, False)), None),
+    ("sin internet", act.siguiente_version(fijo, sin_red), None),
+    ("edge no se toca", act.siguiente_version(repos("https://dl-cdn.alpinelinux.org/alpine/edge/main\n"), espejo(25)), None),
+    ("sin archivo de repositorios", act.siguiente_version(os.path.join(d, "no-existe"), espejo(25)), None),
+    ("limpia el prefijo", act.limpiar("# (1/3) Upgrading musl\r"), "(1/3) Upgrading musl"),
+    ("limpia los colores", act.limpiar("\x1b[32mOK\x1b[0m: 12 MiB"), "OK: 12 MiB"),
+    ("orden normal", act.orden_de_actualizar(""), ["pkexec", "/usr/local/bin/alpine-update-root.sh"]),
+    ("orden con versión nueva", act.orden_de_actualizar("--nueva-version"),
+     ["pkexec", "/usr/local/bin/alpine-update-root.sh", "--nueva-version"]),
+]
+mal = [n for n, sale, espera in casos if sale != espera]
+for n, sale, espera in casos:
+    print("%s  %s" % ("ok  " if sale == espera else "FALLO", n))
+sys.exit(1 if mal else 0)
+EOS
+es "actualizador: versión siguiente, limpieza y orden" 'env -u LAZARO_ACTUALIZADOR_ORDEN python3 "$TMP/act.py" "$DIR/live/usr/sbin/lazaro-actualizador" > "$TMP/act.txt" 2>&1'
+cat "$TMP/act.txt"
+rc=0
+python3 "$DIR/live/usr/sbin/lazaro-actualizador" --otra > /dev/null 2> "$TMP/otra.txt" || rc=$?
+es "actualizador: una orden desconocida se rechaza" '[ "$rc" = 2 ] && grep -q "^Uso: lazaro-actualizador" "$TMP/otra.txt"'
 
 # 9. Los archivos del menú y del arranque con la sesión.
 es "entrada del menú" 'grep -qx "Exec=lazaro-bienvenida" "$DIR/live/usr/share/applications/lazaro-bienvenida.desktop"'
