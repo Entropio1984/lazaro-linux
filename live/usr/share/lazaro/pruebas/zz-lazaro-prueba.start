@@ -452,11 +452,23 @@ idioma_sesion() {
 	# Bienvenida: con escritorio, el programa quedó instalado, sus
 	# archivos de funciones están bien escritos y Python encuentra GTK 3
 	# (sin eso la ventana no abre).
+	# El Actualizador depende del programa que instala el script de
+	# escritorio. Sin internet ese script aún no corrió (se hace al
+	# primer arranque con red) y el botón queda escondido: ahí basta con
+	# que la ventana esté instalada.
+	actualizador_listo() {
+		if [ -x /usr/local/bin/alpine-update-root.sh ]; then
+			/usr/local/sbin/lazaro-actualizador --comprobar
+		else
+			[ -x /usr/local/sbin/lazaro-actualizador ] &&
+				echo "actualizador: instalado, falta la configuración final"
+		fi
+	}
 	if [ -x /usr/local/sbin/lazaro-bienvenida ]; then
 		bien="$(/usr/local/sbin/lazaro-bienvenida --comprobar 2>&1)" &&
 			bien="$bien; $(python3 -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk; print("GTK", Gtk.get_minor_version())' 2>&1)" &&
 			[ -e /etc/xdg/autostart/lazaro-bienvenida.desktop ] &&
-			bien="$bien; $(/usr/local/sbin/lazaro-actualizador --comprobar 2>&1)" &&
+			bien="$bien; $(actualizador_listo 2>&1)" &&
 			echo "LAZARO-BIENVENIDA-OK $bien" ||
 			echo "LAZARO-BIENVENIDA-NO $(printf '%s' "$bien" | tail -n 2 | tr '\n' ' ')"
 	fi
