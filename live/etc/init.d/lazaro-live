@@ -104,6 +104,66 @@ revisar_energia() {
 	fi
 }
 
+# LANG de un proceso (el primero con ese nombre), o "sin-LANG".
+idioma_de() {
+	_p=$(pidof "$1" 2>/dev/null | awk '{ print $1 }')
+	_l=""
+	[ -z "$_p" ] || _l=$(tr '\0' '\n' < "/proc/$_p/environ" 2>/dev/null | sed -n 's/^LANG=//p')
+	echo "${_l:-sin-LANG}"
+}
+
+# La sesión de prueba arranca en español, con las traducciones que la ISO
+# trae solo en ese idioma (build.sh las saca de los paquetes -lang).
+revisar_idioma() {
+	trad=no
+	[ -s /usr/share/locale/es/LC_MESSAGES/xfce4-panel.mo ] && trad=si
+	serie "LAZARO-IDIOMA-LIVE $(idioma_de xfce4-panel) traducciones=$trad"
+}
+
+# Solo en las pruebas: lo mismo que hace el botón "Idioma y teclado" de
+# la Bienvenida, sin ventana. Descarga el portugués de Brasil, guarda
+# idioma y teclado y reinicia la sesión: el escritorio y el instalador
+# (en las pruebas se abre solo) tienen que volver en portugués.
+probar_cambio_idioma() {
+	pkill -x calamares 2>/dev/null || true
+	panel_viejo=$(pidof xfce4-panel 2>/dev/null || true)
+	antes=$(df -m / | awk 'NR == 2 { print $3 }')
+	trad=no
+	if lazaro-traducciones instalar pt_BR.UTF-8 > /tmp/lazaro-traducciones.log 2>&1 \
+		&& lazaro-traducciones tiene pt_BR.UTF-8 \
+		&& [ -s /usr/share/locale/pt_BR/LC_MESSAGES/xfce4-panel.mo ]; then
+		trad=si
+	fi
+	despues=$(df -m / | awk 'NR == 2 { print $3 }')
+	serie "LAZARO-TRADUCCIONES-DESCARGA traducciones=$trad ram=$((despues - antes))MB $(tail -n 1 /tmp/lazaro-traducciones.log)"
+	[ "$trad" = si ] || serie -- tail -n 20 /tmp/lazaro-traducciones.log
+	lazaro-idioma --guardar pt_BR.UTF-8 br
+	rc-service lightdm restart > /dev/null 2>&1
+	# El panel nuevo (otro proceso) y después el instalador.
+	j=0
+	while [ $j -lt 36 ]; do
+		p=$(pidof xfce4-panel 2>/dev/null || true)
+		[ -n "$p" ] && [ "$p" != "$panel_viejo" ] && break
+		j=$((j + 1))
+		sleep 5
+	done
+	j=0
+	until pidof calamares > /dev/null 2>&1 || [ $j -ge 36 ]; do
+		j=$((j + 1))
+		sleep 5
+	done
+	# La distribución que usa de verdad el servidor gráfico nuevo (se lo
+	# pregunta setxkbmap, con la llave de LightDM o la del usuario).
+	teclado=no
+	for xa in /var/run/lightdm/root/:0 /run/lightdm/root/:0 /home/lazaro/.Xauthority; do
+		[ -r "$xa" ] || continue
+		capa=$(DISPLAY=:0 XAUTHORITY="$xa" setxkbmap -query 2>/dev/null | sed -n 's/^layout: *//p')
+		[ -z "$capa" ] || { teclado="$capa"; break; }
+	done
+	[ "$teclado" != no ] || grep -hi xkb /var/log/Xorg.0.log /var/log/lightdm/x-0.log 2>/dev/null | head -n 8 | serie
+	serie "LAZARO-IDIOMA-CAMBIO sesion=$(idioma_de xfce4-panel) calamares=$(idioma_de calamares) teclado=$teclado traducciones=$trad"
+}
+
 AVISO_TEXTO="
   ==============================================================
    No se pudo abrir el escritorio de Lázaro Linux.
@@ -226,6 +286,7 @@ start() {
 				c=$(pidof calamares | awk '{ print $1 }')
 				idioma=$(tr '\0' '\n' < "/proc/$c/environ" 2>/dev/null | sed -n 's/^LANG=//p')
 				serie "LAZARO-CALAMARES-LANG ${idioma:-sin-LANG}"
+				revisar_idioma
 				# Nada debe apagar la pantalla mientras se instala.
 				if pidof xfce4-screensaver >/dev/null 2>&1; then
 					serie "LAZARO-SALVAPANTALLAS-ACTIVO"
@@ -270,6 +331,7 @@ start() {
 						serie -- ls /etc/xdg/autostart
 					fi
 				fi
+				[ ! -e /dev/virtio-ports/lazaro.prueba ] || probar_cambio_idioma
 				exit 0
 			fi
 			i=$((i + 1))

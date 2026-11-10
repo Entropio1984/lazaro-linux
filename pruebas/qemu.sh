@@ -154,7 +154,7 @@ prueba_live() {
 			echo "FALLO: la Bienvenida no se abrió al iniciar la sesión live ($MODO)." >&2
 			ok=1
 		elif ! grep -q '^LAZARO-CALAMARES-LANG es_' "$serie"; then
-			# Calamares abre en español (la sesión live trae LANG=C.UTF-8).
+			# Calamares abre en español, como la sesión live.
 			echo "FALLO: Calamares no abrió en español ($MODO)." >&2
 			grep 'LAZARO-CALAMARES-LANG' "$serie" >&2 || true
 			ok=1
@@ -189,8 +189,32 @@ prueba_live() {
 			echo "FALLO: en la sesión live la pantalla todavía puede apagarse o el equipo suspenderse ($MODO)." >&2
 			grep -A 8 -e LAZARO-ELOGIND- -e LAZARO-DPMS- "$serie" | head -n 20 >&2
 			ok=1
+		elif ! grep -q 'LAZARO-IDIOMA-LIVE es_CO.UTF-8 traducciones=si' "$serie"; then
+			# El escritorio de la live en español: LANG y las traducciones
+			# que la ISO trae solo en español.
+			echo "FALLO: la sesión live no arrancó en español ($MODO)." >&2
+			grep 'LAZARO-IDIOMA-LIVE' "$serie" >&2 || true
+			ok=1
 		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
-			echo "OK: la sesión live arrancó ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
+			echo "OK: la sesión live arrancó en español ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
+			# Cambio de idioma como el de la Bienvenida: descarga el
+			# portugués de Brasil (la Completa lo trae en el USB), reinicia
+			# la sesión y el escritorio y el instalador vuelven en portugués,
+			# con el teclado brasileño.
+			if ! esperar "$serie" "$pid" 900 LAZARO-IDIOMA-CAMBIO; then
+				captura "$mon" "$RES/$nombre-idioma-fallo"
+				echo "FALLO: no terminó el cambio de idioma de la sesión live ($MODO)." >&2
+				grep -A 20 LAZARO-TRADUCCIONES-DESCARGA "$serie" >&2 || true
+				ok=1
+			elif ! grep -q 'LAZARO-IDIOMA-CAMBIO sesion=pt_BR.UTF-8 calamares=pt_BR.UTF-8 teclado=br traducciones=si' "$serie"; then
+				captura "$mon" "$RES/$nombre-idioma-fallo"
+				echo "FALLO: el cambio de idioma de la sesión live no quedó completo ($MODO)." >&2
+				grep -A 20 -e LAZARO-TRADUCCIONES-DESCARGA -e LAZARO-IDIOMA-CAMBIO "$serie" >&2 || true
+				ok=1
+			else
+				captura "$mon" "$RES/$nombre-portugues"
+				echo "OK: cambio de idioma: $(grep -m1 -o 'LAZARO-TRADUCCIONES-DESCARGA.*' "$serie" | tr -d '\r')"
+			fi
 		else
 			echo "FALLO: el agente del portapapeles compartido (spice-vdagent) no corre en la sesión live ($MODO)." >&2
 			sed -n '/LAZARO-SPICE-NO/,$p' "$serie" | head -n 30 >&2
