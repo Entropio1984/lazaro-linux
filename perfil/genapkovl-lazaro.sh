@@ -81,6 +81,14 @@ textos_completa() {
 install -Dm755 "$LAZARO_SCRIPT" "$tmp"/usr/share/lazaro/desktop-postinstall.sh
 install -Dm644 "$LAZARO_VERSION_ENV" "$tmp"/usr/share/lazaro/version.env
 
+# El instalador muestra el número de versión de config.env (ISO_VERSION),
+# no uno escrito a mano en branding.desc.
+gv_version="$(sed -n 's/^ISO_VERSION="\(.*\)"$/\1/p' "$LAZARO_VERSION_ENV")"
+gv_branding="$tmp/usr/share/calamares/branding/lazaro/branding.desc"
+if [ -n "$gv_version" ] && [ -f "$gv_branding" ]; then
+	sed -i "/[vV]ersion[A-Za-z]*:/ s/[0-9][0-9.]*\"\$/$gv_version\"/" "$gv_branding"
+fi
+
 # Manual de Lázaro (PDF): lo compila GitHub Actions (manual/compilar.sh)
 # antes de la ISO. En una compilación local sin el PDF, la ISO sale sin
 # manual y sin su acceso.

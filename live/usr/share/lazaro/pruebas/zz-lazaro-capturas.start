@@ -86,7 +86,7 @@ capturas() {
 	foto afinador 15 /usr/local/sbin/lazaro-afinador --ventana
 	foto controladores 15 /usr/local/sbin/lazaro-controladores --ventana
 	foto terminal 10 xfce4-terminal
-	foto ristretto 10 ristretto /usr/share/backgrounds
+	foto ristretto 10 ristretto /usr/share/icons/hicolor/256x256/apps/lazaro-bienvenida.png
 	foto mousepad 10 mousepad
 	foto bienvenida 15 /usr/local/sbin/lazaro-bienvenida
 
