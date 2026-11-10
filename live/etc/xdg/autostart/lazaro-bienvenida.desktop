@@ -1,6 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Bienvenida a Lázaro Linux
+Name[en]=Welcome to Lázaro Linux
+Name[pt_BR]=Boas-vindas ao Lázaro Linux
 # Al iniciar la sesión de prueba se abre la Bienvenida, que trae el botón
 # "Instalar Lázaro" (abre el instalador, Calamares).
 # Solo en las pruebas automáticas (pruebas/qemu.sh conecta un puerto

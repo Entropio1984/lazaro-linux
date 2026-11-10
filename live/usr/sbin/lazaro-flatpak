@@ -9,9 +9,11 @@
 #   lazaro-flatpak --tienda    abre la tienda de aplicaciones
 #   lazaro-flatpak --estado    dice "activo" o "falta"
 #   lazaro-flatpak --activar   lo activa (como administrador)
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
 
 FLATHUB=https://dl.flathub.org/repo/flathub.flatpakrepo
-TITULO="Flatpak y Flathub"
+TITULO="$(_ 'Flatpak y Flathub')"
 
 estado() {
 	if command -v flatpak >/dev/null 2>&1 &&
@@ -67,31 +69,31 @@ tienda() {
 	for t in $orden; do
 		command -v "$t" >/dev/null 2>&1 && exec "$t"
 	done
-	msg="Este sistema no tiene tienda de aplicaciones."
-	zenity --error --width=380 --title="Tienda de aplicaciones" --text="$msg" >/dev/null 2>&1 || echo "$msg" >&2
+	msg="$(_ 'Este sistema no tiene tienda de aplicaciones.')"
+	zenity --error --width=380 --title="$(_ 'Tienda de aplicaciones')" --text="$msg" >/dev/null 2>&1 || echo "$msg" >&2
 	exit 1
 }
 
 ventana() {
 	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
 	if [ "$(estado)" = activo ]; then
-		zenity --question --width=440 --title="$TITULO" --ok-label="Abrir la tienda" --cancel-label="Cerrar" \
-			--text="Flatpak y Flathub ya están activos en este equipo.\n\nLas aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones." >/dev/null 2>&1 || return 0
+		zenity --question --width=440 --title="$TITULO" --ok-label="$(_ 'Abrir la tienda')" --cancel-label="$(_ 'Cerrar')" \
+			--text="$(_ 'Flatpak y Flathub ya están activos en este equipo.\n\nLas aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones.')" >/dev/null 2>&1 || return 0
 		tienda
 	fi
-	zenity --question --width=480 --title="$TITULO" --ok-label="Activar" --cancel-label="Cerrar" \
-		--text="Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala.\n\nAl activarlos, esas aplicaciones aparecen en la tienda de aplicaciones. Necesita internet y descarga unos 20 MB; cada aplicación de Flathub ocupa bastante más que una de Alpine.\n\n¿Activar Flatpak y Flathub?" >/dev/null 2>&1 || return 0
+	zenity --question --width=480 --title="$TITULO" --ok-label="$(_ 'Activar')" --cancel-label="$(_ 'Cerrar')" \
+		--text="$(_ 'Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala.\n\nAl activarlos, esas aplicaciones aparecen en la tienda de aplicaciones. Necesita internet y descarga unos 20 MB; cada aplicación de Flathub ocupa bastante más que una de Alpine.\n\n¿Activar Flatpak y Flathub?')" >/dev/null 2>&1 || return 0
 	sal="$(mktemp)" || exit 1
 	( como_root "$0" --activar > "$sal" 2>&1; echo $? > "$sal.rc" ) |
 		zenity --progress --pulsate --auto-close --no-cancel --width=380 --title="$TITULO" \
-			--text="Activando Flatpak y Flathub…" >/dev/null 2>&1
+			--text="$(_ 'Activando Flatpak y Flathub…')" >/dev/null 2>&1
 	rc="$(cat "$sal.rc" 2>/dev/null || echo 1)"
 	if [ "$rc" = 0 ]; then
 		zenity --info --width=440 --title="$TITULO" \
-			--text="Listo. Cierra la sesión y vuelve a entrar para que la tienda de aplicaciones muestre lo de Flathub." >/dev/null 2>&1 || true
+			--text="$(_ 'Listo. Cierra la sesión y vuelve a entrar para que la tienda de aplicaciones muestre lo de Flathub.')" >/dev/null 2>&1 || true
 	else
 		zenity --error --width=460 --title="$TITULO" \
-			--text="No se pudo activar. Revisa la conexión a internet y vuelve a intentar.\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
+			--text="$(_ 'No se pudo activar. Revisa la conexión a internet y vuelve a intentar.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
 	fi
 	rm -f "$sal" "$sal.rc"
 }

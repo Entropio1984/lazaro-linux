@@ -52,6 +52,9 @@
 
 set -eu
 
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
 SYS="${LAZARO_SYS:-/sys}"
 CMDLINE="${LAZARO_CMDLINE:-/proc/cmdline}"
 DATOS="${LAZARO_DATOS:-/usr/share/lazaro}"
@@ -259,17 +262,17 @@ revisar() {
 	# Sonido de los portátiles Intel con "Smart Sound" (SOF).
 	if tiene_modulo 'snd_sof*'; then
 		falta alpine sonido-sof "sof-firmware alsa-ucm-conf" \
-			"Sonido del portátil (Intel Smart Sound): sin esto puede no sonar o no andar el micrófono"
+			"$(_ 'Sonido del portátil (Intel Smart Sound): sin esto puede no sonar o no andar el micrófono')"
 	fi
 
 	# Impresoras USB, según la marca.
 	for v in $(usb_con_clase 07); do
 		case "$v" in
-			03f0) falta alpine impresora-hp "hplip" "Impresora HP" ;;
-			04b8) falta alpine impresora-epson "epson-inkjet-printer-escpr gutenprint-cups" "Impresora Epson" ;;
-			04f9) falta alpine impresora-brother "brlaser gutenprint-cups" "Impresora Brother" ;;
-			04e8|0924) falta alpine impresora-samsung "splix" "Impresora Samsung o Xerox" ;;
-			*) falta alpine impresora-otra "gutenprint-cups" "Impresora ($v)" ;;
+			03f0) falta alpine impresora-hp "hplip" "$(_ 'Impresora HP')" ;;
+			04b8) falta alpine impresora-epson "epson-inkjet-printer-escpr gutenprint-cups" "$(_ 'Impresora Epson')" ;;
+			04f9) falta alpine impresora-brother "brlaser gutenprint-cups" "$(_ 'Impresora Brother')" ;;
+			04e8|0924) falta alpine impresora-samsung "splix" "$(_ 'Impresora Samsung o Xerox')" ;;
+			*) falta alpine impresora-otra "gutenprint-cups" "$(printf "$(_ 'Impresora (%s)')" "$v")" ;;
 		esac
 	done
 
@@ -277,51 +280,51 @@ revisar() {
 	if [ -r "$DATOS/huellas.ids" ]; then
 		for id in $(usb_ids); do
 			if grep -qix "$id" "$DATOS/huellas.ids"; then
-				falta alpine huellas "fprintd fprintd-pam" "Lector de huellas ($id)"
+				falta alpine huellas "fprintd fprintd-pam" "$(printf "$(_ 'Lector de huellas (%s)')" "$id")"
 				break
 			fi
 		done
 	fi
-	simulado huellas && falta alpine huellas "fprintd fprintd-pam" "Lector de huellas (prueba)"
+	simulado huellas && falta alpine huellas "fprintd fprintd-pam" "$(printf "$(_ 'Lector de huellas (%s)')" prueba)"
 
 	# Lectores de tarjetas (DNI electrónico, firma digital).
 	if [ -n "$(usb_con_clase 0b)" ] || simulado tarjetas; then
-		falta alpine tarjetas "pcsc-lite pcsc-lite-openrc ccid opensc" "Lector de tarjetas (DNI electrónico, firma digital)"
+		falta alpine tarjetas "pcsc-lite pcsc-lite-openrc ccid opensc" "$(_ 'Lector de tarjetas (DNI electrónico, firma digital)')"
 	fi
 
 	# Pantalla que gira y sensor de luz (2 en 1, tabletas).
 	if hay_sensores_movimiento || simulado sensores; then
-		falta alpine sensores "iio-sensor-proxy iio-sensor-proxy-openrc" "Sensores de giro y de luz (equipos 2 en 1)"
+		falta alpine sensores "iio-sensor-proxy iio-sensor-proxy-openrc" "$(_ 'Sensores de giro y de luz (equipos 2 en 1)')"
 	fi
 
 	if hay_thunderbolt || simulado thunderbolt; then
-		falta alpine thunderbolt "bolt" "Thunderbolt (bases y discos)"
+		falta alpine thunderbolt "bolt" "$(_ 'Thunderbolt (bases y discos)')"
 	fi
 
 	# Ahorro de batería (Julián, 2026-11-04: power-profiles-daemon).
 	if hay_bateria || simulado bateria; then
-		falta alpine bateria "power-profiles-daemon" "Modos de ahorro de batería"
+		falta alpine bateria "power-profiles-daemon" "$(_ 'Modos de ahorro de batería')"
 	fi
 
 	# Con escritorio, siempre: escáneres, celulares y cámaras de fotos,
 	# tabletas de dibujo. Son livianos (unos 3 MB).
 	if hay_escritorio; then
-		falta alpine escaneres "sane sane-airscan simple-scan" "Escáneres (USB y de red)"
-		falta alpine celulares "gvfs-mtp gvfs-gphoto2 gvfs-afc" "Ver los archivos del celular y de cámaras de fotos"
-		falta alpine tabletas "xf86-input-wacom libwacom" "Tabletas de dibujo y lápices Wacom"
+		falta alpine escaneres "sane sane-airscan simple-scan" "$(_ 'Escáneres (USB y de red)')"
+		falta alpine celulares "gvfs-mtp gvfs-gphoto2 gvfs-afc" "$(_ 'Ver los archivos del celular y de cámaras de fotos')"
+		falta alpine tabletas "xf86-input-wacom libwacom" "$(_ 'Tabletas de dibujo y lápices Wacom')"
 	fi
-	falta alpine discos "ntfs-3g exfatprogs mtools" "Discos y memorias de Windows (NTFS, exFAT)"
-	falta alpine temperatura "lm-sensors" "Temperatura y ventiladores"
+	falta alpine discos "ntfs-3g exfatprogs mtools" "$(_ 'Discos y memorias de Windows (NTFS, exFAT)')"
+	falta alpine temperatura "lm-sensors" "$(_ 'Temperatura y ventiladores')"
 
 	# Wifi Broadcom antiguo con el controlador libre b43 (las que usan wl
 	# no lo necesitan).
 	if { tiene_modulo b43 && ! pci_broadcom_wl; } || simulado b43; then
 		hay_firmware 'b43/ucode*.fw' || falta descarga b43 "b43-fwcutter" \
-			"Wifi Broadcom antiguo (b43): el firmware se descarga del espejo de OpenWrt (13,5 MB)"
+			"$(_ 'Wifi Broadcom antiguo (b43): el firmware se descarga del espejo de OpenWrt (13,5 MB)')"
 	fi
 	if tiene_modulo b43legacy || simulado b43legacy; then
 		hay_firmware 'b43legacy/ucode*.fw' || falta descarga b43legacy "b43-fwcutter" \
-			"Wifi Broadcom muy antiguo (b43legacy): el firmware se descarga del espejo de OpenWrt (0,6 MB)"
+			"$(_ 'Wifi Broadcom muy antiguo (b43legacy): el firmware se descarga del espejo de OpenWrt (0,6 MB)')"
 	fi
 
 	# Intel PRO/Wireless 2100 y 2200/2915 (Centrino). Solo si la ISO trae
@@ -331,19 +334,19 @@ revisar() {
 	[ -r "$DATOS/firmware-licencia/LICENSE.ipw2x00" ] && ipw_hay=si
 	if [ "$ipw_hay" = si ] && { tiene_modulo ipw2100 || simulado ipw2100; }; then
 		hay_firmware 'ipw2100-1.3*.fw' || falta licencia ipw2100 "" \
-			"Wifi Intel PRO/Wireless 2100: firmware de Intel, hay que aceptar su licencia"
+			"$(_ 'Wifi Intel PRO/Wireless 2100: firmware de Intel, hay que aceptar su licencia')"
 	fi
 	if [ "$ipw_hay" = si ] && { tiene_modulo ipw2200 || simulado ipw2200; }; then
 		hay_firmware 'ipw2200-*.fw' || falta licencia ipw2200 "" \
-			"Wifi Intel PRO/Wireless 2200/2915: firmware de Intel, hay que aceptar su licencia"
+			"$(_ 'Wifi Intel PRO/Wireless 2200/2915: firmware de Intel, hay que aceptar su licencia')"
 	fi
 
 	# Prism54 (Intersil).
 	if tiene_modulo 'p54pci' || simulado p54pci; then
-		hay_firmware isl3886pci || falta descarga p54pci "" "Wifi Prism54 PCI: el firmware se descarga de daemonizer.de (30 KB)"
+		hay_firmware isl3886pci || falta descarga p54pci "" "$(_ 'Wifi Prism54 PCI: el firmware se descarga de daemonizer.de (30 KB)')"
 	fi
 	if tiene_modulo 'p54usb' || simulado p54usb; then
-		hay_firmware isl3886usb || falta descarga p54usb "" "Wifi Prism54 USB: el firmware se descarga de daemonizer.de (60 KB)"
+		hay_firmware isl3886usb || falta descarga p54usb "" "$(_ 'Wifi Prism54 USB: el firmware se descarga de daemonizer.de (60 KB)')"
 	fi
 
 	# Firmware que el kernel pidió y no encontró.
@@ -359,8 +362,8 @@ revisar() {
 
 	# Solo desde el menú.
 	if [ "${SOLO_AUTOMATICO:-no}" = no ]; then
-		falta menu firmware "fwupd fwupd-openrc" "Actualizar el firmware del equipo (BIOS, discos, bases), si el fabricante lo ofrece"
-		falta menu braille "brltty orca" "Líneas braille y lector de pantalla"
+		falta menu firmware "fwupd fwupd-openrc" "$(_ 'Actualizar el firmware del equipo (BIOS, discos, bases), si el fabricante lo ofrece')"
+		falta menu braille "brltty orca" "$(_ 'Líneas braille y lector de pantalla')"
 	fi
 }
 
@@ -526,7 +529,7 @@ licencia_texto() {
 
 # Pide aceptar la licencia de Intel. 0 si se aceptó.
 pedir_licencia() { # CLAVE
-	zenity --text-info --width=640 --height=520 --title="Licencia de Intel ($1)" \
+	zenity --text-info --width=640 --height=520 --title="$(printf "$(_ 'Licencia de Intel (%s)')" "$1")" \
 		--checkbox="Acepto la licencia de Intel para el firmware de mi tarjeta wifi" \
 		--filename=/dev/stdin <<-EOF
 	$(licencia_texto)
@@ -537,16 +540,16 @@ ventana() {
 	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
 	lista="$(lista_sesion)"
 	if [ -z "$lista" ]; then
-		zenity --info --width=380 --title="Controladores" \
-			--text="No falta nada: todo el hardware que se pudo revisar tiene lo que necesita." >/dev/null 2>&1 || true
+		zenity --info --width=380 --title="$(_ 'Controladores')" \
+			--text="$(_ 'No falta nada: todo el hardware que se pudo revisar tiene lo que necesita.')" >/dev/null 2>&1 || true
 		return 0
 	fi
 	# Marcado de entrada todo, salvo lo que solo está en el menú.
 	elegidos="$(printf '%s\n' "$lista" | awk -F'\t' '{
 		marca = ($1 == "menu") ? "FALSE" : "TRUE"
-		print marca; print $2; print $4 }' | zenity --list --checklist --width=720 --height=420 --title="Controladores" \
-		--text="Esto es lo que le falta a tu equipo. Marca lo que quieras instalar.\nLo que se descarga necesita internet." \
-		--column="" --column="Clave" --column="Qué es" --hide-column=2 --print-column=2 --separator=' ' 2>/dev/null)" || return 0
+		print marca; print $2; print $4 }' | zenity --list --checklist --width=720 --height=420 --title="$(_ 'Controladores')" \
+		--text="$(_ 'Esto es lo que le falta a tu equipo. Marca lo que quieras instalar.\nLo que se descarga necesita internet.')" \
+		--column="" --column="$(_ 'Clave')" --column="$(_ 'Qué es')" --hide-column=2 --print-column=2 --separator=' ' 2>/dev/null)" || return 0
 	[ -n "$elegidos" ] || return 0
 	for c in $elegidos; do
 		case "$c" in
@@ -564,11 +567,11 @@ ventana() {
 	ok="$(printf '%s\n' "$salida" | grep -c 'LAZARO-CONTROLADOR-OK' || true)"
 	no="$(printf '%s\n' "$salida" | grep 'LAZARO-CONTROLADOR-NO' | sed 's/.*-NO //' | tr '\n' ' ')"
 	if [ -n "$no" ]; then
-		zenity --warning --width=420 --title="Controladores" \
-			--text="Instalados: $ok. No se pudo: $no\n\nRevisa la conexión a internet. Detalles en $LOG" >/dev/null 2>&1 || true
+		zenity --warning --width=420 --title="$(_ 'Controladores')" \
+			--text="$(printf "$(_ 'Instalados: %s. No se pudo: %s')" "$ok" "$no")\n\n$(printf "$(_ 'Revisa la conexión a internet. Detalles en %s')" "$LOG")" >/dev/null 2>&1 || true
 	else
-		zenity --info --width=380 --title="Controladores" \
-			--text="Listo. Si algo no anda todavía, reinicia el equipo." >/dev/null 2>&1 || true
+		zenity --info --width=380 --title="$(_ 'Controladores')" \
+			--text="$(_ 'Listo. Si algo no anda todavía, reinicia el equipo.')" >/dev/null 2>&1 || true
 	fi
 }
 
@@ -586,16 +589,16 @@ vigilar() {
 			echo "$d"
 		done)"
 		[ -n "$nuevos" ] || return 0
-		texto="Falta algo para tu hardware:
+		texto="$(_ 'Falta algo para tu hardware:')
 $(printf '%s\n' "$nuevos" | sed 's/^/• /' | head -n 5)"
 		# En segundo plano: el aviso espera a que se lo cierre.
 		(
 			if command -v notify-send >/dev/null 2>&1; then
-				accion="$(notify-send -a Lázaro -i system-software-install -A abrir=Instalar \
-					"Controladores" "$texto" 2>/dev/null || true)"
+				accion="$(notify-send -a Lázaro -i system-software-install -A abrir="$(_ 'Instalar')" \
+					"$(_ 'Controladores')" "$texto" 2>/dev/null || true)"
 				[ "$accion" != abrir ] || "$0" --ventana
 			else
-				zenity --question --width=420 --title="Controladores" --ok-label="Instalar" \
+				zenity --question --width=420 --title="$(_ 'Controladores')" --ok-label="$(_ 'Instalar')" \
 					--text="$texto" >/dev/null 2>&1 && "$0" --ventana
 			fi
 		) &

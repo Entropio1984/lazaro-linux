@@ -32,6 +32,9 @@
 
 set -eu
 
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
 SYS="${LAZARO_SYS:-/sys}"
 CMDLINE="${LAZARO_CMDLINE:-/proc/cmdline}"
 SALIDA="${LAZARO_GRAFICAS:-/run/lazaro/graficas}"
@@ -187,23 +190,23 @@ aviso() {
 	case "$MOTIVO" in
 		generacion)
 			if [ "$GENERACION" = anterior ]; then
-				texto="Este equipo tiene una tarjeta NVIDIA anterior a las GeForce 8 ($CHIPS), que no se probó con su controlador libre."
+				texto="$(printf "$(_ 'Este equipo tiene una tarjeta NVIDIA anterior a las GeForce 8 (%s), que no se probó con su controlador libre.')" "$CHIPS")"
+			elif [ -n "$CHIPS" ]; then
+				texto="$(printf "$(_ 'Este equipo tiene una tarjeta NVIDIA que no se pudo identificar (%s).')" "$CHIPS")"
 			else
-				texto="Este equipo tiene una tarjeta NVIDIA que no se pudo identificar${CHIPS:+ ($CHIPS)}."
+				texto="$(_ 'Este equipo tiene una tarjeta NVIDIA que no se pudo identificar.')"
 			fi
 			texto="$texto
 
-Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.
-
-Al instalar, Lázaro Linux la dejará igual (modo seguro)." ;;
+$(_ 'Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.\n\nAl instalar, Lázaro Linux la dejará igual (modo seguro).')" ;;
 		fallo-carga)
-			texto="No se pudo cargar el controlador de la tarjeta NVIDIA ($CHIPS).
+			texto="$(printf "$(_ 'No se pudo cargar el controlador de la tarjeta NVIDIA (%s).')" "$CHIPS")
 
-La sesión de prueba usa la imagen básica, que puede ir más lenta o con una resolución fija." ;;
+$(_ 'La sesión de prueba usa la imagen básica, que puede ir más lenta o con una resolución fija.')" ;;
 		*) return 0 ;;
 	esac
 	command -v zenity >/dev/null 2>&1 || return 0
-	zenity --info --title="Tarjeta gráfica NVIDIA" --width=420 --text="$texto" >/dev/null 2>&1 || true
+	zenity --info --title="$(_ 'Tarjeta gráfica NVIDIA')" --width=420 --text="$texto" >/dev/null 2>&1 || true
 }
 
 case "${1:-}" in

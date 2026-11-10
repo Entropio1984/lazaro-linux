@@ -28,6 +28,9 @@
 
 set -eu
 
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
 R="${LAZARO_KERNEL_RAIZ:-}"
 DIR="$R/var/lib/lazaro-kernel"
 CONF="$R/etc/lazaro/kernel.conf"
@@ -202,13 +205,13 @@ nueva_version() {
 mostrar_estado() {
 	v="$(apk info -e linux-lazaro 2>/dev/null && apk info linux-lazaro 2>/dev/null | sed -n '1s/ description:$//p')"
 	case "$(estado)" in
-		no) echo "Kernel Lázaro: no instalado." ;;
-		prueba) echo "Kernel Lázaro: instalado, espera su arranque de prueba (reinicia)." ;;
-		activo) echo "Kernel Lázaro: en uso por defecto." ;;
-		fallo) echo "Kernel Lázaro: el arranque de prueba no terminó; el equipo usa el kernel de Alpine." ;;
+		no) _ 'Kernel Lázaro: no instalado.'; echo ;;
+		prueba) _ 'Kernel Lázaro: instalado, espera su arranque de prueba (reinicia).'; echo ;;
+		activo) _ 'Kernel Lázaro: en uso por defecto.'; echo ;;
+		fallo) _ 'Kernel Lázaro: el arranque de prueba no terminó; el equipo usa el kernel de Alpine.'; echo ;;
 	esac
-	[ -z "$v" ] || echo "Paquete: $v"
-	echo "Kernel en uso ahora: $(kernel_en_uso)"
+	[ -z "$v" ] || printf "$(_ 'Paquete: %s')\n" "$v"
+	printf "$(_ 'Kernel en uso ahora: %s')\n" "$(kernel_en_uso)"
 }
 
 como_root() {
@@ -220,24 +223,24 @@ como_root() {
 
 ventana() {
 	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
-	texto="El kernel es la parte central del sistema. El kernel Lázaro es el de Alpine, con el mismo código y las mismas actualizaciones de seguridad, pero sin piezas que solo usan los servidores y con el escritorio más atento al ratón y al teclado.\n\nEs EXPERIMENTAL: la mejora es pequeña y se nota más en equipos lentos. El kernel de Alpine queda siempre en el menú de arranque.\n\n$(mostrar_estado | sed 's/$/\\n/' | tr -d '\n')"
+	texto="$(_ 'El kernel es la parte central del sistema. El kernel Lázaro es el de Alpine, con el mismo código y las mismas actualizaciones de seguridad, pero sin piezas que solo usan los servidores y con el escritorio más atento al ratón y al teclado.\n\nEs EXPERIMENTAL: la mejora es pequeña y se nota más en equipos lentos. El kernel de Alpine queda siempre en el menú de arranque.')\n\n$(mostrar_estado | sed 's/$/\\n/' | tr -d '\n')"
 	case "$(estado)" in
 		no|fallo)
-			zenity --question --width=520 --title="Kernel Lázaro" --ok-label="Instalar y probar" --cancel-label="Cerrar" \
-				--text="$texto\nAl instalarlo, el próximo arranque es de prueba: si algo falla, reinicia y el equipo vuelve solo al kernel de Alpine. Necesita internet." >/dev/null 2>&1 || return 0
+			zenity --question --width=520 --title="$(_ 'Kernel Lázaro')" --ok-label="$(_ 'Instalar y probar')" --cancel-label="$(_ 'Cerrar')" \
+				--text="$texto\n$(_ 'Al instalarlo, el próximo arranque es de prueba: si algo falla, reinicia y el equipo vuelve solo al kernel de Alpine. Necesita internet.')" >/dev/null 2>&1 || return 0
 			if salida="$(como_root "$0" --instalar 2>&1)"; then
-				zenity --question --width=420 --title="Kernel Lázaro" --ok-label="Reiniciar ahora" --cancel-label="Después" \
-					--text="Instalado. El próximo arranque prueba el kernel Lázaro." >/dev/null 2>&1 && { loginctl reboot 2>/dev/null || reboot; }
+				zenity --question --width=420 --title="$(_ 'Kernel Lázaro')" --ok-label="$(_ 'Reiniciar ahora')" --cancel-label="$(_ 'Después')" \
+					--text="$(_ 'Instalado. El próximo arranque prueba el kernel Lázaro.')" >/dev/null 2>&1 && { loginctl reboot 2>/dev/null || reboot; }
 			else
-				zenity --error --width=460 --title="Kernel Lázaro" --text="No se pudo instalar.\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+				zenity --error --width=460 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'No se pudo instalar.')\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
 			fi ;;
 		*)
-			zenity --question --width=520 --title="Kernel Lázaro" --ok-label="Volver al kernel de Alpine" --cancel-label="Cerrar" \
+			zenity --question --width=520 --title="$(_ 'Kernel Lázaro')" --ok-label="$(_ 'Volver al kernel de Alpine')" --cancel-label="$(_ 'Cerrar')" \
 				--text="$texto" >/dev/null 2>&1 || return 0
 			if salida="$(como_root "$0" --quitar 2>&1)"; then
-				zenity --info --width=380 --title="Kernel Lázaro" --text="Listo. Al reiniciar se usa el kernel de Alpine." >/dev/null 2>&1 || true
+				zenity --info --width=380 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'Listo. Al reiniciar se usa el kernel de Alpine.')" >/dev/null 2>&1 || true
 			else
-				zenity --error --width=460 --title="Kernel Lázaro" --text="No se pudo.\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+				zenity --error --width=460 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
 			fi ;;
 	esac
 }

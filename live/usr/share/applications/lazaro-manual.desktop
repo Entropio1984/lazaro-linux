@@ -1,10 +1,18 @@
 [Desktop Entry]
 Type=Application
 Name=Manual de Lázaro
+Name[en]=Lázaro manual (in Spanish)
+Name[pt_BR]=Manual do Lázaro (em espanhol)
 GenericName=Guía de uso
+GenericName[en]=User guide
+GenericName[pt_BR]=Guia de uso
 Comment=Cómo instalar y usar Lázaro Linux, paso a paso
+Comment[en]=How to install and use Lázaro Linux, step by step
+Comment[pt_BR]=Como instalar e usar o Lázaro Linux, passo a passo
 Exec=lazaro-manual
 Icon=help-browser
 Terminal=false
 Categories=Documentation;Utility;
 Keywords=ayuda;manual;guía;tutorial;help;
+Keywords[en]=help;manual;guide;tutorial;
+Keywords[pt_BR]=ajuda;manual;guia;tutorial;help;

@@ -32,6 +32,9 @@
 
 set -eu
 
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
 LOG=/var/log/lazaro-instalar.log
 DATOS=/usr/share/lazaro
 # ALPINE_BRANCH, ALPINE_MIRROR, ISO_VERSION, LAZARO_LLAVE (de build.sh)
@@ -478,6 +481,13 @@ paso_base() {
 	# de la ISO con que se instaló, que el informe muestra.
 	install -Dm755 /usr/sbin/lazaro-diagnostico "$raiz/usr/local/sbin/lazaro-diagnostico"
 	install -Dm644 "$DATOS/version.env" "$raiz/usr/share/lazaro/version.env"
+	# Traducción de los textos de las herramientas: idiomas/*.po y quienes
+	# los leen (texto.sh para los programas de shell, lazaro_texto.py
+	# para los de Python).
+	install -Dm644 "$DATOS/texto.sh" "$raiz/usr/share/lazaro/texto.sh"
+	install -Dm644 "$DATOS/lazaro_texto.py" "$raiz/usr/share/lazaro/lazaro_texto.py"
+	rm -rf "$raiz/usr/share/lazaro/idiomas"
+	cp -a "$DATOS/idiomas" "$raiz/usr/share/lazaro/"
 	# Manual de Lázaro (PDF) y su acceso en el menú, "Manual de Lázaro".
 	if [ -r /usr/share/doc/lazaro/manual-lazaro.pdf ]; then
 		install -Dm644 /usr/share/doc/lazaro/manual-lazaro.pdf "$raiz/usr/share/doc/lazaro/manual-lazaro.pdf"
@@ -1007,13 +1017,13 @@ AVISO
 # (pruebas automáticas) no se muestra nada.
 avisar_primer_arranque() {
 	[ -n "${DISPLAY:-}" ] && command -v zenity >/dev/null 2>&1 || return 0
-	setsid zenity --info --title="Lázaro Linux" --width=520 --text="<b>La instalación terminó, pero falta la configuración final.</b>
+	setsid zenity --info --title="$(_ 'Lázaro Linux')" --width=520 --text="$(_ '<b>La instalación terminó, pero falta la configuración final.</b>
 
 No hubo internet al final de la instalación, así que la barra completa, la pantalla de inicio y los programas elegidos se instalarán en el primer arranque.
 
 <b>Qué hacer:</b> al encender el equipo, conéctate a internet y espera unos minutos. Cuando termine, la pantalla de inicio aparece sola; entra desde ella (no desde la consola de texto). No hace falta reiniciar.
 
-<small><b>Explicación técnica:</b> la configuración final la hace desktop-postinstall.sh, que descarga paquetes y por eso necesita red. En el primer arranque un servicio de OpenRC (lazaro-primer-arranque) lo ejecuta en segundo plano en cuanto hay internet. OpenRC enciende los servicios del arranque una sola vez y en orden: lo que el script habilita después (la pantalla de inicio, elogind, polkit, cupsd...) quedaría apagado hasta el siguiente arranque. Por eso, al terminar, ese servicio los enciende él mismo. La barra, el idioma y los grupos del usuario se leen al iniciar sesión: una sesión abierta por consola antes de terminar sigue con lo anterior. Registros: /var/log/desktop-postinstall.log y /var/log/lazaro-primer-arranque.log</small>" \
+<small><b>Explicación técnica:</b> la configuración final la hace desktop-postinstall.sh, que descarga paquetes y por eso necesita red. En el primer arranque un servicio de OpenRC (lazaro-primer-arranque) lo ejecuta en segundo plano en cuanto hay internet. OpenRC enciende los servicios del arranque una sola vez y en orden: lo que el script habilita después (la pantalla de inicio, elogind, polkit, cupsd...) quedaría apagado hasta el siguiente arranque. Por eso, al terminar, ese servicio los enciende él mismo. La barra, el idioma y los grupos del usuario se leen al iniciar sesión: una sesión abierta por consola antes de terminar sigue con lo anterior. Registros: /var/log/desktop-postinstall.log y /var/log/lazaro-primer-arranque.log</small>')" \
 		</dev/null >/dev/null 2>&1 &
 }
 

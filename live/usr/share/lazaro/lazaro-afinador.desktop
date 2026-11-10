@@ -1,10 +1,18 @@
 [Desktop Entry]
 Type=Application
 Name=Afinador
+Name[en]=Tuner
+Name[pt_BR]=Afinador
 GenericName=Ajustes de rendimiento
+GenericName[en]=Performance tweaks
+GenericName[pt_BR]=Ajustes de desempenho
 Comment=Ajusta el sistema para que el equipo responda mejor (todo se puede quitar)
+Comment[en]=Tunes the system so the computer responds better (everything can be undone)
+Comment[pt_BR]=Ajusta o sistema para o computador responder melhor (tudo pode ser desfeito)
 Exec=lazaro-afinador --ventana
 Icon=preferences-system-performance
 Terminal=false
 Categories=System;Settings;
 Keywords=rendimiento;velocidad;memoria;kernel;afinador;optimizar;
+Keywords[en]=performance;speed;memory;kernel;tuner;optimize;
+Keywords[pt_BR]=desempenho;velocidade;memória;kernel;afinador;otimizar;

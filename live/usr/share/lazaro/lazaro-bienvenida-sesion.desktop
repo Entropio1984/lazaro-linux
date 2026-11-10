@@ -1,7 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Bienvenida a Lázaro Linux
+Name[en]=Welcome to Lázaro Linux
+Name[pt_BR]=Boas-vindas ao Lázaro Linux
 Comment=Muestra la Bienvenida al iniciar sesión (se puede apagar desde la misma ventana)
+Comment[en]=Shows the Welcome window when you log in (it can be turned off from the same window)
+Comment[pt_BR]=Mostra as Boas-vindas ao iniciar a sessão (dá para desligar na própria janela)
 Exec=lazaro-bienvenida --sesion
 Icon=lazaro-bienvenida
 Terminal=false
