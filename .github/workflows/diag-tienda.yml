@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     container: alpine:3.24
     steps:
-      - name: Diagnóstico 2
+      - name: Diagnóstico 3
         run: |
-          set -x
+          set -x; set +e
           apk update -q
           apk add -q openrc dbus polkit gnome-software gnome-software-plugin-apk2 apk-polkit-rs glib
           apk info -e apk-polkit-rs-openrc && echo "OPENRC-SUBPAQUETE-AUTOMATICO" || echo "OPENRC-SUBPAQUETE-NO-AUTOMATICO"
@@ -27,5 +27,13 @@ jobs:
           echo "=== Con servidor:"
           time gdbus call --system --timeout 600 --dest dev.Cogitri.apkPolkit2 --object-path /dev/Cogitri/apkPolkit2 --method dev.Cogitri.apkPolkit2.UpdateRepositories 2>&1 | head -5
           cat /tmp/apkp.log | tail -20
-          find /var/lib/swcatalog -maxdepth 2 2>/dev/null
+          echo "=== Segunda llamada (sin cambios en el índice):"
+          gdbus call --system --timeout 600 --dest dev.Cogitri.apkPolkit2 --object-path /dev/Cogitri/apkPolkit2 --method dev.Cogitri.apkPolkit2.UpdateRepositories 2>&1 | head -3
+          find /var/lib/swcatalog -maxdepth 2 2>/dev/null || echo SIN-CATALOGO
+          ls -la /var/cache/apk/ /etc/apk/cache 2>/dev/null
+          rm -f /var/cache/apk/APKINDEX.* 
+          echo "=== Tras borrar índice:"
+          gdbus call --system --timeout 600 --dest dev.Cogitri.apkPolkit2 --object-path /dev/Cogitri/apkPolkit2 --method dev.Cogitri.apkPolkit2.UpdateRepositories 2>&1 | head -3
+          tail -5 /tmp/apkp.log
+          find /var/lib/swcatalog -maxdepth 2 2>/dev/null || echo SIN-CATALOGO
           appstreamcli status | tail -3
