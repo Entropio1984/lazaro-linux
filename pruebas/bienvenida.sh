@@ -145,7 +145,8 @@ casos = [
     ("limpia el prefijo", act.limpiar("# (1/3) Upgrading musl\r"), "(1/3) Upgrading musl"),
     ("limpia los colores", act.limpiar("\x1b[32mOK\x1b[0m: 12 MiB"), "OK: 12 MiB"),
     ("orden normal", act.orden_de_actualizar(""), ["pkexec", "/usr/local/bin/alpine-update-root.sh"]),
-    ("orden con versión nueva", act.orden_de_actualizar("--nueva-version")[-1], "--nueva-version"),
+    ("orden con versión nueva", act.orden_de_actualizar("--nueva-version"),
+     ["pkexec", "/usr/local/bin/alpine-update-root.sh", "--nueva-version"]),
 ]
 mal = [n for n, sale, espera in casos if sale != espera]
 for n, sale, espera in casos:
@@ -154,7 +155,9 @@ sys.exit(1 if mal else 0)
 EOS
 es "actualizador: versión siguiente, limpieza y orden" 'env -u LAZARO_ACTUALIZADOR_ORDEN python3 "$TMP/act.py" "$DIR/live/usr/sbin/lazaro-actualizador" > "$TMP/act.txt" 2>&1'
 cat "$TMP/act.txt"
-es "actualizador: una orden desconocida se rechaza" '! python3 "$DIR/live/usr/sbin/lazaro-actualizador" --otra 2>/dev/null'
+rc=0
+python3 "$DIR/live/usr/sbin/lazaro-actualizador" --otra > /dev/null 2> "$TMP/otra.txt" || rc=$?
+es "actualizador: una orden desconocida se rechaza" '[ "$rc" = 2 ] && grep -q "^Uso: lazaro-actualizador" "$TMP/otra.txt"'
 
 # 9. Los archivos del menú y del arranque con la sesión.
 es "entrada del menú" 'grep -qx "Exec=lazaro-bienvenida" "$DIR/live/usr/share/applications/lazaro-bienvenida.desktop"'

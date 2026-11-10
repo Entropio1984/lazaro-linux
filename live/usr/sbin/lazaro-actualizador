@@ -311,6 +311,10 @@ def ventana_principal():
                     barra.set_fraction(0.0)
                     decir("No se actualizó: no se aceptó la contraseña.")
                     estado["fase"] = "fin"
+                    if estado["cerrar_al_terminar"]:
+                        # La ventana estaba escondida: que no se quede así.
+                        v.show_all()
+                        v.present()
                     return False
                 return True
             leer_registro()
