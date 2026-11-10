@@ -33,6 +33,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Instalar LaTeX, QEMU e ImageMagick
         run: |
@@ -118,5 +120,10 @@ jobs:
               --title "Manual: capturas de pantalla nuevas" \
               --body "Capturas sacadas por el flujo \"Capturas del manual\" (run $GITHUB_RUN_ID)."
           else
-            git push origin "HEAD:$GITHUB_REF_NAME"
+            # La rama puede haber avanzado mientras se sacaban las capturas.
+            for intento in 1 2 3; do
+              git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+              sleep 10
+            done
+            exit 1
           fi
