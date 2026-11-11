@@ -230,6 +230,10 @@ Al terminar, reinicia y saca el USB.
   entra desde ahí. No hace falta reiniciar.
 - Para instalar más programas, abre la **tienda de aplicaciones** desde
   el menú (Discover en Plasma y LXQt, GNOME Software en los demás).
+  La lista de programas para instalar se descarga sola de internet al
+  instalar y se renueva una vez al día. Si instalaste sin internet,
+  aparece a más tardar una hora después de conectarte; mientras tanto la
+  tienda solo muestra lo que ya está instalado.
 - Cuando haya actualizaciones, un icono en la barra te avisa; al hacer
   clic se abre **Actualizar el sistema**, que solo pide tu contraseña.
   (En KDE Plasma se actualiza desde Discover.)

@@ -516,6 +516,15 @@ prueba_instalar() {
 			echo "FALLO: el sistema instalado no arrancó con los ajustes del afinador." >&2
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
+		elif grep -Eq 'LAZARO-TIENDA-NO.*(servicio|tarea)' "$serie2" ||
+			{ [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; } ||
+			{ [ "$configurado" = si ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA "$serie2"; }; then
+			# Sin internet la lista de programas no se puede descargar: ahí
+			# solo se exigen los servicios y la tarea que la descargará
+			# (si la configuración final ya corrió, como en la Completa).
+			echo "FALLO: la tienda de aplicaciones no quedó lista (servicio de Alpine o lista de programas para instalar)." >&2
+			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
+			ok=1
 		elif ! grep -q LAZARO-MANUAL-OK "$serie2"; then
 			echo "FALLO: el Manual de Lázaro (PDF y acceso en el menú) no quedó en el sistema instalado (en una compilación local, compílalo antes con manual/compilar.sh)." >&2
 			ok=1
