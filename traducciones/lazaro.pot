@@ -488,11 +488,11 @@ msgid "Instalar"
 msgstr ""
 
 #: live/usr/sbin/lazaro-diagnostico
-msgid "Diagnóstico de Lázaro"
+msgid "Pulsa Intro para cerrar esta ventana."
 msgstr ""
 
 #: live/usr/sbin/lazaro-diagnostico
-msgid "Crear el informe"
+msgid "Diagnóstico de Lázaro"
 msgstr ""
 
 #: live/usr/sbin/lazaro-diagnostico
@@ -500,6 +500,10 @@ msgid ""
 "Revisa el equipo y reúne en un archivo de texto su hardware, el estado del sistema y los errores del arranque, para compartirlo al pedir ayuda.\n"
 "\n"
 "No guarda contraseñas ni claves del wifi. Suele tardar menos de un minuto."
+msgstr ""
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Crear el informe"
 msgstr ""
 
 #: live/usr/sbin/lazaro-diagnostico
