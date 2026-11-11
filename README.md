@@ -165,7 +165,10 @@ al instante (hay un recuadro para probar la ñ, los acentos y la @) y el
 idioma cambia cerrando y volviendo a abrir solo el escritorio, sin
 reiniciar el equipo. Después el instalador también se abre en ese
 idioma. La Ligera trae en el USB solo el español; otro idioma se
-descarga si hay internet (la Completa los trae todos).
+descarga si hay internet (la Completa los trae todos). Las herramientas
+de Lázaro (la Bienvenida, el Afinador, los Controladores y las demás)
+también cambian de idioma: están en español, inglés y portugués de
+Brasil, y con cualquier otro idioma salen en inglés.
 
 Lo que guardes aquí se pierde al apagar.
 
@@ -338,6 +341,10 @@ normales del sistema (ver
 [Actualizaciones de las herramientas](#actualizaciones-de-las-herramientas)). Cuando una orden empieza con `doas`, te pide **tu
 contraseña** (la que elegiste al instalar); mientras la escribes no se ve
 nada en la pantalla, es normal: escríbela y pulsa Enter.
+
+Las herramientas hablan el idioma del sistema: español, inglés o
+portugués de Brasil (con otro idioma, inglés). El informe del
+Diagnóstico queda siempre en español, para que quien ayuda lo lea igual.
 
 ### Bienvenida: todo en una ventana
 
@@ -769,7 +776,18 @@ tiene su propia prueba, `pruebas/afinador.sh`, con un portátil viejo, un
 equipo nuevo y uno sin escritorio simulados (qué ajustes elige y que
 aplicar y deshacer dejen GRUB como estaba); en las instalaciones de QEMU
 se comprueba además que el sistema arranca con `preempt=full` y con la
-protección de memoria puesta.
+protección de memoria puesta. `pruebas/traducciones.sh` revisa que las
+traducciones de las herramientas estén completas y que los programas
+las encuentren según el idioma.
+
+### Traducir las herramientas
+
+Los textos se escriben en español dentro de cada programa; las
+traducciones están en `live/usr/share/lazaro/idiomas/` (`en.po`,
+`pt_BR.po`), en el formato de siempre para traducir programas libres
+(se pueden editar con Poedit o con cualquier editor de texto). Cómo
+corregir una traducción o agregar un idioma: ver
+[traducciones/LEEME.md](traducciones/LEEME.md).
 
 ### Repositorio de Lázaro: compilar y publicar
 

@@ -1,7 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Aviso de controladores
+Name[en]=Driver notice
+Name[pt_BR]=Aviso de drivers
 Comment=Avisa si al hardware le falta un controlador
+Comment[en]=Warns when the hardware is missing a driver
+Comment[pt_BR]=Avisa quando falta um driver para o hardware
 Exec=lazaro-controladores --vigilar
 Terminal=false
 NoDisplay=true

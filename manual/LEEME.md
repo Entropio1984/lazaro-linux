@@ -77,11 +77,17 @@ Casi todas se sacan solas en una máquina virtual: en GitHub, pestaña
 **Actions** → **Capturas del manual** → **Run workflow**. Tarda alrededor
 de una hora y deja las imágenes en `imagenes/capturas/` (en `main`, como
 un PR). El recorrido está en
-`live/usr/share/lazaro/pruebas/zz-lazaro-capturas.start`.
+`live/usr/share/lazaro/pruebas/zz-lazaro-capturas.start` (sistema instalado)
+y en `prueba_capturas` de `pruebas/qemu.sh` (menú de arranque, sesión de
+prueba con Idioma y teclado, e instalador).
 
 Estas hay que sacarlas a mano en un equipo real, porque la máquina
 virtual no las puede mostrar bien: `wifi-lista` (redes wifi) y
-`tienda` (la tienda necesita su catálogo de internet). En XFCE: tecla
+`tienda` (la tienda necesita su catálogo de internet). Lo mismo
+`instalador-listo` (la pantalla *Todo listo* del final del
+instalador): el recorrido automático no hace una instalación completa
+con el instalador gráfico; se saca al terminar una instalación de
+verdad, antes de pulsar **Hecho**. En XFCE: tecla
 **Impr Pant**, que abre la herramienta de capturas. La de `actualizar`
 sale sola con una actualización simulada (la ventana es la real).
 

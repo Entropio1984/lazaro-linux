@@ -4,9 +4,11 @@
 # cambie después, así que podría instalar sobre particiones que ya no
 # existen. Mientras GParted está abierto tiene el mismo candado que el
 # instalador, y lazaro-abrir-instalador avisa en vez de abrirse.
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
 if pgrep -x calamares >/dev/null 2>&1; then
 	zenity --warning --title="GParted" --width=380 \
-		--text="Cierra primero el instalador de Lázaro Linux.\n\nEl instalador revisa los discos solo al abrirse: si los cambias con GParted mientras está abierto, no verá los cambios." \
+		--text="$(_ 'Cierra primero el instalador de Lázaro Linux.\n\nEl instalador revisa los discos solo al abrirse: si los cambias con GParted mientras está abierto, no verá los cambios.')" \
 		2>/dev/null
 	exit 0
 fi

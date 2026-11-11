@@ -1,11 +1,19 @@
 [Desktop Entry]
 Type=Application
 Name=Bienvenida
+Name[en]=Welcome
+Name[pt_BR]=Boas-vindas
 GenericName=Bienvenida a Lázaro Linux
+GenericName[en]=Welcome to Lázaro Linux
+GenericName[pt_BR]=Boas-vindas ao Lázaro Linux
 Comment=Conoce Lázaro Linux y abre sus herramientas desde un solo lugar
+Comment[en]=Get to know Lázaro Linux and open its tools from one place
+Comment[pt_BR]=Conheça o Lázaro Linux e abra suas ferramentas em um só lugar
 Exec=lazaro-bienvenida
 Icon=lazaro-bienvenida
 Terminal=false
 Categories=System;Settings;
 Keywords=bienvenida;inicio;ayuda;manual;lazaro;herramientas;welcome;
+Keywords[en]=welcome;start;help;manual;lazaro;tools;
+Keywords[pt_BR]=boas-vindas;início;ajuda;manual;lazaro;ferramentas;welcome;
 StartupWMClass=lazaro-bienvenida

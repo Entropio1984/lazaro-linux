@@ -25,7 +25,15 @@ import shutil
 import subprocess
 import sys
 
-NOMBRE = "Bienvenida a Lázaro Linux"
+# Traducciones (idiomas/*.po junto a lazaro_texto.py). Sin ellas, español.
+sys.path.insert(0, os.environ.get("LAZARO_TEXTO_DIR", "/usr/share/lazaro"))
+try:
+    from lazaro_texto import _
+except ImportError:
+    def _(texto):
+        return texto
+
+NOMBRE = _("Bienvenida a Lázaro Linux")
 ID_APP = "io.github.entropio1984.lazaro.Bienvenida"
 
 # Carpetas de datos, de menor a mayor prioridad: un archivo con el mismo
@@ -141,16 +149,18 @@ def leer_funciones():
             continue
         funciones.append({
             "archivo": n,
-            "nombre": datos["nombre"].strip(),
-            "descripcion": " ".join(datos["descripcion"].split()),
+            # Los textos de los archivos se traducen como los del programa
+            # (idiomas/*.po): el original es la clave.
+            "nombre": _(datos["nombre"].strip()),
+            "descripcion": _(" ".join(datos["descripcion"].split())),
             "iconos": datos.get("icono", "").split(),
-            "seccion": datos["seccion"].strip(),
+            "seccion": _(datos["seccion"].strip()),
             "orden": orden,
             "ejecutar": datos["ejecutar"].strip(),
             "requiere": datos.get("requiere", "").split(),
             "donde": donde,
             "mostrar": mostrar,
-            "boton": datos.get("boton", "Abrir").strip() or "Abrir",
+            "boton": _(datos.get("boton", "Abrir").strip() or "Abrir"),
             "portada": datos.get("portada", "no").strip().lower() in ("si", "sí", "yes", "1"),
         })
     funciones.sort(key=lambda f: (f["orden"], f["archivo"]))
@@ -177,6 +187,7 @@ def leer_portada():
             with open(ruta, encoding="utf-8") as f:
                 bloques = [" ".join(b.split()) for b in f.read().split("\n\n")]
             bloques = [b for b in bloques if b]
+            bloques = [_(b) for b in bloques]
             if bloques:
                 titulo = bloques.pop(0)
             if bloques:
@@ -241,8 +252,8 @@ def falta_gtk():
     """En un equipo instalado antes de que existiera la Bienvenida puede
     faltar py3-gobject3: se ofrece instalarlo."""
     paquetes = "py3-gobject3 gtk+3.0"
-    texto = ("A la Bienvenida de Lázaro le falta un componente para abrir "
-             "su ventana.\n\n¿Instalarlo ahora? (necesita internet)")
+    texto = (_("A la Bienvenida de Lázaro le falta un componente para abrir "
+             "su ventana.\n\n¿Instalarlo ahora? (necesita internet)"))
     if not existe("zenity"):
         print("Falta py3-gobject3. Instálalo con: doas apk add " + paquetes, file=sys.stderr)
         return 1
@@ -253,7 +264,7 @@ def falta_gtk():
     orden = (["pkexec"] if existe("pkexec") else ["doas"]) + ["apk", "add"] + paquetes.split()
     if subprocess.call(orden, env=entorno) != 0:
         subprocess.call(["zenity", "--error", "--title", NOMBRE, "--width", "420", "--text",
-                         "No se pudo instalar. Revisa la conexión a internet y vuelve a intentar."],
+                         _("No se pudo instalar. Revisa la conexión a internet y vuelve a intentar.")],
                         env=entorno)
         return 1
     os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -314,15 +325,15 @@ def ventana_principal(argv):
         con botones para copiarlo o guardarlo."""
         d = Gtk.Dialog(title=funcion["nombre"], transient_for=ventana, modal=True)
         d.set_default_size(680, 480)
-        b_copiar = d.add_button("Copiar", 1)
-        b_guardar = d.add_button("Guardar…", 2)
-        d.add_button("Cerrar", Gtk.ResponseType.CLOSE)
+        b_copiar = d.add_button(_("Copiar"), 1)
+        b_guardar = d.add_button(_("Guardar…"), 2)
+        d.add_button(_("Cerrar"), Gtk.ResponseType.CLOSE)
         b_copiar.set_sensitive(False)
         b_guardar.set_sensitive(False)
         texto = Gtk.TextView(editable=False, cursor_visible=False, monospace=True,
                              left_margin=10, right_margin=10, top_margin=10, bottom_margin=10)
         buf = texto.get_buffer()
-        buf.set_text("Revisando el equipo…")
+        buf.set_text(_("Revisando el equipo…"))
         sw = Gtk.ScrolledWindow()
         sw.add(texto)
         d.get_content_area().pack_start(sw, True, True, 0)
@@ -330,11 +341,11 @@ def ventana_principal(argv):
 
         def listo(proc, res):
             try:
-                _, salida, error = proc.communicate_utf8_finish(res)
+                _ok, salida, error = proc.communicate_utf8_finish(res)
             except GLib.Error as e:
                 salida, error = "", str(e)
             buf.set_text((salida or "").strip() or (error or "").strip()
-                         or "La herramienta no devolvió información.")
+                         or _("La herramienta no devolvió información."))
             b_copiar.set_sensitive(True)
             b_guardar.set_sensitive(True)
 
@@ -345,7 +356,7 @@ def ventana_principal(argv):
             proc = lanzador.spawnv(["sh", "-c", funcion["ejecutar"]])
             proc.communicate_utf8_async(None, None, listo)
         except GLib.Error as e:
-            buf.set_text("No se pudo abrir: %s" % e.message)
+            buf.set_text(_("No se pudo abrir: %s") % e.message)
 
         while True:
             r = d.run()
@@ -353,9 +364,9 @@ def ventana_principal(argv):
             if r == 1:
                 Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(contenido, -1)
             elif r == 2:
-                g = Gtk.FileChooserDialog(title="Guardar", transient_for=d,
+                g = Gtk.FileChooserDialog(title=_("Guardar"), transient_for=d,
                                           action=Gtk.FileChooserAction.SAVE)
-                g.add_buttons("Cancelar", Gtk.ResponseType.CANCEL, "Guardar", Gtk.ResponseType.OK)
+                g.add_buttons(_("Cancelar"), Gtk.ResponseType.CANCEL, _("Guardar"), Gtk.ResponseType.OK)
                 g.set_do_overwrite_confirmation(True)
                 g.set_current_name("lazaro-%s.txt" % funcion["archivo"][:-5])
                 if g.run() == Gtk.ResponseType.OK:
@@ -363,7 +374,7 @@ def ventana_principal(argv):
                         with open(g.get_filename(), "w", encoding="utf-8") as f:
                             f.write(contenido + "\n")
                     except OSError as e:
-                        aviso(d, "No se pudo guardar: %s" % e)
+                        aviso(d, _("No se pudo guardar: %s") % e)
                 g.destroy()
             else:
                 break
@@ -377,7 +388,7 @@ def ventana_principal(argv):
             subprocess.Popen(["sh", "-c", funcion["ejecutar"]], env=entorno,
                              stdin=subprocess.DEVNULL, start_new_session=True)
         except OSError as e:
-            aviso(ventana, "No se pudo abrir «%s»: %s" % (funcion["nombre"], e))
+            aviso(ventana, _("No se pudo abrir «%s»: %s") % (funcion["nombre"], e))
 
     def etiqueta(texto, clases=(), **props):
         e = Gtk.Label(label=texto, xalign=0, wrap=True, **props)
@@ -442,11 +453,12 @@ def ventana_principal(argv):
             tit.pack_start(lm, False, False, 0)
         v = leer_version()
         if v.get("ISO_VERSION"):
-            det = "Versión %s" % v["ISO_VERSION"]
+            det = _("Versión %s") % v["ISO_VERSION"]
             if v.get("LAZARO_EDICION"):
-                det += " · edición %s" % v["LAZARO_EDICION"].capitalize()
+                edicion = {"ligera": _("Ligera"), "completa": _("Completa")}
+                det += _(" · edición %s") % edicion.get(v["LAZARO_EDICION"], v["LAZARO_EDICION"].capitalize())
             if live:
-                det += " · sesión de prueba (live)"
+                det += _(" · sesión de prueba (live)")
             tit.pack_start(etiqueta(det, ("dim-label",)), False, False, 0)
         cab.pack_start(tit, True, True, 0)
         caja.pack_start(cab, False, False, 0)
@@ -498,7 +510,7 @@ def ventana_principal(argv):
 
         pila = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=120)
         pila.add_titled(pagina_inicio(ventana, [f for f in funciones if f["portada"]]),
-                        "inicio", "Inicio")
+                        "inicio", _("Inicio"))
         secciones = []
         for f in funciones:
             if f["seccion"] not in secciones:
@@ -517,11 +529,11 @@ def ventana_principal(argv):
         pie = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12, margin=10,
                       margin_start=14, margin_end=14)
         if not live:
-            casilla = Gtk.CheckButton(label="Mostrar esta ventana al iniciar sesión",
+            casilla = Gtk.CheckButton(label=_("Mostrar esta ventana al iniciar sesión"),
                                       active=se_muestra_al_iniciar())
             casilla.connect("toggled", lambda c: guardar_mostrar(c.get_active()))
             pie.pack_start(casilla, False, False, 0)
-        cerrar = Gtk.Button(label="Cerrar")
+        cerrar = Gtk.Button(label=_("Cerrar"))
         cerrar.set_size_request(96, -1)
         cerrar.connect("clicked", lambda _b: ventana.close())
         pie.pack_end(cerrar, False, False, 0)

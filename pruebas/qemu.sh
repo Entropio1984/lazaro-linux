@@ -640,8 +640,12 @@ prueba_capturas() {
 	disco="$RES/$nombre.qcow2"
 	rm -f "$serie" "$mon" "$disco" "$RES/$nombre-vars.fd"
 	qemu-img create -q -f qcow2 "$disco" 20G
+	# El puerto lazaro.capturas le pide a la sesión que abra después la
+	# ventana de Idioma y teclado.
 	arrancar "$nombre" "$MEM" "$serie" -cdrom "$ISO" -boot d \
-		-drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci
+		-drive "file=$disco,if=virtio,format=qcow2" -nic user,model=virtio-net-pci \
+		-device virtio-serial-pci \
+		-chardev null,id=lzcapturas -device virtserialport,chardev=lzcapturas,name=lazaro.capturas
 	# El menú de arranque se elige solo a los 5 s. La flecha arriba (ya
 	# está en la primera opción) detiene la cuenta sin cambiar nada: el
 	# menú queda quieto para la foto y Enter sigue el arranque normal.
@@ -655,6 +659,11 @@ prueba_capturas() {
 		# El escritorio y la Bienvenida tardan en abrir después.
 		sleep 120
 		captura "$mon" "$CAP/sesion-prueba"
+		if esperar "$serie" "$pid" 400 LAZARO-CAPTURA-IDIOMA; then
+			captura "$mon" "$CAP/idioma"
+		else
+			echo "AVISO: no se abrió la ventana de Idioma y teclado para su captura." >&2
+		fi
 	else
 		captura "$mon" "$CAP/otras/live-fallo"
 		echo "FALLO: la sesión de prueba no arrancó." >&2

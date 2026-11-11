@@ -1,10 +1,18 @@
 [Desktop Entry]
 Type=Application
 Name=Controladores
+Name[en]=Drivers
+Name[pt_BR]=Drivers
 GenericName=Controladores del hardware
+GenericName[en]=Hardware drivers
+GenericName[pt_BR]=Drivers do hardware
 Comment=Revisa el equipo e instala lo que le falta (wifi, impresoras, sonido, huellas...)
+Comment[en]=Checks the computer and installs what is missing (wifi, printers, sound, fingerprints...)
+Comment[pt_BR]=Verifica o computador e instala o que falta (wi-fi, impressoras, som, digitais...)
 Exec=lazaro-controladores --ventana
 Icon=system-software-install
 Terminal=false
 Categories=System;Settings;HardwareSettings;
 Keywords=drivers;controladores;firmware;wifi;impresora;hardware;
+Keywords[en]=drivers;firmware;wifi;printer;hardware;
+Keywords[pt_BR]=drivers;firmware;wifi;impressora;hardware;

@@ -1,0 +1,1402 @@
+# Textos de las herramientas de Lázaro Linux: English.
+# Para traducir: ver traducciones/LEEME.md.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: live/usr/sbin/lazaro-abrir-gparted
+msgid ""
+"Cierra primero el instalador de Lázaro Linux.\n"
+"\n"
+"El instalador revisa los discos solo al abrirse: si los cambias con GParted mientras está abierto, no verá los cambios."
+msgstr ""
+"Close the Lázaro Linux installer first.\n"
+"\n"
+"The installer only checks the disks when it opens: if you change them with GParted while it is open, it will not see the changes."
+
+#: live/usr/sbin/lazaro-abrir-instalador live/usr/sbin/lazaro-instalar-texto
+msgid "Instalar Lázaro Linux"
+msgstr "Install Lázaro Linux"
+
+#: live/usr/sbin/lazaro-abrir-instalador
+msgid "Cierra primero GParted y luego vuelve a abrir el instalador."
+msgstr "Close GParted first and then open the installer again."
+
+#: live/usr/sbin/lazaro-actualizador live/usr/share/lazaro/bienvenida/funciones/12-actualizar.conf
+msgid "Actualizar el sistema"
+msgstr "Update the system"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Buscando si hay una versión nueva de Alpine…"
+msgstr "Checking for a new version of Alpine…"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Ver los detalles"
+msgstr "Show details"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Solo actualizar"
+msgstr "Just update"
+
+#: live/usr/sbin/lazaro-actualizador live/usr/sbin/lazaro-afinador live/usr/sbin/lazaro-bienvenida live/usr/sbin/lazaro-diagnostico live/usr/sbin/lazaro-flatpak live/usr/sbin/lazaro-idioma live/usr/sbin/lazaro-kernel
+msgid "Cerrar"
+msgstr "Close"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Escribe tu contraseña en la ventana que aparece…"
+msgstr "Type your password in the window that appears…"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "La versión actual pronto dejará de recibir arreglos de seguridad para el navegador y el escritorio. El cambio descarga bastante y puede tardar: mantén el equipo conectado a la corriente y a internet, y reinicia al terminar."
+msgstr "The current version will soon stop receiving security fixes for the browser and the desktop. The switch downloads quite a lot and can take a while: keep the computer plugged in and connected to the internet, and restart when it finishes."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "El sistema quedó al día."
+msgstr "The system is up to date."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "La actualización terminó con errores."
+msgstr "The update finished with errors."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Hay una versión nueva de Alpine: %s (tienes %s)."
+msgstr "A new version of Alpine is available: %s (you have %s)."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Cambiar a Alpine %s"
+msgstr "Switch to Alpine %s"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid ""
+"Sigue trabajando en segundo plano: cortarla a la mitad podría dejar el sistema a medio actualizar.\n"
+"\n"
+"No apagues el equipo. Esta ventana vuelve a aparecer cuando termine."
+msgstr ""
+"It keeps working in the background: stopping it halfway could leave the system half updated.\n"
+"\n"
+"Do not turn off the computer. This window will appear again when it finishes."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Revisa la conexión a internet y vuelve a intentar. Los detalles quedaron en %s."
+msgstr "Check the internet connection and try again. The details are in %s."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "El sistema ahora es Alpine %s. Reinicia el equipo para terminar el cambio de versión."
+msgstr "The system is now Alpine %s. Restart the computer to finish the version change."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Se instaló una versión nueva del kernel (el núcleo del sistema). Reinicia el equipo cuando puedas para empezar a usarla."
+msgstr "A new version of the kernel (the core of the system) was installed. Restart the computer when you can to start using it."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "Empezando…"
+msgstr "Starting…"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "No se pudo empezar la actualización."
+msgstr "The update could not start."
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "La actualización sigue"
+msgstr "The update is still running"
+
+#: live/usr/sbin/lazaro-actualizador
+msgid "No se actualizó: no se aceptó la contraseña."
+msgstr "Nothing was updated: the password was not accepted."
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Respuesta del escritorio: el kernel no tiene el modo dinámico (o no hay escritorio)"
+msgstr "Desktop responsiveness: the kernel has no dynamic mode (or there is no desktop)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Respuesta del escritorio: el kernel atiende antes a las ventanas (preempt=full)"
+msgstr "Desktop responsiveness: the kernel serves the windows first (preempt=full)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Respuesta del escritorio (preempt=full): se activa al reiniciar"
+msgstr "Desktop responsiveness (preempt=full): takes effect after restarting"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Respuesta del escritorio: el kernel atendería antes a las ventanas (preempt=full)"
+msgstr "Desktop responsiveness: the kernel would serve the windows first (preempt=full)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Memoria: el kernel no tiene Multi-Gen LRU"
+msgstr "Memory: the kernel has no Multi-Gen LRU"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Memoria: Multi-Gen LRU con protección contra congelones al quedarse sin RAM"
+msgstr "Memory: Multi-Gen LRU with protection against freezes when RAM runs out"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Memoria: protección contra congelones al quedarse sin RAM (Multi-Gen LRU)"
+msgstr "Memory: protection against freezes when RAM runs out (Multi-Gen LRU)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Discos y pendrives: copiar archivos grandes no congela el escritorio"
+msgstr "Disks and USB sticks: copying large files does not freeze the desktop"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Discos y pendrives: que copiar archivos grandes no congele el escritorio"
+msgstr "Disks and USB sticks: keep large file copies from freezing the desktop"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Páginas gigantes: con más de 4 GB de RAM no hace falta cambiarlas"
+msgstr "Huge pages: with more than 4 GB of RAM there is no need to change them"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Páginas gigantes solo para quien las pide: ahorra memoria"
+msgstr "Huge pages only for programs that ask for them: saves memory"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Procesador: el equipo no deja cambiar su velocidad"
+msgstr "Processor: this computer does not allow changing its speed"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Procesador: lo maneja %s junto con el perfil de energía; no hace falta tocarlo"
+msgstr "Processor: managed by %s together with the power profile; no need to touch it"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Procesador: sube la velocidad en cuanto hay trabajo (schedutil)"
+msgstr "Processor: speeds up as soon as there is work (schedutil)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Procesador: que suba la velocidad en cuanto hay trabajo (schedutil)"
+msgstr "Processor: speed up as soon as there is work (schedutil)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Procesador: modo %s, elegido a mano; no se toca"
+msgstr "Processor: %s mode, chosen by hand; left alone"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Protecciones del procesador APAGADAS (más rápido, menos seguro al navegar)"
+msgstr "Processor protections OFF (faster, less safe when browsing)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Protecciones del procesador encendidas (recomendado)"
+msgstr "Processor protections on (recommended)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Memoria comprimida (zram) activa"
+msgstr "Compressed memory (zram) active"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Memoria comprimida (zram) todavía no está activa (la pone la configuración final)"
+msgstr "Compressed memory (zram) not active yet (the final setup turns it on)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Quitar los ajustes"
+msgstr "Remove the tweaks"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Aplicar lo recomendado"
+msgstr "Apply the recommended tweaks"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Protecciones del procesador (avanzado)"
+msgstr "Processor protections (advanced)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Kernel Lázaro (experimental)"
+msgstr "Lázaro kernel (experimental)"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Ver el informe del hardware"
+msgstr "Show the hardware report"
+
+#: live/usr/sbin/lazaro-afinador live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf
+msgid "Afinador"
+msgstr "Tuner"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Ajustes para que el equipo responda mejor. Todos se pueden quitar."
+msgstr "Tweaks to make the computer respond better. All of them can be removed."
+
+#: live/usr/sbin/lazaro-afinador
+msgid "✔ puesto   ○ se puede poner   · no hace falta"
+msgstr "✔ applied   ○ can be applied   · not needed"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Qué quieres hacer:"
+msgstr "What do you want to do:"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Acción"
+msgstr "Action"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Listo. Algunos ajustes se notan después de reiniciar."
+msgstr "Done. Some tweaks are noticeable after restarting."
+
+#: live/usr/sbin/lazaro-afinador live/usr/sbin/lazaro-kernel
+msgid "No se pudo."
+msgstr "It did not work."
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Protecciones del procesador"
+msgstr "Processor protections"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Encenderlas"
+msgstr "Turn them on"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Dejarlas apagadas"
+msgstr "Leave them off"
+
+#: live/usr/sbin/lazaro-afinador
+msgid ""
+"Las protecciones del procesador están APAGADAS.\n"
+"\n"
+"Recomendado: encenderlas si usas el equipo para navegar, el banco o el correo."
+msgstr ""
+"The processor protections are OFF.\n"
+"\n"
+"Recommended: turn them on if you use the computer for browsing, banking or email."
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Apagarlas"
+msgstr "Turn them off"
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Dejarlas encendidas"
+msgstr "Leave them on"
+
+#: live/usr/sbin/lazaro-afinador
+msgid ""
+"El kernel protege al procesador de fallos de diseño (Spectre, Meltdown y otros). Esas protecciones lo frenan un poco: en procesadores Intel de 2ª a 7ª generación, entre un 5 % y un 15 %.\n"
+"\n"
+"Apagarlas lo hace más rápido, pero una página web maliciosa podría leer datos de otros programas, como contraseñas.\n"
+"\n"
+"Apágalas solo si el equipo no se usa para navegar, el banco o el correo. Se aplica al reiniciar y se puede volver a encender aquí."
+msgstr ""
+"The kernel protects the processor from design flaws (Spectre, Meltdown and others). Those protections slow it down a little: on 2nd to 7th generation Intel processors, between 5 % and 15 %.\n"
+"\n"
+"Turning them off makes it faster, but a malicious web page could read data from other programs, such as passwords.\n"
+"\n"
+"Turn them off only if the computer is not used for browsing, banking or email. It takes effect after restarting and can be turned back on here."
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Hardware del equipo"
+msgstr "Computer hardware"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Bienvenida a Lázaro Linux"
+msgstr "Welcome to Lázaro Linux"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid ""
+"A la Bienvenida de Lázaro le falta un componente para abrir su ventana.\n"
+"\n"
+"¿Instalarlo ahora? (necesita internet)"
+msgstr ""
+"The Lázaro Welcome is missing a component to open its window.\n"
+"\n"
+"Install it now? (needs internet)"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Copiar"
+msgstr "Copy"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Guardar…"
+msgstr "Save…"
+
+#: live/usr/sbin/lazaro-bienvenida live/usr/sbin/lazaro-diagnostico
+msgid "Revisando el equipo…"
+msgstr "Checking the computer…"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Inicio"
+msgstr "Home"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "No se pudo instalar. Revisa la conexión a internet y vuelve a intentar."
+msgstr "It could not be installed. Check the internet connection and try again."
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Versión %s"
+msgstr "Version %s"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid " · sesión de prueba (live)"
+msgstr " · trial session (live)"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "La herramienta no devolvió información."
+msgstr "The tool returned no information."
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Ligera"
+msgstr "Light"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Completa"
+msgstr "Full"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid " · edición %s"
+msgstr " · %s edition"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Mostrar esta ventana al iniciar sesión"
+msgstr "Show this window when logging in"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "No se pudo abrir: %s"
+msgstr "Could not open: %s"
+
+#: live/usr/sbin/lazaro-bienvenida live/usr/sbin/lazaro-idioma live/usr/sbin/lazaro-instalar-texto
+msgid "Cancelar"
+msgstr "Cancel"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Guardar"
+msgstr "Save"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "No se pudo abrir «%s»: %s"
+msgstr "Could not open “%s”: %s"
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "No se pudo guardar: %s"
+msgstr "Could not save: %s"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Sonido del portátil (Intel Smart Sound): sin esto puede no sonar o no andar el micrófono"
+msgstr "Laptop sound (Intel Smart Sound): without this there may be no sound or the microphone may not work"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Impresora HP"
+msgstr "HP printer"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Impresora Epson"
+msgstr "Epson printer"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Impresora Brother"
+msgstr "Brother printer"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Impresora Samsung o Xerox"
+msgstr "Samsung or Xerox printer"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Impresora (%s)"
+msgstr "Printer (%s)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Lector de huellas (%s)"
+msgstr "Fingerprint reader (%s)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Lector de tarjetas (DNI electrónico, firma digital)"
+msgstr "Smart card reader (electronic ID, digital signature)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Sensores de giro y de luz (equipos 2 en 1)"
+msgstr "Rotation and light sensors (2-in-1 computers)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Thunderbolt (bases y discos)"
+msgstr "Thunderbolt (docks and disks)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Modos de ahorro de batería"
+msgstr "Battery saving modes"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Escáneres (USB y de red)"
+msgstr "Scanners (USB and network)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Ver los archivos del celular y de cámaras de fotos"
+msgstr "Browse the files on phones and cameras"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Tabletas de dibujo y lápices Wacom"
+msgstr "Wacom drawing tablets and pens"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Discos y memorias de Windows (NTFS, exFAT)"
+msgstr "Windows disks and memory cards (NTFS, exFAT)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Temperatura y ventiladores"
+msgstr "Temperature and fans"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Wifi Broadcom antiguo (b43): el firmware se descarga del espejo de OpenWrt (13,5 MB)"
+msgstr "Old Broadcom wifi (b43): the firmware is downloaded from the OpenWrt mirror (13.5 MB)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Wifi Broadcom muy antiguo (b43legacy): el firmware se descarga del espejo de OpenWrt (0,6 MB)"
+msgstr "Very old Broadcom wifi (b43legacy): the firmware is downloaded from the OpenWrt mirror (0.6 MB)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Wifi Intel PRO/Wireless 2100: firmware de Intel, hay que aceptar su licencia"
+msgstr "Intel PRO/Wireless 2100 wifi: Intel firmware, its license must be accepted"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Wifi Intel PRO/Wireless 2200/2915: firmware de Intel, hay que aceptar su licencia"
+msgstr "Intel PRO/Wireless 2200/2915 wifi: Intel firmware, its license must be accepted"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Wifi Prism54 PCI: el firmware se descarga de daemonizer.de (30 KB)"
+msgstr "Prism54 PCI wifi: the firmware is downloaded from daemonizer.de (30 KB)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Wifi Prism54 USB: el firmware se descarga de daemonizer.de (60 KB)"
+msgstr "Prism54 USB wifi: the firmware is downloaded from daemonizer.de (60 KB)"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Actualizar el firmware del equipo (BIOS, discos, bases), si el fabricante lo ofrece"
+msgstr "Update the computer firmware (BIOS, disks, docks), if the manufacturer provides it"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Líneas braille y lector de pantalla"
+msgstr "Braille displays and screen reader"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Licencia de Intel (%s)"
+msgstr "Intel license (%s)"
+
+#: live/usr/sbin/lazaro-controladores live/usr/share/lazaro/bienvenida/funciones/14-controladores.conf
+msgid "Controladores"
+msgstr "Drivers"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "No falta nada: todo el hardware que se pudo revisar tiene lo que necesita."
+msgstr "Nothing is missing: all the hardware that could be checked has what it needs."
+
+#: live/usr/sbin/lazaro-controladores
+msgid ""
+"Esto es lo que le falta a tu equipo. Marca lo que quieras instalar.\n"
+"Lo que se descarga necesita internet."
+msgstr ""
+"This is what your computer is missing. Tick what you want to install.\n"
+"Anything that is downloaded needs internet."
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Clave"
+msgstr "Key"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Qué es"
+msgstr "What it is"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Instalados: %s. No se pudo: %s"
+msgstr "Installed: %s. Failed: %s"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Revisa la conexión a internet. Detalles en %s"
+msgstr "Check the internet connection. Details in %s"
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Listo. Si algo no anda todavía, reinicia el equipo."
+msgstr "Done. If something still does not work, restart the computer."
+
+#: live/usr/sbin/lazaro-controladores
+msgid "Falta algo para tu hardware:"
+msgstr "Something is missing for your hardware:"
+
+#: live/usr/sbin/lazaro-controladores live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
+msgid "Instalar"
+msgstr "Install"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Diagnóstico de Lázaro"
+msgstr "Lázaro diagnostics"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Crear el informe"
+msgstr "Create the report"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid ""
+"Revisa el equipo y reúne en un archivo de texto su hardware, el estado del sistema y los errores del arranque, para compartirlo al pedir ayuda.\n"
+"\n"
+"No guarda contraseñas ni claves del wifi. Suele tardar menos de un minuto."
+msgstr ""
+"Checks the computer and gathers its hardware, the system status and the startup errors in a text file, to share it when asking for help.\n"
+"\n"
+"It does not save passwords or wifi keys. It usually takes less than a minute."
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Estás en la sesión de prueba (live): copia el archivo a otro USB o envíalo antes de apagar."
+msgstr "You are in the trial session (live): copy the file to another USB stick or send it before shutting down."
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Abrir la carpeta"
+msgstr "Open the folder"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Listo. El informe quedó en:"
+msgstr "Done. The report was saved in:"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Adjunta ese archivo cuando pidas ayuda."
+msgstr "Attach that file when you ask for help."
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "No se pudo crear el informe."
+msgstr "The report could not be created."
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Reuniendo información... (suele tardar menos de un minuto)"
+msgstr "Gathering information... (it usually takes less than a minute)"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "No se pudo guardar el informe en %s (¿carpeta llena o sin permiso?)."
+msgstr "Could not save the report in %s (disk full or no permission?)."
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Listo: %s"
+msgstr "Done: %s"
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Compártelo en el chat (no contiene contraseñas)."
+msgstr "Share it in the chat (it contains no passwords)."
+
+#: live/usr/sbin/lazaro-diagnostico
+msgid "Estás en la sesión live: copia el archivo a otro USB o envíalo antes de apagar."
+msgstr "You are in the live session: copy the file to another USB stick or send it before shutting down."
+
+#: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
+msgid "Flatpak y Flathub"
+msgstr "Flatpak and Flathub"
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Este sistema no tiene tienda de aplicaciones."
+msgstr "This system has no app store."
+
+#: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/20-tienda.conf
+msgid "Tienda de aplicaciones"
+msgstr "App store"
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Abrir la tienda"
+msgstr "Open the store"
+
+#: live/usr/sbin/lazaro-flatpak
+msgid ""
+"Flatpak y Flathub ya están activos en este equipo.\n"
+"\n"
+"Las aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones."
+msgstr ""
+"Flatpak and Flathub are already active on this computer.\n"
+"\n"
+"Flathub apps are searched for and installed from the app store."
+
+#: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
+msgid "Activar"
+msgstr "Turn on"
+
+#: live/usr/sbin/lazaro-flatpak
+msgid ""
+"Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala.\n"
+"\n"
+"Al activarlos, esas aplicaciones aparecen en la tienda de aplicaciones. Necesita internet y descarga unos 20 MB; cada aplicación de Flathub ocupa bastante más que una de Alpine.\n"
+"\n"
+"¿Activar Flatpak y Flathub?"
+msgstr ""
+"Flathub is a collection of apps that do not come with Alpine, such as OnlyOffice, Chrome, Brave, Spotify or Zoom. Flatpak is the system that installs them.\n"
+"\n"
+"Once they are turned on, those apps show up in the app store. It needs internet and downloads about 20 MB; each Flathub app takes up quite a lot more space than an Alpine one.\n"
+"\n"
+"Turn on Flatpak and Flathub?"
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Activando Flatpak y Flathub…"
+msgstr "Turning on Flatpak and Flathub…"
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Listo. Cierra la sesión y vuelve a entrar para que la tienda de aplicaciones muestre lo de Flathub."
+msgstr "Done. Log out and back in so the app store shows the Flathub apps."
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "No se pudo activar. Revisa la conexión a internet y vuelve a intentar."
+msgstr "It could not be turned on. Check the internet connection and try again."
+
+#: live/usr/sbin/lazaro-graficas
+msgid "Este equipo tiene una tarjeta NVIDIA anterior a las GeForce 8 (%s), que no se probó con su controlador libre."
+msgstr "This computer has an NVIDIA card older than the GeForce 8 series (%s), which was not tested with its free driver."
+
+#: live/usr/sbin/lazaro-graficas
+msgid "Este equipo tiene una tarjeta NVIDIA que no se pudo identificar (%s)."
+msgstr "This computer has an NVIDIA card that could not be identified (%s)."
+
+#: live/usr/sbin/lazaro-graficas
+msgid "Este equipo tiene una tarjeta NVIDIA que no se pudo identificar."
+msgstr "This computer has an NVIDIA card that could not be identified."
+
+#: live/usr/sbin/lazaro-graficas
+msgid ""
+"Para evitar una pantalla negra o un bloqueo, la sesión de prueba no usa su controlador: la imagen puede ir más lenta o con una resolución fija.\n"
+"\n"
+"Al instalar, Lázaro Linux la dejará igual (modo seguro)."
+msgstr ""
+"To avoid a black screen or a freeze, the trial session does not use its driver: the picture may be slower or have a fixed resolution.\n"
+"\n"
+"When installed, Lázaro Linux will keep it the same way (safe mode)."
+
+#: live/usr/sbin/lazaro-graficas
+msgid "No se pudo cargar el controlador de la tarjeta NVIDIA (%s)."
+msgstr "The NVIDIA card driver could not be loaded (%s)."
+
+#: live/usr/sbin/lazaro-graficas
+msgid "La sesión de prueba usa la imagen básica, que puede ir más lenta o con una resolución fija."
+msgstr "The trial session uses the basic display, which may be slower or have a fixed resolution."
+
+#: live/usr/sbin/lazaro-graficas
+msgid "Tarjeta gráfica NVIDIA"
+msgstr "NVIDIA graphics card"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Idioma y teclado"
+msgstr "Language and keyboard"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Español de Latinoamérica"
+msgstr "Latin American Spanish"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Español de España"
+msgstr "Spanish (Spain)"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Catalán"
+msgstr "Catalan"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Inglés (Estados Unidos)"
+msgstr "English (US)"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Inglés internacional, con acentos (EE. UU. internacional)"
+msgstr "English international, with accents (US international)"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Inglés (Reino Unido)"
+msgstr "English (UK)"
+
+#: live/usr/sbin/lazaro-idioma live/usr/sbin/lazaro-instalar-texto
+msgid "Portugués de Brasil (ABNT2)"
+msgstr "Brazilian Portuguese (ABNT2)"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Portugués de Portugal"
+msgstr "Portuguese (Portugal)"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Francés"
+msgstr "French"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Alemán"
+msgstr "German"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Italiano"
+msgstr "Italian"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "El idioma de los menús y de los programas. Para cambiarlo se reinicia solo la sesión de prueba: los programas abiertos se cierran."
+msgstr "The language of the menus and programs. Changing it restarts only the trial session: open programs are closed."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Cambiar idioma"
+msgstr "Change language"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Teclado · Keyboard"
+msgstr "Keyboard · Teclado"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Cambia al instante. Si al escribir no salen la ñ, los acentos o la @ donde deberían, prueba otra distribución."
+msgstr "Changes right away. If accents, special letters or @ do not come out where they should when you type, try another layout."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Escribe aquí para probar: ñ á é ¿? @ ¡!"
+msgstr "Type here to test: ñ á é ¿? @ ¡!"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Reiniciando la sesión…"
+msgstr "Restarting the session…"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Actual: %s"
+msgstr "Current: %s"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "No se pudo cambiar el teclado."
+msgstr "The keyboard could not be changed."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "El teclado cambió en esta ventana, pero no se pudo guardar: al reiniciar la sesión o abrir el instalador volverá el anterior."
+msgstr "The keyboard changed in this window, but it could not be saved: the previous one will come back when the session restarts or the installer opens."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "El instalador está abierto: no se cambió el idioma para no interrumpirlo. Ciérralo y vuelve a pulsar «Cambiar idioma» (las traducciones ya quedaron descargadas)."
+msgstr "The installer is open: the language was not changed so as not to interrupt it. Close it and press “Change language” again (the translations are already downloaded)."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "No se pudo guardar el idioma."
+msgstr "The language could not be saved."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Cierra primero el instalador y luego vuelve a cambiar el idioma."
+msgstr "Close the installer first and then change the language again."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "La sesión de prueba se cierra y vuelve a abrirse sola en unos segundos, ya en el idioma nuevo. Se cierran los programas abiertos: guarda antes lo que estés haciendo."
+msgstr "The trial session closes and opens again by itself in a few seconds, in the new language. Open programs are closed: save your work first."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Cambiar y reiniciar la sesión"
+msgstr "Change and restart the session"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Cambiando el idioma…"
+msgstr "Changing the language…"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Descargando las traducciones de %s… (puede tardar unos minutos)"
+msgstr "Downloading the %s translations… (it can take a few minutes)"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "No se pudieron descargar las traducciones"
+msgstr "The translations could not be downloaded"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Este idioma no viene en el USB y hace falta internet para descargarlo. Conéctate a una red y vuelve a intentar, o cambia igual: el escritorio quedará casi todo en inglés."
+msgstr "This language is not on the USB stick and internet is needed to download it. Connect to a network and try again, or change anyway: most of the desktop will be in English."
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Cambiar igual"
+msgstr "Change anyway"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "Volver"
+msgstr "Back"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "¿Cambiar el idioma a %s?"
+msgstr "Change the language to %s?"
+
+#: live/usr/sbin/lazaro-idioma
+msgid "No se pudo descargar: %s"
+msgstr "Could not download: %s"
+
+#: live/usr/sbin/lazaro-instalar
+msgid "Lázaro Linux"
+msgstr "Lázaro Linux"
+
+#: live/usr/sbin/lazaro-instalar
+msgid ""
+"<b>La instalación terminó, pero falta la configuración final.</b>\n"
+"\n"
+"No hubo internet al final de la instalación, así que la barra completa, la pantalla de inicio y los programas elegidos se instalarán en el primer arranque.\n"
+"\n"
+"<b>Qué hacer:</b> al encender el equipo, conéctate a internet y espera unos minutos. Cuando termine, la pantalla de inicio aparece sola; entra desde ella (no desde la consola de texto). No hace falta reiniciar.\n"
+"\n"
+"<small><b>Explicación técnica:</b> la configuración final la hace desktop-postinstall.sh, que descarga paquetes y por eso necesita red. En el primer arranque un servicio de OpenRC (lazaro-primer-arranque) lo ejecuta en segundo plano en cuanto hay internet. OpenRC enciende los servicios del arranque una sola vez y en orden: lo que el script habilita después (la pantalla de inicio, elogind, polkit, cupsd...) quedaría apagado hasta el siguiente arranque. Por eso, al terminar, ese servicio los enciende él mismo. La barra, el idioma y los grupos del usuario se leen al iniciar sesión: una sesión abierta por consola antes de terminar sigue con lo anterior. Registros: /var/log/desktop-postinstall.log y /var/log/lazaro-primer-arranque.log</small>"
+msgstr ""
+"<b>The installation finished, but the final setup is still missing.</b>\n"
+"\n"
+"There was no internet at the end of the installation, so the full panel, the login screen and the chosen programs will be installed on the first boot.\n"
+"\n"
+"<b>What to do:</b> when you turn on the computer, connect to the internet and wait a few minutes. When it finishes, the login screen appears by itself; log in from it (not from the text console). No restart is needed.\n"
+"\n"
+"<small><b>Technical explanation:</b> the final setup is done by desktop-postinstall.sh, which downloads packages and therefore needs a network. On the first boot an OpenRC service (lazaro-primer-arranque) runs it in the background as soon as there is internet. OpenRC starts the boot services only once and in order: whatever the script enables afterwards (the login screen, elogind, polkit, cupsd...) would stay off until the next boot. That is why, when it finishes, that service starts them itself. The panel, the language and the user's groups are read at login: a session opened on the console before it finishes keeps the old ones. Logs: /var/log/desktop-postinstall.log and /var/log/lazaro-primer-arranque.log</small>"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Aceptar"
+msgstr "OK"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Sí"
+msgstr "Yes"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "No"
+msgstr "No"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Instalación cancelada. No se cambió nada en el disco."
+msgstr "Installation cancelled. Nothing was changed on the disk."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Para empezar de nuevo, escribe: doas lazaro-instalar-texto"
+msgstr "To start again, type: doas lazaro-instalar-texto"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Bienvenida"
+msgstr "Welcome"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"Este instalador funciona sin escritorio, desde esta pantalla.\n"
+"\n"
+"Se maneja con el teclado:\n"
+"  - flechas arriba y abajo para moverte,\n"
+"  - barra espaciadora para marcar o desmarcar,\n"
+"  - Tab para pasar a los botones,\n"
+"  - Enter para aceptar.\n"
+"\n"
+"Al final verás un resumen y nada se borra hasta que confirmes."
+msgstr ""
+"This installer works without a desktop, from this screen.\n"
+"\n"
+"Use the keyboard:\n"
+"  - up and down arrows to move,\n"
+"  - space bar to tick or untick,\n"
+"  - Tab to move to the buttons,\n"
+"  - Enter to accept.\n"
+"\n"
+"At the end you will see a summary, and nothing is erased until you confirm."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Sin discos"
+msgstr "No disks"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"No encontré ningún disco de 8 GB o más donde instalar (el USB de Lázaro no cuenta).\n"
+"\n"
+"Revisa que el disco esté conectado y vuelve a intentarlo."
+msgstr ""
+"I found no disk of 8 GB or more to install on (the Lázaro USB stick does not count).\n"
+"\n"
+"Check that the disk is connected and try again."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Disco"
+msgstr "Disk"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"¿En qué disco instalo Lázaro Linux?\n"
+"\n"
+"ATENCIÓN: se borrará TODO lo que tenga ese disco (otros sistemas, fotos, documentos)."
+msgstr ""
+"Which disk should I install Lázaro Linux on?\n"
+"\n"
+"WARNING: EVERYTHING on that disk will be erased (other systems, photos, documents)."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "(recomendado)"
+msgstr "(recommended)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "¿Qué escritorio quieres? GNOME y Plasma se descargan de internet; los demás vienen en el USB."
+msgstr "Which desktop do you want? GNOME and Plasma are downloaded from the internet; the others come on the USB stick."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "¿Qué escritorio quieres? Todos vienen en el USB: no hace falta internet."
+msgstr "Which desktop do you want? All of them come on the USB stick: no internet needed."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Escritorio"
+msgstr "Desktop"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "XFCE: liviano y clásico"
+msgstr "XFCE: light and classic"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "LXQt: el más liviano, para poca memoria"
+msgstr "LXQt: the lightest, for little memory"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "MATE: clásico, sencillo"
+msgstr "MATE: classic, simple"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "GNOME: moderno, pide 4 GB y gráfica con 3D"
+msgstr "GNOME: modern, needs 4 GB and 3D graphics"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Plasma (KDE): completo, pide 4 GB"
+msgstr "Plasma (KDE): full-featured, needs 4 GB"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Sway: ventanas en mosaico, con teclado"
+msgstr "Sway: tiling windows, keyboard driven"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "XFCE Wayland (experimental)"
+msgstr "XFCE Wayland (experimental)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Sin escritorio: solo la consola"
+msgstr "No desktop: console only"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Revisando la conexión a internet..."
+msgstr "Checking the internet connection..."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Sin internet"
+msgstr "No internet"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"Ese escritorio se descarga de internet y no hay conexión.\n"
+"\n"
+"Conecta el cable de red, o elige otro escritorio: todos menos\n"
+"GNOME y Plasma se instalan sin internet.\n"
+"\n"
+"Para usar wifi: cancela, escribe\n"
+"  nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"\n"
+"(con las comillas)\n"
+"y vuelve a abrir el instalador."
+msgstr ""
+"That desktop is downloaded from the internet and there is no connection.\n"
+"\n"
+"Plug in the network cable, or choose another desktop: all except\n"
+"GNOME and Plasma install without internet.\n"
+"\n"
+"To use wifi: cancel, type\n"
+"  nmcli device wifi connect \"NETWORK NAME\" password \"PASSWORD\"\n"
+"(with the quotes)\n"
+"and open the installer again."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Software adicional"
+msgstr "Additional software"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Marca con la barra espaciadora lo que quieras instalar."
+msgstr "Tick with the space bar what you want to install."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Fastfetch: resumen del equipo en la terminal"
+msgstr "Fastfetch: computer summary in the terminal"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Btop: monitor de recursos"
+msgstr "Btop: resource monitor"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "necesita internet"
+msgstr "needs internet"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "viene en el USB"
+msgstr "comes on the USB stick"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre."
+msgstr "Tick with the space bar what you want to install. Firefox is always installed."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "VLC: reproductor de video y música"
+msgstr "VLC: video and music player"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "YouTube ligero: videos sin navegador (480p)"
+msgstr "Light YouTube: videos without a browser (480p)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "LibreOffice: oficina (documentos, hojas de cálculo)"
+msgstr "LibreOffice: office suite (documents, spreadsheets)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Flatpak con Flathub: tienda de aplicaciones"
+msgstr "Flatpak with Flathub: app store"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Idioma"
+msgstr "Language"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Idioma del sistema:"
+msgstr "System language:"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Teclado"
+msgstr "Keyboard"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Distribución del teclado (la tecla Ñ y los acentos):"
+msgstr "Keyboard layout (special letters and accents):"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Latinoamericano"
+msgstr "Latin American"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Español (España)"
+msgstr "Spanish (Spain)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Inglés (EE. UU.)"
+msgstr "English (US)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Inglés internacional (con acentos)"
+msgstr "English international (with accents)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Zona horaria"
+msgstr "Time zone"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Zona horaria (para la hora del reloj). Si no sabes, deja la propuesta:"
+msgstr "Time zone (for the clock). If you are not sure, keep the suggestion:"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "No conozco la zona \"%s\". Ejemplos: America/Bogota, Europe/Madrid."
+msgstr "Unknown time zone \"%s\". Examples: America/New_York, Europe/London."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Usuario"
+msgstr "User"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Tu nombre (como quieres que aparezca):"
+msgstr "Your name (as you want it to appear):"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Nombre de usuario para entrar (minúsculas y números, sin espacios):"
+msgstr "User name to log in (lowercase letters and numbers, no spaces):"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Ese nombre no se puede usar; elige otro."
+msgstr "That name cannot be used; choose another one."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Usa solo minúsculas, números, - y _, empezando con una letra."
+msgstr "Use only lowercase letters, numbers, - and _, starting with a letter."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Debe empezar con una letra minúscula."
+msgstr "It must start with a lowercase letter."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Contraseña"
+msgstr "Password"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Contraseña de %s (mínimo 4 caracteres). También será la de administrador:"
+msgstr "Password for %s (at least 4 characters). It will also be the administrator password:"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Escríbela otra vez:"
+msgstr "Type it again:"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "La contraseña debe tener al menos 4 caracteres."
+msgstr "The password must have at least 4 characters."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Las dos contraseñas no coinciden. Inténtalo de nuevo."
+msgstr "The two passwords do not match. Try again."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Nombre del equipo"
+msgstr "Computer name"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Nombre del equipo en la red:"
+msgstr "Computer name on the network:"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Resumen"
+msgstr "Summary"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"Revisa antes de instalar:\n"
+"\n"
+"  Disco:       %s (%s)  <- SE BORRA COMPLETO\n"
+"  Escritorio:  %s\n"
+"  Programas:   %s\n"
+"  Idioma:      %s\n"
+"  Teclado:     %s\n"
+"  Zona:        %s\n"
+"  Usuario:     %s (%s)\n"
+"  Equipo:      %s\n"
+"\n"
+"¿Borro el disco e instalo?"
+msgstr ""
+"Check before installing:\n"
+"\n"
+"  Disk:        %s (%s)  <- FULLY ERASED\n"
+"  Desktop:     %s\n"
+"  Programs:    %s\n"
+"  Language:    %s\n"
+"  Keyboard:    %s\n"
+"  Time zone:   %s\n"
+"  User:        %s (%s)\n"
+"  Computer:    %s\n"
+"\n"
+"Erase the disk and install?"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"Instalando Lázaro Linux en %s. Esto puede tardar bastante;\n"
+"no apagues el equipo. El detalle queda en /var/log/lazaro-instalar.log."
+msgstr ""
+"Installing Lázaro Linux on %s. This can take quite a while;\n"
+"do not turn off the computer. The details go to /var/log/lazaro-instalar.log."
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Listo"
+msgstr "Done"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid ""
+"Lázaro Linux quedó instalado.\n"
+"\n"
+"Saca el USB y reinicia el equipo. ¿Reinicio ahora?"
+msgstr ""
+"Lázaro Linux is installed.\n"
+"\n"
+"Remove the USB stick and restart the computer. Restart now?"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "La instalación falló (código %s). Las últimas líneas del registro:"
+msgstr "The installation failed (code %s). The last lines of the log:"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Puedes sacarle una foto a esta pantalla para pedir ayuda."
+msgstr "You can take a photo of this screen to ask for help."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Kernel Lázaro: no instalado."
+msgstr "Lázaro kernel: not installed."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Kernel Lázaro: instalado, espera su arranque de prueba (reinicia)."
+msgstr "Lázaro kernel: installed, waiting for its test boot (restart)."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Kernel Lázaro: en uso por defecto."
+msgstr "Lázaro kernel: used by default."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Kernel Lázaro: el arranque de prueba no terminó; el equipo usa el kernel de Alpine."
+msgstr "Lázaro kernel: the test boot did not finish; the computer uses the Alpine kernel."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Paquete: %s"
+msgstr "Package: %s"
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Kernel en uso ahora: %s"
+msgstr "Kernel in use now: %s"
+
+#: live/usr/sbin/lazaro-kernel
+msgid ""
+"El kernel es la parte central del sistema. El kernel Lázaro es el de Alpine, con el mismo código y las mismas actualizaciones de seguridad, pero sin piezas que solo usan los servidores y con el escritorio más atento al ratón y al teclado.\n"
+"\n"
+"Es EXPERIMENTAL: la mejora es pequeña y se nota más en equipos lentos. El kernel de Alpine queda siempre en el menú de arranque."
+msgstr ""
+"The kernel is the core of the system. The Lázaro kernel is Alpine's, with the same code and the same security updates, but without parts only servers use and with the desktop more responsive to the mouse and keyboard.\n"
+"\n"
+"It is EXPERIMENTAL: the improvement is small and more noticeable on slow computers. The Alpine kernel always stays in the boot menu."
+
+#: live/usr/sbin/lazaro-kernel live/usr/share/lazaro/bienvenida/funciones/34-kernel.conf
+msgid "Kernel Lázaro"
+msgstr "Lázaro kernel"
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Instalar y probar"
+msgstr "Install and test"
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Al instalarlo, el próximo arranque es de prueba: si algo falla, reinicia y el equipo vuelve solo al kernel de Alpine. Necesita internet."
+msgstr "Once installed, the next boot is a test: if something fails, restart and the computer goes back to the Alpine kernel by itself. Needs internet."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Reiniciar ahora"
+msgstr "Restart now"
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Después"
+msgstr "Later"
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Instalado. El próximo arranque prueba el kernel Lázaro."
+msgstr "Installed. The next boot tests the Lázaro kernel."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "No se pudo instalar."
+msgstr "It could not be installed."
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Volver al kernel de Alpine"
+msgstr "Go back to the Alpine kernel"
+
+#: live/usr/sbin/lazaro-kernel
+msgid "Listo. Al reiniciar se usa el kernel de Alpine."
+msgstr "Done. The Alpine kernel is used after restarting."
+
+#: live/usr/sbin/lazaro-bienvenida
+msgid "Abrir"
+msgstr "Open"
+
+#: live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
+msgid "Instalar Lázaro"
+msgstr "Install Lázaro"
+
+#: live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf live/usr/share/lazaro/bienvenida/funciones/06-idioma.conf live/usr/share/lazaro/bienvenida/funciones/10-manual.conf live/usr/share/lazaro/bienvenida/funciones/12-actualizar.conf live/usr/share/lazaro/bienvenida/funciones/14-controladores.conf
+msgid "Primeros pasos"
+msgstr "Getting started"
+
+#: live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
+msgid "Instala Lázaro Linux en el disco de este equipo, paso a paso."
+msgstr "Installs Lázaro Linux on this computer's disk, step by step."
+
+#: live/usr/share/lazaro/bienvenida/funciones/06-idioma.conf
+msgid "Idioma y teclado · Language"
+msgstr "Language and keyboard · Idioma"
+
+#: live/usr/share/lazaro/bienvenida/funciones/06-idioma.conf live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf
+msgid "Cambiar"
+msgstr "Change"
+
+#: live/usr/share/lazaro/bienvenida/funciones/06-idioma.conf
+msgid "Cambia el idioma de la sesión de prueba y del instalador, y la distribución del teclado (ñ, acentos, @)."
+msgstr "Changes the language of the trial session and the installer, and the keyboard layout (accents, special letters, @)."
+
+#: live/usr/share/lazaro/bienvenida/funciones/10-manual.conf
+msgid "Manual de Lázaro"
+msgstr "Lázaro manual (in Spanish)"
+
+#: live/usr/share/lazaro/bienvenida/funciones/10-manual.conf
+msgid "Leer"
+msgstr "Read"
+
+#: live/usr/share/lazaro/bienvenida/funciones/10-manual.conf
+msgid "La guía para usar el sistema, explicada desde cero y sin palabras técnicas."
+msgstr "The guide to using the system, explained from scratch without technical words (in Spanish for now)."
+
+#: live/usr/share/lazaro/bienvenida/funciones/12-actualizar.conf
+msgid "Actualizar"
+msgstr "Update"
+
+#: live/usr/share/lazaro/bienvenida/funciones/12-actualizar.conf
+msgid "Busca e instala las mejoras y los arreglos de seguridad. Conviene hacerlo cada semana."
+msgstr "Finds and installs improvements and security fixes. It is a good idea to do it every week."
+
+#: live/usr/share/lazaro/bienvenida/funciones/14-controladores.conf
+msgid "Revisar"
+msgstr "Check"
+
+#: live/usr/share/lazaro/bienvenida/funciones/14-controladores.conf
+msgid "Revisa si al wifi, la impresora, el sonido u otra parte del equipo le falta algo para funcionar, y lo instala."
+msgstr "Checks whether the wifi, the printer, the sound or another part of the computer is missing something to work, and installs it."
+
+#: live/usr/share/lazaro/bienvenida/funciones/20-tienda.conf live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
+msgid "Programas"
+msgstr "Programs"
+
+#: live/usr/share/lazaro/bienvenida/funciones/20-tienda.conf
+msgid "Busca, instala y quita programas con un clic."
+msgstr "Find, install and remove programs with one click."
+
+#: live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
+msgid "Activa la colección Flathub para instalar desde la tienda programas que no vienen en Alpine, como OnlyOffice, Chrome, Brave o Spotify."
+msgstr "Turns on the Flathub collection to install programs from the store that do not come with Alpine, such as OnlyOffice, Chrome, Brave or Spotify."
+
+#: live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
+msgid "YouTube ligero"
+msgstr "Light YouTube"
+
+#: live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
+msgid "Busca y mira videos sin abrir el navegador: gasta mucha menos memoria y procesador."
+msgstr "Search and watch videos without opening the browser: it uses much less memory and processor."
+
+#: live/usr/share/lazaro/bienvenida/funciones/30-hardware.conf
+msgid "Ver el hardware"
+msgstr "Show the hardware"
+
+#: live/usr/share/lazaro/bienvenida/funciones/30-hardware.conf live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf live/usr/share/lazaro/bienvenida/funciones/34-kernel.conf live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf
+msgid "Tu equipo"
+msgstr "Your computer"
+
+#: live/usr/share/lazaro/bienvenida/funciones/30-hardware.conf
+msgid "Ver"
+msgstr "Show"
+
+#: live/usr/share/lazaro/bienvenida/funciones/30-hardware.conf
+msgid "Muestra qué tiene este equipo: procesador, memoria, discos, tarjeta de video, red y sonido."
+msgstr "Shows what this computer has: processor, memory, disks, graphics card, network and sound."
+
+#: live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf
+msgid "Ajusta el sistema para que el equipo responda mejor. Todo lo que hace se puede quitar."
+msgstr "Tunes the system so the computer responds better. Everything it does can be undone."
+
+#: live/usr/share/lazaro/bienvenida/funciones/34-kernel.conf
+msgid "Experimental: una versión más liviana de la parte central del sistema. Si algo falla, el equipo vuelve solo al de Alpine."
+msgstr "Experimental: a lighter version of the core of the system. If something fails, the computer goes back to Alpine's by itself."
+
+#: live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf
+msgid "Resolución de pantalla (modo seguro)"
+msgstr "Screen resolution (safe mode)"
+
+#: live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf
+msgid "Para tarjetas NVIDIA antiguas que funcionan en modo seguro: elige el tamaño de la imagen."
+msgstr "For old NVIDIA cards running in safe mode: choose the screen size."
+
+#: live/usr/share/lazaro/bienvenida/funciones/40-diagnostico.conf
+msgid "Diagnóstico"
+msgstr "Diagnostics"
+
+#: live/usr/share/lazaro/bienvenida/funciones/40-diagnostico.conf live/usr/share/lazaro/bienvenida/funciones/42-reportar.conf live/usr/share/lazaro/bienvenida/funciones/44-proyecto.conf
+msgid "Ayuda"
+msgstr "Help"
+
+#: live/usr/share/lazaro/bienvenida/funciones/40-diagnostico.conf
+msgid "Crear informe"
+msgstr "Create report"
+
+#: live/usr/share/lazaro/bienvenida/funciones/40-diagnostico.conf
+msgid "Busca errores y reúne en un archivo la información del equipo, para compartirla al pedir ayuda. No guarda contraseñas."
+msgstr "Looks for errors and gathers the computer's information in a file, to share it when asking for help. It does not save passwords."
+
+#: live/usr/share/lazaro/bienvenida/funciones/42-reportar.conf
+msgid "Contar un problema"
+msgstr "Report a problem"
+
+#: live/usr/share/lazaro/bienvenida/funciones/42-reportar.conf
+msgid "Abre la página del proyecto donde se reportan fallas y se proponen mejoras. Adjunta el informe del Diagnóstico."
+msgstr "Opens the project page where problems are reported and improvements suggested. Attach the Diagnostics report."
+
+#: live/usr/share/lazaro/bienvenida/funciones/44-proyecto.conf
+msgid "Página de Lázaro Linux"
+msgstr "Lázaro Linux website"
+
+#: live/usr/share/lazaro/bienvenida/funciones/44-proyecto.conf
+msgid "Novedades, descargas y el código del proyecto, que es libre: cualquiera puede verlo, usarlo y mejorarlo."
+msgstr "News, downloads and the project's code, which is free: anyone can see it, use it and improve it."
+
+#: live/usr/share/lazaro/bienvenida/portada.txt
+msgid "Te damos la bienvenida a Lázaro Linux"
+msgstr "Welcome to Lázaro Linux"
+
+#: live/usr/share/lazaro/bienvenida/portada.txt
+msgid "Tu hardware aún tiene pulso"
+msgstr "Your hardware still has a pulse"
+
+#: live/usr/share/lazaro/bienvenida/portada.txt
+msgid "Lázaro Linux es un sistema operativo libre y gratuito, hecho para darle una segunda vida a los computadores que otros sistemas ya dejaron atrás."
+msgstr "Lázaro Linux is a free operating system, made to give a second life to the computers that other systems have left behind."
+
+#: live/usr/share/lazaro/bienvenida/portada.txt
+msgid "Está construido sobre Alpine Linux, uno de los sistemas más livianos que existen, y viene listo para usar: escritorio, navegador, sonido, wifi e impresoras, sin pasos técnicos y sin depender de internet para instalarse."
+msgstr "It is built on Alpine Linux, one of the lightest systems there is, and comes ready to use: desktop, browser, sound, wifi and printers, with no technical steps and without needing internet to install."
+
+#: live/usr/share/lazaro/bienvenida/portada.txt
+msgid "Creemos que un computador que todavía enciende todavía sirve. Usarlo unos años más ahorra dinero, evita basura electrónica y pone la tecnología al alcance de más personas."
+msgstr "We believe a computer that still turns on is still useful. Using it a few more years saves money, avoids electronic waste and puts technology within reach of more people."
+
+#: live/usr/share/lazaro/bienvenida/portada.txt
+msgid "En el menú de la izquierda están las herramientas de Lázaro. Esta ventana se puede volver a abrir cuando quieras desde el menú de aplicaciones: «Bienvenida»."
+msgstr "The Lázaro tools are in the menu on the left. You can open this window again whenever you want from the applications menu: “Welcome”."

@@ -372,6 +372,31 @@ start() {
 		serie "LAZARO-CALAMARES-NO-ABRIO"
 	) &
 
+	# Solo para las capturas del manual (pruebas/qemu.sh capturas, con el
+	# puerto lazaro.capturas): con la sesión ya quieta, abre la ventana de
+	# Idioma y teclado de la Bienvenida y avisa por el puerto serie para
+	# que QEMU la fotografíe.
+	if [ -e /dev/virtio-ports/lazaro.capturas ]; then
+		(
+			i=0
+			until pidof xfce4-panel >/dev/null 2>&1 || [ $i -ge 180 ]; do
+				i=$((i + 1))
+				sleep 5
+			done
+			# Después de la foto de la sesión con la Bienvenida.
+			sleep 200
+			p=$(pidof xfce4-panel 2>/dev/null | awk '{ print $1 }')
+			[ -n "$p" ] || exit 0
+			entorno=$(tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null \
+				| grep -E '^(DISPLAY|XAUTHORITY|DBUS_SESSION_BUS_ADDRESS|LANG|XDG_[A-Z_]*)=' | tr '\n' ' ')
+			pkill -f lazaro-bienvenida 2>/dev/null || true
+			sleep 3
+			su -s /bin/sh lazaro -c "env $entorno lazaro-idioma" >/dev/null 2>&1 &
+			sleep 15
+			serie "LAZARO-CAPTURA-IDIOMA"
+		) &
+	fi
+
 	# Si la sesión gráfica no abre (poca memoria, gráfica sin controlador),
 	# en la consola aparece un aviso que propone el instalador en modo
 	# texto. No en las pruebas desatendidas, que no usan escritorio.

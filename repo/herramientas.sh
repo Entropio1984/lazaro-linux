@@ -55,6 +55,10 @@ for f in lazaro-controladores.initd lazaro-afinador.initd lazaro-kernel.initd; d
 	install -Dm755 "$L/usr/share/lazaro/$f" "$A/usr/share/lazaro/$f"
 done
 install -Dm644 "$L/usr/share/lazaro/firmware-paquetes.tsv" "$A/usr/share/lazaro/firmware-paquetes.tsv"
+# Traducciones de los textos (inglés, portugués de Brasil...).
+install -Dm644 "$L/usr/share/lazaro/texto.sh" "$A/usr/share/lazaro/texto.sh"
+install -Dm644 "$L/usr/share/lazaro/lazaro_texto.py" "$A/usr/share/lazaro/lazaro_texto.py"
+cp -r "$L/usr/share/lazaro/idiomas" "$A/usr/share/lazaro/"
 install -Dm644 "$L/usr/share/applications/lazaro-controladores.desktop" "$A/usr/share/applications/lazaro-controladores.desktop"
 install -Dm644 "$L/usr/share/lazaro/lazaro-afinador.desktop" "$A/usr/share/applications/lazaro-afinador.desktop"
 install -Dm644 "$L/etc/xdg/autostart/lazaro-controladores.desktop" "$A/usr/share/lazaro/lazaro-controladores-sesion.desktop"
