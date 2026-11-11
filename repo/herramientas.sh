@@ -58,9 +58,6 @@ install -Dm644 "$L/usr/share/lazaro/firmware-paquetes.tsv" "$A/usr/share/lazaro/
 # Mejoras para los equipos ya instalados (lazaro-arreglos las corre una
 # vez en cada uno).
 cp -r "$L/usr/share/lazaro/arreglos" "$A/usr/share/lazaro/"
-# btop mide la GPU Intel sin doas (gancho de apk; el post-install lo pone
-# en /etc/apk/commit_hooks.d).
-install -Dm755 "$L/usr/share/lazaro/btop-gpu.hook" "$A/usr/share/lazaro/btop-gpu.hook"
 # Traducciones de los textos (inglés, portugués de Brasil...).
 install -Dm644 "$L/usr/share/lazaro/texto.sh" "$A/usr/share/lazaro/texto.sh"
 install -Dm644 "$L/usr/share/lazaro/lazaro_texto.py" "$A/usr/share/lazaro/lazaro_texto.py"
