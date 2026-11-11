@@ -183,6 +183,11 @@ prueba_live() {
 			echo "FALLO: la sesión live no cupo en la memoria ($MEM MB) o no se preparó ($MODO)." >&2
 			grep -e 'No space left' -e LAZARO-RAIZ "$serie" | head -n 10 >&2 || true
 			ok=1
+		elif ! grep -q LAZARO-ZRAM-OK "$serie"; then
+			# Memoria comprimida: sin ella, con 2 GB la sesión se caía.
+			echo "FALLO: la sesión live no activó la memoria comprimida (zram) ($MODO)." >&2
+			grep LAZARO-ZRAM "$serie" >&2 || true
+			ok=1
 		elif ! grep -q LAZARO-DOAS-OK "$serie"; then
 			echo "FALLO: en la sesión live, doas no da acceso de root al usuario lazaro ($MODO)." >&2
 			ok=1
@@ -204,6 +209,8 @@ prueba_live() {
 			ok=1
 		elif esperar "$serie" "$pid" 120 LAZARO-SPICE-OK LAZARO-SPICE-NO; then
 			echo "OK: la sesión live arrancó en español ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
+			grep -m1 -o 'LAZARO-ZRAM-OK.*' "$serie" | tr -d '\r' || true
+			grep -m1 -o 'LAZARO-MEMORIA.*' "$serie" | tr -d '\r' || true
 			# Cambio de idioma como el de la Bienvenida: descarga el
 			# portugués de Brasil (la Completa lo trae en el USB), reinicia
 			# la sesión y el escritorio y el instalador vuelven en portugués,

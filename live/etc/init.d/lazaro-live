@@ -186,6 +186,11 @@ avisar_texto() {
 	printf '\033c%s\n' "$AVISO_TEXTO" > /dev/tty1 2>/dev/null || true
 	chvt 1 2>/dev/null || true
 	serie "LAZARO-AVISO-TEXTO $1"
+	# Para saber por qué (solo llega al puerto serie de las pruebas): la
+	# memoria y lo último que dijeron el kernel y el servidor gráfico.
+	serie -- free -m
+	dmesg 2>/dev/null | tail -n 12 | serie
+	tail -n 12 /var/log/lightdm/x-0.log 2>/dev/null | serie
 }
 
 # Espera hasta 5 minutos a que aparezca la sesión gráfica. Si nunca
@@ -274,6 +279,13 @@ start() {
 	serie "LAZARO-LIVE-LISTO"
 	# Cuánto ocupa la sesión live en la RAM y cuánto le queda.
 	serie "LAZARO-RAIZ $(df -m / | awk 'NR == 2 { print "usado=" $3 "MB total=" $2 "MB" }')"
+	# Memoria comprimida (servicio lazaro-zram): sin ella, con 2 GB de RAM
+	# la sesión gráfica se caía.
+	if grep -q '^/dev/zram0 ' /proc/swaps 2>/dev/null; then
+		serie "LAZARO-ZRAM-OK $(awk '$1 == "/dev/zram0" { print "tamano=" int($3 / 1024) "MB" }' /proc/swaps) algoritmo=$(sed -n 's/.*\[\(.*\)\].*/\1/p' /sys/block/zram0/comp_algorithm 2>/dev/null)"
+	else
+		serie "LAZARO-ZRAM-NO"
+	fi
 	# "doas" debe dar root al usuario de la sesión (doas.d/lazaro-live.conf)
 	# para cualquier orden: se pide una que no sea la de Calamares y se
 	# mira que corra como UID 0.
@@ -307,6 +319,8 @@ start() {
 				c=$(pidof calamares | awk '{ print $1 }')
 				idioma=$(tr '\0' '\n' < "/proc/$c/environ" 2>/dev/null | sed -n 's/^LANG=//p')
 				serie "LAZARO-CALAMARES-LANG ${idioma:-sin-LANG}"
+				# Memoria con todo abierto (informativo).
+				serie "LAZARO-MEMORIA $(free -m | awk '$1 == "Mem:" { print "libre=" $7 "MB" } $1 == "Swap:" { print "zram-usado=" $3 "MB" }' | tr '\n' ' ')"
 				revisar_idioma
 				# Nada debe apagar la pantalla mientras se instala.
 				if pidof xfce4-screensaver >/dev/null 2>&1; then
