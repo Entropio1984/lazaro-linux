@@ -177,6 +177,9 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	else
 		echo "Lázaro: sin dato (no existe /usr/share/lazaro/version.env)"
 	fi
+	# Las herramientas se actualizan solas después de instalar: su
+	# versión dice qué tan al día está el equipo.
+	echo "Herramientas de Lázaro: $(apk info -e -v lazaro-herramientas 2>/dev/null || echo 'sin el paquete lazaro-herramientas')"
 	echo "Fecha: $(date)"
 	echo "Equipo: $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null) $(cat /sys/class/dmi/id/product_version 2>/dev/null)"
 	echo "BIOS: $(cat /sys/class/dmi/id/bios_version 2>/dev/null) ($(cat /sys/class/dmi/id/bios_date 2>/dev/null))"
@@ -189,6 +192,12 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 
 	seccion "Instalación de Lázaro"
 	archivo /usr/share/lazaro/version.env
+	# Mejoras para equipos instalados: cuáles se aplicaron y cuáles faltan.
+	if [ -x /usr/local/sbin/lazaro-arreglos ]; then
+		echo "--- lazaro-arreglos --listar"
+		/usr/local/sbin/lazaro-arreglos --listar 2>&1
+		[ ! -r /var/log/lazaro-arreglos.log ] || { echo "--- /var/log/lazaro-arreglos.log (final)"; tail -n 40 /var/log/lazaro-arreglos.log; }
+	fi
 	for f in /run/lazaro/*; do [ -f "$f" ] && archivo "$f"; done
 	for f in /etc/lazaro/*; do [ -f "$f" ] && archivo "$f"; done
 	archivo /etc/apk/repositories

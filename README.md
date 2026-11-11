@@ -505,6 +505,13 @@ Puedes cerrar la ventana mientras trabaja: la actualización sigue y la
 ventana vuelve a aparecer cuando termina. No apagues el equipo mientras
 tanto.
 
+En Lázaro el botón hace tres cosas seguidas: busca en ese momento lo
+último publicado en el repositorio de Lázaro, actualiza el sistema (Alpine
+y Flatpak) y aplica las **mejoras de Lázaro** que le falten a tu equipo
+(ver [Mejoras para equipos ya instalados](#mejoras-para-equipos-ya-instalados)).
+Si aplicó alguna, al terminar la ventana las lista, por ejemplo: *Se
+activó la tienda de programas*.
+
 La ventana es solo la cara: el trabajo lo hace el mismo actualizador de
 siempre (el de `desktop-postinstall.sh`). En un equipo instalado antes de
 que existiera esta ventana, el botón de la Bienvenida ya la usa; el del
@@ -544,6 +551,39 @@ hay que conectarlo **una sola vez**:
 
 Si dice que no pudo descargar, revisa la conexión y vuelve a pegar la
 línea: se puede repetir sin problema.
+
+### Mejoras para equipos ya instalados
+
+Algunas mejoras no son un programa nuevo sino un cambio en el sistema:
+activar un servicio, poner una tarea, corregir un archivo. Esas cosas se
+hacen una sola vez, al instalar, así que antes solo las recibía quien
+instalaba con una ISO nueva. Ahora llegan también a los equipos ya
+instalados, como **arreglos**: pasos cortos y numerados que vienen dentro
+del paquete firmado de las herramientas.
+
+- **No hay que elegir nada.** Al pulsar **Actualizar el sistema** se
+  aplican solos, en orden, los que a tu equipo le falten. Cada uno corre
+  una sola vez. (Si actualizas de otra forma, se aplican al encender o en
+  la revisión diaria.)
+- **Al terminar, la ventana dice qué se arregló**, en una frase por
+  mejora.
+- **Solo reparaciones.** No cambian fondos, temas ni nada que hayas
+  ajustado a tu gusto. Lo grande (el kernel Lázaro, los ajustes del
+  Afinador) sigue siendo decisión tuya, desde su botón.
+- Si un arreglo no puede aplicarse (por ejemplo, sin internet), se
+  intenta de nuevo en la próxima actualización.
+- Un equipo recién instalado ya trae todas las mejoras de su ISO: en él
+  no corre ninguno.
+
+El primero es el de la **tienda de programas**, que en los equipos
+instalados antes del 11 de noviembre de 2026 solo mostraba lo ya
+instalado.
+
+Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
+(también sale en el informe del **Diagnóstico**). El detalle queda en
+`/var/log/lazaro-arreglos.log`. Quien colabora con Lázaro tiene la guía
+para escribir un arreglo en
+[`live/usr/share/lazaro/arreglos/LEEME.md`](live/usr/share/lazaro/arreglos/LEEME.md).
 
 **Con la terminal:**
 

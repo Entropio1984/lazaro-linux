@@ -502,6 +502,17 @@ idioma_sesion() {
 			echo "LAZARO-BIENVENIDA-OK $bien" ||
 			echo "LAZARO-BIENVENIDA-NO $(printf '%s' "$bien" | tail -n 2 | tr '\n' ' ')"
 	fi
+	# Mejoras para equipos ya instalados: un sistema recién instalado las
+	# trae todas anotadas (ninguna pendiente) y "Actualizar el sistema"
+	# pasa por lazaro-actualizar-raiz.
+	arr_rc=0
+	arr="$(/usr/local/sbin/lazaro-arreglos --listar 2>&1)" || arr_rc=$?
+	if [ "$arr_rc" = 0 ] && printf '%s\n' "$arr" | grep -q '^001-tienda	' && ! printf '%s\n' "$arr" | grep -q '	pendiente	' &&
+		[ -x /usr/local/sbin/lazaro-actualizar-raiz ]; then
+		echo "LAZARO-ARREGLOS-OK $(printf '%s\n' "$arr" | wc -l)"
+	else
+		echo "LAZARO-ARREGLOS-NO $(printf '%s' "$arr" | tail -n 3 | tr '\n' ' ')"
+	fi
 	# doas: la regla de administradores es válida, se aplica al usuario
 	# y conserva el idioma (LANG). doas -C lee el archivo como el
 	# usuario, así que se revisa una copia legible.

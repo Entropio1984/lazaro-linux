@@ -48,13 +48,16 @@ L="$LAZARO_DIR/live"
 # /etc que ya existen (los equipos instalados antes del paquete los
 # tienen sueltos).
 for p in lazaro-diagnostico lazaro-controladores lazaro-afinador lazaro-kernel lazaro-repositorio \
-	lazaro-bienvenida lazaro-flatpak lazaro-actualizador; do
+	lazaro-bienvenida lazaro-flatpak lazaro-actualizador lazaro-arreglos lazaro-actualizar-raiz; do
 	install -Dm755 "$L/usr/sbin/$p" "$A/usr/share/lazaro/programas/$p"
 done
 for f in lazaro-controladores.initd lazaro-afinador.initd lazaro-kernel.initd; do
 	install -Dm755 "$L/usr/share/lazaro/$f" "$A/usr/share/lazaro/$f"
 done
 install -Dm644 "$L/usr/share/lazaro/firmware-paquetes.tsv" "$A/usr/share/lazaro/firmware-paquetes.tsv"
+# Mejoras para los equipos ya instalados (lazaro-arreglos las corre una
+# vez en cada uno).
+cp -r "$L/usr/share/lazaro/arreglos" "$A/usr/share/lazaro/"
 # Traducciones de los textos (inglés, portugués de Brasil...).
 install -Dm644 "$L/usr/share/lazaro/texto.sh" "$A/usr/share/lazaro/texto.sh"
 install -Dm644 "$L/usr/share/lazaro/lazaro_texto.py" "$A/usr/share/lazaro/lazaro_texto.py"

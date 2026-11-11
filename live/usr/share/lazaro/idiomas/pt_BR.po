@@ -1403,3 +1403,9 @@ msgstr "As ferramentas do Lázaro estão no menu da esquerda. Esta janela pode s
 
 msgid "Pulsa Intro para cerrar esta ventana."
 msgstr "Pressione Enter para fechar esta janela."
+
+msgid "Mejoras de Lázaro que se aplicaron:"
+msgstr "Melhorias do Lázaro que foram aplicadas:"
+
+msgid "Se activó la tienda de programas (antes solo mostraba lo ya instalado)"
+msgstr "A loja de programas foi ativada (antes só mostrava o que já estava instalado)"

@@ -1,0 +1,153 @@
+#!/bin/sh
+# lazaro-arreglos: lleva a los equipos ya instalados las mejoras de Lázaro
+# que no son un programa nuevo sino un cambio en el sistema (activar un
+# servicio, poner una tarea, corregir un archivo). Sin esto, esos cambios
+# solo los tendría quien instala con una ISO nueva.
+#
+# Cada mejora es un "arreglo": un archivo corto de
+# /usr/share/lazaro/arreglos (NNN-nombre.sh) que llega con el paquete
+# lazaro-herramientas, firmado con la clave de Lázaro. Este programa
+# corre, en orden y una sola vez por equipo, los que falten. Nadie tiene
+# que elegir nada: se aplican solos al pulsar "Actualizar el sistema" y,
+# por si la actualización se hizo de otra forma, al encender y una vez al
+# día (lazaro-repositorio).
+#
+# Un arreglo:
+#   - tiene una línea "# Titulo: ..." con lo que hizo, dicho para la
+#     persona que usa el equipo (se le muestra al terminar de actualizar);
+#   - termina con 0 si lo aplicó, con 10 si en este equipo no hacía falta
+#     (se anota y no se muestra), con 11 si hoy no aplica pero mañana
+#     podría (no se anota: se vuelve a mirar la próxima vez, sin contarlo
+#     como falla) y con otro número si no pudo (por ejemplo, sin
+#     internet): ese se vuelve a intentar la próxima vez;
+#   - no rompe nada si corre dos veces y no depende de otro arreglo;
+#   - toca solo lo necesario: nunca lo que la persona ajustó a su gusto.
+# Cómo escribir uno: live/usr/share/lazaro/arreglos/LEEME.md.
+#
+# Uso (como root):
+#   lazaro-arreglos --aplicar   corre los que falten
+#   lazaro-arreglos --listar    número, estado y título de cada uno
+#   lazaro-arreglos --marcar [--raiz R]   los anota todos como hechos sin
+#        correrlos: lo usa el instalador, porque un sistema recién
+#        instalado ya trae todas las mejoras de su ISO
+#
+# Lo aplicado queda en /var/lib/lazaro/arreglos y el detalle en
+# /var/log/lazaro-arreglos.log.
+#
+# Variables para las pruebas: LAZARO_ARREGLOS_DIR, LAZARO_ARREGLOS_ESTADO,
+# LAZARO_ARREGLOS_LOG, LAZARO_ARREGLOS_CANDADO.
+
+set -eu
+
+RAIZ=""
+orden=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--aplicar|--listar|--marcar) orden="$1" ;;
+		--raiz) RAIZ="${2%/}"; shift ;;
+		*) echo "Opción desconocida: $1" >&2; exit 2 ;;
+	esac
+	shift
+done
+
+DIR="${LAZARO_ARREGLOS_DIR:-$RAIZ/usr/share/lazaro/arreglos}"
+ESTADO="${LAZARO_ARREGLOS_ESTADO:-$RAIZ/var/lib/lazaro/arreglos}"
+LOG="${LAZARO_ARREGLOS_LOG:-$RAIZ/var/log/lazaro-arreglos.log}"
+CANDADO="${LAZARO_ARREGLOS_CANDADO:-/run/lazaro-arreglos.lock}"
+# Lo más que puede tardar un arreglo (segundos).
+PLAZO="${LAZARO_ARREGLOS_PLAZO:-900}"
+
+titulo() { sed -n 's/^# Titulo: *//p' "$1" | head -n 1; }
+# Estado anotado de un arreglo (hecho, sin-falta, instalacion) o vacío.
+estado() {
+	[ -r "$ESTADO" ] || return 0
+	awk -v n="$1" '$1 == n { e = $2 } END { print e }' "$ESTADO"
+}
+anotar() { # NOMBRE ESTADO
+	mkdir -p "${ESTADO%/*}"
+	printf '%s %s %s\n' "$1" "$2" "$(date '+%F' 2>/dev/null)" >> "$ESTADO"
+}
+arreglos() {
+	for a in "$DIR"/[0-9][0-9][0-9]-*.sh; do
+		[ -f "$a" ] && echo "$a"
+	done
+	return 0
+}
+
+listar() {
+	arreglos | while read -r a; do
+		n="$(basename "$a" .sh)"
+		e="$(estado "$n")"
+		printf '%s\t%s\t%s\n' "$n" "${e:-pendiente}" "$(titulo "$a")"
+	done
+}
+
+marcar() {
+	arreglos | while read -r a; do
+		n="$(basename "$a" .sh)"
+		[ -n "$(estado "$n")" ] || anotar "$n" instalacion
+	done
+	echo "LAZARO-ARREGLOS-MARCADOS $(arreglos | wc -l)"
+}
+
+aplicar() {
+	[ "$(id -u)" = 0 ] || [ -n "${LAZARO_ARREGLOS_DIR:-}" ] || {
+		echo "Hace falta ser administrador: doas $0 --aplicar" >&2; exit 1; }
+	# Mientras "Actualizar el sistema" trabaja, apk está ocupado: después.
+	if [ -z "${LAZARO_ARREGLOS_CANDADO:-}" ] && [ -d /run/alpine-update.lock ] &&
+		kill -0 "$(cat /run/alpine-update.lock/pid 2>/dev/null)" 2>/dev/null; then
+		return 0
+	fi
+	# Uno a la vez (el botón y la tarea diaria podrían coincidir).
+	if ! mkdir "$CANDADO" 2>/dev/null; then
+		otro="$(cat "$CANDADO/pid" 2>/dev/null)"
+		if [ -n "$otro" ] && kill -0 "$otro" 2>/dev/null; then
+			return 0
+		fi
+		rm -rf "$CANDADO"
+		mkdir "$CANDADO" 2>/dev/null || return 0
+	fi
+	echo $$ > "$CANDADO/pid"
+	trap 'rm -rf "$CANDADO"' EXIT
+	trap 'exit 130' INT TERM HUP
+	mkdir -p "${LOG%/*}" 2>/dev/null || true
+	fallaron=0
+	for a in $(arreglos); do
+		n="$(basename "$a" .sh)"
+		[ -z "$(estado "$n")" ] || continue
+		t="$(titulo "$a")"
+		echo "==== $(date '+%F %T' 2>/dev/null) $n: ${t:-sin título}" >> "$LOG"
+		rc=0
+		timeout "$PLAZO" sh "$a" >> "$LOG" 2>&1 </dev/null || rc=$?
+		case "$rc" in
+			0)
+				anotar "$n" hecho
+				echo "aplicado" >> "$LOG"
+				# La ventana de "Actualizar el sistema" junta estas
+				# líneas y las muestra al terminar.
+				echo "# Mejora aplicada: ${t:-$n}"
+				;;
+			10)
+				anotar "$n" sin-falta
+				echo "no hacía falta en este equipo" >> "$LOG"
+				;;
+			11)
+				echo "hoy no aplica en este equipo: se vuelve a mirar la próxima vez" >> "$LOG"
+				;;
+			*)
+				fallaron=$((fallaron + 1))
+				echo "no se pudo (código $rc): se intenta de nuevo la próxima vez" >> "$LOG"
+				;;
+		esac
+	done
+	[ "$fallaron" -eq 0 ] ||
+		echo "# Quedaron $fallaron mejoras de Lázaro sin aplicar: se intentan de nuevo en la próxima actualización."
+	return 0
+}
+
+case "$orden" in
+	--aplicar) aplicar ;;
+	--listar) listar ;;
+	--marcar) marcar ;;
+	*) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+esac

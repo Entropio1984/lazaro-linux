@@ -8,6 +8,7 @@ traducciones/lazaro.pot (la plantilla, formato gettext):
   - programas de Python de live/usr/sbin: _("texto")
   - Bienvenida: Nombre, Descripcion, Seccion y Boton de cada
     bienvenida/funciones/*.conf, y los párrafos de bienvenida/portada.txt
+  - arreglos: la línea "# Titulo:" de cada arreglos/NNN-*.sh
 
 Uso:
   python3 traducciones/extraer.py            escribe lazaro.pot
@@ -81,6 +82,17 @@ def textos_bienvenida():
     return salida
 
 
+def textos_arreglos():
+    """El título de cada arreglo (lo muestra lazaro-actualizador)."""
+    salida = []
+    for ruta in sorted(glob.glob(os.path.join(DATOS, "arreglos/[0-9]*.sh"))):
+        with open(ruta, encoding="utf-8") as f:
+            m = re.search(r"(?m)^# Titulo: *(.+?) *$", f.read())
+        if m:
+            salida.append((m.group(1), rel(ruta)))
+    return salida
+
+
 def todos():
     """[(texto, [archivos])] en el orden en que aparecen."""
     lista = []
@@ -95,6 +107,7 @@ def todos():
         else:
             lista += textos_shell(ruta, cod)
     lista += textos_bienvenida()
+    lista += textos_arreglos()
     orden, donde = [], {}
     for t, r in lista:
         if not t.strip():

@@ -1,0 +1,46 @@
+#!/bin/sh
+# lazaro-actualizar-raiz: lo que hace "Actualizar el sistema" en Lázaro,
+# como administrador (lo llama lazaro-actualizador con pkexec):
+#
+#   1. trae lo último publicado en el repositorio de Lázaro
+#      (lazaro-repositorio --sincronizar). Sin esto, el botón solo vería
+#      la copia que el equipo baja una vez al día;
+#   2. actualiza el sistema con el actualizador de siempre
+#      (/usr/local/bin/alpine-update-root.sh: apk y Flatpak), que así ya
+#      instala las herramientas nuevas de Lázaro;
+#   3. aplica las mejoras de Lázaro que falten (lazaro-arreglos).
+#
+# Cada línea que imprime lleva "# " al principio, como las del
+# actualizador: es lo que la ventana muestra como paso en curso.
+#
+# Variables para las pruebas: LAZARO_ACTUALIZAR_REPOSITORIO,
+# LAZARO_ACTUALIZAR_SISTEMA, LAZARO_ACTUALIZAR_ARREGLOS.
+
+REPOSITORIO="${LAZARO_ACTUALIZAR_REPOSITORIO:-/usr/local/sbin/lazaro-repositorio}"
+SISTEMA="${LAZARO_ACTUALIZAR_SISTEMA:-/usr/local/bin/alpine-update-root.sh}"
+ARREGLOS="${LAZARO_ACTUALIZAR_ARREGLOS:-/usr/local/sbin/lazaro-arreglos}"
+
+# Si ya hay una actualización en curso, que lo diga el actualizador sin
+# tocar nada antes.
+ocupado=no
+[ -d /run/alpine-update.lock ] && kill -0 "$(cat /run/alpine-update.lock/pid 2>/dev/null)" 2>/dev/null && ocupado=si
+
+if [ "$ocupado" = no ] && [ -x "$REPOSITORIO" ]; then
+	echo "# Buscando las mejoras de Lázaro…"
+	# Sin internet o con GitHub caído se sigue igual: el sistema se
+	# actualiza con lo que haya.
+	timeout 1800 "$REPOSITORIO" --sincronizar >/dev/null 2>&1 ||
+		echo "# No se pudo consultar el repositorio de Lázaro; se sigue con el resto."
+fi
+
+rc=0
+"$SISTEMA" "$@" || rc=$?
+# 75: había otra actualización en curso; no se hizo nada.
+[ "$rc" != 75 ] || exit 75
+
+# El programa de arreglos puede ser más nuevo que este archivo: acaba de
+# actualizarse con el sistema.
+if [ -x "$ARREGLOS" ]; then
+	"$ARREGLOS" --aplicar || true
+fi
+exit "$rc"

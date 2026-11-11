@@ -6,6 +6,9 @@
 # (/usr/local/bin/alpine-update-root.sh, que instala desktop-postinstall.sh):
 # pide la contraseña con pkexec, actualiza apk y Flatpak y escribe su avance
 # en /var/log/alpine-update.log, una línea por paso con el prefijo "# ".
+# En Lázaro lo llama lazaro-actualizar-raiz, que antes trae lo último del
+# repositorio de Lázaro y después aplica sus mejoras (lazaro-arreglos); las
+# que aplicó se muestran al terminar.
 # Esta ventana lee ese archivo; no está conectada al actualizador por una
 # tubería, así que cerrarla nunca corta una actualización a medias.
 #
@@ -42,6 +45,10 @@ except ImportError:
 NOMBRE = _("Actualizar el sistema")
 ID_APP = "io.github.entropio1984.lazaro.Actualizador"
 RAIZ = "/usr/local/bin/alpine-update-root.sh"
+# Lo mismo, con las mejoras de Lázaro antes y después.
+RAIZ_LAZARO = "/usr/local/sbin/lazaro-actualizar-raiz"
+# Así anuncia lazaro-arreglos cada mejora que aplicó.
+MEJORA = "Mejora aplicada: "
 CLASICO = "/usr/local/bin/alpine-update-launcher.sh"
 REGISTRO = os.environ.get("LAZARO_ACTUALIZADOR_REGISTRO") or "/var/log/alpine-update.log"
 MARCA = os.environ.get("LAZARO_ACTUALIZADOR_MARCA") or "/tmp/.alpine-update-authenticated"
@@ -58,7 +65,15 @@ def orden_de_actualizar(modo):
     """La orden que hace la actualización, como lista."""
     if os.environ.get("LAZARO_ACTUALIZADOR_ORDEN"):
         return shlex.split(os.environ["LAZARO_ACTUALIZADOR_ORDEN"]) + ([modo] if modo else [])
-    return ["pkexec", RAIZ] + ([modo] if modo else [])
+    raiz = RAIZ_LAZARO if os.access(RAIZ_LAZARO, os.X_OK) else RAIZ
+    return ["pkexec", raiz] + ([modo] if modo else [])
+
+
+def mejora_de(linea):
+    """El título de la mejora que anuncia una línea ya limpia, o None."""
+    if linea.startswith(MEJORA) and linea[len(MEJORA):].strip():
+        return linea[len(MEJORA):].strip()
+    return None
 
 
 def siguiente_version(repositorios="/etc/apk/repositories", bajar=None):
@@ -178,7 +193,7 @@ def ventana_principal():
         return clasico()
 
     estado = {"proc": None, "pos": 0, "registro": None, "fase": "buscar",
-              "antes": version_de_alpine(), "cerrar_al_terminar": False}
+              "antes": version_de_alpine(), "cerrar_al_terminar": False, "mejoras": []}
 
     def al_activar(app):
         if app.get_windows():
@@ -218,6 +233,11 @@ def ventana_principal():
         mensaje.set_no_show_all(True)
         caja.pack_start(mensaje, False, False, 0)
 
+        # Las mejoras de Lázaro que aplicó esta actualización.
+        mejoras = Gtk.Label(xalign=0, wrap=True, max_width_chars=70)
+        mejoras.set_no_show_all(True)
+        caja.pack_start(mejoras, False, False, 0)
+
         detalles = Gtk.Expander(label=_("Ver los detalles"))
         texto = Gtk.TextView(editable=False, cursor_visible=False, monospace=True,
                              wrap_mode=Gtk.WrapMode.WORD_CHAR, left_margin=8, right_margin=8)
@@ -256,26 +276,44 @@ def ventana_principal():
             return False
 
         def leer_registro():
-            """Lo nuevo del archivo de avance desde la última lectura."""
+            """Lo nuevo del archivo de avance desde la última lectura.
+            Devuelve si el actualizador ya escribió algún paso."""
             try:
                 with open(estado["registro"], "rb") as f:
                     f.seek(estado["pos"])
                     datos = f.read()
             except OSError:
-                return
+                return False
             corte = datos.rfind(b"\n")
             if corte < 0:
-                return
+                return False
             estado["pos"] += corte + 1
+            pasos = False
             for cruda in datos[:corte].decode("utf-8", "replace").split("\n"):
                 linea = limpiar(cruda)
                 if linea:
                     agregar(linea)
                     if cruda.lstrip().startswith("# ") and not linea.startswith("====="):
-                        decir(linea)
+                        pasos = True
+                        if mejora_de(linea):
+                            estado["mejoras"].append(_(mejora_de(linea)))
+                        else:
+                            decir(linea)
+            return pasos
+
+        def quitar_marca():
+            try:
+                os.unlink(MARCA)
+            except OSError:
+                pass
 
         def terminar(codigo):
             leer_registro()
+            quitar_marca()
+            if estado["mejoras"]:
+                mejoras.set_text(_("Mejoras de Lázaro que se aplicaron:") + "\n" +
+                                 "\n".join("• " + m for m in estado["mejoras"]))
+                mejoras.show()
             barra.set_fraction(1.0 if codigo == 0 else 0.0)
             despues = version_de_alpine()
             if codigo == 0:
@@ -308,10 +346,14 @@ def ventana_principal():
                 if aceptada:
                     estado["fase"] = "trabajo"
                     decir(_("Empezando…"))
-                    try:
-                        os.unlink(MARCA)
-                    except OSError:
-                        pass
+                    quitar_marca()
+                elif leer_registro():
+                    # lazaro-actualizar-raiz escribe su primer paso antes
+                    # de que el actualizador llene la marca: la contraseña
+                    # ya se aceptó. La marca se quita al terminar (si se
+                    # borrara ahora, el actualizador la crearía de nuevo
+                    # como administrador y no se podría quitar).
+                    estado["fase"] = "trabajo"
                 elif proc.poll() is not None:
                     # Terminó sin llegar a trabajar como administrador:
                     # contraseña cancelada o equivocada.
