@@ -16,8 +16,10 @@
 #   - tiene una línea "# Titulo: ..." con lo que hizo, dicho para la
 #     persona que usa el equipo (se le muestra al terminar de actualizar);
 #   - termina con 0 si lo aplicó, con 10 si en este equipo no hacía falta
-#     (se anota y no se muestra) y con otro número si no pudo (por
-#     ejemplo, sin internet): ese se vuelve a intentar la próxima vez;
+#     (se anota y no se muestra), con 11 si hoy no aplica pero mañana
+#     podría (no se anota: se vuelve a mirar la próxima vez, sin contarlo
+#     como falla) y con otro número si no pudo (por ejemplo, sin
+#     internet): ese se vuelve a intentar la próxima vez;
 #   - no rompe nada si corre dos veces y no depende de otro arreglo;
 #   - toca solo lo necesario: nunca lo que la persona ajustó a su gusto.
 # Cómo escribir uno: live/usr/share/lazaro/arreglos/LEEME.md.
@@ -128,6 +130,9 @@ aplicar() {
 			10)
 				anotar "$n" sin-falta
 				echo "no hacía falta en este equipo" >> "$LOG"
+				;;
+			11)
+				echo "hoy no aplica en este equipo: se vuelve a mirar la próxima vez" >> "$LOG"
 				;;
 			*)
 				fallaron=$((fallaron + 1))

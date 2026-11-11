@@ -67,6 +67,15 @@ es "cuando ya puede, se aplica y se anuncia" 'grep -qx "# Mejora aplicada: Terce
 sh "$PROG" --aplicar > "$TMP/sal4.txt"
 es "con todo hecho no corre nada ni dice nada" '[ ! -s "$TMP/corridos" ] && [ ! -s "$TMP/sal4.txt" ]'
 
+# Un arreglo que hoy no aplica (11) no se anota ni cuenta como falla.
+arreglo 007-despues "Para después" "exit 11"
+: > "$TMP/corridos"
+sh "$PROG" --aplicar > "$TMP/sal7.txt"
+sh "$PROG" --aplicar >> "$TMP/sal7.txt"
+es "el que hoy no aplica se vuelve a mirar cada vez, sin avisos" '[ "$(grep -c 007 "$TMP/corridos")" = 2 ] && [ ! -s "$TMP/sal7.txt" ] && sh "$PROG" --listar | grep -q "^007-despues	pendiente"'
+rm "$A/007-despues.sh"
+: > "$TMP/corridos"
+
 # Un arreglo nuevo que llega con una actualización.
 arreglo 004-nuevo "Arreglo que llegó después" "exit 0"
 sh "$PROG" --aplicar > "$TMP/sal5.txt"
@@ -179,12 +188,20 @@ chmod 755 "$B/apk" "$B/rc-update"
 tienda() { rc=0; : > "$TMP/llamadas"; PATH="$B:$PATH" LAZARO_ARREGLO_RAIZ="$T" sh "$REALES/001-tienda.sh" > /dev/null 2>&1 || rc=$?; }
 : > "$T/lib/apk/db/installed"
 tienda
-es "tienda: sin tienda instalada no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
+es "tienda: sin tienda instalada no hace nada, y se vuelve a mirar después" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
 echo "P:gnome-software" > "$T/lib/apk/db/installed"
 : > "$TMP/sin-internet"
 tienda
 es "tienda: sin internet queda pendiente" '[ "$rc" != 0 ] && [ "$rc" != 10 ] && [ ! -e "$T/etc/periodic/hourly/alpine-tienda-catalogo" ]'
 rm "$TMP/sin-internet"
+# Sin poder escribir la tarea (disco lleno, solo lectura): pendiente. Como
+# root los permisos no frenan, así que ahí no se prueba.
+if [ "$(id -u)" != 0 ]; then
+	chmod 555 "$T/etc"
+	tienda
+	chmod 755 "$T/etc"
+	es "tienda: si no se puede escribir la tarea, queda pendiente" '[ "$rc" = 1 ] && [ ! -e "$T/etc/periodic" ]'
+fi
 tienda
 es "tienda: activa el servicio y pone la tarea del catálogo" '[ "$rc" = 0 ] && [ -e "$T/etc/runlevels/default/apk-polkit-server" ] && [ -x "$T/etc/periodic/hourly/alpine-tienda-catalogo" ] && grep -qx "P:alpine-appstream-downloader" "$T/lib/apk/db/installed" && [ -e "$T/etc/runlevels/default/crond" ]'
 es "tienda: la tarea tiene buena sintaxis" 'sh -n "$T/etc/periodic/hourly/alpine-tienda-catalogo"'
@@ -197,7 +214,7 @@ es "tienda: con Discover solo hace falta el catálogo" '[ "$rc" = 0 ] && [ -x "$
 
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
-	es "$p va en el paquete y lo copia el instalador" 'grep -q "$p" "$DIR/repo/herramientas.sh" && grep -q "/usr/sbin/$p" "$DIR/live/usr/sbin/lazaro-instalar"'
+	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'
 	es "sintaxis de $p" 'sh -n "$DIR/live/usr/sbin/$p"'
 done
 es "los arreglos van en el paquete" 'grep -q "usr/share/lazaro/arreglos" "$DIR/repo/herramientas.sh"'

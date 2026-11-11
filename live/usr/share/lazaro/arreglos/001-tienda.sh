@@ -18,7 +18,9 @@ instalado() { grep -qx "P:$1" "$R/lib/apk/db/installed" 2>/dev/null; }
 
 gnome=no
 instalado gnome-software && gnome=si
-[ "$gnome" = si ] || instalado discover || exit 10
+# Sin tienda no hay nada que arreglar hoy; si la persona instala una
+# después, se vuelve a mirar (11: no se anota como hecho).
+[ "$gnome" = si ] || instalado discover || exit 11
 
 TAREA="$R/etc/periodic/hourly/alpine-tienda-catalogo"
 if [ -x "$TAREA" ] && instalado alpine-appstream-downloader &&
@@ -35,8 +37,10 @@ if [ "$gnome" = si ]; then
 fi
 instalado alpine-appstream-downloader || apk add -q alpine-appstream-downloader || exit 1
 
-mkdir -p "$R/etc/periodic/hourly"
-cat > "$TAREA" <<'TAREAEOF'
+# A un archivo aparte y después a su lugar: si no se puede escribir (disco
+# lleno), el arreglo queda pendiente en vez de dejar una tarea a medias.
+mkdir -p "$R/etc/periodic/hourly" || exit 1
+cat > "$TAREA.nuevo" <<'TAREAEOF'
 #!/bin/sh
 # Generado por desktop-postinstall.sh: descarga la lista de programas de
 # Alpine que muestra la tienda de aplicaciones (catalogo AppStream, en
@@ -60,7 +64,8 @@ log=/var/log/alpine-tienda-catalogo.log
     echo "Catalogo descargado."
 } >"$log" 2>&1
 TAREAEOF
-chmod 755 "$TAREA"
+[ -s "$TAREA.nuevo" ] && chmod 755 "$TAREA.nuevo" && mv -f "$TAREA.nuevo" "$TAREA" || {
+	rm -f "$TAREA.nuevo"; exit 1; }
 rc-update add crond default >/dev/null 2>&1 || true
 
 # La lista se descarga ya; si ahora no se puede, la tarea lo intenta

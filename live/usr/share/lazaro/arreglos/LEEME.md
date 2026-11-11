@@ -33,7 +33,9 @@ reutiliza ni se cambia un número ya publicado):
 #
 # Por qué hace falta y qué cambio de la instalación copia.
 
-# ¿Hace falta en este equipo? Si no, 10.
+# ¿Hace falta en este equipo? Si no, 10 (se anota y no se vuelve a
+# mirar). Si hoy no aplica pero más adelante podría (falta un programa
+# que la persona puede instalar después), 11: se vuelve a mirar.
 [ -e /etc/algo ] || exit 10
 # El cambio. Si no se puede ahora (sin internet), cualquier otro número:
 # se intenta de nuevo en la próxima actualización.
