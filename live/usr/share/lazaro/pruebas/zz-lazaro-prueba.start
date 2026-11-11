@@ -111,6 +111,7 @@ idioma_sesion() {
 			rc-service apk-polkit-server status >/dev/null 2>&1 || falta="$falta servicio-detenido"
 		fi
 		[ -x /etc/periodic/hourly/alpine-tienda-catalogo ] || falta="$falta sin-tarea-diaria"
+		rc-service crond status >/dev/null 2>&1 || falta="$falta servicio-crond-detenido"
 		programas="$(appstreamcli status 2>/dev/null | sed -n 's/.* \([0-9][0-9]*\) software components.*/\1/p')"
 		[ "${programas:-0}" -ge 300 ] || falta="$falta catalogo-con-${programas:-0}-programas"
 		if [ -z "$falta" ]; then

@@ -517,9 +517,11 @@ prueba_instalar() {
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
 		elif grep -Eq 'LAZARO-TIENDA-NO.*(servicio|tarea)' "$serie2" ||
-			{ [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; }; then
+			{ [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; } ||
+			{ [ "$configurado" = si ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA "$serie2"; }; then
 			# Sin internet la lista de programas no se puede descargar: ahí
-			# solo se exige el servicio y la tarea que la descargará.
+			# solo se exigen los servicios y la tarea que la descargará
+			# (si la configuración final ya corrió, como en la Completa).
 			echo "FALLO: la tienda de aplicaciones no quedó lista (servicio de Alpine o lista de programas para instalar)." >&2
 			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
 			ok=1
