@@ -193,9 +193,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Cada paquete en su propia carpeta (nuevo/<nombre>/). Sin "name",
+      # download-artifact deja un artefacto solo sin carpeta propia
+      # (nuevo/resumen.txt): eso pasaba cada vez que no se compilaba el
+      # kernel y el repositorio no se publicaba desde el 9 de noviembre.
       - uses: actions/download-artifact@v7
         with:
-          path: nuevo
+          name: lazaro-herramientas
+          path: nuevo/lazaro-herramientas
+
+      - uses: actions/download-artifact@v7
+        if: needs.kernel.result == 'success'
+        with:
+          name: kernel-lazaro
+          path: nuevo/kernel-lazaro
 
       - name: Juntar con lo publicado y firmar el índice
         env:
