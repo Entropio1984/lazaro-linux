@@ -716,6 +716,16 @@ paso_afinador() { # RAIZ
 		# Las pruebas en QEMU buscan esta línea en la consola.
 		[ -z "${pa_r:-}" ] || log "$pa_r"
 	fi
+	# Mejoras para equipos ya instalados (lazaro-arreglos): este sistema
+	# ya las trae todas, así que se anotan como hechas sin correrlas.
+	# lazaro-actualizar-raiz es lo que corre "Actualizar el sistema".
+	if [ -x /usr/sbin/lazaro-arreglos ]; then
+		install -Dm755 /usr/sbin/lazaro-arreglos "$1/usr/local/sbin/lazaro-arreglos"
+		install -Dm755 /usr/sbin/lazaro-actualizar-raiz "$1/usr/local/sbin/lazaro-actualizar-raiz"
+		rm -rf "$1/usr/share/lazaro/arreglos"
+		cp -a "$DATOS/arreglos" "$1/usr/share/lazaro/"
+		log "$("$1/usr/local/sbin/lazaro-arreglos" --marcar --raiz "$1" 2>>"$LOG")"
+	fi
 	[ -e "$1/etc/lazaro/sin-escritorio" ] ||
 		install -Dm644 "$DATOS/lazaro-afinador.desktop" "$1/usr/share/applications/lazaro-afinador.desktop"
 	pa_salida="$("$pa_af" --aplicar --raiz "$1" 2>>"$LOG")" || {

@@ -537,6 +537,10 @@ prueba_instalar() {
 			echo "FALLO: la Bienvenida no quedó lista en el sistema instalado (programa, funciones o GTK para Python)." >&2
 			grep LAZARO-BIENVENIDA "$serie2" >&2 || true
 			ok=1
+		elif ! grep -q LAZARO-ARREGLOS-OK "$serie2"; then
+			echo "FALLO: las mejoras para equipos instalados (lazaro-arreglos) no quedaron anotadas como hechas, o falta lazaro-actualizar-raiz." >&2
+			grep LAZARO-ARREGLOS "$serie2" >&2 || true
+			ok=1
 		elif grep -q LAZARO-BTOP-GPU-NO "$serie2"; then
 			echo "FALLO: btop quedó sin el permiso para medir la GPU sin doas:" >&2
 			grep LAZARO-BTOP-GPU-NO "$serie2" >&2

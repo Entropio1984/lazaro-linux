@@ -223,6 +223,10 @@ arranque() {
 		sleep 30
 	done
 	instalar_herramientas || true
+	# Mejoras de Lázaro que falten (si el sistema se actualizó sin pasar
+	# por "Actualizar el sistema", que las aplica en el momento).
+	[ ! -x "$RAIZ/usr/local/sbin/lazaro-arreglos" ] ||
+		"$RAIZ/usr/local/sbin/lazaro-arreglos" --aplicar >/dev/null 2>&1 || true
 }
 
 orden=""

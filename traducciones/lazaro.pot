@@ -95,6 +95,10 @@ msgid "La actualización sigue"
 msgstr ""
 
 #: live/usr/sbin/lazaro-actualizador
+msgid "Mejoras de Lázaro que se aplicaron:"
+msgstr ""
+
+#: live/usr/sbin/lazaro-actualizador
 msgid "No se actualizó: no se aceptó la contraseña."
 msgstr ""
 
@@ -1318,4 +1322,8 @@ msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/portada.txt
 msgid "En el menú de la izquierda están las herramientas de Lázaro. Esta ventana se puede volver a abrir cuando quieras desde el menú de aplicaciones: «Bienvenida»."
+msgstr ""
+
+#: live/usr/share/lazaro/arreglos/001-tienda.sh
+msgid "Se activó la tienda de programas (antes solo mostraba lo ya instalado)"
 msgstr ""

@@ -354,6 +354,10 @@ jobs:
       # y quitar, con GRUB y apk falsos.
       - run: sh pruebas/kernel.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q curl && sh pruebas/kernel.sh'
+      # Mejoras para equipos ya instalados: lazaro-arreglos (una vez cada
+      # uno, en orden), lazaro-actualizar-raiz y el arreglo de la tienda.
+      - run: sh pruebas/arreglos.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/arreglos.sh'
       # Traducciones de las herramientas (inglés y portugués de Brasil):
       # completas, con los mismos %s, y leídas igual por el shell y por
       # Python (también con el awk de busybox, el de la ISO).

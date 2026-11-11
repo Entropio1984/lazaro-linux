@@ -19,6 +19,8 @@ done
 [ ! -e /etc/init.d/lazaro-repositorio ] || [ -e /etc/runlevels/default/lazaro-repositorio ] ||
 	ln -s /etc/init.d/lazaro-repositorio /etc/runlevels/default/lazaro-repositorio 2>/dev/null
 install -Dm644 "$S/lazaro.rsa.pub" /etc/apk/keys/lazaro.rsa.pub
+[ ! -f "$S/btop-gpu.hook" ] ||
+	install -Dm755 "$S/btop-gpu.hook" /etc/apk/commit_hooks.d/lazaro-btop-gpu.hook
 [ -e /etc/lazaro/sin-escritorio ] ||
 	install -Dm644 "$S/lazaro-controladores-sesion.desktop" /etc/xdg/autostart/lazaro-controladores.desktop
 # La Bienvenida se abre al iniciar sesión hasta que la persona desmarca
