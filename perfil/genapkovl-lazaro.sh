@@ -117,6 +117,7 @@ rc_add udev-settle sysinit
 rc_add modloop sysinit
 
 rc_add hwclock boot
+rc_add lazaro-zram boot
 rc_add lazaro-graficas boot
 rc_add modules boot
 rc_add sysctl boot

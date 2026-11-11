@@ -1,0 +1,61 @@
+#!/sbin/openrc-run
+# Memoria comprimida (zram) para la sesión live de Lázaro Linux.
+#
+# La sesión live entera vive en la RAM (tmpfs): en la Ligera son unos
+# 1,4 GB de programas. Con 2 GB de RAM y sin swap le quedaban unos
+# 250 MB al escritorio, al instalador y a la Bienvenida juntos, y la
+# sesión gráfica se caía al abrir Calamares (o al cambiar de idioma).
+# Con zram, lo que casi no se usa (la mayor parte de esos programas) se
+# guarda comprimido en la misma RAM, a cambio de un poco de procesador:
+# es lo mismo que el sistema instalado ya tiene por desktop-postinstall.sh.
+#
+# No se apaga al cerrar: el equipo se apaga igual y sacar todo de zram
+# pediría memoria justo al final.
+#
+# El tamaño es el de la RAM: es un límite, no reserva memoria (solo se
+# ocupa lo que de verdad se comprime). Si algo falla, la live sigue como
+# antes, sin zram.
+
+description="Memoria comprimida (zram) de la sesión live"
+
+depend() {
+	after modloop
+	before lazaro-live lightdm
+}
+
+start() {
+	ebegin "Activando la memoria comprimida (zram)"
+	if grep -q '^/dev/zram0 ' /proc/swaps 2>/dev/null; then
+		eend 0
+		return 0
+	fi
+	if ! { [ -e /sys/block/zram0 ] || modprobe zram num_devices=1 2>/dev/null; } \
+		|| [ ! -e /sys/block/zram0 ]; then
+		eend 0 "zram no disponible: la sesión sigue sin memoria comprimida"
+		return 0
+	fi
+	# zstd comprime más; lzo-rle es más rápido y siempre está.
+	for alg in zstd lzo-rle lzo; do
+		if grep -qw "$alg" /sys/block/zram0/comp_algorithm 2>/dev/null; then
+			echo "$alg" > /sys/block/zram0/comp_algorithm 2>/dev/null && break
+		fi
+	done
+	ram_kb=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+	# Hasta 8 GB: con más RAM no hace falta tanto.
+	[ "$ram_kb" -le 8388608 ] || ram_kb=8388608
+	if echo "$((ram_kb * 1024))" > /sys/block/zram0/disksize \
+		&& mkswap /dev/zram0 >/dev/null 2>&1 \
+		&& { swapon -p 100 /dev/zram0 2>/dev/null || swapon /dev/zram0; }; then
+		# Con zram conviene que el kernel use la swap con ganas (igual
+		# que el sistema instalado): mover a zram es barato y deja RAM
+		# libre para el escritorio y el instalador.
+		sysctl -q -w vm.swappiness=100 2>/dev/null || true
+		# Sin leer páginas de a varias: en zram no ayuda.
+		sysctl -q -w vm.page-cluster=0 2>/dev/null || true
+		eend 0
+	else
+		eend 0 "no se pudo activar zram: la sesión sigue sin memoria comprimida"
+	fi
+	return 0
+}
+

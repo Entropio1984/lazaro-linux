@@ -57,7 +57,9 @@ imprimir.
 - **Memoria (RAM):** 2 GB o más es lo cómodo. Con menos puede funcionar
   con LXQt, pero la sesión de prueba podría no llegar al escritorio; en
   ese caso usa el instalador en modo texto (ver
-  [Problemas comunes](#problemas-comunes)).
+  [Problemas comunes](#problemas-comunes)). La sesión de prueba usa
+  memoria comprimida (zram), como el sistema instalado, para que con
+  2 GB alcance para el escritorio y el instalador a la vez.
 - **Arranque BIOS o UEFI:** sirven los dos, también los equipos muy viejos.
 - **Una memoria USB** de 4 GB para la edición Ligera o de 8 GB para la
   Completa.
