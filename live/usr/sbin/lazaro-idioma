@@ -15,6 +15,10 @@
 #                                      (como root) escribe la elección en
 #                                      /etc; IDIOMA o DISTRIBUCION pueden
 #                                      ser "-" para dejarlos como están
+#   lazaro-idioma --reiniciar-sesion   (como root) cierra y vuelve a abrir
+#                                      la sesión gráfica (LightDM) y avisa
+#                                      al vigilante de la live que es a
+#                                      propósito
 #
 # Para las pruebas: LAZARO_IDIOMA_RAIZ escribe en otra carpeta en vez de /.
 
@@ -201,6 +205,56 @@ def como_root(args):
     return ["pkexec"] + list(args)
 
 
+MARCA_REINICIO = "/run/lazaro/reinicio-sesion"
+
+
+def marcar_reinicio():
+    """Avisa al vigilante de la live (lazaro-live) que la sesión gráfica se
+    reinicia a propósito: así no la da por caída ni pasa al aviso del
+    instalador en modo texto mientras el escritorio vuelve a abrir."""
+    try:
+        os.makedirs(os.path.dirname(MARCA_REINICIO), exist_ok=True)
+        with open(MARCA_REINICIO, "w") as f:
+            f.write("idioma\n")
+    except OSError:
+        pass
+
+
+def lightdm_corre():
+    return subprocess.call(["rc-service", "lightdm", "status"], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL) == 0
+
+
+def reiniciar_sesion_root():
+    """Cierra y vuelve a abrir la sesión gráfica. Si LightDM no quedó
+    corriendo (por ejemplo, tardó demasiado en cerrarse y OpenRC no lo
+    volvió a arrancar), lo arranca otra vez."""
+    import time
+    marcar_reinicio()
+    demora = os.environ.get("LAZARO_IDIOMA_DEMORA", "")
+    if demora.isdigit():
+        # Solo para las pruebas: un equipo lento, que tarda en volver a
+        # abrir el escritorio (más que el minuto que espera el vigilante).
+        subprocess.call(["rc-service", "lightdm", "stop"], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL)
+        time.sleep(int(demora))
+        subprocess.call(["rc-service", "lightdm", "start"], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL)
+    else:
+        subprocess.call(["rc-service", "lightdm", "restart"], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL)
+    for _intento in range(2):
+        if lightdm_corre():
+            return 0
+        time.sleep(3)
+        marcar_reinicio()
+        subprocess.call(["rc-service", "lightdm", "zap"], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL)
+        subprocess.call(["rc-service", "lightdm", "start"], stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL)
+    return 0 if lightdm_corre() else 1
+
+
 # --- Ventana ------------------------------------------------------------------
 
 def ventana(argv):
@@ -380,7 +434,8 @@ def ventana(argv):
             # La sesión gráfica se cierra y LightDM vuelve a entrar solo
             # (inicio automático) con el idioma nuevo. Se lanza aparte para
             # que no se corte al cerrarse esta ventana.
-            orden = " ".join(como_root(["rc-service", "lightdm", "restart"]))
+            orden = " ".join(como_root([sys.executable, os.path.abspath(__file__),
+                                        "--reiniciar-sesion"]))
             subprocess.Popen(["setsid", "-f", "sh", "-c", "sleep 1; exec " + orden],
                              env=entorno, stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -462,8 +517,13 @@ def main(argv):
             print("Uso: lazaro-idioma --guardar IDIOMA|- DISTRIBUCION|- [VARIANTE]", file=sys.stderr)
             return 2
         return guardar(argv[2], argv[3], argv[4] if len(argv) == 5 else "")
+    if orden == "--reiniciar-sesion":
+        if os.geteuid() != 0:
+            print("lazaro-idioma --reiniciar-sesion se corre como root.", file=sys.stderr)
+            return 1
+        return reiniciar_sesion_root()
     if orden:
-        print("Uso: lazaro-idioma [--listar|--guardar ...]", file=sys.stderr)
+        print("Uso: lazaro-idioma [--listar|--guardar ...|--reiniciar-sesion]", file=sys.stderr)
         return 2
     return ventana(argv)
 

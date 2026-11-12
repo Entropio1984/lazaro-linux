@@ -225,9 +225,27 @@ prueba_live() {
 				echo "FALLO: el cambio de idioma de la sesión live no quedó completo ($MODO)." >&2
 				grep -A 20 -e LAZARO-TRADUCCIONES-DESCARGA -e LAZARO-IDIOMA-CAMBIO "$serie" >&2 || true
 				ok=1
+			elif ! esperar "$serie" "$pid" 600 LAZARO-IDIOMA-INGLES; then
+				captura "$mon" "$RES/$nombre-idioma-fallo"
+				echo "FALLO: no terminó el cambio al inglés de la sesión live ($MODO)." >&2
+				ok=1
+			elif ! grep -q 'LAZARO-IDIOMA-INGLES sesion=en_US.UTF-8 calamares=en_US.UTF-8' "$serie"; then
+				captura "$mon" "$RES/$nombre-idioma-fallo"
+				echo "FALLO: al cambiar al inglés, el escritorio o el instalador no volvieron en inglés ($MODO)." >&2
+				grep -e LAZARO-IDIOMA-INGLES -e LAZARO-AVISO-TEXTO -e LAZARO-SESION-REINTENTO "$serie" >&2 || true
+				ok=1
+			elif grep -q -e LAZARO-AVISO-TEXTO -e LAZARO-SESION-REINTENTO "$serie"; then
+				# Cambiar de idioma reinicia la sesión a propósito: aunque el
+				# escritorio tarde en volver (la prueba al inglés simula un
+				# equipo lento, 90 s), no debe aparecer el aviso del modo texto.
+				captura "$mon" "$RES/$nombre-idioma-fallo"
+				echo "FALLO: al cambiar de idioma, la live dio el escritorio por caído y mostró el aviso del modo texto ($MODO)." >&2
+				grep -A 12 -e LAZARO-AVISO-TEXTO -e LAZARO-SESION-REINTENTO "$serie" >&2 || true
+				ok=1
 			else
-				captura "$mon" "$RES/$nombre-portugues"
+				captura "$mon" "$RES/$nombre-ingles"
 				echo "OK: cambio de idioma: $(grep -m1 -o 'LAZARO-TRADUCCIONES-DESCARGA.*' "$serie" | tr -d '\r')"
+				echo "OK: cambio al inglés con un escritorio lento, sin el aviso del modo texto."
 			fi
 		else
 			echo "FALLO: el agente del portapapeles compartido (spice-vdagent) no corre en la sesión live ($MODO)." >&2
