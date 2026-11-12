@@ -266,7 +266,22 @@ vigilar_sesion() {
 	avisado=no
 	reintento=no
 	motivo=sin-sesion
+	sesion_marca=""
 	while :; do
+		# La marca del reinicio solo vale hasta que vuelve el escritorio
+		# (otro xfce4-session que el que había al dejarla): después, una
+		# caída de verdad se cuenta otra vez sin esperar los 4 minutos.
+		if [ -f "$MARCA_REINICIO" ]; then
+			actual=$(pidof xfce4-session 2>/dev/null || echo ninguna)
+			if [ -z "$sesion_marca" ]; then
+				sesion_marca="$actual"
+			elif [ "$actual" != ninguna ] && [ "$actual" != "$sesion_marca" ]; then
+				rm -f "$MARCA_REINICIO"
+				sesion_marca=""
+			fi
+		else
+			sesion_marca=""
+		fi
 		if hay_sesion; then
 			caida=0
 			limite=12

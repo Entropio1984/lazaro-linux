@@ -275,7 +275,7 @@ viejas; ver [Tarjetas NVIDIA](#tarjetas-nvidia).
 **El escritorio no abre.** Si a los 5 minutos no apareció (o si se
 cerró y no volvió en un minuto), la pantalla pasa sola a modo texto con
 un aviso. Si el escritorio vuelve después, la pantalla regresa sola a
-él. Entra como `lazaro` (no pide
+él (salvo que ya hayas empezado el instalador en modo texto). Entra como `lazaro` (no pide
 contraseña) y escribe `doas lazaro-instalar-texto`. Es el mismo
 instalador, con menús que se manejan con las flechas, la barra
 espaciadora y Enter, y no borra nada hasta que confirmas el resumen. Para
