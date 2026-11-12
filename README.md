@@ -170,7 +170,9 @@ idioma. La Ligera trae en el USB solo el español; otro idioma se
 descarga si hay internet (la Completa los trae todos). Las herramientas
 de Lázaro (la Bienvenida, el Afinador, los Controladores y las demás)
 también cambian de idioma: están en español, inglés y portugués de
-Brasil, y con cualquier otro idioma salen en inglés.
+Brasil, y con cualquier otro idioma salen en inglés. En un equipo viejo
+el escritorio puede tardar uno o dos minutos en volver: espera, la
+pantalla no pasa al modo texto por eso.
 
 Lo que guardes aquí se pierde al apagar.
 
@@ -270,8 +272,10 @@ esa copia está dañada.
 seguro** en el menú del paso 4. Pasa sobre todo con tarjetas NVIDIA
 viejas; ver [Tarjetas NVIDIA](#tarjetas-nvidia).
 
-**El escritorio no abre.** Si a los 5 minutos no apareció, la pantalla
-pasa sola a modo texto con un aviso. Entra como `lazaro` (no pide
+**El escritorio no abre.** Si a los 5 minutos no apareció (o si se
+cerró y no volvió en un minuto), la pantalla pasa sola a modo texto con
+un aviso. Si el escritorio vuelve después, la pantalla regresa sola a
+él (salvo que ya hayas empezado el instalador en modo texto). Entra como `lazaro` (no pide
 contraseña) y escribe `doas lazaro-instalar-texto`. Es el mismo
 instalador, con menús que se manejan con las flechas, la barra
 espaciadora y Enter, y no borra nada hasta que confirmas el resumen. Para
@@ -800,7 +804,7 @@ mano, también con la siguiente (edge):
 
 | Prueba | Arranque | Escritorio | Internet | Qué comprueba |
 |---|---|---|---|---|
-| Sesión live | BIOS | XFCE | Sí | El escritorio arranca en español, la Bienvenida y el instalador se abren, el instalador ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona. Después cambia a portugués como lo haría el botón Idioma y teclado: el escritorio y el instalador vuelven en portugués y con teclado brasileño |
+| Sesión live | BIOS | XFCE | Sí | El escritorio arranca en español, la Bienvenida y el instalador se abren, el instalador ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona. Después cambia a portugués como lo haría el botón Idioma y teclado: el escritorio y el instalador vuelven en portugués y con teclado brasileño. Luego cambia al inglés simulando un equipo lento (el escritorio tarda 90 segundos en volver): vuelve en inglés y no aparece el aviso del modo texto |
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
 | Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, y la live trae `dialog` |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |

@@ -120,26 +120,20 @@ revisar_idioma() {
 	serie "LAZARO-IDIOMA-LIVE $(idioma_de xfce4-panel) traducciones=$trad"
 }
 
-# Solo en las pruebas: lo mismo que hace el botón "Idioma y teclado" de
-# la Bienvenida, sin ventana. Descarga el portugués de Brasil, guarda
-# idioma y teclado y reinicia la sesión: el escritorio y el instalador
-# (en las pruebas se abre solo) tienen que volver en portugués.
-probar_cambio_idioma() {
+# Solo en las pruebas: reinicia la sesión como el botón "Cambiar idioma"
+# (lazaro-idioma --reiniciar-sesion, como el usuario lazaro con doas y
+# fuera de la sesión) y espera el panel nuevo y después el instalador
+# (en las pruebas se abre solo).
+# Con "lento", como un equipo viejo: el escritorio tarda 90 segundos en
+# volver (más que el minuto que espera el vigilante de la sesión).
+reiniciar_como_boton() {
 	pkill -x calamares 2>/dev/null || true
 	panel_viejo=$(pidof xfce4-panel 2>/dev/null || true)
-	antes=$(df -m / | awk 'NR == 2 { print $3 }')
-	trad=no
-	if lazaro-traducciones instalar pt_BR.UTF-8 > /tmp/lazaro-traducciones.log 2>&1 \
-		&& lazaro-traducciones tiene pt_BR.UTF-8 \
-		&& [ -s /usr/share/locale/pt_BR/LC_MESSAGES/xfce4-panel.mo ]; then
-		trad=si
+	if [ "${1:-}" = lento ]; then
+		setsid -f sh -c 'sleep 1; exec env LAZARO_IDIOMA_DEMORA=90 lazaro-idioma --reiniciar-sesion' </dev/null >/dev/null 2>&1
+	else
+		su -s /bin/sh lazaro -c "setsid -f sh -c 'sleep 1; exec doas -n lazaro-idioma --reiniciar-sesion' </dev/null >/dev/null 2>&1"
 	fi
-	despues=$(df -m / | awk 'NR == 2 { print $3 }')
-	serie "LAZARO-TRADUCCIONES-DESCARGA traducciones=$trad ram=$((despues - antes))MB $(tail -n 1 /tmp/lazaro-traducciones.log)"
-	[ "$trad" = si ] || serie -- tail -n 20 /tmp/lazaro-traducciones.log
-	lazaro-idioma --guardar pt_BR.UTF-8 br
-	rc-service lightdm restart > /dev/null 2>&1
-	# El panel nuevo (otro proceso) y después el instalador.
 	j=0
 	while [ $j -lt 36 ]; do
 		p=$(pidof xfce4-panel 2>/dev/null || true)
@@ -152,6 +146,27 @@ probar_cambio_idioma() {
 		j=$((j + 1))
 		sleep 5
 	done
+}
+
+# Solo en las pruebas: lo mismo que hace el botón "Idioma y teclado" de
+# la Bienvenida, sin ventana. Descarga el portugués de Brasil, guarda
+# idioma y teclado y reinicia la sesión: el escritorio y el instalador
+# tienen que volver en portugués. Después lo mismo al inglés (no
+# descarga nada) simulando un equipo lento, y ninguno de los dos cambios debe terminar en el aviso
+# del modo texto.
+probar_cambio_idioma() {
+	antes=$(df -m / | awk 'NR == 2 { print $3 }')
+	trad=no
+	if lazaro-traducciones instalar pt_BR.UTF-8 > /tmp/lazaro-traducciones.log 2>&1 \
+		&& lazaro-traducciones tiene pt_BR.UTF-8 \
+		&& [ -s /usr/share/locale/pt_BR/LC_MESSAGES/xfce4-panel.mo ]; then
+		trad=si
+	fi
+	despues=$(df -m / | awk 'NR == 2 { print $3 }')
+	serie "LAZARO-TRADUCCIONES-DESCARGA traducciones=$trad ram=$((despues - antes))MB $(tail -n 1 /tmp/lazaro-traducciones.log)"
+	[ "$trad" = si ] || serie -- tail -n 20 /tmp/lazaro-traducciones.log
+	lazaro-idioma --guardar pt_BR.UTF-8 br
+	reiniciar_como_boton
 	# La distribución que usa de verdad el servidor gráfico nuevo (se lo
 	# pregunta setxkbmap, con la llave de LightDM o la del usuario).
 	teclado=no
@@ -162,6 +177,10 @@ probar_cambio_idioma() {
 	done
 	[ "$teclado" != no ] || grep -hi xkb /var/log/Xorg.0.log /var/log/lightdm/x-0.log 2>/dev/null | head -n 8 | serie
 	serie "LAZARO-IDIOMA-CAMBIO sesion=$(idioma_de xfce4-panel) calamares=$(idioma_de calamares) teclado=$teclado traducciones=$trad"
+	# Al inglés, en un equipo lento (así falló una vez en un equipo real).
+	lazaro-idioma --guardar en_US.UTF-8 us
+	reiniciar_como_boton lento
+	serie "LAZARO-IDIOMA-INGLES sesion=$(idioma_de xfce4-panel) calamares=$(idioma_de calamares)"
 }
 
 AVISO_TEXTO="
@@ -181,7 +200,19 @@ hay_sesion() {
 	pidof xfce4-session >/dev/null 2>&1
 }
 
+# El botón "Idioma y teclado" reinicia la sesión a propósito y deja esta
+# marca (lazaro-idioma --reiniciar-sesion). Mientras sea reciente (4
+# minutos), que no haya escritorio no es una falla: en un equipo viejo
+# cerrar y volver a abrir el escritorio puede tardar más de un minuto.
+MARCA_REINICIO=/run/lazaro/reinicio-sesion
+reinicio_reciente() {
+	[ -f "$MARCA_REINICIO" ] || return 1
+	t=$(stat -c %Y "$MARCA_REINICIO" 2>/dev/null) || return 1
+	[ $(($(date +%s) - t)) -lt 240 ]
+}
+
 avisar_texto() {
+	[ -f /run/lazaro/issue ] || { mkdir -p /run/lazaro; cp /etc/issue /run/lazaro/issue 2>/dev/null || :; }
 	printf '%s\n' "$AVISO_TEXTO" >> /etc/issue
 	printf '\033c%s\n' "$AVISO_TEXTO" > /dev/tty1 2>/dev/null || true
 	chvt 1 2>/dev/null || true
@@ -193,24 +224,92 @@ avisar_texto() {
 	tail -n 12 /var/log/lightdm/x-0.log 2>/dev/null | serie
 }
 
-# Espera hasta 5 minutos a que aparezca la sesión gráfica. Si nunca
-# aparece, o aparece y luego se cae sin volver en un minuto, avisa.
-vigilar_sesion() {
-	i=0
-	while [ "$i" -lt 60 ] && ! hay_sesion; do
-		i=$((i + 1))
-		sleep 5
+# La pantalla (terminal virtual) del escritorio: la que usa Xorg ("vt7").
+pantalla_escritorio() {
+	for f in /proc/[0-9]*/cmdline; do
+		case "$(tr '\0' ' ' < "$f" 2>/dev/null)" in
+		*Xorg*|*/X\ *)
+			vt=$(tr '\0' '\n' < "$f" 2>/dev/null | sed -n 's/^vt\([0-9][0-9]*\)$/\1/p' | head -n 1)
+			[ -z "$vt" ] || { echo "$vt"; return; }
+			;;
+		esac
 	done
-	if ! hay_sesion; then
-		avisar_texto sin-sesion
+	echo 7
+}
+
+# El escritorio volvió después del aviso: se quita el aviso y se vuelve
+# a la pantalla del escritorio. Antes el aviso dejaba la pantalla negra
+# con "login:" aunque el escritorio ya estuviera abierto detrás. No se
+# cambia de pantalla si ya se está instalando en modo texto.
+quitar_aviso() {
+	[ ! -f /run/lazaro/issue ] || cp /run/lazaro/issue /etc/issue 2>/dev/null || true
+	# (El [o] evita que grep se encuentre a sí mismo.)
+	if grep -qs 'lazaro-instalar-text[o]' /proc/[0-9]*/cmdline; then
+		serie "LAZARO-ESCRITORIO-VOLVIO sin-cambiar-pantalla"
 		return 0
 	fi
+	vt=$(pantalla_escritorio)
+	chvt "$vt" 2>/dev/null || true
+	serie "LAZARO-ESCRITORIO-VOLVIO vt$vt"
+}
+
+# Vigila la sesión gráfica todo el tiempo que dure la live:
+#  - al arrancar espera hasta 5 minutos a que aparezca;
+#  - si se cae, espera un minuto a que vuelva (4 más si fue un cambio
+#    de idioma, que la reinicia a propósito);
+#  - si LightDM murió, lo arranca otra vez una vez antes de avisar;
+#  - si no vuelve, avisa en la consola del instalador en modo texto;
+#  - y si después vuelve, quita el aviso y regresa al escritorio.
+vigilar_sesion() {
+	limite=60
 	caida=0
-	while [ "$caida" -lt 12 ]; do
-		if hay_sesion; then caida=0; else caida=$((caida + 1)); fi
+	avisado=no
+	reintento=no
+	motivo=sin-sesion
+	sesion_marca=""
+	while :; do
+		# La marca del reinicio solo vale hasta que vuelve el escritorio
+		# (otro xfce4-session que el que había al dejarla): después, una
+		# caída de verdad se cuenta otra vez sin esperar los 4 minutos.
+		if [ -f "$MARCA_REINICIO" ]; then
+			actual=$(pidof xfce4-session 2>/dev/null || echo ninguna)
+			if [ -z "$sesion_marca" ]; then
+				sesion_marca="$actual"
+			elif [ "$actual" != ninguna ] && [ "$actual" != "$sesion_marca" ]; then
+				rm -f "$MARCA_REINICIO"
+				sesion_marca=""
+			fi
+		else
+			sesion_marca=""
+		fi
+		if hay_sesion; then
+			caida=0
+			limite=12
+			motivo=sesion-caida
+			if [ "$avisado" = si ]; then
+				quitar_aviso
+				avisado=no
+			fi
+		elif reinicio_reciente; then
+			caida=0
+		elif [ "$avisado" = no ]; then
+			caida=$((caida + 1))
+			if [ "$caida" -ge "$limite" ]; then
+				if [ "$reintento" = no ] && ! rc-service lightdm status >/dev/null 2>&1; then
+					reintento=si
+					caida=0
+					limite=24
+					serie "LAZARO-SESION-REINTENTO $motivo"
+					rc-service lightdm zap >/dev/null 2>&1 || true
+					rc-service lightdm start >/dev/null 2>&1 || true
+				else
+					avisar_texto "$motivo"
+					avisado=si
+				fi
+			fi
+		fi
 		sleep 5
 	done
-	avisar_texto sesion-caida
 }
 
 start() {
