@@ -137,6 +137,10 @@ que termina en \texttt{x86.iso} y se diferencia en esto:
 \begin{description}
   \item[Escritorios] solo los dos más livianos, XFCE y LXQt (o sin
     escritorio). Los dos se instalan sin internet.
+  \item[Sin internet] todo lo que se instala viene en la ISO, también la
+    configuración final (sonido, memoria comprimida, indicador de red,
+    impresoras) y los programas de \emph{Software adicional}. Nada queda
+    pendiente para cuando haya conexión.
   \item[Navegador] con cualquiera de los dos escritorios se instala
     NetSurf, muy liviano, para páginas sencillas. Firefox es una casilla de \emph{Software adicional} (viene
     marcada): hace falta para el banco, el correo y los sitios modernos,
@@ -145,15 +149,17 @@ que termina en \texttt{x86.iso} y se diferencia en esto:
   \item[Con 1 GB de memoria o menos] la sesión de prueba no abre el
     escritorio, porque no cabría en la memoria. Aparece un aviso para
     instalar desde esa misma pantalla, con el teclado: escribe
-    \comando{lazaro}, pulsa Enter, y luego
-    \comando{doas lazaro-instalar-texto}. Hace las mismas preguntas que el
+    \comando{doas lazaro-instalar-texto} y pulsa Enter. Hace las mismas preguntas que el
     instalador gráfico y el sistema instalado queda igual, con su
     escritorio. Con 1,5 GB o más, la sesión de prueba abre normalmente.
   \item[Lo que no tiene] la tienda Flathub (OnlyOffice, Google Chrome y
-    Brave no existen para 32 bits), el kernel Lázaro, las actualizaciones
+    Brave no existen para 32 bits), VLC (mpv ya abre videos y música),
+    el kernel Lázaro, las actualizaciones
     automáticas de las herramientas de Lázaro (el sistema y sus programas
-    sí se actualizan como siempre) y el controlador privativo del wifi
-    Broadcom.
+    sí se actualizan como siempre), el controlador privativo del wifi
+    Broadcom y, en LXQt instalado sin internet, la tienda de aplicaciones
+    (Discover es demasiado grande para la ISO; XFCE sí trae GNOME
+    Software).
   \item[Requisitos] un procesador Pentium~4, Pentium~M, Atom o más nuevo,
     y arranque BIOS, que es el que traen estos equipos. Aprovecha hasta
     unos 3 GB de memoria.

@@ -96,6 +96,13 @@ la Ligera o la Completa: tienen más opciones.
   Pesa menos de 2 GB y cabe en un USB de 4 GB.
 - **Escritorios:** solo los dos más livianos, **XFCE** y **LXQt** (o sin
   escritorio). Los dos se instalan sin internet.
+- **Sin internet de principio a fin:** todo lo que se instala viene en
+  la ISO, también la configuración final (sonido, memoria comprimida,
+  indicador de red, impresoras) y los programas de "Software adicional".
+  Nada queda pendiente para cuando haya conexión.
+- **Pantalla de inicio de LXQt:** se dibuja sin usar la tarjeta de
+  video, porque las gráficas de esa época (Intel 945 y parecidas) no
+  mostraban las letras.
 - **Navegador:** con cualquiera de los dos escritorios se instala
   **NetSurf**, muy liviano (usa unos 30 MB de memoria), para páginas
   sencillas. **Firefox** es una casilla
@@ -111,10 +118,13 @@ la Ligera o la Completa: tienen más opciones.
   de prueba abre normalmente. En el menú de arranque también está la
   opción "instalar en modo texto, poca memoria" para elegirlo a mano.
 - **Lo que no tiene:** Flatpak ni la tienda Flathub (OnlyOffice, Chrome
-  y Brave no existen para 32 bits), el kernel Lázaro, las
+  y Brave no existen para 32 bits), VLC (mpv, el reproductor de YouTube
+  ligero, ya abre videos y música), el kernel Lázaro, las
   actualizaciones automáticas de las herramientas de Lázaro (el sistema
-  y sus programas sí se actualizan normalmente) y el controlador
-  privativo de wifi Broadcom.
+  y sus programas sí se actualizan normalmente), el controlador
+  privativo de wifi Broadcom y, en LXQt instalado sin internet, la
+  tienda de aplicaciones (Discover trae cientos de paquetes de KDE y no
+  cabe en la ISO; XFCE sí trae GNOME Software).
 - **Requisitos:** procesador con SSE2 (Pentium 4, Pentium M, Atom o
   más nuevo) y arranque BIOS, que es el que traen estos equipos. Aprovecha
   hasta unos 3 GB de memoria.
@@ -873,7 +883,7 @@ mano, también con la siguiente (edge):
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
 | 32 bits: sesión live | BIOS | XFCE | Sí | Lo mismo que la de 64 bits, en una máquina con procesador de 32 bits y 2 GB de memoria |
 | 32 bits: poca memoria | BIOS | (no se carga) | No | Con 1 GB la live no carga el escritorio, muestra el aviso del instalador en modo texto y la consola entra sola como `lazaro` |
-| 32 bits: instalación | BIOS | XFCE, LXQt, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. LXQt además se instala y arranca con 1 GB de memoria |
+| 32 bits: instalación | BIOS | XFCE, LXQt, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. Sin red, la configuración final también termina durante la instalación. LXQt además se instala y arranca con 1 GB de memoria |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
 revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que

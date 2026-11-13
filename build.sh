@@ -284,6 +284,37 @@ if [ "$LAZARO_EDICION" = completa ]; then
 	fi
 fi
 
+# --- 32 bits: también se instala entera sin internet --------------------
+# Va lo que instala desktop-postinstall.sh (audio, memoria comprimida,
+# applet de red, impresoras...) con XFCE o LXQt, para que la configuración
+# final corra durante la instalación aunque no haya red. No se excluye
+# nada que el script necesite en 32 bits: quedan fuera lo de Plasma, MATE
+# y Sway, Flatpak (no hay aplicaciones de 32 bits) y Vulkan y la
+# aceleración de video de Intel moderna (equipos que no son de 32 bits).
+# Si el script pide alguno teniendo internet, lo descarga.
+if [ "$ALPINE_ARCH" = x86 ]; then
+	msg "32 bits: lista de paquetes para instalar sin internet"
+	perfil_paquetes=$(LAZARO_DIR="$LAZARO_DIR" ALPINE_ARCH="$ALPINE_ARCH" sh -c '. "$LAZARO_DIR/perfil/mkimg.lazaro.sh"
+		echo $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS $LAZARO_ESCRITORIOS')
+	# shellcheck disable=SC2086
+	# LAZARO_NUNCA: el paquete "linux-firmware" arrastra el firmware de
+	# todo; como en la Ligera, quedan fuera qcom (equipos ARM), mellanox
+	# (centros de datos) y dpaa2 (ARM de NXP): 270 MB que ningún PC usa.
+	# El propio "linux-firmware" tampoco va en la lista: mkimage baja cada
+	# paquete con sus dependencias y volvería a traerlos todos.
+	LAZARO_PESOS=40 \
+	LAZARO_NUNCA="linux-firmware linux-firmware-qcom linux-firmware-mellanox linux-firmware-dpaa2" \
+	LAZARO_EXCLUIR="discover okular plasma-desktop-lang kdeplasma-addons-lang
+		plasma-nm plasma-pa xdg-desktop-portal-kde flatpak intel-media-driver
+		waybar fuzzel greetd-gtkgreet font-awesome mate-media mate-polkit
+		mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-nouveau vulkan-loader
+		vlc vlc-qt" \
+		sh "$LAZARO_DIR/perfil/paquetes-completa.sh" "$PAQUETES_COMPLETA" "$SCRIPT" \
+		"$INDICES/main.tar.gz" "$INDICES/community.tar.gz" \
+		"$REPO_PROPIO/paquetes/$ALPINE_ARCH/APKINDEX.tar.gz" -- $perfil_paquetes
+	chown constructor:abuild "$PAQUETES_COMPLETA"
+fi
+
 # --- Datos de hardware para lazaro-controladores -------------------------
 # Se generan al compilar y entran en la sesión live (genapkovl los copia).
 DATOS_HW="$CONSTRUCTOR_HOME/datos-hardware"

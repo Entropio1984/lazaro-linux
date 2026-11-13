@@ -390,7 +390,17 @@ prueba_instalar() {
 	completa=no
 	case "$(basename "$ISO")" in *-completa-*) completa=si ;; esac
 	configurado=no
-	{ [ "$red" = con-red ] || [ "$completa" = si ]; } && configurado=si
+	# todo_en_iso: la configuración final no necesita internet (edición
+	# Completa y la de 32 bits).
+	todo_en_iso="$completa"
+	[ "$BITS32" = no ] || todo_en_iso=si
+	{ [ "$red" = con-red ] || [ "$todo_en_iso" = si ]; } && configurado=si
+	# con_tienda: el escritorio queda con tienda de aplicaciones (LXQt de
+	# 32 bits sin red no: Discover no va en esa ISO; con red el script lo
+	# descarga).
+	con_tienda=si
+	[ "$de" != ninguno ] || con_tienda=no
+	{ [ "$BITS32" = si ] && [ "$de" = lxqt ] && [ "$red" != con-red ]; } && con_tienda=no
 
 	extraer_kernel
 
@@ -490,13 +500,15 @@ prueba_instalar() {
 		sed -n '/LAZARO-FLATPAK-NO/,$p' "$serie" | head -n 60 >&2 || true
 		return 1
 	fi
-	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
+	if [ "$todo_en_iso" = si ] && [ "$de" != ninguno ]; then
 		if ! grep -q '^\[lazaro\] desktop-postinstall.sh terminó bien' "$serie"; then
 			terminar "$pid"
-			echo "FALLO: en la edición Completa la configuración final debe terminar durante la instalación (también sin red)." >&2
+			echo "FALLO: en la edición Completa y en la de 32 bits la configuración final debe terminar durante la instalación (también sin red)." >&2
 			grep -E 'desktop-postinstall|ERROR|Aviso' "$serie" | tail -n 30 >&2 || true
 			return 1
 		fi
+	fi
+	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
 		if ! grep -q 'LAZARO-FLATPAK-USB-OK org.onlyoffice.desktopeditors' "$serie" \
 			|| ! grep -q 'LAZARO-FLATPAK-USB-OK com.brave.Browser' "$serie" \
 			|| ! grep -q LAZARO-FLATHUB-ORIGEN-OK "$serie"; then
@@ -607,11 +619,13 @@ prueba_instalar() {
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
 		elif grep -Eq 'LAZARO-TIENDA-NO.*(servicio|tarea)' "$serie2" ||
-			{ [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; } ||
-			{ [ "$configurado" = si ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA "$serie2"; }; then
+			{ [ "$red" = con-red ] && [ "$con_tienda" = si ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; } ||
+			{ [ "$configurado" = si ] && [ "$con_tienda" = si ] && ! grep -q LAZARO-TIENDA "$serie2"; }; then
 			# Sin internet la lista de programas no se puede descargar: ahí
 			# solo se exigen los servicios y la tarea que la descargará
 			# (si la configuración final ya corrió, como en la Completa).
+			# LXQt de 32 bits no tiene tienda: el script le pone Discover,
+			# que trae cientos de paquetes de KDE y no va en esa ISO.
 			echo "FALLO: la tienda de aplicaciones no quedó lista (servicio de Alpine o lista de programas para instalar)." >&2
 			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
 			ok=1

@@ -276,6 +276,15 @@ revisar_consola() {
 	) &
 }
 
+# La marca tiene al menos 20 segundos. Mientras la sesión vieja se cierra,
+# xfce4-session puede aparecer un momento con otro número de proceso: eso
+# no es todavía el escritorio nuevo, y quitar la marca ahí dejaba el
+# reinicio sin protección (el vigilante lo daba por caído al minuto).
+marca_asentada() {
+	t=$(stat -c %Y "$MARCA_REINICIO" 2>/dev/null) || return 0
+	[ $(($(date +%s) - t)) -ge 20 ]
+}
+
 avisar_texto() {
 	[ -f /run/lazaro/issue ] || { mkdir -p /run/lazaro; cp /etc/issue /run/lazaro/issue 2>/dev/null || :; }
 	printf '%s\n' "$AVISO_TEXTO" > /run/lazaro/aviso-texto
@@ -343,7 +352,8 @@ vigilar_sesion() {
 			actual=$(pidof xfce4-session 2>/dev/null || echo ninguna)
 			if [ -z "$sesion_marca" ]; then
 				sesion_marca="$actual"
-			elif [ "$actual" != ninguna ] && [ "$actual" != "$sesion_marca" ]; then
+			elif [ "$actual" != ninguna ] && [ "$actual" != "$sesion_marca" ] && marca_asentada; then
+				serie "LAZARO-MARCA-REINICIO-QUITADA antes=$sesion_marca ahora=$actual"
 				rm -f "$MARCA_REINICIO"
 				sesion_marca=""
 			fi

@@ -861,13 +861,14 @@ paso_ajustes() {
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
 	red_ajustes=no
 	esperar_red && red_ajustes=si
-	# Edición Completa sin internet: el script corre igual, solo con el
+	# Edición Completa y la de 32 bits, sin internet: el script corre igual, solo con el
 	# repositorio de la ISO (sin repositorios de internet, el script no
 	# espera la red y todo lo que instala viene en la ISO).
 	sin_red_completa=no
-	if [ "$red_ajustes" = no ] && [ "$LAZARO_EDICION" = completa ] && [ -n "$(repo_iso)" ]; then
+	if [ "$red_ajustes" = no ] && [ -n "$(repo_iso)" ] &&
+		{ [ "$LAZARO_EDICION" = completa ] || [ "$BITS32" = si ]; }; then
 		sin_red_completa=si
-		log "Sin internet: la configuración final se hace con lo que trae el USB (edición Completa)."
+		log "Sin internet: la configuración final se hace con lo que trae el USB."
 	fi
 	if [ "$red_ajustes" = si ] || [ "$sin_red_completa" = si ]; then
 		# Mientras corre el script, el repositorio de la ISO sigue a mano
@@ -901,6 +902,19 @@ paso_ajustes() {
 		programar_primer_arranque "$raiz"
 	fi
 
+	# 32 bits con SDDM (LXQt): las gráficas de esos equipos (Intel 945 y
+	# parecidas) no logran dibujar las letras de la pantalla de inicio con
+	# OpenGL: no se ve lo que se escribe ni los menús de arriba. Se dibuja
+	# sin la tarjeta de video, que para esa pantalla alcanza de sobra.
+	if [ "$BITS32" = si ] && [ -e "$raiz/usr/bin/sddm" ]; then
+		mkdir -p "$raiz/etc/sddm.conf.d"
+		cat > "$raiz/etc/sddm.conf.d/60-lazaro-32-bits.conf" <<-EOF
+			# Lázaro Linux de 32 bits: la pantalla de inicio se dibuja sin OpenGL.
+			[General]
+			GreeterEnvironment=QT_QUICK_BACKEND=software
+		EOF
+		log "LAZARO-SDDM-SOFTWARE"
+	fi
 	paso_afinador "$raiz"
 	paso_bienvenida "$raiz"
 

@@ -229,9 +229,10 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 
 # 32 bits: sin Flatpak (Flathub no publica aplicaciones de 32 bits). Van
 # los dos navegadores: NetSurf se instala siempre y Firefox es una
-# casilla de "Software adicional".
+# casilla de "Software adicional". Sin VLC: mpv ya reproduce video y
+# música, y así la ISO entra en 2 GB.
 [ "$LAZARO_ARCH" != x86 ] ||
-	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /') netsurf firefox"
+	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /; s/ vlc vlc-qt / /') netsurf firefox"
 
 # Edición Completa (LAZARO_EDICION=completa): además, GNOME y Plasma tal
 # como los instala setup-desktop (alpine-conf 3.22.0) y lo que les agrega
@@ -292,6 +293,9 @@ profile_lazaro() {
 		desc="Tu hardware aún tiene pulso.
 		Para equipos de 32 bits: XFCE o LXQt."
 		lazaro_edicion=" 32 bits"
+		# Lo que instala desktop-postinstall.sh, para que la configuración
+		# final no necesite internet (lista de build.sh).
+		apks="$apks $(cat "${LAZARO_PAQUETES_COMPLETA:?falta la lista de paquetes de la ISO de 32 bits}")"
 	fi
 	grub_mod="$grub_mod serial terminal"
 	apkovl="genapkovl-lazaro.sh"

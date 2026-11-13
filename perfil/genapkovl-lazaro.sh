@@ -90,11 +90,14 @@ textos_32() {
 	mv "$t3_cal/escritorio.nuevo" "$t3_cal/packagechooser-escritorio.conf"
 	[ "$(grep -c '^    - id:' "$t3_cal/packagechooser-escritorio.conf")" = 3 ] ||
 		{ echo "genapkovl-lazaro: la lista de escritorios de 32 bits no quedó con 3 opciones" >&2; exit 1; }
-	# Software adicional: fuera el grupo de Flatpak (es el último) y entra
+	# Software adicional: fuera el grupo de Flatpak (es el último) y VLC
+	# (mpv ya reproduce video y música, y así entra en 2 GB); entra
 	# Firefox, marcado, después de LibreOffice.
 	awk '
 		/^    - name: "Aplicaciones Flatpak/ { fuera = 1 }
 		fuera { next }
+		/^          - name: "VLC"/ { saltar = 4 }
+		saltar > 0 { saltar--; next }
 		{ print }
 		END {
 			print "          - name: \"Firefox\""
@@ -105,6 +108,8 @@ textos_32() {
 	' "$t3_cal/netinstall.conf" > "$t3_cal/netinstall.nuevo"
 	mv "$t3_cal/netinstall.nuevo" "$t3_cal/netinstall.conf"
 	! grep -qi 'flatpak' "$t3_cal/netinstall.conf" || sed -i '/^#/!{/[Ff]latpak/d}' "$t3_cal/netinstall.conf"
+	! grep -q 'packages: \[ vlc \]' "$t3_cal/netinstall.conf" ||
+		{ echo "genapkovl-lazaro: quedó la casilla de VLC en netinstall.conf" >&2; exit 1; }
 	grep -q 'packages: \[ firefox \]' "$t3_cal/netinstall.conf" ||
 		{ echo "genapkovl-lazaro: no quedó la casilla de Firefox en netinstall.conf" >&2; exit 1; }
 	sed -i \

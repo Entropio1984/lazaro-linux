@@ -154,14 +154,13 @@ if [ "$escritorio" = ninguno ]; then
 		btop "$(_ 'Btop: monitor de recursos')" off) || cancelar
 elif [ "$bits32" = si ]; then
 	# Sin Flatpak (Flathub no tiene aplicaciones de 32 bits). NetSurf va
-	# siempre; Firefox es opcional.
+	# siempre; Firefox es opcional. Sin VLC (mpv reproduce video y música).
 	elegidos=$(pedir --title "$(_ 'Software adicional')" --separate-output --checklist \
 "$(_ 'Marca con la barra espaciadora lo que quieras instalar.')" \
-		16 76 6 \
+		15 76 5 \
 		firefox "Firefox" on \
 		fastfetch "$(_ 'Fastfetch: resumen del equipo en la terminal')" off \
 		btop "$(_ 'Btop: monitor de recursos')" off \
-		vlc "$(_ 'VLC: reproductor de video y música')" off \
 		youtube "$(_ 'YouTube ligero: videos sin navegador (480p)')" on \
 		libreoffice "$(_ 'LibreOffice: oficina (documentos, hojas de cálculo)')" off) || cancelar
 else
