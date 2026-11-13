@@ -73,6 +73,12 @@ start() {
 	antes=$(df -m / | awk 'NR == 2 { print $3 }')
 	# shellcheck disable=SC2046
 	if apk add --no-network --no-progress --quiet $(cat "$LISTA") > /var/log/lazaro-escritorio.log 2>&1; then
+		# Los paquetes nuevos traen reglas de udev (teclados, ratones,
+		# pantallas táctiles, agentes de máquinas virtuales) que no
+		# estaban cuando udev revisó el hardware: se revisa otra vez.
+		udevadm control --reload 2>/dev/null || true
+		udevadm trigger --action=add 2>/dev/null || true
+		udevadm settle --timeout=20 2>/dev/null || true
 		serie "LAZARO-ESCRITORIO-OK memoria=${mb}MB base=${antes}MB con-escritorio=$(df -m / | awk 'NR == 2 { print $3 }')MB"
 		eend 0
 	else
