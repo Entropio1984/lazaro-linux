@@ -925,10 +925,6 @@ msgid "Btop: monitor de recursos"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "VLC: reproductor de video y música"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
 msgid "YouTube ligero: videos sin navegador (480p)"
 msgstr ""
 
@@ -946,6 +942,10 @@ msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre."
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "VLC: reproductor de video y música"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
