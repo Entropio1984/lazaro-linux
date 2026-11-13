@@ -307,7 +307,8 @@ if [ "$ALPINE_ARCH" = x86 ]; then
 	LAZARO_EXCLUIR="discover okular plasma-desktop-lang kdeplasma-addons-lang
 		plasma-nm plasma-pa xdg-desktop-portal-kde flatpak intel-media-driver
 		waybar fuzzel greetd-gtkgreet font-awesome mate-media mate-polkit
-		mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-nouveau vulkan-loader" \
+		mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-nouveau vulkan-loader
+		vlc vlc-qt" \
 		sh "$LAZARO_DIR/perfil/paquetes-completa.sh" "$PAQUETES_COMPLETA" "$SCRIPT" \
 		"$INDICES/main.tar.gz" "$INDICES/community.tar.gz" \
 		"$REPO_PROPIO/paquetes/$ALPINE_ARCH/APKINDEX.tar.gz" -- $perfil_paquetes

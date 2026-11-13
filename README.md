@@ -118,7 +118,8 @@ la Ligera o la Completa: tienen más opciones.
   de prueba abre normalmente. En el menú de arranque también está la
   opción "instalar en modo texto, poca memoria" para elegirlo a mano.
 - **Lo que no tiene:** Flatpak ni la tienda Flathub (OnlyOffice, Chrome
-  y Brave no existen para 32 bits), el kernel Lázaro, las
+  y Brave no existen para 32 bits), VLC (mpv, el reproductor de YouTube
+  ligero, ya abre videos y música), el kernel Lázaro, las
   actualizaciones automáticas de las herramientas de Lázaro (el sistema
   y sus programas sí se actualizan normalmente) y el controlador
   privativo de wifi Broadcom.

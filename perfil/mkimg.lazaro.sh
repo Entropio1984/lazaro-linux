@@ -229,9 +229,10 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 
 # 32 bits: sin Flatpak (Flathub no publica aplicaciones de 32 bits). Van
 # los dos navegadores: NetSurf se instala siempre y Firefox es una
-# casilla de "Software adicional".
+# casilla de "Software adicional". Sin VLC: mpv ya reproduce video y
+# música, y así la ISO entra en 2 GB.
 [ "$LAZARO_ARCH" != x86 ] ||
-	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /') netsurf firefox"
+	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /; s/ vlc vlc-qt / /') netsurf firefox"
 
 # Edición Completa (LAZARO_EDICION=completa): además, GNOME y Plasma tal
 # como los instala setup-desktop (alpine-conf 3.22.0) y lo que les agrega
