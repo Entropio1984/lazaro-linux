@@ -259,6 +259,16 @@ revisar_consola() {
 		done
 		serie "LAZARO-CONSOLA-NO"
 		grep '^tty' /etc/inittab | serie
+		ls -l /bin/login /sbin/getty 2>&1 | serie
+		for p in /proc/[0-9]*; do
+			c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)
+			case "$c" in
+				*getty* | *login* | *lazaro-consola* | *ash* | init*)
+					echo "${p#/proc/} $(stat -c %U "$p" 2>/dev/null) tty=$(sed 's/.*) //' "$p/stat" 2>/dev/null | awk '{ print $5 }') $c"
+					;;
+			esac
+		done | serie
+		tail -n 15 /var/log/messages 2>/dev/null | serie
 	) &
 }
 
