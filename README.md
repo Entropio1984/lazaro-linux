@@ -121,8 +121,10 @@ la Ligera o la Completa: tienen más opciones.
   y Brave no existen para 32 bits), VLC (mpv, el reproductor de YouTube
   ligero, ya abre videos y música), el kernel Lázaro, las
   actualizaciones automáticas de las herramientas de Lázaro (el sistema
-  y sus programas sí se actualizan normalmente) y el controlador
-  privativo de wifi Broadcom.
+  y sus programas sí se actualizan normalmente), el controlador
+  privativo de wifi Broadcom y, en LXQt instalado sin internet, la
+  tienda de aplicaciones (Discover trae cientos de paquetes de KDE y no
+  cabe en la ISO; XFCE sí trae GNOME Software).
 - **Requisitos:** procesador con SSE2 (Pentium 4, Pentium M, Atom o
   más nuevo) y arranque BIOS, que es el que traen estos equipos. Aprovecha
   hasta unos 3 GB de memoria.

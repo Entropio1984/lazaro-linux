@@ -395,6 +395,11 @@ prueba_instalar() {
 	todo_en_iso="$completa"
 	[ "$BITS32" = no ] || todo_en_iso=si
 	{ [ "$red" = con-red ] || [ "$todo_en_iso" = si ]; } && configurado=si
+	# con_tienda: el escritorio queda con tienda de aplicaciones (LXQt de
+	# 32 bits no: Discover no va en esa ISO).
+	con_tienda=si
+	[ "$de" != ninguno ] || con_tienda=no
+	{ [ "$BITS32" = si ] && [ "$de" = lxqt ]; } && con_tienda=no
 
 	extraer_kernel
 
@@ -613,11 +618,13 @@ prueba_instalar() {
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
 		elif grep -Eq 'LAZARO-TIENDA-NO.*(servicio|tarea)' "$serie2" ||
-			{ [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; } ||
-			{ [ "$configurado" = si ] && [ "$de" != ninguno ] && ! grep -q LAZARO-TIENDA "$serie2"; }; then
+			{ [ "$red" = con-red ] && [ "$con_tienda" = si ] && ! grep -q LAZARO-TIENDA-OK "$serie2"; } ||
+			{ [ "$configurado" = si ] && [ "$con_tienda" = si ] && ! grep -q LAZARO-TIENDA "$serie2"; }; then
 			# Sin internet la lista de programas no se puede descargar: ahí
 			# solo se exigen los servicios y la tarea que la descargará
 			# (si la configuración final ya corrió, como en la Completa).
+			# LXQt de 32 bits no tiene tienda: el script le pone Discover,
+			# que trae cientos de paquetes de KDE y no va en esa ISO.
 			echo "FALLO: la tienda de aplicaciones no quedó lista (servicio de Alpine o lista de programas para instalar)." >&2
 			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
 			ok=1
