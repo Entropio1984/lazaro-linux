@@ -300,8 +300,10 @@ if [ "$ALPINE_ARCH" = x86 ]; then
 	# LAZARO_NUNCA: el paquete "linux-firmware" arrastra el firmware de
 	# todo; como en la Ligera, quedan fuera qcom (equipos ARM), mellanox
 	# (centros de datos) y dpaa2 (ARM de NXP): 270 MB que ningún PC usa.
+	# El propio "linux-firmware" tampoco va en la lista: mkimage baja cada
+	# paquete con sus dependencias y volvería a traerlos todos.
 	LAZARO_PESOS=40 \
-	LAZARO_NUNCA="linux-firmware-qcom linux-firmware-mellanox linux-firmware-dpaa2" \
+	LAZARO_NUNCA="linux-firmware linux-firmware-qcom linux-firmware-mellanox linux-firmware-dpaa2" \
 	LAZARO_EXCLUIR="discover okular plasma-desktop-lang kdeplasma-addons-lang
 		plasma-nm plasma-pa xdg-desktop-portal-kde flatpak intel-media-driver
 		waybar fuzzel greetd-gtkgreet font-awesome mate-media mate-polkit
