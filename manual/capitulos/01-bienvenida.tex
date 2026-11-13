@@ -76,8 +76,9 @@ mundo.
 \begin{tabularx}{\textwidth}{>{\bfseries}lX}
 \toprule
 Procesador & De 64 bits (x86\_64). Casi todos los equipos desde 2008 lo son.
-             Los muy antiguos de 32 bits (por ejemplo, muchos netbooks con
-             Intel Atom N270 o N280) no sirven. \\
+             Para los más antiguos, de 32 bits (por ejemplo, muchos
+             netbooks con Intel Atom N270 o N280), está la ISO de 32 bits
+             (sección~\ref{sec:32-bits}). \\
 Memoria (RAM) & 2 GB o más es lo cómodo. Con 1 GB puede funcionar con el
              escritorio LXQt; con menos, el instalador no deja seguir.
              La sesión de prueba usa memoria comprimida (\termino{zram}),
@@ -124,6 +125,39 @@ Controladores (firmware) & Los de red & Todos \\
 \textbf{Si dudas, elige la Ligera}: se descarga más rápido y alcanza para la
 mayoría. Elige la Completa si el equipo no va a tener internet o si tu
 conexión es lenta.
+
+\section{Lázaro de 32 bits}\label{sec:32-bits}
+
+Hay una tercera ISO, aparte, para equipos \textbf{anteriores a 2008} cuyo
+procesador no puede con la de 64 bits (portátiles con Pentium~M o Core
+Duo, netbooks con Atom N270 o N280). Si tu equipo es de 64 bits, usa la
+Ligera o la Completa: tienen más opciones. La de 32 bits es el archivo
+que termina en \texttt{x86.iso} y se diferencia en esto:
+
+\begin{description}
+  \item[Escritorios] solo los dos más livianos, XFCE y LXQt (o sin
+    escritorio). Los dos se instalan sin internet.
+  \item[Navegador] siempre se instala NetSurf, muy liviano, para páginas
+    sencillas. Firefox es una casilla de \emph{Software adicional} (viene
+    marcada): hace falta para el banco, el correo y los sitios modernos,
+    pero es el programa más pesado. Con 1 GB de memoria úsalo con pocas
+    pestañas, y para los videos usa YouTube ligero.
+  \item[Con 1 GB de memoria o menos] la sesión de prueba no abre el
+    escritorio, porque no cabría en la memoria. Aparece un aviso para
+    instalar desde esa misma pantalla, con el teclado: escribe
+    \comando{lazaro}, pulsa Enter, y luego
+    \comando{doas lazaro-instalar-texto}. Hace las mismas preguntas que el
+    instalador gráfico y el sistema instalado queda igual, con su
+    escritorio. Con 1,5 GB o más, la sesión de prueba abre normalmente.
+  \item[Lo que no tiene] la tienda Flathub (OnlyOffice, Google Chrome y
+    Brave no existen para 32 bits), el kernel Lázaro, las actualizaciones
+    automáticas de las herramientas de Lázaro (el sistema y sus programas
+    sí se actualizan como siempre) y el controlador privativo del wifi
+    Broadcom.
+  \item[Requisitos] un procesador Pentium~4, Pentium~M, Atom o más nuevo,
+    y arranque BIOS, que es el que traen estos equipos. Aprovecha hasta
+    unos 3 GB de memoria.
+\end{description}
 
 \section{Antes de seguir}
 

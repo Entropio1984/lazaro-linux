@@ -52,8 +52,9 @@ imprimir.
 ## ¿Funciona en mi equipo?
 
 - **Procesador de 64 bits** (x86_64). Casi todos los equipos desde 2008
-  lo son. Los muy antiguos de solo 32 bits (por ejemplo, muchos
-  netbooks con Intel Atom N270 o N280) no sirven.
+  lo son. Para los más antiguos, de solo 32 bits (por ejemplo, muchos
+  netbooks con Intel Atom N270 o N280, o portátiles con Pentium M o
+  Core Duo), está la [ISO de 32 bits](#lázaro-de-32-bits).
 - **Memoria (RAM):** 2 GB o más es lo cómodo. Con menos puede funcionar
   con LXQt, pero la sesión de prueba podría no llegar al escritorio; en
   ese caso usa el instalador en modo texto (ver
@@ -82,6 +83,40 @@ varias épocas.
 **Si dudas, elige la Ligera**: descarga más rápido y alcanza para la
 mayoría. Elige la Completa si el equipo no va a tener internet o si la
 conexión es lenta. No hace falta crear ninguna cuenta para descargar.
+
+### Lázaro de 32 bits
+
+Una tercera ISO, aparte, para equipos **anteriores a 2008** cuyo
+procesador no puede con la de 64 bits. Si tu equipo es de 64 bits, usa
+la Ligera o la Completa: tienen más opciones.
+
+- **Descargar:** el archivo que termina en `x86.iso`, en
+  [GitHub](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo)
+  o en [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/32-bits/).
+  Pesa menos de 2 GB y cabe en un USB de 4 GB.
+- **Escritorios:** solo los dos más livianos, **XFCE** y **LXQt** (o sin
+  escritorio). Los dos se instalan sin internet.
+- **Navegador:** siempre se instala **NetSurf**, muy liviano (usa unos
+  30 MB de memoria), para páginas sencillas. **Firefox** es una casilla
+  de "Software adicional" (viene marcada): hace falta para el banco, el
+  correo y los sitios modernos, pero es el programa más pesado; con 1 GB
+  de memoria úsalo con pocas pestañas. Para YouTube, mejor
+  [YouTube ligero](#youtube-ligero).
+- **Equipos con 1 GB de memoria o menos:** la sesión de prueba no abre
+  el escritorio, porque no cabría en la memoria. En su lugar aparece un
+  aviso para instalar desde esa misma pantalla, con el teclado
+  (`doas lazaro-instalar-texto`): hace las mismas preguntas y el sistema
+  instalado queda igual, con su escritorio. Con 1,5 GB o más, la sesión
+  de prueba abre normalmente. En el menú de arranque también está la
+  opción "instalar en modo texto, poca memoria" para elegirlo a mano.
+- **Lo que no tiene:** Flatpak ni la tienda Flathub (OnlyOffice, Chrome
+  y Brave no existen para 32 bits), el kernel Lázaro, las
+  actualizaciones automáticas de las herramientas de Lázaro (el sistema
+  y sus programas sí se actualizan normalmente) y el controlador
+  privativo de wifi Broadcom.
+- **Requisitos:** procesador con SSE2 (Pentium 4, Pentium M, Atom o
+  más nuevo) y arranque BIOS, que es el que traen estos equipos. Aprovecha
+  hasta unos 3 GB de memoria.
 
 ## Manual de Lázaro
 
@@ -776,6 +811,13 @@ ALPINE_BRANCH=edge ./build.sh
 Para cambiarla de forma permanente, edita `ALPINE_BRANCH` en
 `config.env`.
 
+Para la ISO de 32 bits (se compila en un contenedor de Alpine i386; en un
+equipo de 64 bits corre directamente, sin emulación):
+
+```sh
+ALPINE_ARCH=x86 ./build.sh
+```
+
 Para probar cambios de `desktop-postinstall.sh` antes de subirlos a su
 repositorio, usa una copia local:
 
@@ -791,6 +833,17 @@ el disco que se elija.
 ```sh
 ./pruebas/qemu.sh live salida/lazaro-linux-0.2-3.24-x86_64.iso bios
 ./pruebas/qemu.sh instalar salida/lazaro-linux-0.2-3.24-x86_64.iso uefi xfce con-red
+```
+
+La ISO de 32 bits (`*-x86.iso`) se prueba sola en una máquina con
+procesador de 32 bits y 2 GB de memoria, en modo BIOS. `poca` comprueba
+que con 1 GB aparece el aviso del instalador en modo texto, y
+`MEM_32=1024` instala con 1 GB:
+
+```sh
+./pruebas/qemu.sh live salida/lazaro-linux-0.2-3.24-x86.iso bios
+./pruebas/qemu.sh poca salida/lazaro-linux-0.2-3.24-x86.iso bios
+MEM_32=1024 ./pruebas/qemu.sh instalar salida/lazaro-linux-0.2-3.24-x86.iso bios lxqt sin-red
 ```
 
 Las capturas de pantalla y los registros quedan en
@@ -816,6 +869,9 @@ mano, también con la siguiente (edge):
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
 | Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
+| 32 bits: sesión live | BIOS | XFCE | Sí | Lo mismo que la de 64 bits, en una máquina con procesador de 32 bits y 2 GB de memoria |
+| 32 bits: poca memoria | BIOS | (no se carga) | No | Con 1 GB la live no carga el escritorio y muestra el aviso del instalador en modo texto |
+| 32 bits: instalación | BIOS | XFCE, LXQt, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. LXQt además se instala y arranca con 1 GB de memoria |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
 revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que
