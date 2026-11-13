@@ -21,7 +21,10 @@ MINIMO_MB=1400
 depend() {
 	need localmount
 	after modloop lazaro-zram udev-settle
-	before lazaro-graficas lazaro-live lightdm
+	# Antes de "modules" y "sysctl": los paquetes del escritorio traen
+	# módulos para cargar al arranque (uinput de spice-vdagent, por
+	# ejemplo) y ajustes en modules-load.d y sysctl.d.
+	before lazaro-graficas lazaro-live lightdm modules sysctl
 }
 
 serie() {
