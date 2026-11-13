@@ -19,7 +19,8 @@ LISTA=/etc/lazaro/world-escritorio
 MINIMO_MB=1400
 
 depend() {
-	need localmount
+	# Sin "need localmount": localmount va después de modules, y la raíz
+	# (en memoria) ya está montada desde el initramfs.
 	after modloop lazaro-zram udev-settle
 	# Antes de "modules" y "sysctl": los paquetes del escritorio traen
 	# módulos para cargar al arranque (uinput de spice-vdagent, por
