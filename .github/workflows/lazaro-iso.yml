@@ -321,6 +321,123 @@ jobs:
             pruebas/resultados/*.ppm
           retention-days: 14
 
+  # ISO de 32 bits (Alpine x86): para equipos anteriores a 2008. Solo XFCE
+  # y LXQt, sin Flatpak ni kernel Lázaro, con NetSurf como navegador
+  # liviano. Va en trabajos aparte: si falla, las ediciones de 64 bits se
+  # prueban y se publican igual. Solo con la versión estable de Alpine.
+  iso-32:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    name: ISO de 32 bits (estable)
+    needs: manual
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: manual
+          path: manual
+
+      - name: Versión de Alpine
+        id: version
+        run: |
+          . config.env
+          echo "branch=$ALPINE_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Caché de Calamares compilado (32 bits)
+        uses: actions/cache@v5
+        with:
+          path: cache
+          key: calamares-x86-${{ steps.version.outputs.branch }}-${{ hashFiles('paquetes/**', 'config.env', 'build.sh') }}
+
+      - name: Compilar la ISO de 32 bits
+        env:
+          ALPINE_BRANCH: ${{ steps.version.outputs.branch }}
+          ALPINE_ARCH: x86
+        run: ./build.sh
+
+      - name: Tamaño de la ISO (límite de GitHub, 2 GB)
+        run: |
+          for f in salida/*.iso; do
+            b=$(stat -c %s "$f")
+            echo "$f: $((b / 1048576)) MB"
+            if [ "$b" -ge 2147483648 ]; then
+              echo "::error::La ISO pesa 2 GB o más y GitHub no la aceptaría en la descarga."
+              exit 1
+            fi
+          done
+
+      - name: Permisos de la caché
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" cache salida || true
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: iso-32
+          path: salida/*.iso*
+          retention-days: 7
+          compression-level: 0
+
+  # La máquina de prueba tiene un procesador de 32 bits (Core Duo) y 2 GB
+  # de RAM (pruebas/qemu.sh lo elige por el nombre de la ISO). Solo BIOS:
+  # los equipos de 32 bits con UEFI casi no existen.
+  pruebas-32:
+    name: Prueba 32 bits ${{ matrix.prueba }}
+    needs: iso-32
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        prueba:
+          - live bios
+          - texto bios
+          - instalar bios xfce sin-red
+          - instalar bios lxqt sin-red
+          - instalar bios xfce con-red
+          - instalar bios lxqt con-red
+          - instalar bios ninguno sin-red
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Activar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instalar QEMU
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils xorriso socat imagemagick
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-32
+          path: iso
+
+      - name: Probar
+        run: |
+          set -- ${{ matrix.prueba }}
+          orden="$1"; shift
+          ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
+
+      - name: Nombre de los resultados
+        if: always()
+        id: nombre
+        run: echo "valor=$(echo '32-bits-${{ matrix.prueba }}' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: resultados-${{ steps.nombre.outputs.valor }}
+          path: |
+            pruebas/resultados/*.log
+            pruebas/resultados/*.png
+            pruebas/resultados/*.ppm
+          retention-days: 14
+
   # Decisiones de la revisión de tarjetas gráficas de la live y de
   # lazaro-controladores con un /sys simulado: las máquinas virtuales no
   # tienen NVIDIA, impresoras ni wifi viejo.
@@ -440,7 +557,7 @@ jobs:
   todo-en-verde:
     name: Todo en verde
     if: always()
-    needs: [manual, iso, pruebas, graficas, iso-completa, pruebas-completa]
+    needs: [manual, iso, pruebas, graficas, iso-completa, pruebas-completa, iso-32, pruebas-32]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -496,6 +613,8 @@ jobs:
           etiqueta=en-desarrollo
           notas="ISO de prueba compilada desde main ($GITHUB_SHA) y verificada en QEMU (BIOS y UEFI). No es una versión final: pruébala solo en una máquina virtual o en un equipo de sobra.
 
+          El archivo que termina en x86.iso es la de 32 bits, para equipos anteriores a 2008 (solo XFCE y LXQt).
+
           Esta es la edición Ligera. La edición Completa (unos 4,5 GB, se instala sin internet con cualquiera de los 7 escritorios) está en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Completa/"
           if gh release view "$etiqueta" >/dev/null 2>&1; then
             gh release edit "$etiqueta" --prerelease --notes "$notas"
@@ -511,7 +630,10 @@ jobs:
           # en-desarrollo solo guarda la última.
           # Si la lista o un borrado fallan, el paso falla (bash -e).
           archivos="$(gh release view "$etiqueta" --json assets --jq '.assets[].name')"
+          # La ISO de 32 bits la sube y la limpia su propio trabajo
+          # (publicar-32): aquí no se toca.
           for archivo in $archivos; do
+            case "$archivo" in *-x86.iso*) continue ;; esac
             if [ ! -e "iso/$archivo" ]; then
               gh release delete-asset "$etiqueta" "$archivo" --yes
             fi
@@ -553,13 +675,62 @@ jobs:
           SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
         run: sh .github/subir-sourceforge.sh Completa iso
 
+  # ISO de 32 bits: a la misma Release "en-desarrollo" y a SourceForge,
+  # carpeta 32-bits. Trabajo aparte: no depende de las de 64 bits ni las
+  # demora.
+  publicar-32:
+    name: Publicar ISO de 32 bits
+    needs: [pruebas-32, graficas]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: lazaro-publicar-32
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-32
+          path: iso
+
+      - name: Agregar a la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          etiqueta=en-desarrollo
+          # La Release la crea "Publicar ISO en desarrollo"; si todavía
+          # no existe (primera vez), se crea aquí.
+          gh release view "$etiqueta" >/dev/null 2>&1 ||
+            gh release create "$etiqueta" --prerelease --target "$GITHUB_SHA" \
+              --title "Lázaro Linux (en desarrollo)" --notes "ISO de prueba compilada desde main."
+          gh release upload "$etiqueta" iso/* --clobber
+          # Solo queda la última ISO de 32 bits.
+          archivos="$(gh release view "$etiqueta" --json assets --jq '.assets[].name')"
+          for archivo in $archivos; do
+            case "$archivo" in
+              *-x86.iso*) [ -e "iso/$archivo" ] || gh release delete-asset "$etiqueta" "$archivo" --yes ;;
+            esac
+          done
+
+      - name: Subir a SourceForge
+        continue-on-error: true
+        env:
+          SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
+        run: sh .github/subir-sourceforge.sh 32-bits iso
+
   # Versión numerada (etiqueta vX.Y): se publica solo si las DOS ediciones
   # pasaron sus pruebas, en su propia Release (fija: nunca se reemplaza) y
   # en SourceForge, carpeta Versiones/X.Y. Grupo propio: una publicación
   # de main nunca desplaza a la de una versión.
   publicar-version:
     name: Publicar la versión
-    needs: [pruebas, graficas, pruebas-completa]
+    needs: [pruebas, graficas, pruebas-completa, pruebas-32]
     if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
@@ -606,6 +777,12 @@ jobs:
           name: iso-completa
           path: iso-completa
 
+      # La de 32 bits va con la Ligera: a la Release y a SourceForge.
+      - uses: actions/download-artifact@v7
+        with:
+          name: iso-32
+          path: iso
+
       - uses: actions/download-artifact@v7
         with:
           name: manual
@@ -644,6 +821,7 @@ jobs:
             echo
             echo "- **Ligera** (menos de 2 GB): el archivo .iso de abajo, o en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Versiones/$version/"
             echo "- **Completa** (unos 4,6 GB, se instala sin internet): solo en SourceForge, misma carpeta."
+            echo "- **32 bits** (para equipos anteriores a 2008; solo XFCE y LXQt): el archivo que termina en x86.iso, abajo o en SourceForge."
             echo
             echo "Cómo instalarla: https://github.com/$GH_REPO#guía-de-instalación-paso-a-paso"
             echo

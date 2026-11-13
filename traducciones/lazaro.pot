@@ -864,6 +864,10 @@ msgid "LXQt: el más liviano, para poca memoria"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
+msgid "Sin escritorio: solo la consola"
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
 msgid "MATE: clásico, sencillo"
 msgstr ""
 
@@ -881,10 +885,6 @@ msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "XFCE Wayland (experimental)"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "Sin escritorio: solo la consola"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
@@ -925,18 +925,6 @@ msgid "Btop: monitor de recursos"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "necesita internet"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "viene en el USB"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre."
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
 msgid "VLC: reproductor de video y música"
 msgstr ""
 
@@ -946,6 +934,18 @@ msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "LibreOffice: oficina (documentos, hojas de cálculo)"
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "necesita internet"
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "viene en el USB"
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre."
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto

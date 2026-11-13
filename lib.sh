@@ -19,6 +19,20 @@ case "$ALPINE_BRANCH" in
 		;;
 esac
 
+case "$ALPINE_ARCH" in
+	x86_64) ;;
+	x86)
+		if [ "$LAZARO_EDICION" != ligera ]; then
+			echo "La ISO de 32 bits (ALPINE_ARCH=x86) solo existe como edición Ligera." >&2
+			exit 1
+		fi
+		;;
+	*)
+		echo "ALPINE_ARCH no válida: '$ALPINE_ARCH' (usa x86_64 o x86)" >&2
+		exit 1
+		;;
+esac
+
 ALPINE_REPO_MAIN="$ALPINE_MIRROR/$ALPINE_BRANCH/main"
 ALPINE_REPO_COMMUNITY="$ALPINE_MIRROR/$ALPINE_BRANCH/community"
 case "$LAZARO_EDICION" in

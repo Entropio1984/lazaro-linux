@@ -76,6 +76,52 @@ textos_completa() {
 }
 [ "${LAZARO_EDICION:-ligera}" != completa ] || textos_completa
 
+# ISO de 32 bits: solo XFCE, LXQt y "Sin escritorio"; sin Flatpak (Flathub
+# no tiene aplicaciones de 32 bits); NetSurf va siempre y Firefox pasa a
+# ser una casilla. Se quitan de las pantallas de Calamares las opciones
+# que no existen y se comprueba que quedó lo esperado.
+textos_32() {
+	t3_cal="$tmp/etc/calamares/modules"
+	awk '
+		/^    - id:/ { ver = ($3 == "xfce" || $3 == "lxqt" || $3 == "ninguno") }
+		/^    - id:/ || en_items { en_items = 1; if (ver) print; next }
+		{ print }
+	' "$t3_cal/packagechooser-escritorio.conf" > "$t3_cal/escritorio.nuevo"
+	mv "$t3_cal/escritorio.nuevo" "$t3_cal/packagechooser-escritorio.conf"
+	[ "$(grep -c '^    - id:' "$t3_cal/packagechooser-escritorio.conf")" = 3 ] ||
+		{ echo "genapkovl-lazaro: la lista de escritorios de 32 bits no quedó con 3 opciones" >&2; exit 1; }
+	# Software adicional: fuera el grupo de Flatpak (es el último) y entra
+	# Firefox, marcado, después de LibreOffice.
+	awk '
+		/^    - name: "Aplicaciones Flatpak/ { fuera = 1 }
+		fuera { next }
+		{ print }
+		END {
+			print "          - name: \"Firefox\""
+			print "            description: \"Navegador completo: abre el banco, el correo y los sitios modernos que NetSurf no puede. Es el programa más pesado; con 1 GB de memoria o menos conviene usarlo con pocas pestañas.\""
+			print "            selected: true"
+			print "            packages: [ firefox ]"
+		}
+	' "$t3_cal/netinstall.conf" > "$t3_cal/netinstall.nuevo"
+	mv "$t3_cal/netinstall.nuevo" "$t3_cal/netinstall.conf"
+	! grep -qi 'flatpak' "$t3_cal/netinstall.conf" || sed -i '/^#/!{/[Ff]latpak/d}' "$t3_cal/netinstall.conf"
+	grep -q 'packages: \[ firefox \]' "$t3_cal/netinstall.conf" ||
+		{ echo "genapkovl-lazaro: no quedó la casilla de Firefox en netinstall.conf" >&2; exit 1; }
+	sed -i \
+		-e 's/Firefox is always installed\./NetSurf, a light browser, is always installed./' \
+		-e 's/Firefox se instala siempre\./NetSurf, un navegador liviano, se instala siempre./' \
+		"$t3_cal/netinstall.conf"
+	grep -q 'NetSurf, un navegador liviano' "$t3_cal/netinstall.conf" ||
+		{ echo "genapkovl-lazaro: no se pudo cambiar el título de netinstall.conf" >&2; exit 1; }
+	# Sin estas herramientas en la live, lazaro-instalar no las copia al
+	# sistema instalado y la Bienvenida no muestra sus botones.
+	rm -f "$tmp/usr/sbin/lazaro-kernel" "$tmp/usr/sbin/lazaro-flatpak" \
+		"$tmp/usr/share/lazaro/lazaro-kernel.initd" \
+		"$tmp/usr/share/lazaro/bienvenida/funciones/34-kernel.conf" \
+		"$tmp/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf"
+}
+[ "${ALPINE_ARCH:-x86_64}" != x86 ] || textos_32
+
 # El script del usuario se copia a la ISO desde la raíz del repositorio:
 # así hay una sola copia que mantener.
 install -Dm755 "$LAZARO_SCRIPT" "$tmp"/usr/share/lazaro/desktop-postinstall.sh

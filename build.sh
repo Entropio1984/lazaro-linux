@@ -7,6 +7,8 @@
 #                         de verdad, como root).
 #
 # Resultado: salida/lazaro-linux-<versión>-<alpine>-x86_64.iso
+# ISO de 32 bits (solo XFCE y LXQt): ALPINE_ARCH=x86 ./build.sh
+#   Resultado: salida/lazaro-linux-<versión>-<alpine>-x86.iso
 # Caché (Calamares ya compilado y su llave de firma): cache/
 #
 # Para otra versión de Alpine: ALPINE_BRANCH=edge ./build.sh
@@ -52,6 +54,9 @@ if [ "${1:-}" != "--dentro" ]; then
 	if [ -n "${LAZARO_FLATPAK_USB:-}" ]; then
 		set -- "$@" -v "$(realpath "$LAZARO_FLATPAK_USB"):/flatpak-usb:ro" -e LAZARO_FLATPAK_USB=/flatpak-usb
 	fi
+	# 32 bits: el mismo contenedor de Alpine en su versión i386. Un
+	# procesador de 64 bits lo ejecuta directamente, sin emulación.
+	[ "$ALPINE_ARCH" != x86 ] || set -- --platform linux/386 "$@"
 	exec docker run --rm "$@" \
 		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR \
 		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL -e LAZARO_EDICION \
@@ -65,6 +70,15 @@ if [ "${1:-}" != "--dentro" ]; then
 fi
 
 [ "$(id -u)" -eq 0 ] || die "build.sh --dentro debe ejecutarse como root"
+
+# 32 bits dentro de un contenedor i386 en un equipo de 64: "uname -m"
+# sigue diciendo x86_64 y confunde a los programas que compilan. linux32
+# (busybox) hace que todo lo que sigue vea un equipo de 32 bits.
+if [ "$ALPINE_ARCH" = x86 ] && [ "$(uname -m)" = x86_64 ] && command -v linux32 >/dev/null 2>&1; then
+	exec linux32 /bin/sh "$0" --dentro
+fi
+[ "$(apk --print-arch)" = "$ALPINE_ARCH" ] ||
+	die "este Alpine es de $(apk --print-arch) y se pidió compilar para $ALPINE_ARCH (para 32 bits usa ./build.sh con Docker, que elige el contenedor i386)"
 
 msg "Preparando el entorno de compilación"
 printf '%s\n%s\n' "$ALPINE_REPO_MAIN" "$ALPINE_REPO_COMMUNITY" > /etc/apk/repositories
@@ -142,6 +156,10 @@ fi
 # --- broadcom-wl (driver wifi privativo de Broadcom) --------------------
 # Va como código (broadcom-wl-src) y lo compila akms en el equipo que lo
 # necesita. Ver paquetes/broadcom-wl/APKBUILD.
+if [ "$ALPINE_ARCH" = x86 ]; then
+	# El driver de Broadcom que se empaqueta es solo de 64 bits.
+	msg "32 bits: sin broadcom-wl"
+else
 WL_VER=$(sed -n 's/^pkgver=//p' "$LAZARO_DIR/paquetes/broadcom-wl/APKBUILD")
 WL_REL=$(sed -n 's/^pkgrel=//p' "$LAZARO_DIR/paquetes/broadcom-wl/APKBUILD")
 if ls "$REPO_PROPIO/paquetes/$ALPINE_ARCH/broadcom-wl-src-$WL_VER-r$WL_REL.apk" >/dev/null 2>&1; then
@@ -163,6 +181,7 @@ else
 	fi
 	tail -n 5 "$REGISTRO"
 fi
+fi
 cd "$LAZARO_DIR"
 
 # --- aports/scripts (mkimage.sh) ---------------------------------------
@@ -178,6 +197,7 @@ cp "$LAZARO_DIR"/perfil/mkimg.lazaro.sh "$LAZARO_DIR"/perfil/genapkovl-lazaro.sh
 	"$CONSTRUCTOR_HOME/.mkimage/"
 cat > "$CONSTRUCTOR_HOME/version.env" <<EOF
 ALPINE_BRANCH="$ALPINE_BRANCH"
+ALPINE_ARCH="$ALPINE_ARCH"
 ALPINE_MIRROR="$ALPINE_MIRROR"
 ISO_VERSION="$ISO_VERSION"
 CALAMARES_VERSION="$CALAMARES_VERSION"
@@ -343,6 +363,7 @@ su constructor -c "cd $CONSTRUCTOR_HOME && \
 	LAZARO_VERSION_ENV='$CONSTRUCTOR_HOME/version.env' \
 	LAZARO_PUBKEY='$LLAVE.pub' \
 	LAZARO_EDICION='$LAZARO_EDICION' \
+	ALPINE_ARCH='$ALPINE_ARCH' \
 	LAZARO_PAQUETES_COMPLETA='$PAQUETES_COMPLETA' \
 	LAZARO_FLATPAK_USB='${LAZARO_FLATPAK_USB:-}' \
 	sh $APORTS/scripts/mkimage.sh \
