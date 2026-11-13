@@ -297,7 +297,7 @@ if [ "$ALPINE_ARCH" = x86 ]; then
 	perfil_paquetes=$(LAZARO_DIR="$LAZARO_DIR" ALPINE_ARCH="$ALPINE_ARCH" sh -c '. "$LAZARO_DIR/perfil/mkimg.lazaro.sh"
 		echo $LAZARO_LIVE $LAZARO_DESTINO $LAZARO_EXTRAS $LAZARO_ESCRITORIOS')
 	# shellcheck disable=SC2086
-	LAZARO_EXCLUIR="discover okular plasma-desktop-lang kdeplasma-addons-lang
+	LAZARO_PESOS=150 LAZARO_EXCLUIR="discover okular plasma-desktop-lang kdeplasma-addons-lang
 		plasma-nm plasma-pa xdg-desktop-portal-kde flatpak intel-media-driver
 		waybar fuzzel greetd-gtkgreet font-awesome mate-media mate-polkit
 		mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-nouveau vulkan-loader" \

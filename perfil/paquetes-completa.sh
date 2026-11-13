@@ -80,6 +80,7 @@ awk '
 	FNR == 1 { archivo++ }
 	archivo == 1 && /^P:/ { p = substr($0, 3); existe[p] = 1; next }
 	archivo == 1 && /^D:/ { deps[p] = substr($0, 3); next }
+	archivo == 1 && /^S:/ { peso[p] = substr($0, 3) + 0; next }
 	archivo == 1 && /^i:/ { si[p] = substr($0, 3); next }
 	archivo == 1 && /^k:/ { prio[p] = substr($0, 3) + 0; next }
 	archivo == 1 && /^p:/ { prov[p] = substr($0, 3); next }
@@ -110,10 +111,21 @@ awk '
 				if (ok) { agregar(q); nuevos++ }
 			}
 		} while (nuevos > 0)
-		for (n in elegido) print n
+		for (n in elegido) {
+			print n
+			total += peso[n]
+			if (n ~ /-lang$/) idiomas += peso[n]
+			printf "%d %s\n", peso[n], n > pesos
+		}
+		printf "paquetes-completa: %d MB en total, %d MB en traducciones (-lang)\n", total / 1048576, idiomas / 1048576 > "/dev/stderr"
 		if (desconocidos != "") print "paquetes-completa: no están en Alpine (se omiten):" desconocidos > "/dev/stderr"
 	}
-' "$tmp/indice" "$tmp/semillas" > "$tmp/lista"
+' pesos="$tmp/pesos" "$tmp/indice" "$tmp/semillas" > "$tmp/lista"
 sort "$tmp/lista" > "$salida"
 
 echo "paquetes-completa: $(wc -l < "$salida") paquetes en $salida"
+# Los más pesados, para saber qué recortar si la ISO no cabe.
+if [ -n "${LAZARO_PESOS:-}" ] && [ -s "$tmp/pesos" ]; then
+	echo "paquetes-completa: los ${LAZARO_PESOS} más pesados (MB):"
+	sort -rn "$tmp/pesos" | head -n "$LAZARO_PESOS" | awk '{ printf "  %6.1f %s\n", $1 / 1048576, $2 }'
+fi
