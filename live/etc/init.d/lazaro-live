@@ -188,11 +188,10 @@ AVISO_TEXTO="
    No se pudo abrir el escritorio de Lázaro Linux.
 
    Puedes instalar desde esta pantalla, solo con el teclado:
-     1. Donde dice \"login:\", escribe  lazaro  y pulsa Enter
-        (no pide contraseña).
-     2. Escribe  doas lazaro-instalar-texto  y pulsa Enter.
+     Escribe  doas lazaro-instalar-texto  y pulsa Enter.
 
    El instalador hace las mismas preguntas que el gráfico.
+   (Si no ves una línea para escribir, pulsa Enter.)
   ==============================================================
 "
 
@@ -205,12 +204,11 @@ AVISO_POCA_MEMORIA="
    abre el escritorio de prueba (no cabría). Se instala desde
    esta pantalla, solo con el teclado, y queda igual:
 
-     1. Donde dice \"login:\", escribe  lazaro  y pulsa Enter
-        (no pide contraseña).
-     2. Escribe  doas lazaro-instalar-texto  y pulsa Enter.
+     Escribe  doas lazaro-instalar-texto  y pulsa Enter.
 
-   Para el wifi, antes del paso 2:
+   Para el wifi, antes de eso:
      nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"
+   (Si no ves una línea para escribir, pulsa Enter.)
   ==============================================================
 "
 
@@ -229,8 +227,45 @@ reinicio_reciente() {
 	[ $(($(date +%s) - t)) -lt 240 ]
 }
 
+# Las consolas de texto entran solas como "lazaro" (lazaro-consola): el
+# login de la live no acepta la contraseña vacía de ese usuario. init
+# vuelve a leer /etc/inittab con la señal HUP, antes de abrir las consolas
+# (las abre cuando termina el arranque).
+consola_automatica() {
+	[ -f /etc/inittab ] || return 0
+	grep -q lazaro-consola /etc/inittab && return 0
+	sed -i 's|^\(tty[1-6]\)::respawn:/sbin/getty .*|\1::respawn:/sbin/getty -n -l /usr/sbin/lazaro-consola 38400 \1|' /etc/inittab
+	kill -HUP 1 2>/dev/null || true
+}
+
+# Para las pruebas: ¿hay una consola abierta como "lazaro" en la primera
+# pantalla de texto (tty1 = dispositivo 4:1 = 1025)?
+revisar_consola() {
+	[ ! -f /run/lazaro/consola-revisada ] || return 0
+	: > /run/lazaro/consola-revisada
+	(
+		i=0
+		while [ $i -lt 36 ]; do
+			for p in /proc/[0-9]*; do
+				[ "$(stat -c %U "$p" 2>/dev/null)" = lazaro ] || continue
+				t=$(sed 's/.*) //' "$p/stat" 2>/dev/null | awk '{ print $5 }')
+				if [ "$t" = 1025 ]; then
+					serie "LAZARO-CONSOLA-OK"
+					exit 0
+				fi
+			done
+			i=$((i + 1))
+			sleep 5
+		done
+		serie "LAZARO-CONSOLA-NO"
+		grep '^tty' /etc/inittab | serie
+	) &
+}
+
 avisar_texto() {
 	[ -f /run/lazaro/issue ] || { mkdir -p /run/lazaro; cp /etc/issue /run/lazaro/issue 2>/dev/null || :; }
+	printf '%s\n' "$AVISO_TEXTO" > /run/lazaro/aviso-texto
+	revisar_consola
 	printf '%s\n' "$AVISO_TEXTO" >> /etc/issue
 	printf '\033c%s\n' "$AVISO_TEXTO" > /dev/tty1 2>/dev/null || true
 	chvt 1 2>/dev/null || true
@@ -261,6 +296,7 @@ pantalla_escritorio() {
 # cambia de pantalla si ya se está instalando en modo texto.
 quitar_aviso() {
 	[ ! -f /run/lazaro/issue ] || cp /run/lazaro/issue /etc/issue 2>/dev/null || true
+	rm -f /run/lazaro/aviso-texto
 	# (El [o] evita que grep se encuentre a sí mismo.)
 	if grep -qs 'lazaro-instalar-text[o]' /proc/[0-9]*/cmdline; then
 		serie "LAZARO-ESCRITORIO-VOLVIO sin-cambiar-pantalla"
@@ -340,6 +376,7 @@ start() {
 			addgroup lazaro "$g" 2>/dev/null || true
 		done
 	fi
+	consola_automatica
 	# Sin salvapantallas en la live: apagaba y bloqueaba la pantalla a
 	# los pocos minutos aunque la instalación siguiera trabajando (y el
 	# usuario lazaro no tiene contraseña para desbloquearla).

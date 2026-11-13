@@ -321,8 +321,11 @@ prueba_texto() {
 	elif ! grep -q LAZARO-DIALOG-OK "$serie"; then
 		echo "FALLO: en la live falta dialog o lazaro-instalar-texto ($MODO)." >&2
 		ok=1
+	elif ! esperar "$serie" "$pid" 240 LAZARO-CONSOLA-OK LAZARO-CONSOLA-NO; then
+		echo "FALLO: la consola de texto no entró sola como 'lazaro' ($MODO)." >&2
+		ok=1
 	else
-		echo "OK: sin escritorio aparece el aviso del instalador en modo texto ($MODO)."
+		echo "OK: sin escritorio aparece el aviso del instalador en modo texto y la consola entra sola como 'lazaro' ($MODO)."
 	fi
 	sleep 5
 	captura "$mon" "$RES/$nombre-aviso"
@@ -352,8 +355,11 @@ prueba_poca() {
 	elif ! grep -q LAZARO-LIVE-LISTO "$serie" || grep -q 'No space left on device' "$serie"; then
 		echo "FALLO: con 1 GB de RAM la sesión live básica no se preparó." >&2
 		ok=1
+	elif ! esperar "$serie" "$pid" 240 LAZARO-CONSOLA-OK LAZARO-CONSOLA-NO; then
+		echo "FALLO: con 1 GB de RAM la consola de texto no entró sola como 'lazaro'." >&2
+		ok=1
 	else
-		echo "OK: con 1 GB de RAM la live arranca sin escritorio y ofrece el instalador en modo texto."
+		echo "OK: con 1 GB de RAM la live arranca sin escritorio, la consola entra sola como 'lazaro' y ofrece el instalador en modo texto."
 		grep -m1 -o 'LAZARO-ESCRITORIO-NO.*' "$serie" | tr -d '\r' || true
 		grep -m1 -o 'LAZARO-RAIZ.*' "$serie" | tr -d '\r' || true
 	fi
