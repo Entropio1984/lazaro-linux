@@ -104,7 +104,7 @@ awk -v fuera="$(echo ${LAZARO_NUNCA:-})" '
 		do {
 			nuevos = 0
 			for (q in si) {
-				if (q in elegido) continue
+				if ((q in elegido) || (q in nunca)) continue
 				k = split(si[q], lista, " ")
 				ok = 1
 				for (j = 1; j <= k && ok; j++) {

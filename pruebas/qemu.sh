@@ -396,10 +396,11 @@ prueba_instalar() {
 	[ "$BITS32" = no ] || todo_en_iso=si
 	{ [ "$red" = con-red ] || [ "$todo_en_iso" = si ]; } && configurado=si
 	# con_tienda: el escritorio queda con tienda de aplicaciones (LXQt de
-	# 32 bits no: Discover no va en esa ISO).
+	# 32 bits sin red no: Discover no va en esa ISO; con red el script lo
+	# descarga).
 	con_tienda=si
 	[ "$de" != ninguno ] || con_tienda=no
-	{ [ "$BITS32" = si ] && [ "$de" = lxqt ]; } && con_tienda=no
+	{ [ "$BITS32" = si ] && [ "$de" = lxqt ] && [ "$red" != con-red ]; } && con_tienda=no
 
 	extraer_kernel
 
