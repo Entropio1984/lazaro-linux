@@ -1,0 +1,97 @@
+#!/sbin/openrc-run
+# Solo en la ISO de 32 bits. Al arrancar, la live trae únicamente lo
+# básico (consola, red e instalador en modo texto: unos 150 MB de
+# memoria). Este servicio decide si además carga el escritorio de prueba
+# (XFCE, Calamares y lo demás, que viven en la memoria):
+#   - con 1,5 GB de RAM o más, lo carga: la live queda como la de 64 bits;
+#   - con menos, no: el escritorio no cabría en la memoria. Se muestra el
+#     aviso para instalar con lazaro-instalar-texto, que hace las mismas
+#     preguntas y deja el mismo sistema instalado.
+# Va después de lazaro-zram: con la memoria comprimida ya activa, lo que
+# se instala en la RAM ocupa bastante menos.
+# Se puede forzar desde el menú de arranque: lazaro.escritorio=si | no.
+
+description="Escritorio de la sesión live (según la memoria)"
+
+LISTA=/etc/lazaro/world-escritorio
+# MemTotal de un equipo "de 1,5 GB" queda en unos 1450 MB (el núcleo y la
+# gráfica integrada se quedan con una parte).
+MINIMO_MB=1400
+
+depend() {
+	# Sin "need localmount": localmount va después de modules, y la raíz
+	# (en memoria) ya está montada desde el initramfs.
+	after modloop lazaro-zram udev-settle
+	# Antes de "modules" y "sysctl": los paquetes del escritorio traen
+	# módulos para cargar al arranque (uinput de spice-vdagent, por
+	# ejemplo) y ajustes en modules-load.d y sysctl.d.
+	before lazaro-graficas lazaro-live lightdm modules sysctl
+}
+
+serie() {
+	[ -c /dev/ttyS0 ] || return 0
+	printf '%s\n' "$*" > /dev/ttyS0 2>/dev/null || true
+}
+
+parametro() {
+	for p in $(cat /proc/cmdline); do
+		case "$p" in "$1"=*) echo "${p#*=}"; return 0 ;; esac
+	done
+	return 1
+}
+
+sin_escritorio() { # MOTIVO MB
+	mkdir -p /run/lazaro
+	echo "$2" > /run/lazaro/poca-memoria
+	# Servicios del escritorio que no se cargaron.
+	for s in /etc/runlevels/*/*; do
+		[ -L "$s" ] && [ ! -e "$s" ] && rm -f "$s"
+	done
+	serie "LAZARO-ESCRITORIO-NO motivo=$1 memoria=${2}MB"
+}
+
+start() {
+	[ -s "$LISTA" ] || return 0
+	mb=$(awk '/^MemTotal:/ { print int($2 / 1024); exit }' /proc/meminfo)
+	quiere=$(parametro lazaro.escritorio || true)
+	if [ "$quiere" = no ]; then
+		ebegin "Sesión live sin escritorio (pedido en el menú de arranque)"
+		sin_escritorio pedido "$mb"
+		eend 0
+		return 0
+	fi
+	if [ "$mb" -lt "$MINIMO_MB" ] && [ "$quiere" != si ]; then
+		ebegin "Poca memoria ($mb MB): la sesión live sigue sin escritorio"
+		sin_escritorio memoria "$mb"
+		eend 0
+		return 0
+	fi
+	ebegin "Cargando el escritorio de la sesión live (tarda un momento)"
+	# La live vive en la memoria (tmpfs). El tope de ese espacio no reserva
+	# nada: con la memoria comprimida activa puede pasar de la RAM, porque
+	# lo que no se usa en el momento queda comprimido (los programas se
+	# comprimen a un tercio). Sin zram, el 85 % de la RAM, como en 64 bits.
+	tope=$((mb * 85 / 100))
+	! grep -q '^/dev/zram0 ' /proc/swaps 2>/dev/null || tope=$((mb * 120 / 100))
+	mount -o "remount,size=${tope}m" / 2>/dev/null || true
+	antes=$(df -m / | awk 'NR == 2 { print $3 }')
+	# shellcheck disable=SC2046
+	if apk add --no-network --no-progress --quiet $(cat "$LISTA") > /var/log/lazaro-escritorio.log 2>&1; then
+		# Los paquetes nuevos traen reglas de udev (teclados, ratones,
+		# pantallas táctiles, agentes de máquinas virtuales) que no
+		# estaban cuando udev revisó el hardware: se revisa otra vez.
+		udevadm control --reload 2>/dev/null || true
+		udevadm trigger --action=add 2>/dev/null || true
+		udevadm settle --timeout=20 2>/dev/null || true
+		serie "LAZARO-ESCRITORIO-OK memoria=${mb}MB base=${antes}MB con-escritorio=$(df -m / | awk 'NR == 2 { print $3 }')MB"
+		eend 0
+	else
+		# Sin espacio en la memoria o un paquete que falta: se sigue sin
+		# escritorio, con el instalador en modo texto.
+		serie "LAZARO-ESCRITORIO-FALLO"
+		tail -n 15 /var/log/lazaro-escritorio.log > /dev/ttyS0 2>/dev/null || true
+		sin_escritorio fallo "$mb"
+		eend 0 "no se pudo cargar el escritorio: queda el instalador en modo texto"
+	fi
+	return 0
+}

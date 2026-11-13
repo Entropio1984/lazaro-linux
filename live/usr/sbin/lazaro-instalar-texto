@@ -105,7 +105,18 @@ marca() { [ "$1" = "$rec" ] && echo on || echo off; }
 sufijo() { [ "$1" = "$rec" ] && echo " $(_ '(recomendado)')" || true; }
 pregunta="$(_ '¿Qué escritorio quieres? GNOME y Plasma se descargan de internet; los demás vienen en el USB.')"
 [ "$LAZARO_EDICION" != completa ] || pregunta="$(_ '¿Qué escritorio quieres? Todos vienen en el USB: no hace falta internet.')"
+# ISO de 32 bits: solo XFCE y LXQt, los dos en el USB.
+bits32=no
+[ "$(apk --print-arch 2>/dev/null)" != x86 ] || bits32=si
 while :; do
+	if [ "$bits32" = si ]; then
+		escritorio=$(pedir --title "$(_ 'Escritorio')" --radiolist "$(_ '¿Qué escritorio quieres? Todos vienen en el USB: no hace falta internet.')" \
+			12 70 3 \
+			xfce "$(_ 'XFCE: liviano y clásico')$(sufijo xfce)" "$(marca xfce)" \
+			lxqt "$(_ 'LXQt: el más liviano, para poca memoria')$(sufijo lxqt)" "$(marca lxqt)" \
+			ninguno "$(_ 'Sin escritorio: solo la consola')$(sufijo ninguno)" "$(marca ninguno)") || cancelar
+		break
+	fi
 	escritorio=$(pedir --title "$(_ 'Escritorio')" --radiolist "$pregunta" \
 		18 70 8 \
 		xfce "$(_ 'XFCE: liviano y clásico')$(sufijo xfce)" "$(marca xfce)" \
@@ -141,6 +152,18 @@ if [ "$escritorio" = ninguno ]; then
 		11 72 2 \
 		fastfetch "$(_ 'Fastfetch: resumen del equipo en la terminal')" off \
 		btop "$(_ 'Btop: monitor de recursos')" off) || cancelar
+elif [ "$bits32" = si ]; then
+	# Sin Flatpak (Flathub no tiene aplicaciones de 32 bits). NetSurf va
+	# siempre; Firefox es opcional.
+	elegidos=$(pedir --title "$(_ 'Software adicional')" --separate-output --checklist \
+"$(_ 'Marca con la barra espaciadora lo que quieras instalar.')" \
+		16 76 6 \
+		firefox "Firefox" on \
+		fastfetch "$(_ 'Fastfetch: resumen del equipo en la terminal')" off \
+		btop "$(_ 'Btop: monitor de recursos')" off \
+		vlc "$(_ 'VLC: reproductor de video y música')" off \
+		youtube "$(_ 'YouTube ligero: videos sin navegador (480p)')" on \
+		libreoffice "$(_ 'LibreOffice: oficina (documentos, hojas de cálculo)')" off) || cancelar
 else
 	flat=on
 	fp_usb=", $(_ 'necesita internet')"

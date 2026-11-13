@@ -12,6 +12,13 @@
 #       Arranca la ISO impidiendo que abra el escritorio y comprueba que
 #       en la consola aparece el aviso del instalador en modo texto.
 #
+#   pruebas/qemu.sh poca ISO bios
+#       Solo la ISO de 32 bits: con 1 GB de RAM no carga el escritorio de
+#       prueba y muestra el aviso para instalar en modo texto.
+#
+# La ISO de 32 bits (*-x86.iso) se prueba en una máquina con procesador
+# de 32 bits y 2 GB de RAM (MEM_32=1024 para probar con 1 GB), solo BIOS.
+#
 #   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red
 #       Instala sin interfaz (lazaro-instalar auto) en un disco virtual,
 #       y luego arranca el disco y comprueba que el sistema instalado
@@ -54,6 +61,20 @@ case "$MODO" in bios|uefi) ;; *) echo "Modo inválido: $MODO (usa bios o uefi)" 
 KVM=""
 [ -w /dev/kvm ] && KVM="-enable-kvm -cpu host"
 MEM="${MEM:-4096}"
+QEMU=qemu-system-x86_64
+# ISO de 32 bits (nombre *-x86.iso): una máquina con procesador de 32
+# bits de verdad (Core Duo, 2006: no puede ejecutar nada de 64 bits) y
+# 2 GB de RAM, lo que traen como mucho esos equipos. Solo BIOS.
+BITS32=no
+case "$ISO" in *-x86.iso)
+	BITS32=si
+	QEMU=qemu-system-i386
+	KVM="-cpu coreduo"
+	[ -w /dev/kvm ] && KVM="-enable-kvm -cpu coreduo"
+	MEM="${MEM_32:-2048}"
+	[ "$MODO" = bios ] || { echo "La ISO de 32 bits solo se prueba en modo BIOS." >&2; exit 2; }
+	;;
+esac
 
 # Firmware UEFI para QEMU. Se busca una sola vez, aquí y no dentro de
 # $(...): ahí el "exit" no detendría la prueba y QEMU arrancaría en BIOS.
@@ -88,7 +109,7 @@ arrancar() {
 			-drive "if=pflash,format=raw,file=$RES/$a_nombre-vars.fd" "$@"
 	fi
 	# shellcheck disable=SC2086
-	qemu-system-x86_64 $KVM -m "$a_mem" -smp 2 "$@" \
+	"$QEMU" $KVM -m "$a_mem" -smp 2 "$@" \
 		-vga std -display none \
 		-serial "file:$a_serie" -monitor "unix:$SOCK_DIR/$a_nombre.mon,server,nowait" &
 	pid=$!
@@ -311,6 +332,38 @@ prueba_texto() {
 	return $ok
 }
 
+# ISO de 32 bits en un equipo con 1 GB de RAM: no debe cargar el
+# escritorio de prueba (no cabe en la memoria) y tiene que mostrar el
+# aviso para instalar en modo texto.
+prueba_poca() {
+	[ "$BITS32" = si ] || { echo "La prueba 'poca' es solo para la ISO de 32 bits." >&2; exit 2; }
+	nombre="poca-$MODO"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	rm -f "$serie" "$mon"
+	arrancar "$nombre" 1024 "$serie" -cdrom "$ISO" -boot d -nic none
+	ok=0
+	if ! esperar "$serie" "$pid" 900 'LAZARO-AVISO-TEXTO poca-memoria' LAZARO-ESCRITORIO-OK; then
+		echo "FALLO: con 1 GB de RAM no apareció el aviso para instalar en modo texto." >&2
+		ok=1
+	elif ! grep -q 'LAZARO-ESCRITORIO-NO motivo=memoria' "$serie"; then
+		echo "FALLO: con 1 GB de RAM la live intentó cargar el escritorio." >&2
+		ok=1
+	elif ! grep -q LAZARO-LIVE-LISTO "$serie" || grep -q 'No space left on device' "$serie"; then
+		echo "FALLO: con 1 GB de RAM la sesión live básica no se preparó." >&2
+		ok=1
+	else
+		echo "OK: con 1 GB de RAM la live arranca sin escritorio y ofrece el instalador en modo texto."
+		grep -m1 -o 'LAZARO-ESCRITORIO-NO.*' "$serie" | tr -d '\r' || true
+		grep -m1 -o 'LAZARO-RAIZ.*' "$serie" | tr -d '\r' || true
+	fi
+	sleep 5
+	captura "$mon" "$RES/$nombre-aviso"
+	terminar "$pid"
+	[ "$ok" -eq 0 ] || tail -n 80 "$serie" >&2 || true
+	return $ok
+}
+
 prueba_instalar() {
 	de="$1"
 	red="$2"
@@ -396,13 +449,15 @@ prueba_instalar() {
 	echo "OK: afinador: ${afinador#LAZARO-AFINADOR-OK}"
 	# lazaro-repositorio: el sistema queda listo para que las herramientas
 	# de Lázaro se actualicen solas.
-	if ! grep -q 'LAZARO-REPOSITORIO-PREPARADO' "$serie"; then
+	if [ "$BITS32" = si ] && grep -q 'LAZARO-REPOSITORIO-32-NO' "$serie"; then
+		echo "OK: 32 bits, sin repositorio de Lázaro (todavía no existe para 32 bits)"
+	elif ! grep -q 'LAZARO-REPOSITORIO-PREPARADO' "$serie"; then
 		terminar "$pid"
 		echo "FALLO: no se preparó el repositorio de Lázaro al instalar." >&2
 		grep -iE 'repositorio' "$serie" | tail -n 20 >&2 || true
 		return 1
 	fi
-	echo "OK: repositorio de Lázaro preparado"
+	[ "$BITS32" = si ] || echo "OK: repositorio de Lázaro preparado"
 	# Calamares muestra en su registro lo que lazaro-instalar escribe: debe
 	# verse el avance por paquete mientras setup-desktop instala (sin
 	# escritorio no hay ese paso: setup-disk no escribe una línea por
@@ -422,7 +477,8 @@ prueba_instalar() {
 		return 1
 	fi
 	# Flatpak viene por defecto: con red debe quedar Flathub agregado.
-	if [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-OK "$serie"; then
+	# (No en 32 bits: Flathub no tiene aplicaciones de 32 bits.)
+	if [ "$BITS32" = no ] && [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-OK "$serie"; then
 		terminar "$pid"
 		echo "FALLO: Flatpak/Flathub no quedó instalado." >&2
 		sed -n '/LAZARO-FLATPAK-NO/,$p' "$serie" | head -n 60 >&2 || true
@@ -462,6 +518,9 @@ prueba_instalar() {
 		mem2=3072
 		espera2=1200
 	fi
+	# 32 bits con MEM_32: el sistema instalado arranca con esa misma
+	# memoria (la prueba del equipo de 1 GB).
+	[ "$BITS32" = no ] || [ -z "${MEM_32:-}" ] || mem2="$MEM_32"
 	arrancar "$nombre" "$mem2" "$serie2" \
 		-drive "file=$disco,if=virtio,format=qcow2" -boot c -nic "$nic"
 	ok=0
@@ -537,7 +596,7 @@ prueba_instalar() {
 			echo "FALLO: no se confirmó YouTube ligero (Pipe Viewer + mpv + yt-dlp con QuickJS)." >&2
 			ok=1
 		elif ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*ttl=1000' "$serie2" \
-			|| { [ "$de" != ninguno ] && ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*Dynamic Preempt: full' "$serie2"; }; then
+			|| { [ "$BITS32" = no ] && [ "$de" != ninguno ] && ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*Dynamic Preempt: full' "$serie2"; }; then
 			echo "FALLO: el sistema instalado no arrancó con los ajustes del afinador." >&2
 			grep LAZARO-AFINADOR "$serie2" >&2 || true
 			ok=1
@@ -815,6 +874,9 @@ case "$orden" in
 	texto)
 		[ $# -eq 3 ] || uso
 		prueba_texto ;;
+	poca)
+		[ $# -eq 3 ] || uso
+		prueba_poca ;;
 	instalar)
 		[ $# -eq 5 ] || [ $# -eq 6 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac

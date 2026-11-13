@@ -49,6 +49,16 @@ ESCRITORIOS_OFFLINE="xfce mate lxqt sway xfce-wayland ninguno"
 # desktop-postinstall.sh, que entonces corre aunque no haya internet.
 LAZARO_EDICION="${LAZARO_EDICION:-ligera}"
 [ "$LAZARO_EDICION" != completa ] || ESCRITORIOS_OFFLINE="$ESCRITORIOS"
+# ISO de 32 bits: solo XFCE y LXQt (los dos vienen en el USB). No hay
+# Flatpak (Flathub no tiene aplicaciones de 32 bits) ni kernel Lázaro;
+# NetSurf, un navegador liviano, se instala siempre y Firefox solo si se
+# marcó ("firefox" entre los EXTRAS).
+BITS32=no
+if [ "$ARCH" = x86 ]; then
+	BITS32=si
+	ESCRITORIOS="xfce lxqt ninguno"
+	ESCRITORIOS_OFFLINE="$ESCRITORIOS"
+fi
 
 log() { printf '[lazaro] %s\n' "$*" | tee -a "$LOG" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -340,6 +350,10 @@ broadcom_wl_tarjeta() {
 # wifi pero con cable, y akms lo vuelve a intentar con cada kernel nuevo.
 paso_broadcom() { # RAIZ
 	bw_tarjeta="$(broadcom_wl_tarjeta)" || return 0
+	if [ "$BITS32" = si ]; then
+		log "Aviso: wifi Broadcom $bw_tarjeta: su driver (broadcom-wl) no está disponible para 32 bits. Usa cable, el celular por USB o un adaptador wifi USB."
+		return 0
+	fi
 	log "Wifi Broadcom $bw_tarjeta: se instala el driver broadcom-wl (se compila, tarda unos minutos)..."
 	avance_iniciar "el driver wifi Broadcom" "$1"
 	bw_rc=0
@@ -571,10 +585,13 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 	[ "$pe_grafico" = no ] || pe_paq="$pe_paq font-dejavu font-liberation font-liberation-sans-narrow font-noto font-noto-emoji"
 	# La Bienvenida (lazaro-bienvenida) es Python con GTK 3.
 	[ "$pe_grafico" = no ] || pe_paq="$pe_paq python3 py3-gobject3 gtk+3.0"
+	# 32 bits: NetSurf siempre; Firefox, si se marcó, sale del USB.
+	[ "$BITS32" = no ] || [ "$pe_grafico" = no ] || pe_paq="$pe_paq netsurf"
 	for e in $3; do
 		case "$e" in
 			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
-			flatpak) [ "$pe_grafico" = no ] || pe_paq="$pe_paq flatpak" ;;
+			flatpak) [ "$pe_grafico" = no ] || [ "$BITS32" = si ] || pe_paq="$pe_paq flatpak" ;;
+			firefox) [ "$pe_grafico" = no ] || [ "$BITS32" = no ] || pe_paq="$pe_paq firefox" ;;
 			vlc) [ "$pe_grafico" = no ] || pe_paq="$pe_paq vlc vlc-qt" ;;
 			# YouTube ligero: yt-dlp-ejs-rt-quickjs se pide aparte para que
 			# yt-dlp use QuickJS (1 MB) y no arrastre Deno (41 MB).
@@ -670,7 +687,8 @@ paso_bienvenida() { # RAIZ
 	[ -x /usr/sbin/lazaro-bienvenida ] || return 0
 	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || return 0
 	install -Dm755 /usr/sbin/lazaro-bienvenida "$1/usr/local/sbin/lazaro-bienvenida"
-	install -Dm755 /usr/sbin/lazaro-flatpak "$1/usr/local/sbin/lazaro-flatpak"
+	[ ! -x /usr/sbin/lazaro-flatpak ] ||
+		install -Dm755 /usr/sbin/lazaro-flatpak "$1/usr/local/sbin/lazaro-flatpak"
 	# La ventana de "Actualizar el sistema", con el aspecto de la Bienvenida.
 	install -Dm755 /usr/sbin/lazaro-actualizador "$1/usr/local/sbin/lazaro-actualizador"
 	mkdir -p "$1/usr/share/lazaro"
@@ -705,12 +723,19 @@ paso_afinador() { # RAIZ
 	install -Dm755 "$DATOS/lazaro-afinador.initd" "$1/etc/init.d/lazaro-afinador"
 	# Kernel Lázaro: solo la herramienta; se instala si el usuario lo pide
 	# (menú Afinador o lazaro-kernel --instalar).
-	install -Dm755 /usr/sbin/lazaro-kernel "$1/usr/local/sbin/lazaro-kernel"
-	install -Dm644 "$DATOS/lazaro-kernel.initd" "$1/usr/share/lazaro/lazaro-kernel.initd"
+	# (La ISO de 32 bits no lo trae: el kernel Lázaro es de 64 bits.)
+	if [ -x /usr/sbin/lazaro-kernel ]; then
+		install -Dm755 /usr/sbin/lazaro-kernel "$1/usr/local/sbin/lazaro-kernel"
+		install -Dm644 "$DATOS/lazaro-kernel.initd" "$1/usr/share/lazaro/lazaro-kernel.initd"
+	fi
 	# Repositorio de Lázaro: con él las herramientas se actualizan solas
 	# (paquete lazaro-herramientas, que se instala en el primer arranque
 	# con internet).
-	if [ -x /usr/sbin/lazaro-repositorio ]; then
+	# En 32 bits todavía no: el repositorio publicado es de 64 bits. Las
+	# herramientas quedan instaladas igual (las copia este instalador).
+	if [ "$BITS32" = si ]; then
+		log "LAZARO-REPOSITORIO-32-NO (el repositorio de Lázaro aún no existe para 32 bits)"
+	elif [ -x /usr/sbin/lazaro-repositorio ]; then
 		pa_r="$(/usr/sbin/lazaro-repositorio --activar --raiz "$1" 2>>"$LOG")" ||
 			log "Aviso: no se pudo preparar el repositorio de Lázaro."
 		# Las pruebas en QEMU buscan esta línea en la consola.
@@ -754,10 +779,16 @@ paso_ajustes() {
 	# de las dependencias: las apps de Flathub activan Flatpak y, sin
 	# escritorio, descarta todo lo gráfico.
 	con="firefox,actualizaciones"
+	# 32 bits: Firefox solo si se marcó (llega como "firefox" en EXTRAS).
+	[ "$BITS32" = no ] || con="actualizaciones"
 	[ -e "$raiz/etc/lazaro/sin-escritorio" ] || con="$con,impresoras"
 	for e in $extras; do
 		case "$e" in
 			base) ;;
+			firefox) [ "$BITS32" = no ] || con="$con,firefox" ;;
+			flatpak|onlyoffice|chrome|brave)
+				# Flathub no publica aplicaciones de 32 bits.
+				[ "$BITS32" = si ] || con="$con,$e" ;;
 			fastfetch|btop|vlc|youtube|libreoffice|flatpak|onlyoffice|chrome|brave)
 				con="$con,$e" ;;
 			*) log "Aviso: programa adicional desconocido '$e'; se omite." ;;
@@ -1087,6 +1118,7 @@ crear_usuario() { # USUARIO NOMBRE CLAVE EQUIPO [CLAVE_ROOT]
 
 # Flatpak viene por defecto: con red, Flathub debe quedar agregado.
 auto_revisar_flatpak() {
+	[ "$BITS32" = no ] || return 0
 	[ ! -e "$raiz/etc/lazaro/sin-escritorio" ] && hay_red || return 0
 	# Se lee la configuración en vez de ejecutar flatpak dentro del
 	# sistema instalado: un proceso que quede vivo ahí impide desmontarlo.
@@ -1211,6 +1243,8 @@ desmontar_destino() {
 # USB (también sin internet), con Flathub como origen.
 auto_flathub=""
 [ "$LAZARO_EDICION" != completa ] || auto_flathub=" onlyoffice brave"
+# 32 bits: como en Calamares, con la casilla de Firefox marcada.
+[ "$BITS32" = no ] || auto_flathub=" firefox"
 auto_revisar_flatpak_usb() {
 	[ "$LAZARO_EDICION" = completa ] || return 0
 	for a in org.onlyoffice.desktopeditors com.brave.Browser; do

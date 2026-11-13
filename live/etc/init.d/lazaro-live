@@ -196,6 +196,24 @@ AVISO_TEXTO="
   ==============================================================
 "
 
+# ISO de 32 bits con poca memoria (lazaro-escritorio no cargó el
+# escritorio de prueba: no cabría en la RAM). No es una falla: se instala
+# desde aquí, con las mismas preguntas.
+AVISO_POCA_MEMORIA="
+  ==============================================================
+   Lázaro Linux: este equipo tiene poca memoria, así que no se
+   abre el escritorio de prueba (no cabría). Se instala desde
+   esta pantalla, solo con el teclado, y queda igual:
+
+     1. Donde dice \"login:\", escribe  lazaro  y pulsa Enter
+        (no pide contraseña).
+     2. Escribe  doas lazaro-instalar-texto  y pulsa Enter.
+
+   Para el wifi, antes del paso 2:
+     nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"
+  ==============================================================
+"
+
 hay_sesion() {
 	pidof xfce4-session >/dev/null 2>&1
 }
@@ -410,6 +428,8 @@ start() {
 
 	# Aviso para las pruebas: Calamares llegó a abrirse en pantalla.
 	(
+		# Sin escritorio (32 bits con poca memoria) no hay nada que esperar.
+		[ ! -f /run/lazaro/poca-memoria ] || exit 0
 		i=0
 		while [ $i -lt 120 ]; do
 			if pidof calamares >/dev/null 2>&1; then
@@ -462,6 +482,9 @@ start() {
 					else
 						serie "LAZARO-SPICE-NO"
 						ps -ef 2>&1 | grep -i '[s]pice' | serie
+						serie -- rc-service spice-vdagentd status
+						serie -- rc-service spice-vdagentd start
+						grep -i spice /var/log/messages 2>/dev/null | tail -n 8 | serie
 						serie -- ls /etc/xdg/autostart
 					fi
 				fi
@@ -523,7 +546,12 @@ start() {
 				serie "LAZARO-DIALOG-OK"
 			fi
 		fi
-		vigilar_sesion &
+		if [ -f /run/lazaro/poca-memoria ]; then
+			AVISO_TEXTO="$AVISO_POCA_MEMORIA"
+			avisar_texto poca-memoria
+		else
+			vigilar_sesion &
+		fi
 	fi
 
 	# Instalación desatendida, solo para pruebas:

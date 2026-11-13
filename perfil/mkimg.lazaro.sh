@@ -12,9 +12,17 @@
 
 # Escritorio de la sesión live = lo que instala "setup-desktop xfce" en
 # alpine-conf (verificado en la etiqueta 3.22.0, la de Alpine 3.24).
+# 32 bits (ALPINE_ARCH=x86): el navegador de la sesión de prueba es
+# NetSurf (unos 30 MB de memoria) en vez de Firefox, que es el programa
+# más pesado de la live: en estos equipos la memoria es lo que falta.
+# Con él va evince, porque NetSurf no abre PDF y el manual es un PDF.
+LAZARO_ARCH="${ALPINE_ARCH:-x86_64}"
+LAZARO_NAVEGADOR_LIVE=firefox
+[ "$LAZARO_ARCH" != x86 ] || LAZARO_NAVEGADOR_LIVE="netsurf evince"
 LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 	xfce4 elogind gvfs lightdm lightdm-gtk-greeter polkit-elogind
-	xfce4-screensaver xfce4-terminal font-dejavu dbus dbus-x11 firefox"
+	xfce4-screensaver xfce4-terminal font-dejavu dbus dbus-x11
+	$LAZARO_NAVEGADOR_LIVE"
 
 # util-linux: Calamares (kpmcore) busca los discos con "lsblk --json" y
 # usa blkid, blockdev y sfdisk; busybox no trae lsblk y sin él Calamares
@@ -67,6 +75,29 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	plymouth plymouth-drm plymouth-openrc-plugin
 	$LAZARO_RED_LIVE"
 
+# ISO de 32 bits: la live arranca solo con lo básico (LAZARO_LIVE_BASE:
+# consola, red, discos e instalador en modo texto) y el servicio
+# lazaro-escritorio carga el resto (LAZARO_LIVE_ESCRITORIO) cuando la
+# memoria alcanza (1,5 GB o más) y ya está activa la memoria comprimida.
+# Con 1 GB el escritorio de prueba no cabe en la RAM: así el equipo
+# igual arranca y se instala con lazaro-instalar-texto.
+LAZARO_LIVE_BASE="alpine-base eudev udev-init-scripts udev-init-scripts-openrc
+	util-linux e2fsprogs dosfstools doas musl-locales tzdata kbd-bkeymaps
+	networkmanager networkmanager-wifi networkmanager-cli wpa_supplicant
+	dbus pciutils dialog tar
+	plymouth plymouth-drm plymouth-openrc-plugin
+	$LAZARO_RED_LIVE"
+LAZARO_LIVE_ESCRITORIO=""
+if [ "$LAZARO_ARCH" = x86 ]; then
+	for _p in $LAZARO_LIVE; do
+		case " $(echo $LAZARO_LIVE_BASE) " in
+			*" $_p "*) ;;
+			*) LAZARO_LIVE_ESCRITORIO="$LAZARO_LIVE_ESCRITORIO $_p" ;;
+		esac
+	done
+	unset _p
+fi
+
 # Firmware de los demás adaptadores de red (wifi, cable, bluetooth, USB y
 # PCMCIA) y lo que faltaba de Intel y AMD, que no venía en la ISO, para que el sistema instalado sin
 # internet tenga red con cualquier tarjeta que Alpine reconozca. La sesión
@@ -118,6 +149,8 @@ unset _fw _fw_revisar
 # descargan, así que con esas tarjetas hace falta internet al instalar
 # (cable o el celular por USB).
 LAZARO_BROADCOM="broadcom-wl-src akms"
+# El paquete es solo de 64 bits.
+[ "$LAZARO_ARCH" != x86 ] || LAZARO_BROADCOM=""
 
 # Controladores de más hardware (lazaro-controladores los instala solo si
 # el equipo los necesita; ver la revisión del 2026-11-04). En las dos
@@ -173,6 +206,12 @@ LAZARO_ESCRITORIOS="
 	pavucontrol polkit-gnome greetd-gtkgreet seatd
 	labwc adwaita-icon-theme network-manager-applet"
 
+# 32 bits: solo XFCE (el de la live) y LXQt.
+[ "$LAZARO_ARCH" != x86 ] || LAZARO_ESCRITORIOS="
+	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
+	udisks2 adwaita-qt oxygen lxqt-policykit xdg-desktop-portal-lxqt
+	adwaita-icon-theme network-manager-applet"
+
 # Programas de "Software adicional" que vienen en la ISO (unos 325 MB):
 # lazaro-instalar los instala desde el USB, sin internet, y
 # desktop-postinstall.sh después los encuentra ya puestos. También van
@@ -187,6 +226,12 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 	pipe-viewer pipe-viewer-gtk mpv yt-dlp yt-dlp-ejs-rt-quickjs
 	flatpak font-liberation font-liberation-sans-narrow font-noto
 	font-noto-emoji usbutils xrandr libcap-setcap"
+
+# 32 bits: sin Flatpak (Flathub no publica aplicaciones de 32 bits). Van
+# los dos navegadores: NetSurf se instala siempre y Firefox es una
+# casilla de "Software adicional".
+[ "$LAZARO_ARCH" != x86 ] ||
+	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /') netsurf firefox"
 
 # Edición Completa (LAZARO_EDICION=completa): además, GNOME y Plasma tal
 # como los instala setup-desktop (alpine-conf 3.22.0) y lo que les agrega
@@ -211,7 +256,7 @@ profile_lazaro() {
 		Sesión live con XFCE e instalador Calamares."
 	profile_abbrev="lazaro"
 	image_name="lazaro-linux"
-	arch="x86_64"
+	arch="x86_64 x86"
 	kernel_addons=
 	# console=ttyS0 primero y tty0 al final: la consola principal sigue
 	# siendo la pantalla; el puerto serie solo sirve a las pruebas (QEMU).
@@ -242,10 +287,20 @@ profile_lazaro() {
 		# Rock Ridge, completos).
 		iso_opts="$iso_opts -joliet-long"
 	fi
+	if [ "$LAZARO_ARCH" = x86 ]; then
+		title="Lázaro Linux 32 bits"
+		desc="Tu hardware aún tiene pulso.
+		Para equipos de 32 bits: XFCE o LXQt."
+		lazaro_edicion=" 32 bits"
+	fi
 	grub_mod="$grub_mod serial terminal"
 	apkovl="genapkovl-lazaro.sh"
 	# genapkovl-lazaro.sh corre como proceso aparte: recibe la lista así.
 	export LAZARO_WORLD="$LAZARO_LIVE"
+	if [ "$LAZARO_ARCH" = x86 ]; then
+		export LAZARO_WORLD="$LAZARO_LIVE_BASE"
+		export LAZARO_WORLD_ESCRITORIO="$LAZARO_LIVE_ESCRITORIO"
+	fi
 	hostname="lazaro"
 }
 
@@ -275,6 +330,15 @@ syslinux_gen_config() {
 		INITRD /boot/amd-ucode.img,/boot/intel-ucode.img,/boot/initramfs-lts
 		APPEND $initfs_cmdline $kernel_cmdline $lazaro_nvidia nomodeset
 	EOF
+	[ "$LAZARO_ARCH" = x86 ] || return 0
+	cat <<- EOF
+
+	LABEL texto
+		MENU LABEL Lazaro Linux (instalar en modo texto, poca memoria)
+		KERNEL /boot/vmlinuz-lts
+		INITRD /boot/amd-ucode.img,/boot/intel-ucode.img,/boot/initramfs-lts
+		APPEND $initfs_cmdline $kernel_cmdline $lazaro_nvidia lazaro.escritorio=no
+	EOF
 }
 
 grub_gen_config() {
@@ -291,6 +355,14 @@ grub_gen_config() {
 
 	menuentry "Lazaro Linux (modo grafico seguro)" {
 		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline $lazaro_nvidia nomodeset
+		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
+	}
+	EOF
+	[ "$LAZARO_ARCH" = x86 ] || return 0
+	cat <<- EOF
+
+	menuentry "Lazaro Linux (instalar en modo texto, poca memoria)" {
+		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline $lazaro_nvidia lazaro.escritorio=no
 		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
 	}
 	EOF

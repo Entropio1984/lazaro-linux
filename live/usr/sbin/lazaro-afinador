@@ -504,11 +504,14 @@ ventana() {
 		fi
 		o_mit="$(_ 'Protecciones del procesador (avanzado)')"
 		o_ker="$(_ 'Kernel Lázaro (experimental)')"
+		# La ISO de 32 bits no trae el kernel Lázaro (es de 64 bits).
+		hay_ker=""
+		if [ -x /usr/local/sbin/lazaro-kernel ] || command -v lazaro-kernel >/dev/null 2>&1; then hay_ker=si; fi
 		o_inf="$(_ 'Ver el informe del hardware')"
 		o_cer="$(_ 'Cerrar')"
 		eleccion="$(zenity --list --title="$(_ 'Afinador')" --width=640 --height=420 \
 			--text="$(_ 'Ajustes para que el equipo responda mejor. Todos se pueden quitar.')\n\n$estado\n\n$(_ '✔ puesto   ○ se puede poner   · no hace falta')\n$(_ 'Qué quieres hacer:')" \
-			--column="$(_ 'Acción')" --hide-header "$b1" "$o_mit" "$o_ker" "$o_inf" "$o_cer" 2>/dev/null)" || return 0
+			--column="$(_ 'Acción')" --hide-header "$b1" "$o_mit" ${hay_ker:+"$o_ker"} "$o_inf" "$o_cer" 2>/dev/null)" || return 0
 		case "$eleccion" in
 			"$b1")
 				if salida="$(como_root "$0" --"$a1" 2>&1)"; then
