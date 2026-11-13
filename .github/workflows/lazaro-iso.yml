@@ -393,11 +393,14 @@ jobs:
         prueba:
           - live bios
           - texto bios
+          # Con 1 GB de RAM: sin escritorio de prueba, aviso del modo texto.
+          - poca bios
           - instalar bios xfce sin-red
-          - instalar bios lxqt sin-red
           - instalar bios xfce con-red
           - instalar bios lxqt con-red
           - instalar bios ninguno sin-red
+          # Equipo de 1 GB: se instala y arranca LXQt con esa memoria.
+          - instalar bios lxqt sin-red 1024
     steps:
       - uses: actions/checkout@v5
 
@@ -421,6 +424,10 @@ jobs:
         run: |
           set -- ${{ matrix.prueba }}
           orden="$1"; shift
+          if [ "$orden" = instalar ] && [ "${4:-}" = 1024 ]; then
+            export MEM_32=1024
+            set -- "$1" "$2" "$3"
+          fi
           ./pruebas/qemu.sh "$orden" iso/*.iso "$@"
 
       - name: Nombre de los resultados

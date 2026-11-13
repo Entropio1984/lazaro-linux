@@ -152,6 +152,14 @@ install -Dm644 "$LAZARO_PUBKEY" "$tmp/etc/apk/keys/$(basename "$LAZARO_PUBKEY")"
 echo "$HOSTNAME" > "$tmp"/etc/hostname
 mkdir -p "$tmp"/etc/apk
 printf '%s\n' $LAZARO_WORLD > "$tmp"/etc/apk/world
+# 32 bits: el escritorio de la live lo carga después lazaro-escritorio,
+# solo si la memoria alcanza.
+if [ -n "${LAZARO_WORLD_ESCRITORIO:-}" ]; then
+	mkdir -p "$tmp"/etc/lazaro
+	printf '%s\n' $LAZARO_WORLD_ESCRITORIO > "$tmp"/etc/lazaro/world-escritorio
+else
+	rm -f "$tmp"/etc/init.d/lazaro-escritorio
+fi
 
 # Igual que "setup-devd udev" (alpine-conf): eudev en lugar de mdev,
 # necesario para Xorg y para que Calamares vea los discos.
@@ -164,6 +172,7 @@ rc_add modloop sysinit
 
 rc_add hwclock boot
 rc_add lazaro-zram boot
+[ -z "${LAZARO_WORLD_ESCRITORIO:-}" ] || rc_add lazaro-escritorio boot
 rc_add lazaro-graficas boot
 rc_add modules boot
 rc_add sysctl boot

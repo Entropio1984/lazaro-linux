@@ -12,6 +12,13 @@
 #       Arranca la ISO impidiendo que abra el escritorio y comprueba que
 #       en la consola aparece el aviso del instalador en modo texto.
 #
+#   pruebas/qemu.sh poca ISO bios
+#       Solo la ISO de 32 bits: con 1 GB de RAM no carga el escritorio de
+#       prueba y muestra el aviso para instalar en modo texto.
+#
+# La ISO de 32 bits (*-x86.iso) se prueba en una máquina con procesador
+# de 32 bits y 2 GB de RAM (MEM_32=1024 para probar con 1 GB), solo BIOS.
+#
 #   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red
 #       Instala sin interfaz (lazaro-instalar auto) en un disco virtual,
 #       y luego arranca el disco y comprueba que el sistema instalado
@@ -322,6 +329,38 @@ prueba_texto() {
 	terminar "$pid"
 	[ "$ok" -eq 0 ] || tail -n 80 "$serie" >&2 || true
 	rm -f "$k" "$i"
+	return $ok
+}
+
+# ISO de 32 bits en un equipo con 1 GB de RAM: no debe cargar el
+# escritorio de prueba (no cabe en la memoria) y tiene que mostrar el
+# aviso para instalar en modo texto.
+prueba_poca() {
+	[ "$BITS32" = si ] || { echo "La prueba 'poca' es solo para la ISO de 32 bits." >&2; exit 2; }
+	nombre="poca-$MODO"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	rm -f "$serie" "$mon"
+	arrancar "$nombre" 1024 "$serie" -cdrom "$ISO" -boot d -nic none
+	ok=0
+	if ! esperar "$serie" "$pid" 900 'LAZARO-AVISO-TEXTO poca-memoria' LAZARO-ESCRITORIO-OK; then
+		echo "FALLO: con 1 GB de RAM no apareció el aviso para instalar en modo texto." >&2
+		ok=1
+	elif ! grep -q 'LAZARO-ESCRITORIO-NO motivo=memoria' "$serie"; then
+		echo "FALLO: con 1 GB de RAM la live intentó cargar el escritorio." >&2
+		ok=1
+	elif ! grep -q LAZARO-LIVE-LISTO "$serie" || grep -q 'No space left on device' "$serie"; then
+		echo "FALLO: con 1 GB de RAM la sesión live básica no se preparó." >&2
+		ok=1
+	else
+		echo "OK: con 1 GB de RAM la live arranca sin escritorio y ofrece el instalador en modo texto."
+		grep -m1 -o 'LAZARO-ESCRITORIO-NO.*' "$serie" | tr -d '\r' || true
+		grep -m1 -o 'LAZARO-RAIZ.*' "$serie" | tr -d '\r' || true
+	fi
+	sleep 5
+	captura "$mon" "$RES/$nombre-aviso"
+	terminar "$pid"
+	[ "$ok" -eq 0 ] || tail -n 80 "$serie" >&2 || true
 	return $ok
 }
 
@@ -832,6 +871,9 @@ case "$orden" in
 	texto)
 		[ $# -eq 3 ] || uso
 		prueba_texto ;;
+	poca)
+		[ $# -eq 3 ] || uso
+		prueba_poca ;;
 	instalar)
 		[ $# -eq 5 ] || [ $# -eq 6 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac

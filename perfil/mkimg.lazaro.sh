@@ -75,6 +75,29 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	plymouth plymouth-drm plymouth-openrc-plugin
 	$LAZARO_RED_LIVE"
 
+# ISO de 32 bits: la live arranca solo con lo básico (LAZARO_LIVE_BASE:
+# consola, red, discos e instalador en modo texto) y el servicio
+# lazaro-escritorio carga el resto (LAZARO_LIVE_ESCRITORIO) cuando la
+# memoria alcanza (1,5 GB o más) y ya está activa la memoria comprimida.
+# Con 1 GB el escritorio de prueba no cabe en la RAM: así el equipo
+# igual arranca y se instala con lazaro-instalar-texto.
+LAZARO_LIVE_BASE="alpine-base eudev udev-init-scripts udev-init-scripts-openrc
+	util-linux e2fsprogs dosfstools doas musl-locales tzdata kbd-bkeymaps
+	networkmanager networkmanager-wifi networkmanager-cli wpa_supplicant
+	dbus pciutils dialog tar
+	plymouth plymouth-drm plymouth-openrc-plugin
+	$LAZARO_RED_LIVE"
+LAZARO_LIVE_ESCRITORIO=""
+if [ "$LAZARO_ARCH" = x86 ]; then
+	for _p in $LAZARO_LIVE; do
+		case " $(echo $LAZARO_LIVE_BASE) " in
+			*" $_p "*) ;;
+			*) LAZARO_LIVE_ESCRITORIO="$LAZARO_LIVE_ESCRITORIO $_p" ;;
+		esac
+	done
+	unset _p
+fi
+
 # Firmware de los demás adaptadores de red (wifi, cable, bluetooth, USB y
 # PCMCIA) y lo que faltaba de Intel y AMD, que no venía en la ISO, para que el sistema instalado sin
 # internet tenga red con cualquier tarjeta que Alpine reconozca. La sesión
@@ -274,6 +297,10 @@ profile_lazaro() {
 	apkovl="genapkovl-lazaro.sh"
 	# genapkovl-lazaro.sh corre como proceso aparte: recibe la lista así.
 	export LAZARO_WORLD="$LAZARO_LIVE"
+	if [ "$LAZARO_ARCH" = x86 ]; then
+		export LAZARO_WORLD="$LAZARO_LIVE_BASE"
+		export LAZARO_WORLD_ESCRITORIO="$LAZARO_LIVE_ESCRITORIO"
+	fi
 	hostname="lazaro"
 }
 
@@ -303,6 +330,15 @@ syslinux_gen_config() {
 		INITRD /boot/amd-ucode.img,/boot/intel-ucode.img,/boot/initramfs-lts
 		APPEND $initfs_cmdline $kernel_cmdline $lazaro_nvidia nomodeset
 	EOF
+	[ "$LAZARO_ARCH" = x86 ] || return 0
+	cat <<- EOF
+
+	LABEL texto
+		MENU LABEL Lazaro Linux (instalar en modo texto, poca memoria)
+		KERNEL /boot/vmlinuz-lts
+		INITRD /boot/amd-ucode.img,/boot/intel-ucode.img,/boot/initramfs-lts
+		APPEND $initfs_cmdline $kernel_cmdline $lazaro_nvidia lazaro.escritorio=no
+	EOF
 }
 
 grub_gen_config() {
@@ -319,6 +355,14 @@ grub_gen_config() {
 
 	menuentry "Lazaro Linux (modo grafico seguro)" {
 		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline $lazaro_nvidia nomodeset
+		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
+	}
+	EOF
+	[ "$LAZARO_ARCH" = x86 ] || return 0
+	cat <<- EOF
+
+	menuentry "Lazaro Linux (instalar en modo texto, poca memoria)" {
+		linux	/boot/vmlinuz-lts $initfs_cmdline $kernel_cmdline $lazaro_nvidia lazaro.escritorio=no
 		initrd	/boot/amd-ucode.img /boot/intel-ucode.img /boot/initramfs-lts
 	}
 	EOF
