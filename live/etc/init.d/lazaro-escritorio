@@ -63,6 +63,13 @@ start() {
 		return 0
 	fi
 	ebegin "Cargando el escritorio de la sesión live (tarda un momento)"
+	# La live vive en la memoria (tmpfs). El tope de ese espacio no reserva
+	# nada: con la memoria comprimida activa puede pasar de la RAM, porque
+	# lo que no se usa en el momento queda comprimido (los programas se
+	# comprimen a un tercio). Sin zram, el 85 % de la RAM, como en 64 bits.
+	tope=$((mb * 85 / 100))
+	! grep -q '^/dev/zram0 ' /proc/swaps 2>/dev/null || tope=$((mb * 120 / 100))
+	mount -o "remount,size=${tope}m" / 2>/dev/null || true
 	antes=$(df -m / | awk 'NR == 2 { print $3 }')
 	# shellcheck disable=SC2046
 	if apk add --no-network --no-progress --quiet $(cat "$LISTA") > /var/log/lazaro-escritorio.log 2>&1; then
