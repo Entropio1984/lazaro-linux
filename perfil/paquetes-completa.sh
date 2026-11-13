@@ -47,13 +47,15 @@ grep -v '^[[:space:]]*#' "$script" |
 	tr ' ' '\n' | tr -d "\"'" |
 	grep -E '^[a-z0-9][a-z0-9._+-]*[a-z0-9]$' > "$tmp/semillas" || true
 # LAZARO_EXCLUIR: paquetes del script que esta ISO no lleva (32 bits).
+# LAZARO_NUNCA: paquetes que no entran ni como dependencia de otro (el
+# firmware de equipos que no son PC, que arrastra "linux-firmware").
 for x in ${LAZARO_EXCLUIR:-}; do
 	grep -vx -- "$x" "$tmp/semillas" > "$tmp/semillas.n" || true
 	mv "$tmp/semillas.n" "$tmp/semillas"
 done
 printf '%s\n' "$@" >> "$tmp/semillas"
 
-awk '
+awk -v fuera="$(echo ${LAZARO_NUNCA:-})" '
 	function limpiar(t) { sub(/[<>=~].*/, "", t); return t }
 	# Paquete que cumple una dependencia: el nombre exacto o, si no, quien
 	# la provee (so:, cmd:, pc: o un nombre virtual), el de más prioridad.
@@ -64,7 +66,7 @@ awk '
 		return ""
 	}
 	function agregar(n,    lista, k, j, d) {
-		if (n == "" || (n in elegido)) return
+		if (n == "" || (n in elegido) || (n in nunca)) return
 		elegido[n] = 1
 		pila[++tope] = n
 		while (tope > 0) {
@@ -73,10 +75,11 @@ awk '
 			for (j = 1; j <= k; j++) {
 				if (lista[j] ~ /^!/) continue
 				d = resolver(lista[j])
-				if (d != "" && !(d in elegido)) { elegido[d] = 1; pila[++tope] = d }
+				if (d != "" && !(d in elegido) && !(d in nunca)) { elegido[d] = 1; pila[++tope] = d }
 			}
 		}
 	}
+	BEGIN { k = split(fuera, lista, " "); for (j = 1; j <= k; j++) nunca[lista[j]] = 1 }
 	FNR == 1 { archivo++ }
 	archivo == 1 && /^P:/ { p = substr($0, 3); existe[p] = 1; next }
 	archivo == 1 && /^D:/ { deps[p] = substr($0, 3); next }
