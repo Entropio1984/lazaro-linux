@@ -311,8 +311,9 @@ viejas; ver [Tarjetas NVIDIA](#tarjetas-nvidia).
 **El escritorio no abre.** Si a los 5 minutos no apareció (o si se
 cerró y no volvió en un minuto), la pantalla pasa sola a modo texto con
 un aviso. Si el escritorio vuelve después, la pantalla regresa sola a
-él (salvo que ya hayas empezado el instalador en modo texto). Entra como `lazaro` (no pide
-contraseña) y escribe `doas lazaro-instalar-texto`. Es el mismo
+él (salvo que ya hayas empezado el instalador en modo texto). La consola
+entra sola con el usuario `lazaro` (no pide usuario ni contraseña):
+escribe `doas lazaro-instalar-texto`. Es el mismo
 instalador, con menús que se manejan con las flechas, la barra
 espaciadora y Enter, y no borra nada hasta que confirmas el resumen. Para
 conectar el wifi antes, escribe (con las comillas):
@@ -860,7 +861,7 @@ mano, también con la siguiente (edge):
 |---|---|---|---|---|
 | Sesión live | BIOS | XFCE | Sí | El escritorio arranca en español, la Bienvenida y el instalador se abren, el instalador ve el disco, la revisión de gráficas corrió y el portapapeles compartido funciona. Después cambia a portugués como lo haría el botón Idioma y teclado: el escritorio y el instalador vuelven en portugués y con teclado brasileño. Luego cambia al inglés simulando un equipo lento (el escritorio tarda 90 segundos en volver): vuelve en inglés y no aparece el aviso del modo texto |
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
-| Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, y la live trae `dialog` |
+| Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, la consola entra sola como `lazaro` y la live trae `dialog` |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |
 | Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo y la pantalla de inicio recuerda la resolución que eligió el usuario |
 | Instalación | UEFI | KDE Plasma | Sí | Lo mismo con Plasma |
@@ -871,7 +872,7 @@ mano, también con la siguiente (edge):
 | Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
 | 32 bits: sesión live | BIOS | XFCE | Sí | Lo mismo que la de 64 bits, en una máquina con procesador de 32 bits y 2 GB de memoria |
-| 32 bits: poca memoria | BIOS | (no se carga) | No | Con 1 GB la live no carga el escritorio y muestra el aviso del instalador en modo texto |
+| 32 bits: poca memoria | BIOS | (no se carga) | No | Con 1 GB la live no carga el escritorio, muestra el aviso del instalador en modo texto y la consola entra sola como `lazaro` |
 | 32 bits: instalación | BIOS | XFCE, LXQt, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. LXQt además se instala y arranca con 1 GB de memoria |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Sesión live: las consolas de texto (Ctrl+Alt+F1 a F6) entran solas con
+# el usuario "lazaro", sin preguntar usuario ni contraseña. La llama
+# getty (ver consola_automatica en /etc/init.d/lazaro-live).
+# Hace falta porque el "login" de util-linux, que es el que trae la live,
+# no acepta una contraseña vacía: pedía la contraseña de "lazaro" y
+# rechazaba el Enter.
+if id lazaro >/dev/null 2>&1; then
+	exec /bin/login -f lazaro
+fi
+exec /bin/login
