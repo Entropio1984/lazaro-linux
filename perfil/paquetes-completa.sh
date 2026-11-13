@@ -46,6 +46,11 @@ grep -v '^[[:space:]]*#' "$script" |
 	sed -E 's/install_pkgs? *//' |
 	tr ' ' '\n' | tr -d "\"'" |
 	grep -E '^[a-z0-9][a-z0-9._+-]*[a-z0-9]$' > "$tmp/semillas" || true
+# LAZARO_EXCLUIR: paquetes del script que esta ISO no lleva (32 bits).
+for x in ${LAZARO_EXCLUIR:-}; do
+	grep -vx -- "$x" "$tmp/semillas" > "$tmp/semillas.n" || true
+	mv "$tmp/semillas.n" "$tmp/semillas"
+done
 printf '%s\n' "$@" >> "$tmp/semillas"
 
 awk '

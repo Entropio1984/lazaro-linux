@@ -292,6 +292,9 @@ profile_lazaro() {
 		desc="Tu hardware aún tiene pulso.
 		Para equipos de 32 bits: XFCE o LXQt."
 		lazaro_edicion=" 32 bits"
+		# Lo que instala desktop-postinstall.sh, para que la configuración
+		# final no necesite internet (lista de build.sh).
+		apks="$apks $(cat "${LAZARO_PAQUETES_COMPLETA:?falta la lista de paquetes de la ISO de 32 bits}")"
 	fi
 	grub_mod="$grub_mod serial terminal"
 	apkovl="genapkovl-lazaro.sh"

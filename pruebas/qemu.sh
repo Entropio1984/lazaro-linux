@@ -390,7 +390,11 @@ prueba_instalar() {
 	completa=no
 	case "$(basename "$ISO")" in *-completa-*) completa=si ;; esac
 	configurado=no
-	{ [ "$red" = con-red ] || [ "$completa" = si ]; } && configurado=si
+	# todo_en_iso: la configuración final no necesita internet (edición
+	# Completa y la de 32 bits).
+	todo_en_iso="$completa"
+	[ "$BITS32" = no ] || todo_en_iso=si
+	{ [ "$red" = con-red ] || [ "$todo_en_iso" = si ]; } && configurado=si
 
 	extraer_kernel
 
@@ -490,13 +494,15 @@ prueba_instalar() {
 		sed -n '/LAZARO-FLATPAK-NO/,$p' "$serie" | head -n 60 >&2 || true
 		return 1
 	fi
-	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
+	if [ "$todo_en_iso" = si ] && [ "$de" != ninguno ]; then
 		if ! grep -q '^\[lazaro\] desktop-postinstall.sh terminó bien' "$serie"; then
 			terminar "$pid"
-			echo "FALLO: en la edición Completa la configuración final debe terminar durante la instalación (también sin red)." >&2
+			echo "FALLO: en la edición Completa y en la de 32 bits la configuración final debe terminar durante la instalación (también sin red)." >&2
 			grep -E 'desktop-postinstall|ERROR|Aviso' "$serie" | tail -n 30 >&2 || true
 			return 1
 		fi
+	fi
+	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
 		if ! grep -q 'LAZARO-FLATPAK-USB-OK org.onlyoffice.desktopeditors' "$serie" \
 			|| ! grep -q 'LAZARO-FLATPAK-USB-OK com.brave.Browser' "$serie" \
 			|| ! grep -q LAZARO-FLATHUB-ORIGEN-OK "$serie"; then
