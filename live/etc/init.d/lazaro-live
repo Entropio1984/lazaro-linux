@@ -235,6 +235,10 @@ consola_automatica() {
 	[ -f /etc/inittab ] || return 0
 	grep -q lazaro-consola /etc/inittab && return 0
 	sed -i 's|^\(tty[1-6]\)::respawn:/sbin/getty .*|\1::respawn:/sbin/getty -n -l /usr/sbin/lazaro-consola 38400 \1|' /etc/inittab
+	# El arranque de Alpine agrega otra consola en "tty0" (por console=tty0),
+	# que es la misma pantalla que tty1: dos programas leyendo el mismo
+	# teclado se reparten las letras y el usuario nunca queda bien escrito.
+	sed -i '/^tty0::/d' /etc/inittab
 	kill -HUP 1 2>/dev/null || true
 }
 
