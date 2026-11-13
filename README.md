@@ -96,8 +96,9 @@ la Ligera o la Completa: tienen más opciones.
   Pesa menos de 2 GB y cabe en un USB de 4 GB.
 - **Escritorios:** solo los dos más livianos, **XFCE** y **LXQt** (o sin
   escritorio). Los dos se instalan sin internet.
-- **Navegador:** siempre se instala **NetSurf**, muy liviano (usa unos
-  30 MB de memoria), para páginas sencillas. **Firefox** es una casilla
+- **Navegador:** con cualquiera de los dos escritorios se instala
+  **NetSurf**, muy liviano (usa unos 30 MB de memoria), para páginas
+  sencillas. **Firefox** es una casilla
   de "Software adicional" (viene marcada): hace falta para el banco, el
   correo y los sitios modernos, pero es el programa más pesado; con 1 GB
   de memoria úsalo con pocas pestañas. Para YouTube, mejor

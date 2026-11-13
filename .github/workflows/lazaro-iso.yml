@@ -731,8 +731,8 @@ jobs:
           SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
         run: sh .github/subir-sourceforge.sh 32-bits iso
 
-  # Versión numerada (etiqueta vX.Y): se publica solo si las DOS ediciones
-  # pasaron sus pruebas, en su propia Release (fija: nunca se reemplaza) y
+  # Versión numerada (etiqueta vX.Y): se publica solo si las dos ediciones
+  # y la ISO de 32 bits pasaron sus pruebas, en su propia Release (fija: nunca se reemplaza) y
   # en SourceForge, carpeta Versiones/X.Y. Grupo propio: una publicación
   # de main nunca desplaza a la de una versión.
   publicar-version:

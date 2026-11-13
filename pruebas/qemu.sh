@@ -518,6 +518,9 @@ prueba_instalar() {
 		mem2=3072
 		espera2=1200
 	fi
+	# 32 bits con MEM_32: el sistema instalado arranca con esa misma
+	# memoria (la prueba del equipo de 1 GB).
+	[ "$BITS32" = no ] || [ -z "${MEM_32:-}" ] || mem2="$MEM_32"
 	arrancar "$nombre" "$mem2" "$serie2" \
 		-drive "file=$disco,if=virtio,format=qcow2" -boot c -nic "$nic"
 	ok=0
