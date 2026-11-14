@@ -94,8 +94,12 @@ la Ligera o la Completa: tienen más opciones.
   [GitHub](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo)
   o en [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/32-bits/).
   Pesa menos de 2 GB y cabe en un USB de 4 GB.
-- **Escritorios:** solo los dos más livianos, **XFCE** y **LXQt** (o sin
-  escritorio). Los dos se instalan sin internet.
+- **Escritorios:** solo los más livianos: **IceWM con apariencia de
+  LXDE** (el recomendado con 1 GB de memoria: barra abajo con menú,
+  ventanas, red, volumen y reloj; íconos en el escritorio; sin efectos
+  visuales), **XFCE** y **LXQt** (o sin escritorio). Los tres se
+  instalan sin internet. En IceWM, el menú de cada ventana (cerrar,
+  maximizar...) sale en inglés: IceWM de Alpine viene sin traducciones.
 - **Sin internet de principio a fin:** todo lo que se instala viene en
   la ISO, también la configuración final (sonido, memoria comprimida,
   indicador de red, impresoras) y los programas de "Software adicional".
@@ -108,7 +112,13 @@ la Ligera o la Completa: tienen más opciones.
   sencillas. **Firefox** es una casilla
   de "Software adicional" (viene marcada): hace falta para el banco, el
   correo y los sitios modernos, pero es el programa más pesado; con 1 GB
-  de memoria úsalo con pocas pestañas. Para YouTube, mejor
+  de memoria úsalo con pocas pestañas (Lázaro lo deja con menos
+  procesos para que gaste menos). Trae ya puestas tres extensiones:
+  **uBlock Origin** (bloquea publicidad), **h264ify** (pide a YouTube un
+  formato de video que los equipos viejos reproducen sin trabarse) y
+  **ff2mpv** (botón derecho sobre un video, "Play in MPV": lo abre en
+  mpv, mucho más liviano que el navegador). mpv viene ajustado para
+  procesadores viejos. Para YouTube también está
   [YouTube ligero](#youtube-ligero).
 - **Equipos con 1 GB de memoria o menos:** la sesión de prueba no abre
   el escritorio, porque no cabría en la memoria. En su lugar aparece un
@@ -122,8 +132,8 @@ la Ligera o la Completa: tienen más opciones.
   ligero, ya abre videos y música), el kernel Lázaro, las
   actualizaciones automáticas de las herramientas de Lázaro (el sistema
   y sus programas sí se actualizan normalmente), el controlador
-  privativo de wifi Broadcom y, en LXQt instalado sin internet, la
-  tienda de aplicaciones (Discover trae cientos de paquetes de KDE y no
+  privativo de wifi Broadcom y, en IceWM y en LXQt instalado sin
+  internet, la tienda de aplicaciones (Discover trae cientos de paquetes de KDE y no
   cabe en la ISO; XFCE sí trae GNOME Software).
 - **Requisitos:** procesador con SSE2 (Pentium 4, Pentium M, Atom o
   más nuevo) y arranque BIOS, que es el que traen estos equipos. Aprovecha
@@ -884,6 +894,7 @@ mano, también con la siguiente (edge):
 | 32 bits: sesión live | BIOS | XFCE | Sí | Lo mismo que la de 64 bits, en una máquina con procesador de 32 bits y 2 GB de memoria |
 | 32 bits: poca memoria | BIOS | (no se carga) | No | Con 1 GB la live no carga el escritorio, muestra el aviso del instalador en modo texto y la consola entra sola como `lazaro` |
 | 32 bits: instalación | BIOS | XFCE, LXQt, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. Sin red, la configuración final también termina durante la instalación. LXQt además se instala y arranca con 1 GB de memoria |
+| 32 bits: IceWM | BIOS | IceWM | No | Se instala sin red con 1 GB de memoria y arranca con su barra, el escritorio de PCManFM, el indicador de red y el agente de permisos; Firefox queda con sus tres extensiones y ff2mpv conectado a mpv. Imprime la memoria usada en la sesión |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
 revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que

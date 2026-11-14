@@ -135,8 +135,12 @@ Ligera o la Completa: tienen más opciones. La de 32 bits es el archivo
 que termina en \texttt{x86.iso} y se diferencia en esto:
 
 \begin{description}
-  \item[Escritorios] solo los dos más livianos, XFCE y LXQt (o sin
-    escritorio). Los dos se instalan sin internet.
+  \item[Escritorios] solo los más livianos: IceWM con apariencia de
+    LXDE (el recomendado con 1 GB de memoria: barra abajo con menú,
+    ventanas, red, volumen y reloj, e íconos en el escritorio), XFCE y
+    LXQt (o sin escritorio). Los tres se instalan sin internet. En
+    IceWM, el menú de cada ventana (cerrar, maximizar\ldots) sale en
+    inglés.
   \item[Sin internet] todo lo que se instala viene en la ISO, también la
     configuración final (sonido, memoria comprimida, indicador de red,
     impresoras) y los programas de \emph{Software adicional}. Nada queda
@@ -145,7 +149,11 @@ que termina en \texttt{x86.iso} y se diferencia en esto:
     NetSurf, muy liviano, para páginas sencillas. Firefox es una casilla de \emph{Software adicional} (viene
     marcada): hace falta para el banco, el correo y los sitios modernos,
     pero es el programa más pesado. Con 1 GB de memoria úsalo con pocas
-    pestañas, y para los videos usa YouTube ligero.
+    pestañas. Trae puestas tres extensiones: uBlock Origin (bloquea la
+    publicidad), h264ify (YouTube manda un formato de video que los
+    equipos viejos reproducen sin trabarse) y ff2mpv: con el botón
+    derecho sobre un video, \emph{Play in MPV} lo abre en mpv, mucho más
+    liviano. Para los videos también está YouTube ligero.
   \item[Con 1 GB de memoria o menos] la sesión de prueba no abre el
     escritorio, porque no cabría en la memoria. Aparece un aviso para
     instalar desde esa misma pantalla, con el teclado: escribe
@@ -157,7 +165,7 @@ que termina en \texttt{x86.iso} y se diferencia en esto:
     el kernel Lázaro, las actualizaciones
     automáticas de las herramientas de Lázaro (el sistema y sus programas
     sí se actualizan como siempre), el controlador privativo del wifi
-    Broadcom y, en LXQt instalado sin internet, la tienda de aplicaciones
+    Broadcom y, en IceWM y en LXQt instalado sin internet, la tienda de aplicaciones
     (Discover es demasiado grande para la ISO; XFCE sí trae GNOME
     Software).
   \item[Requisitos] un procesador Pentium~4, Pentium~M, Atom o más nuevo,

@@ -2,7 +2,8 @@
 # lazaro-recomendar: al arrancar la sesión live, mira el equipo y deja
 # en Calamares una recomendación de escritorio y de programas, que la
 # persona puede cambiar:
-#   - memoria: menos de 2 GB, LXQt; de 2 a 4 GB, XFCE; con más, cualquier
+#   - memoria: menos de 2 GB, LXQt (IceWM en la ISO de 32 bits); de 2 a
+#     4 GB, XFCE; con más, cualquier
 #     escritorio va bien (queda XFCE);
 #   - gráfica: sin aceleración 3D (máquina virtual, controlador básico o
 #     NVIDIA en modo seguro) se desaconsejan GNOME, Plasma, Sway y XFCE
@@ -170,6 +171,10 @@ disco="$(disco_bytes)"
 escritorio=xfce; nombre=XFCE
 if [ "$mb" -gt 0 ] && [ "$mb" -lt 1600 ]; then
 	escritorio=lxqt; nombre=LXQt
+	# ISO de 32 bits: IceWM (con apariencia de LXDE), el más liviano.
+	if grep -q '^    - id: icewm$' "$(original packagechooser-escritorio.conf)" 2>/dev/null; then
+		escritorio=icewm; nombre=IceWM
+	fi
 fi
 
 motivo="$ram de RAM"

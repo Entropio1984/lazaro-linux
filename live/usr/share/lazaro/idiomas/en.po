@@ -1409,3 +1409,11 @@ msgstr "Lázaro improvements that were applied:"
 
 msgid "Se activó la tienda de programas (antes solo mostraba lo ya instalado)"
 msgstr "The software store was turned on (before, it only showed what was already installed)"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "IceWM (estilo LXDE): el más liviano, para 1 GB"
+msgstr "IceWM (LXDE style): the lightest, for 1 GB"
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "LXQt: liviano y moderno"
+msgstr "LXQt: light and modern"

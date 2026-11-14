@@ -401,6 +401,8 @@ prueba_instalar() {
 	con_tienda=si
 	[ "$de" != ninguno ] || con_tienda=no
 	{ [ "$BITS32" = si ] && [ "$de" = lxqt ] && [ "$red" != con-red ]; } && con_tienda=no
+	# IceWM no lleva tienda (GNOME Software y Discover pesan demasiado).
+	[ "$de" != icewm ] || con_tienda=no
 
 	extraer_kernel
 
@@ -629,6 +631,14 @@ prueba_instalar() {
 			echo "FALLO: la tienda de aplicaciones no quedó lista (servicio de Alpine o lista de programas para instalar)." >&2
 			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
 			ok=1
+		elif [ "$de" = icewm ] && ! grep -q LAZARO-ICEWM-OK "$serie2"; then
+			echo "FALLO: la sesión de IceWM (estilo LXDE) no arrancó completa (lxsession, pcmanfm, nm-applet y lxpolkit)." >&2
+			grep -A 30 LAZARO-ICEWM "$serie2" >&2 || echo "(no se encontró la sesión de IceWM)" >&2
+			ok=1
+		elif [ "$BITS32" = si ] && [ "$configurado" = si ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FIREFOX-32-OK "$serie2"; then
+			echo "FALLO: en 32 bits Firefox quedó sin sus extensiones (uBlock Origin, h264ify, ff2mpv) o sin el puente de ff2mpv." >&2
+			grep -A 20 LAZARO-FIREFOX-32 "$serie2" >&2 || true
+			ok=1
 		elif ! grep -q LAZARO-MANUAL-OK "$serie2"; then
 			echo "FALLO: el Manual de Lázaro (PDF y acceso en el menú) no quedó en el sistema instalado (en una compilación local, compílalo antes con manual/compilar.sh)." >&2
 			ok=1
@@ -711,6 +721,7 @@ prueba_instalar() {
 			fi
 		elif grep -Eq '(lightdm|sddm|gdm|greetd).*started|status: started|LAZARO-DM-ACTIVO' "$serie2"; then
 			echo "OK: el sistema instalado arrancó y su gestor de sesión está activo."
+			grep -m1 -o 'LAZARO-MEMORIA-SESION.*' "$serie2" | tr -d '\r' || true
 		else
 			echo "FALLO: el sistema arrancó, pero el gestor de sesión no está activo." >&2
 			ok=1

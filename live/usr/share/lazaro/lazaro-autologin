@@ -43,7 +43,7 @@ elif [ -d /etc/lightdm ]; then
 	addgroup -S autologin 2>/dev/null || true
 	id -nG "$u" | tr ' ' '\n' | grep -qx autologin \
 		|| addgroup "$u" autologin || rc=1
-	sesion="$(primera_sesion /usr/share/xsessions xfce mate lxqt)" || sesion=""
+	sesion="$(primera_sesion /usr/share/xsessions icewm-lxde xfce mate lxqt)" || sesion=""
 	mkdir -p /etc/lightdm/lightdm.conf.d
 	{
 		echo "[Seat:*]"
