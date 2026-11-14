@@ -100,20 +100,24 @@ ATENCIÓN: se borrará TODO lo que tenga ese disco (otros sistemas, fotos, docum
 
 # --- Escritorio ------------------------------------------------------------
 rec=xfce
+# 32 bits sin recomendación (la live no cargó el escritorio por falta de
+# memoria): IceWM, el más liviano.
+[ "$(apk --print-arch 2>/dev/null)" != x86 ] || rec=icewm
 [ -r /run/lazaro/recomendacion ] && rec=$(sed -n 's/^ESCRITORIO=//p' /run/lazaro/recomendacion)
 marca() { [ "$1" = "$rec" ] && echo on || echo off; }
 sufijo() { [ "$1" = "$rec" ] && echo " $(_ '(recomendado)')" || true; }
 pregunta="$(_ '¿Qué escritorio quieres? GNOME y Plasma se descargan de internet; los demás vienen en el USB.')"
 [ "$LAZARO_EDICION" != completa ] || pregunta="$(_ '¿Qué escritorio quieres? Todos vienen en el USB: no hace falta internet.')"
-# ISO de 32 bits: solo XFCE y LXQt, los dos en el USB.
+# ISO de 32 bits: IceWM, XFCE y LXQt, todos en el USB.
 bits32=no
 [ "$(apk --print-arch 2>/dev/null)" != x86 ] || bits32=si
 while :; do
 	if [ "$bits32" = si ]; then
 		escritorio=$(pedir --title "$(_ 'Escritorio')" --radiolist "$(_ '¿Qué escritorio quieres? Todos vienen en el USB: no hace falta internet.')" \
-			12 70 3 \
+			13 70 4 \
+			icewm "$(_ 'IceWM (estilo LXDE): el más liviano, para 1 GB')$(sufijo icewm)" "$(marca icewm)" \
 			xfce "$(_ 'XFCE: liviano y clásico')$(sufijo xfce)" "$(marca xfce)" \
-			lxqt "$(_ 'LXQt: el más liviano, para poca memoria')$(sufijo lxqt)" "$(marca lxqt)" \
+			lxqt "$(_ 'LXQt: liviano y moderno')$(sufijo lxqt)" "$(marca lxqt)" \
 			ninguno "$(_ 'Sin escritorio: solo la consola')$(sufijo ninguno)" "$(marca ninguno)") || cancelar
 		break
 	fi

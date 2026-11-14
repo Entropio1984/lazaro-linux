@@ -382,6 +382,32 @@ echo "  español: $(du -sh "$DATOS_HW/usr/share" | cut -f1) en total con los dat
 	|| die "falta la traducción al español de XFCE (xfce4-panel.mo)"
 chown -R constructor:abuild "$DATOS_HW"
 
+# --- 32 bits: extensiones de Firefox -------------------------------------
+# uBlock Origin, h264ify y ff2mpv, en la sesión live (genapkovl copia
+# DATOS_HW): lazaro-instalar las deja en el sistema nuevo y Firefox las
+# instala desde el disco, sin internet (paso_firefox_32). Se descarga la
+# última versión publicada en addons.mozilla.org (firmada por Mozilla).
+if [ "$ALPINE_ARCH" = x86 ]; then
+	msg "32 bits: extensiones de Firefox"
+	ff_dir="$DATOS_HW/usr/share/lazaro/firefox"
+	mkdir -p "$ff_dir"
+	for ff_ext in ublock-origin:uBlock0@raymondhill.net h264ify: ff2mpv:ff2mpv@yossarian.net; do
+		ff_nombre="${ff_ext%%:*}"
+		ff_id="${ff_ext#*:}"
+		curl -fsSL --retry 3 -o "$ff_dir/$ff_nombre.xpi" \
+			"https://addons.mozilla.org/firefox/downloads/latest/$ff_nombre/latest.xpi" \
+			|| die "no se pudo descargar la extensión de Firefox $ff_nombre"
+		unzip -l "$ff_dir/$ff_nombre.xpi" 2>/dev/null | grep -q 'manifest.json' \
+			|| die "la extensión $ff_nombre no es un .xpi válido"
+		# ff2mpv: el puente (ff2mpv.json) solo acepta esta extensión.
+		if [ -n "$ff_id" ]; then
+			unzip -p "$ff_dir/$ff_nombre.xpi" manifest.json | grep -q "\"$ff_id\"" \
+				|| die "la extensión $ff_nombre ya no tiene el identificador $ff_id"
+		fi
+		echo "  $ff_nombre: $(du -k "$ff_dir/$ff_nombre.xpi" | cut -f1) KB"
+	done
+fi
+
 # --- ISO ----------------------------------------------------------------
 msg "Generando la ISO"
 mkdir -p "$SALIDA"

@@ -401,6 +401,8 @@ jobs:
           - instalar bios ninguno sin-red
           # Equipo de 1 GB: se instala y arranca LXQt con esa memoria.
           - instalar bios lxqt sin-red 1024
+          # IceWM (estilo LXDE), el escritorio para equipos de 1 GB.
+          - instalar bios icewm sin-red 1024
     steps:
       - uses: actions/checkout@v5
 

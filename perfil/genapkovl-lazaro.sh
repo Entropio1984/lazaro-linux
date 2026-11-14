@@ -76,7 +76,8 @@ textos_completa() {
 }
 [ "${LAZARO_EDICION:-ligera}" != completa ] || textos_completa
 
-# ISO de 32 bits: solo XFCE, LXQt y "Sin escritorio"; sin Flatpak (Flathub
+# ISO de 32 bits: IceWM (apariencia de LXDE), XFCE, LXQt y "Sin
+# escritorio"; sin Flatpak (Flathub
 # no tiene aplicaciones de 32 bits); NetSurf va siempre y Firefox pasa a
 # ser una casilla. Se quitan de las pantallas de Calamares las opciones
 # que no existen y se comprueba que quedó lo esperado.
@@ -84,12 +85,28 @@ textos_32() {
 	t3_cal="$tmp/etc/calamares/modules"
 	awk '
 		/^    - id:/ { ver = ($3 == "xfce" || $3 == "lxqt" || $3 == "ninguno") }
+		# IceWM va primero (es el más liviano).
+		/^items:/ {
+			print
+			print "    - id: icewm"
+			print "      name: \"IceWM (LXDE style)\""
+			print "      name[es]: \"IceWM (estilo LXDE)\""
+			print "      description: \"The lightest: IceWM with the look of LXDE, for 1 GB of memory. Installs without internet.\""
+			print "      description[es]: \"El más liviano: IceWM con la apariencia de LXDE (barra abajo, menú, iconos en el escritorio), para equipos con 1 GB de memoria. Se instala sin internet desde el USB.\""
+			print "      screenshot: \"escritorio-icewm.png\""
+			next
+		}
 		/^    - id:/ || en_items { en_items = 1; if (ver) print; next }
 		{ print }
 	' "$t3_cal/packagechooser-escritorio.conf" > "$t3_cal/escritorio.nuevo"
 	mv "$t3_cal/escritorio.nuevo" "$t3_cal/packagechooser-escritorio.conf"
-	[ "$(grep -c '^    - id:' "$t3_cal/packagechooser-escritorio.conf")" = 3 ] ||
-		{ echo "genapkovl-lazaro: la lista de escritorios de 32 bits no quedó con 3 opciones" >&2; exit 1; }
+	[ "$(grep -c '^    - id:' "$t3_cal/packagechooser-escritorio.conf")" = 4 ] ||
+		{ echo "genapkovl-lazaro: la lista de escritorios de 32 bits no quedó con 4 opciones" >&2; exit 1; }
+	# Con IceWM, LXQt ya no es el más liviano.
+	sed -i \
+		-e 's/El más liviano, para equipos con muy poca memoria\./Liviano y moderno./' \
+		-e 's/The lightest option\./Light and modern./' \
+		"$t3_cal/packagechooser-escritorio.conf"
 	# Software adicional: fuera el grupo de Flatpak (es el último) y VLC
 	# (mpv ya reproduce video y música, y así entra en 2 GB); entra
 	# Firefox, marcado, después de LibreOffice.
