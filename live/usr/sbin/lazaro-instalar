@@ -1275,11 +1275,17 @@ auto_prueba_resolucion() { # ESCRITORIO
 	if [ "$pdm" = lightdm ]; then
 		en_destino "$raiz" addgroup -S autologin >>"$LOG" 2>&1 || true
 		en_destino "$raiz" addgroup prueba autologin >>"$LOG" 2>&1 || true
+		# IceWM entra por la sesión con apariencia de LXDE (icewm.desktop,
+		# del paquete, abre IceWM solo, sin lxsession).
+		psesion="$1"
+		if [ "$1" = icewm ] && [ -f "$raiz/usr/share/xsessions/icewm-lxde.desktop" ]; then
+			psesion=icewm-lxde
+		fi
 		cat > "$raiz/etc/lightdm/lightdm.conf.d/90-lazaro-prueba.conf" <<-EOF
 		[Seat:*]
 		autologin-user=prueba
 		autologin-user-timeout=0
-		autologin-session=$1
+		autologin-session=$psesion
 		EOF
 	elif [ "$pdm" = sddm ]; then
 		# Plasma entra en su sesión Wayland (la predeterminada).
