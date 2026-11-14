@@ -214,7 +214,7 @@ LAZARO_ESCRITORIOS="
 	udisks2 adwaita-qt oxygen lxqt-policykit xdg-desktop-portal-lxqt
 	adwaita-icon-theme network-manager-applet
 	icewm lxsession lightdm lightdm-gtk-greeter dbus-x11 pcmanfm lxterminal
-	papirus-icon-theme greybird-themes librsvg gdk-pixbuf-loaders pulseaudio-utils pavucontrol
+	papirus-icon-theme greybird-themes librsvg glycin-svg glycin-image-rs pulseaudio-utils pavucontrol
 	gpicview mousepad galculator xarchiver scrot xdg-user-dirs"
 
 # Programas de "Software adicional" que vienen en la ISO (unos 325 MB):
