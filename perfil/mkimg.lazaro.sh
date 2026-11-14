@@ -206,11 +206,16 @@ LAZARO_ESCRITORIOS="
 	pavucontrol polkit-gnome greetd-gtkgreet seatd
 	labwc adwaita-icon-theme network-manager-applet"
 
-# 32 bits: solo XFCE (el de la live) y LXQt.
+# 32 bits: XFCE (el de la live), LXQt e IceWM con apariencia de LXDE
+# (lo que instalan lazaro-instalar y desktop-postinstall.sh para IceWM;
+# paquetes-completa.sh agrega además lo que el script pida).
 [ "$LAZARO_ARCH" != x86 ] || LAZARO_ESCRITORIOS="
 	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
 	udisks2 adwaita-qt oxygen lxqt-policykit xdg-desktop-portal-lxqt
-	adwaita-icon-theme network-manager-applet"
+	adwaita-icon-theme network-manager-applet
+	icewm lxsession lightdm lightdm-gtk-greeter dbus-x11 pcmanfm lxterminal
+	papirus-icon-theme greybird-themes pulseaudio-utils pavucontrol
+	gpicview mousepad galculator xarchiver scrot xdg-user-dirs"
 
 # Programas de "Software adicional" que vienen en la ISO (unos 325 MB):
 # lazaro-instalar los instala desde el USB, sin internet, y
@@ -232,7 +237,7 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 # casilla de "Software adicional". Sin VLC: mpv ya reproduce video y
 # música, y así la ISO entra en 2 GB.
 [ "$LAZARO_ARCH" != x86 ] ||
-	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /; s/ vlc vlc-qt / /') netsurf firefox"
+	LAZARO_EXTRAS="$(echo $LAZARO_EXTRAS | sed 's/ flatpak / /; s/ vlc vlc-qt / /') netsurf firefox ff2mpv-rust"
 
 # Edición Completa (LAZARO_EDICION=completa): además, GNOME y Plasma tal
 # como los instala setup-desktop (alpine-conf 3.22.0) y lo que les agrega

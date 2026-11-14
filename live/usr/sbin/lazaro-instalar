@@ -49,14 +49,15 @@ ESCRITORIOS_OFFLINE="xfce mate lxqt sway xfce-wayland ninguno"
 # desktop-postinstall.sh, que entonces corre aunque no haya internet.
 LAZARO_EDICION="${LAZARO_EDICION:-ligera}"
 [ "$LAZARO_EDICION" != completa ] || ESCRITORIOS_OFFLINE="$ESCRITORIOS"
-# ISO de 32 bits: solo XFCE y LXQt (los dos vienen en el USB). No hay
+# ISO de 32 bits: IceWM (con apariencia de LXDE, el más liviano), XFCE y
+# LXQt, todos en el USB. No hay
 # Flatpak (Flathub no tiene aplicaciones de 32 bits) ni kernel Lázaro;
 # NetSurf, un navegador liviano, se instala siempre y Firefox solo si se
 # marcó ("firefox" entre los EXTRAS).
 BITS32=no
 if [ "$ARCH" = x86 ]; then
 	BITS32=si
-	ESCRITORIOS="xfce lxqt ninguno"
+	ESCRITORIOS="icewm xfce lxqt ninguno"
 	ESCRITORIOS_OFFLINE="$ESCRITORIOS"
 fi
 
@@ -560,6 +561,25 @@ paso_escritorio() {
 		log "Sin escritorio: el sistema arrancará en modo texto."
 		return 0
 	fi
+	if [ "$de" = icewm ]; then
+		# IceWM no está en setup-desktop: la misma base gráfica y lo mínimo
+		# para entrar (sesión de LXDE y LightDM), como lo instala
+		# desktop-postinstall.sh --escritorio icewm. El script después
+		# arma la barra, el menú y el tema (setup_icewm).
+		log "Instalando el escritorio 'icewm' (IceWM con apariencia de LXDE)..."
+		avance_iniciar "el escritorio"
+		if ! en_destino "$raiz" setup-xorg-base icewm lxsession lightdm lightdm-gtk-greeter \
+			dbus dbus-x11 elogind polkit-elogind gvfs udisks2 font-dejavu </dev/null >>"$LOG" 2>&1; then
+			die "no se pudo instalar IceWM (detalles en $LOG)"
+		fi
+		for svc in dbus elogind lightdm; do
+			en_destino "$raiz" rc-update add "$svc" default >>"$LOG" 2>&1 || true
+		done
+		avance_parar
+		servicios_a_default "$raiz"
+		log "Escritorio 'icewm' instalado."
+		return 0
+	fi
 	log "Instalando el escritorio '$de' con setup-desktop..."
 	avance_iniciar "el escritorio"
 	if ! en_destino "$raiz" setup-desktop "$de" </dev/null >>"$LOG" 2>&1; then
@@ -591,7 +611,8 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 		case "$e" in
 			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
 			flatpak) [ "$pe_grafico" = no ] || [ "$BITS32" = si ] || pe_paq="$pe_paq flatpak" ;;
-			firefox) [ "$pe_grafico" = no ] || [ "$BITS32" = no ] || pe_paq="$pe_paq firefox" ;;
+			# ff2mpv-rust: el "Play in MPV" de la extensión ff2mpv (paso_firefox_32).
+			firefox) [ "$pe_grafico" = no ] || [ "$BITS32" = no ] || pe_paq="$pe_paq firefox ff2mpv-rust" ;;
 			vlc) [ "$pe_grafico" = no ] || pe_paq="$pe_paq vlc vlc-qt" ;;
 			# YouTube ligero: yt-dlp-ejs-rt-quickjs se pide aparte para que
 			# yt-dlp use QuickJS (1 MB) y no arrastre Deno (41 MB).
@@ -902,6 +923,9 @@ paso_ajustes() {
 		programar_primer_arranque "$raiz"
 	fi
 
+	paso_firefox_32 "$raiz" "$extras"
+	paso_mpv_32 "$raiz"
+
 	# 32 bits con SDDM (LXQt): las gráficas de esos equipos (Intel 945 y
 	# parecidas) no logran dibujar las letras de la pantalla de inicio con
 	# OpenGL: no se ve lo que se escribe ni los menús de arriba. Se dibuja
@@ -920,6 +944,87 @@ paso_ajustes() {
 
 	cp "$LOG" "$raiz/var/log/lazaro-instalar.log" 2>/dev/null || true
 	log "Instalación terminada."
+}
+
+# --- 32 bits: Firefox para equipos de 1 GB -------------------------------
+# Si se marcó Firefox: tres extensiones y menos memoria, con la política
+# de Firefox para todo el sistema (/etc/firefox/policies/policies.json).
+#   - uBlock Origin: bloquea publicidad y rastreadores, que son buena
+#     parte del trabajo del procesador al abrir una página.
+#   - h264ify: YouTube en H.264, el formato que menos le cuesta a estos
+#     procesadores (VP9 y AV1 los saturan).
+#   - ff2mpv: clic derecho en un video > "Play in MPV": el video se abre
+#     en mpv, mucho más liviano que dentro de Firefox (paquete
+#     ff2mpv-rust, que hace de puente).
+# Las extensiones van en la ISO (build.sh las descarga al compilar):
+# Firefox las instala desde el disco la primera vez que abre, sin
+# internet, y después se actualizan solas desde addons.mozilla.org.
+# Menos procesos: 2 para las páginas y 1 por sitio; las pestañas en
+# segundo plano se descargan si falta memoria.
+paso_firefox_32() { # RAIZ EXTRAS
+	[ "$BITS32" = si ] || return 0
+	case " $2 " in *" firefox "*) ;; *) return 0 ;; esac
+	ext=/usr/share/lazaro/firefox
+	if ! ls "$ext"/*.xpi >/dev/null 2>&1; then
+		log "Aviso: la ISO no trae las extensiones de Firefox; se omiten."
+		return 0
+	fi
+	mkdir -p "$1$ext" "$1/etc/firefox/policies"
+	cp "$ext"/*.xpi "$1$ext/"
+	lista=""
+	for x in "$1$ext"/*.xpi; do
+		lista="$lista${lista:+, }\"${x#"$1"}\""
+	done
+	cat > "$1/etc/firefox/policies/policies.json" <<-EOF
+	{
+	  "policies": {
+	    "Extensions": { "Install": [ $lista ] },
+	    "DisableTelemetry": true,
+	    "DisableFirefoxStudies": true,
+	    "DisablePocket": true,
+	    "Preferences": {
+	      "dom.ipc.processCount": { "Value": 2, "Status": "default" },
+	      "dom.ipc.processCount.webIsolated": { "Value": 1, "Status": "default" },
+	      "browser.tabs.unloadOnLowMemory": { "Value": true, "Status": "default" },
+	      "browser.sessionstore.interval": { "Value": 60000, "Status": "default" }
+	    }
+	  }
+	}
+	EOF
+	# Puente de ff2mpv: Firefox lo busca por este nombre.
+	mkdir -p "$1/usr/lib/mozilla/native-messaging-hosts"
+	cat > "$1/usr/lib/mozilla/native-messaging-hosts/ff2mpv.json" <<-EOF
+	{
+	  "name": "ff2mpv",
+	  "description": "ff2mpv: abre en mpv el video de la página",
+	  "path": "/usr/bin/ff2mpv-rust",
+	  "type": "stdio",
+	  "allowed_extensions": ["ff2mpv@yossarian.net"]
+	}
+	EOF
+	[ -x "$1/usr/bin/ff2mpv-rust" ] || log "Aviso: falta ff2mpv-rust; \"Play in MPV\" no funcionará."
+	log "LAZARO-FIREFOX-32 extensiones=$(ls "$1$ext"/*.xpi | wc -l) ff2mpv=$([ -x "$1/usr/bin/ff2mpv-rust" ] && echo si || echo no)"
+}
+
+# --- 32 bits: mpv para procesadores viejos ---------------------------------
+# desktop-postinstall.sh deja /etc/mpv/mpv.conf (480p, H.264, 360p con un
+# núcleo). En 32 bits se agrega: escalado barato (perfil "fast"), sin el
+# filtro de bloques de H.264 (lo más caro de decodificar; casi no se nota
+# a 480p) y descartar cuadros antes que atrasar el audio.
+paso_mpv_32() { # RAIZ
+	[ "$BITS32" = si ] || return 0
+	conf="$1/etc/mpv/mpv.conf"
+	[ -f "$conf" ] || return 0
+	grep -q '^# Lázaro de 32 bits' "$conf" && return 0
+	cat >> "$conf" <<-'EOF'
+
+	# Lázaro de 32 bits: menos trabajo para procesadores viejos.
+	profile=fast
+	vd-lavc-skiploopfilter=all
+	vd-lavc-fast=yes
+	framedrop=vo
+	EOF
+	log "LAZARO-MPV-32"
 }
 
 # --- Aplicaciones de Flathub desde el USB (edición Completa) -------------

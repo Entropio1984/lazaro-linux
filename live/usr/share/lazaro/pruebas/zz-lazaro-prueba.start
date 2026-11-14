@@ -10,7 +10,7 @@ idioma_sesion() {
 	while [ -z "$panel" ] && [ $t -lt 90 ]; do
 		for c in /proc/[0-9]*/comm; do
 			case "$(cat "$c" 2>/dev/null)" in
-			xfce4-panel|mate-panel|lxqt-panel|plasmashell|gnome-shell|sway) ;;
+			xfce4-panel|mate-panel|lxqt-panel|plasmashell|gnome-shell|sway|icewm) ;;
 			*) continue ;;
 			esac
 			# Dueño por el Uid real (/proc/PID puede figurar como de
@@ -33,6 +33,27 @@ idioma_sesion() {
 	fi
 	idioma="$(tr '\0' '\n' < "$panel/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
 	echo "LAZARO-IDIOMA-SESION $(cat "$panel/comm") ${idioma:-sin-LANG}"
+	# IceWM: lo que arranca la sesión de LXDE (red en la bandeja, iconos
+	# del escritorio, agente de contraseñas) y la memoria con la sesión
+	# abierta, para compararla con los demás escritorios.
+	if [ "$(cat "$panel/comm")" = icewm ]; then
+		sleep 30
+		falta=""
+		for p in lxsession pcmanfm nm-applet lxpolkit; do
+			hay=no
+			for c in /proc/[0-9]*/comm; do
+				[ "$(cat "$c" 2>/dev/null)" = "$p" ] && { hay=si; break; }
+			done
+			[ "$hay" = si ] || falta="$falta $p"
+		done
+		if [ -z "$falta" ]; then
+			echo "LAZARO-ICEWM-OK"
+		else
+			echo "LAZARO-ICEWM-NO$falta"
+			tail -n 25 /home/prueba/.xsession-errors 2>/dev/null | sed 's/^/  /'
+		fi
+		echo "LAZARO-MEMORIA-SESION usada=$(awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {print int((t-a)/1024)}' /proc/meminfo) disponible=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo) MB"
+	fi
 	# En Sway la barra es waybar: también se mira su idioma.
 	if [ "$(cat "$panel/comm")" = sway ]; then
 		for c in /proc/[0-9]*/comm; do
@@ -523,6 +544,18 @@ idioma_sesion() {
 		echo "LAZARO-DOAS-OK"
 	else
 		echo "LAZARO-DOAS-NO $(printf '%s' "$doas_c" | head -n 2 | tr '\n' ' ')"
+	fi
+	# 32 bits con Firefox: extensiones por política y el puente de ff2mpv.
+	if [ "$(apk --print-arch)" = x86 ] && apk info -e firefox >/dev/null 2>&1; then
+		if grep -q '"Extensions"' /etc/firefox/policies/policies.json 2>/dev/null \
+			&& [ "$(ls /usr/share/lazaro/firefox/*.xpi 2>/dev/null | wc -l)" -ge 3 ] \
+			&& [ -x /usr/bin/ff2mpv-rust ] \
+			&& [ -f /usr/lib/mozilla/native-messaging-hosts/ff2mpv.json ]; then
+			echo "LAZARO-FIREFOX-32-OK"
+		else
+			echo "LAZARO-FIREFOX-32-NO"
+			ls -la /etc/firefox/policies /usr/share/lazaro/firefox /usr/lib/mozilla/native-messaging-hosts 2>&1 | head -n 20
+		fi
 	fi
 	# Idioma de la sesión (si no se miró antes de cerrarla).
 	[ -n "$reiniciar" ] || idioma_sesion
