@@ -568,10 +568,23 @@ paso_escritorio() {
 		# arma la barra, el menú y el tema (setup_icewm).
 		log "Instalando el escritorio 'icewm' (IceWM con apariencia de LXDE)..."
 		avance_iniciar "el escritorio"
-		if ! en_destino "$raiz" setup-xorg-base icewm lxsession lightdm lightdm-gtk-greeter \
-			dbus dbus-x11 elogind polkit-elogind gvfs udisks2 font-dejavu </dev/null >>"$LOG" 2>&1; then
-			die "no se pudo instalar IceWM (detalles en $LOG)"
+		# setup-xorg-base termina arrancando udev, lo que falla dentro del
+		# chroot ("failed to acquire lock") aunque los paquetes ya quedaron
+		# instalados: se mira que estén y se dejan los servicios de udev
+		# en el arranque a mano.
+		rc=0
+		en_destino "$raiz" setup-xorg-base icewm lxsession lightdm lightdm-gtk-greeter \
+			dbus dbus-x11 elogind polkit-elogind gvfs udisks2 font-dejavu </dev/null >>"$LOG" 2>&1 || rc=$?
+		if [ "$rc" != 0 ]; then
+			if ! en_destino "$raiz" apk info -e xorg-server icewm lxsession lightdm >>"$LOG" 2>&1; then
+				die "no se pudo instalar IceWM (detalles en $LOG)"
+			fi
+			log "setup-xorg-base terminó con error $rc (udev no arranca dentro del chroot); los paquetes están instalados."
 		fi
+		for svc in udev udev-trigger udev-settle; do
+			en_destino "$raiz" rc-update add "$svc" sysinit >>"$LOG" 2>&1 || true
+		done
+		en_destino "$raiz" rc-update add udev-postmount default >>"$LOG" 2>&1 || true
 		for svc in dbus elogind lightdm; do
 			en_destino "$raiz" rc-update add "$svc" default >>"$LOG" 2>&1 || true
 		done
