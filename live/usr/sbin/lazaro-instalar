@@ -765,11 +765,9 @@ paso_afinador() { # RAIZ
 	# Repositorio de Lázaro: con él las herramientas se actualizan solas
 	# (paquete lazaro-herramientas, que se instala en el primer arranque
 	# con internet).
-	# En 32 bits todavía no: el repositorio publicado es de 64 bits. Las
-	# herramientas quedan instaladas igual (las copia este instalador).
-	if [ "$BITS32" = si ]; then
-		log "LAZARO-REPOSITORIO-32-NO (el repositorio de Lázaro aún no existe para 32 bits)"
-	elif [ -x /usr/sbin/lazaro-repositorio ]; then
+	# También en 32 bits: el repositorio publica un índice aparte para x86
+	# con las mismas herramientas (sin el kernel Lázaro, que es de 64).
+	if [ -x /usr/sbin/lazaro-repositorio ]; then
 		pa_r="$(/usr/sbin/lazaro-repositorio --activar --raiz "$1" 2>>"$LOG")" ||
 			log "Aviso: no se pudo preparar el repositorio de Lázaro."
 		# Las pruebas en QEMU buscan esta línea en la consola.

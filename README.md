@@ -129,12 +129,16 @@ la Ligera o la Completa: tienen más opciones.
   opción "instalar en modo texto, poca memoria" para elegirlo a mano.
 - **Lo que no tiene:** Flatpak ni la tienda Flathub (OnlyOffice, Chrome
   y Brave no existen para 32 bits), VLC (mpv, el reproductor de YouTube
-  ligero, ya abre videos y música), el kernel Lázaro, las
-  actualizaciones automáticas de las herramientas de Lázaro (el sistema
-  y sus programas sí se actualizan normalmente), el controlador
+  ligero, ya abre videos y música), el kernel Lázaro, el controlador
   privativo de wifi Broadcom y, en IceWM y en LXQt instalado sin
   internet, la tienda de aplicaciones (Discover trae cientos de paquetes de KDE y no
   cabe en la ISO; XFCE sí trae GNOME Software).
+- **Mejoras de Lázaro:** igual que en 64 bits, **Actualizar el sistema**
+  trae las herramientas nuevas de Lázaro y aplica solas las
+  [mejoras para equipos ya instalados](#mejoras-para-equipos-ya-instalados).
+  Un equipo de 32 bits instalado antes del 15 de noviembre de 2026 hay
+  que conectarlo una vez (ver
+  [Actualizaciones de las herramientas](#actualizaciones-de-las-herramientas)).
 - **Requisitos:** procesador con SSE2 (Pentium 4, Pentium M, Atom o
   más nuevo) y arranque BIOS, que es el que traen estos equipos. Aprovecha
   hasta unos 3 GB de memoria.
@@ -591,10 +595,15 @@ nueva, tu equipo la recibe con el **aviso de actualizaciones** de
 siempre. Todo lo que viene de ahí está **firmado** con la clave de
 Lázaro: el sistema rechaza cualquier paquete que no tenga esa firma.
 
+Vale para las dos versiones: la de 64 bits y la de
+[32 bits](#lázaro-de-32-bits) (que recibe las mismas herramientas, sin el
+kernel Lázaro).
+
 **Equipos instalados con una ISO nueva:** no tienes que hacer nada. En el
 primer arranque con internet el equipo se conecta solo al repositorio.
 
-**Equipos que ya tenían Lázaro antes de esta novedad:**
+**Equipos que ya tenían Lázaro antes de esta novedad** (en 32 bits:
+instalados antes del 15 de noviembre de 2026):
 hay que conectarlo **una sola vez**:
 
 1. Conéctate a internet.
@@ -780,7 +789,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Revisión de tarjetas gráficas | `live/usr/sbin/lazaro-graficas` | Decide si cargar nouveau antes del escritorio |
 | Afinador | `live/usr/sbin/lazaro-afinador` | Perfil del hardware (fijo y extraíble, nivel x86-64, discos, memoria) y ajustes reversibles: `preempt=full`, Multi-Gen LRU con `min_ttl_ms`, tope de escritura en `sysctl.d`, páginas gigantes y `schedutil`; servicio de arranque y menú "Afinador" |
 | Kernel Lázaro | `kernel/` + `live/usr/sbin/lazaro-kernel` | `linux-lazaro`: el linux-lts de Alpine con `kernel/lazaro.fragment` (sin hardware de servidor ni depuración, expropiación completa). Se compila, prueba en QEMU y publica en el repositorio de Lázaro cada vez que Alpine saca un linux-lts nuevo. `lazaro-kernel` lo instala junto al de Alpine y hace un arranque de prueba (`grub-reboot`) que se confirma al terminar de encender |
-| Repositorio de Lázaro | `repo/`, `paquetes/lazaro-herramientas/` + `live/usr/sbin/lazaro-repositorio` | `.github/workflows/lazaro-repositorio.yml` arma el paquete `lazaro-herramientas` en cada cambio de main (y el kernel cuando toca), los firma y los publica en la Release `repo-vX.Y`. Como una Release no tiene carpetas, `lazaro-repositorio` la copia cada día a `/var/lib/lazaro-repositorio` y apk la usa como repositorio local `@lazaro` (el kernel solo se baja si está instalado) |
+| Repositorio de Lázaro | `repo/`, `paquetes/lazaro-herramientas/` + `live/usr/sbin/lazaro-repositorio` | `.github/workflows/lazaro-repositorio.yml` arma el paquete `lazaro-herramientas` en cada cambio de main (y el kernel cuando toca), los firma y los publica en la Release `repo-vX.Y` (índice `APKINDEX.tar.gz` para 64 bits; `APKINDEX-x86.tar.gz`, solo con `lazaro-herramientas`, que es `noarch`, para 32). Como una Release no tiene carpetas, `lazaro-repositorio` la copia cada día a `/var/lib/lazaro-repositorio` y apk la usa como repositorio local `@lazaro` (el kernel solo se baja si está instalado) |
 | Controladores que faltan | `live/usr/sbin/lazaro-controladores` | Revisa el hardware e instala lo que le falta (al instalar, al arrancar, con aviso en la sesión y desde el menú) |
 | Recomendación según el equipo | `live/usr/sbin/lazaro-recomendar` | Escritorio y programas preseleccionados en Calamares según memoria, gráfica y disco |
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
