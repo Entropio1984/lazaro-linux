@@ -630,7 +630,7 @@ prueba_instalar() {
 			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
 			ok=1
 		elif [ "$de" = icewm ] && ! grep -q LAZARO-ICEWM-OK "$serie2"; then
-			echo "FALLO: la sesión de IceWM (estilo LXDE) no arrancó completa (lxsession, pcmanfm, nm-applet y lxpolkit)." >&2
+			echo "FALLO: la sesión de IceWM (estilo LXDE) no arrancó completa (lxsession, pcmanfm, nm-applet y lxpolkit) o quedó sin el logo de Lázaro de fondo." >&2
 			grep -A 30 LAZARO-ICEWM "$serie2" >&2 || echo "(no se encontró la sesión de IceWM)" >&2
 			ok=1
 		elif [ "$BITS32" = si ] && [ "$configurado" = si ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FIREFOX-32-OK "$serie2"; then

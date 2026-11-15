@@ -513,6 +513,12 @@ paso_base() {
 	# CAP_PERFMON cada vez que se instala o actualiza (libcap-setcap se
 	# instala siempre con los programas adicionales).
 	install -Dm755 "$DATOS/btop-gpu.hook" "$raiz/etc/apk/commit_hooks.d/lazaro-btop-gpu.hook"
+	# Fondo de pantalla de Lázaro (su logo). desktop-postinstall.sh lo usa
+	# en IceWM si lo encuentra, por eso se copia antes de correrlo.
+	if [ -d /usr/share/backgrounds/lazaro ]; then
+		mkdir -p "$raiz/usr/share/backgrounds"
+		cp -a /usr/share/backgrounds/lazaro "$raiz/usr/share/backgrounds/"
+	fi
 	# El tema del pulso no viene en ningún paquete: se copia el de la ISO.
 	mkdir -p "$raiz/usr/share/plymouth/themes" "$raiz/etc/plymouth"
 	cp -a /usr/share/plymouth/themes/lazaro "$raiz/usr/share/plymouth/themes/"

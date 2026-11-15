@@ -46,6 +46,10 @@ idioma_sesion() {
 			done
 			[ "$hay" = si ] || falta="$falta $p"
 		done
+		# Fondo de pantalla: el logo de Lázaro (lo copia lazaro-instalar y
+		# lo pone desktop-postinstall.sh), no el azul liso.
+		grep -qs '^wallpaper=/usr/share/backgrounds/lazaro/' /home/*/.config/pcmanfm/icewm-lxde/desktop-items-0.conf \
+			|| falta="$falta fondo-de-lazaro"
 		if [ -z "$falta" ]; then
 			echo "LAZARO-ICEWM-OK"
 		else
