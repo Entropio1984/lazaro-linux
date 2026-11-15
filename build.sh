@@ -7,7 +7,7 @@
 #                         de verdad, como root).
 #
 # Resultado: salida/lazaro-linux-<versión>-<alpine>-x86_64.iso
-# ISO de 32 bits (solo XFCE y LXQt): ALPINE_ARCH=x86 ./build.sh
+# ISO de 32 bits (solo IceWM): ALPINE_ARCH=x86 ./build.sh
 #   Resultado: salida/lazaro-linux-<versión>-<alpine>-x86.iso
 # Caché (Calamares ya compilado y su llave de firma): cache/
 #
@@ -286,7 +286,8 @@ fi
 
 # --- 32 bits: también se instala entera sin internet --------------------
 # Va lo que instala desktop-postinstall.sh (audio, memoria comprimida,
-# applet de red, impresoras...) con XFCE o LXQt, para que la configuración
+# applet de red, impresoras...) con IceWM, el único escritorio de 32 bits
+# (sin lo que el script pone solo con XFCE o LXQt), para que la configuración
 # final corra durante la instalación aunque no haya red. No se excluye
 # nada que el script necesite en 32 bits: quedan fuera lo de Plasma, MATE
 # y Sway, Flatpak (no hay aplicaciones de 32 bits) y Vulkan y la
@@ -308,7 +309,10 @@ if [ "$ALPINE_ARCH" = x86 ]; then
 		plasma-nm plasma-pa xdg-desktop-portal-kde flatpak intel-media-driver
 		waybar fuzzel greetd-gtkgreet font-awesome mate-media mate-polkit
 		mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-nouveau vulkan-loader
-		vlc vlc-qt" \
+		vlc vlc-qt
+		lxqt-policykit pavucontrol-qt xdg-desktop-portal-lxqt ristretto
+		thunar-archive-plugin thunar-volman xfce4-pulseaudio-plugin
+		xfce4-screenshooter gnome-software gnome-software-plugin-apk2" \
 		sh "$LAZARO_DIR/perfil/paquetes-completa.sh" "$PAQUETES_COMPLETA" "$SCRIPT" \
 		"$INDICES/main.tar.gz" "$INDICES/community.tar.gz" \
 		"$REPO_PROPIO/paquetes/$ALPINE_ARCH/APKINDEX.tar.gz" -- $perfil_paquetes
@@ -378,8 +382,15 @@ echo "  paquetes de traducción: $(wc -l < "$LANG_LIVE")"
 sh "$LAZARO_DIR/live/usr/sbin/lazaro-traducciones" extraer "$DATOS_HW" es $(cat "$LANG_LIVE") \
 	|| die "no se pudo sacar el español de los paquetes de traducción"
 echo "  español: $(du -sh "$DATOS_HW/usr/share" | cut -f1) en total con los datos de hardware"
-[ -e "$DATOS_HW/usr/share/locale/es/LC_MESSAGES/xfce4-panel.mo" ] \
-	|| die "falta la traducción al español de XFCE (xfce4-panel.mo)"
+# 32 bits: la sesión de prueba es IceWM (Alpine lo compila sin
+# traducciones); se revisa la de GTK (Bienvenida, NetSurf).
+if [ "$ALPINE_ARCH" = x86 ]; then
+	[ -e "$DATOS_HW/usr/share/locale/es/LC_MESSAGES/gtk30.mo" ] \
+		|| echo "AVISO: no se encontró la traducción al español de GTK en la sesión de prueba"
+else
+	[ -e "$DATOS_HW/usr/share/locale/es/LC_MESSAGES/xfce4-panel.mo" ] \
+		|| die "falta la traducción al español de XFCE (xfce4-panel.mo)"
+fi
 chown -R constructor:abuild "$DATOS_HW"
 
 # --- 32 bits: extensiones de Firefox -------------------------------------

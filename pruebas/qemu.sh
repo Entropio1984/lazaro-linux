@@ -13,7 +13,11 @@
 #       en la consola aparece el aviso del instalador en modo texto.
 #
 #   pruebas/qemu.sh poca ISO bios
-#       Solo la ISO de 32 bits: con 1 GB de RAM no carga el escritorio de
+#       Solo la ISO de 32 bits: con 1 GB de RAM carga el escritorio de
+#       prueba (IceWM) y el instalador gráfico abre y ve el disco.
+#
+#   pruebas/qemu.sh muypoca ISO bios
+#       Solo la ISO de 32 bits: con 768 MB no carga el escritorio de
 #       prueba y muestra el aviso para instalar en modo texto.
 #
 # La ISO de 32 bits (*-x86.iso) se prueba en una máquina con procesador
@@ -192,9 +196,10 @@ prueba_live() {
 			echo "FALLO: la revisión de tarjetas gráficas no corrió o no decidió lo esperado ($MODO)." >&2
 			grep 'LAZARO-GRAFICAS' "$serie" >&2 || true
 			ok=1
-		elif ! grep -q 'LAZARO-RECOMENDACION escritorio=xfce .*disco=21GB flatpak=no' "$serie"; then
+		elif ! grep -q "LAZARO-RECOMENDACION escritorio=$([ "$BITS32" = si ] && echo icewm || echo xfce) .*disco=21GB flatpak=no" "$serie"; then
 			# 4 GB de RAM y disco de 20 GiB (qemu-img "20G" = 21 GB
-			# decimales): XFCE, y Flatpak sin marcar por el disco pequeño.
+			# decimales): XFCE (IceWM en la ISO de 32 bits, su único
+			# escritorio), y Flatpak sin marcar por el disco pequeño.
 			echo "FALLO: la recomendación del instalador no corrió o no recomendó lo esperado ($MODO)." >&2
 			grep 'LAZARO-RECOMENDACION' "$serie" >&2 || true
 			ok=1
@@ -335,31 +340,74 @@ prueba_texto() {
 	return $ok
 }
 
-# ISO de 32 bits en un equipo con 1 GB de RAM: no debe cargar el
-# escritorio de prueba (no cabe en la memoria) y tiene que mostrar el
-# aviso para instalar en modo texto.
+# ISO de 32 bits en un equipo con 1 GB de RAM: carga el escritorio de
+# prueba (IceWM) y el instalador gráfico abre y ve el disco. Muestra
+# cuánta memoria queda con Calamares abierto.
 prueba_poca() {
 	[ "$BITS32" = si ] || { echo "La prueba 'poca' es solo para la ISO de 32 bits." >&2; exit 2; }
 	nombre="poca-$MODO"
 	serie="$RES/$nombre-serie.log"
 	mon="$SOCK_DIR/$nombre.mon"
-	rm -f "$serie" "$mon"
-	arrancar "$nombre" 1024 "$serie" -cdrom "$ISO" -boot d -nic none
+	disco="$RES/$nombre.qcow2"
+	rm -f "$serie" "$mon" "$disco"
+	qemu-img create -q -f qcow2 "$disco" 20G
+	arrancar "$nombre" 1024 "$serie" -cdrom "$ISO" -boot d \
+		-drive "file=$disco,if=virtio,format=qcow2" -nic none \
+		-device virtio-serial-pci \
+		-chardev null,id=lzprueba -device virtserialport,chardev=lzprueba,name=lazaro.prueba
 	ok=0
-	if ! esperar "$serie" "$pid" 900 'LAZARO-AVISO-TEXTO poca-memoria' LAZARO-ESCRITORIO-OK; then
-		echo "FALLO: con 1 GB de RAM no apareció el aviso para instalar en modo texto." >&2
+	if ! esperar "$serie" "$pid" 900 LAZARO-CALAMARES-ABIERTO 'LAZARO-CALAMARES-NO-ABRIO\|LAZARO-AVISO-TEXTO'; then
+		captura "$mon" "$RES/$nombre-fallo"
+		echo "FALLO: con 1 GB de RAM el instalador gráfico no se abrió en la sesión de prueba." >&2
+		grep -e LAZARO-ESCRITORIO -e LAZARO-AVISO-TEXTO -e LAZARO-RAIZ "$serie" >&2 || true
 		ok=1
-	elif ! grep -q 'LAZARO-ESCRITORIO-NO motivo=memoria' "$serie"; then
-		echo "FALLO: con 1 GB de RAM la live intentó cargar el escritorio." >&2
-		ok=1
-	elif ! grep -q LAZARO-LIVE-LISTO "$serie" || grep -q 'No space left on device' "$serie"; then
-		echo "FALLO: con 1 GB de RAM la sesión live básica no se preparó." >&2
-		ok=1
-	elif ! esperar "$serie" "$pid" 240 LAZARO-CONSOLA-OK LAZARO-CONSOLA-NO; then
-		echo "FALLO: con 1 GB de RAM la consola de texto no entró sola como 'lazaro'." >&2
+	elif ! esperar "$serie" "$pid" 240 LAZARO-DISCOS-OK LAZARO-DISCOS-FALLO; then
+		captura "$mon" "$RES/$nombre-fallo"
+		echo "FALLO: con 1 GB de RAM Calamares se abrió pero no ve el disco." >&2
 		ok=1
 	else
-		echo "OK: con 1 GB de RAM la live arranca sin escritorio, la consola entra sola como 'lazaro' y ofrece el instalador en modo texto."
+		# Un rato con todo abierto, como quien lee las pantallas.
+		sleep 60
+		captura "$mon" "$RES/$nombre-calamares"
+		if grep -q -e LAZARO-AVISO-TEXTO -e 'Out of memory' "$serie"; then
+			echo "FALLO: con 1 GB de RAM la sesión de prueba se cayó por falta de memoria." >&2
+			ok=1
+		else
+			echo "OK: con 1 GB de RAM la sesión de prueba (IceWM) abre el instalador gráfico y ve el disco."
+		fi
+	fi
+	grep -o -e 'LAZARO-ESCRITORIO-OK.*' -e 'LAZARO-RAIZ.*' -e 'LAZARO-MEMORIA.*' -e 'LAZARO-MEMORIA-CALAMARES.*' "$serie" | tr -d '\r' || true
+	terminar "$pid"
+	rm -f "$disco"
+	[ "$ok" -eq 0 ] || tail -n 80 "$serie" >&2 || true
+	return $ok
+}
+
+# ISO de 32 bits con menos de 1 GB (768 MB): no debe cargar el escritorio
+# de prueba (no cabe en la memoria) y tiene que mostrar el aviso para
+# instalar en modo texto.
+prueba_muypoca() {
+	[ "$BITS32" = si ] || { echo "La prueba 'muypoca' es solo para la ISO de 32 bits." >&2; exit 2; }
+	nombre="muypoca-$MODO"
+	serie="$RES/$nombre-serie.log"
+	mon="$SOCK_DIR/$nombre.mon"
+	rm -f "$serie" "$mon"
+	arrancar "$nombre" 768 "$serie" -cdrom "$ISO" -boot d -nic none
+	ok=0
+	if ! esperar "$serie" "$pid" 900 'LAZARO-AVISO-TEXTO poca-memoria' LAZARO-ESCRITORIO-OK; then
+		echo "FALLO: con 768 MB de RAM no apareció el aviso para instalar en modo texto." >&2
+		ok=1
+	elif ! grep -q 'LAZARO-ESCRITORIO-NO motivo=memoria' "$serie"; then
+		echo "FALLO: con 768 MB de RAM la live intentó cargar el escritorio." >&2
+		ok=1
+	elif ! grep -q LAZARO-LIVE-LISTO "$serie" || grep -q 'No space left on device' "$serie"; then
+		echo "FALLO: con 768 MB de RAM la sesión live básica no se preparó." >&2
+		ok=1
+	elif ! esperar "$serie" "$pid" 240 LAZARO-CONSOLA-OK LAZARO-CONSOLA-NO; then
+		echo "FALLO: con 768 MB de RAM la consola de texto no entró sola como 'lazaro'." >&2
+		ok=1
+	else
+		echo "OK: con 768 MB de RAM la live arranca sin escritorio, la consola entra sola como 'lazaro' y ofrece el instalador en modo texto."
 		grep -m1 -o 'LAZARO-ESCRITORIO-NO.*' "$serie" | tr -d '\r' || true
 		grep -m1 -o 'LAZARO-RAIZ.*' "$serie" | tr -d '\r' || true
 	fi
@@ -906,6 +954,9 @@ case "$orden" in
 	poca)
 		[ $# -eq 3 ] || uso
 		prueba_poca ;;
+	muypoca)
+		[ $# -eq 3 ] || uso
+		prueba_muypoca ;;
 	instalar)
 		[ $# -eq 5 ] || [ $# -eq 6 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac

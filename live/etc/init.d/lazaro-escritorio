@@ -2,8 +2,10 @@
 # Solo en la ISO de 32 bits. Al arrancar, la live trae únicamente lo
 # básico (consola, red e instalador en modo texto: unos 150 MB de
 # memoria). Este servicio decide si además carga el escritorio de prueba
-# (XFCE, Calamares y lo demás, que viven en la memoria):
-#   - con 1,5 GB de RAM o más, lo carga: la live queda como la de 64 bits;
+# (IceWM, Calamares y lo demás, que viven en la memoria):
+#   - con 1 GB de RAM o más, lo carga: se instala con el instalador
+#     gráfico, como en 64 bits (IceWM es mucho más liviano que el XFCE
+#     que había antes, que pedía 1,5 GB);
 #   - con menos, no: el escritorio no cabría en la memoria. Se muestra el
 #     aviso para instalar con lazaro-instalar-texto, que hace las mismas
 #     preguntas y deja el mismo sistema instalado.
@@ -14,9 +16,10 @@
 description="Escritorio de la sesión live (según la memoria)"
 
 LISTA=/etc/lazaro/world-escritorio
-# MemTotal de un equipo "de 1,5 GB" queda en unos 1450 MB (el núcleo y la
-# gráfica integrada se quedan con una parte).
-MINIMO_MB=1400
+# MemTotal de un equipo "de 1 GB" queda en unos 950 a 1000 MB (el núcleo
+# y la gráfica integrada se quedan con una parte); uno de 768 MB, debajo
+# de 750.
+MINIMO_MB=800
 
 depend() {
 	# Sin "need localmount": localmount va después de modules, y la raíz
@@ -84,6 +87,10 @@ start() {
 		udevadm trigger --action=add 2>/dev/null || true
 		udevadm settle --timeout=20 2>/dev/null || true
 		serie "LAZARO-ESCRITORIO-OK memoria=${mb}MB base=${antes}MB con-escritorio=$(df -m / | awk 'NR == 2 { print $3 }')MB"
+		# Para las pruebas: qué ocupa más lugar en la memoria (MB).
+		if [ -c /dev/ttyS0 ]; then
+			du -sm /usr/lib/* /usr/share/* /usr/libexec/* 2>/dev/null | sort -rn | head -n 15 | sed 's/^/LAZARO-PESO /' > /dev/ttyS0 2>/dev/null || true
+		fi
 		eend 0
 	else
 		# Sin espacio en la memoria o un paquete que falta: se sigue sin

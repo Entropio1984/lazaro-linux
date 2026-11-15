@@ -94,12 +94,16 @@ la Ligera o la Completa: tienen más opciones.
   [GitHub](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo)
   o en [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/32-bits/).
   Pesa menos de 2 GB y cabe en un USB de 4 GB.
-- **Escritorios:** solo los más livianos: **IceWM con apariencia de
-  LXDE** (el recomendado con 1 GB de memoria: barra abajo con menú,
-  ventanas, red, volumen y reloj; íconos en el escritorio; sin efectos
-  visuales), **XFCE** y **LXQt** (o sin escritorio). Los tres se
-  instalan sin internet. En IceWM, el menú de cada ventana (cerrar,
-  maximizar...) sale en inglés: IceWM de Alpine viene sin traducciones.
+- **Escritorio:** solo **IceWM**, liviano y moderno (XFCE y LXQt iban
+  lentos en estos equipos): barra y menús oscuros con los colores de
+  Lázaro, parecidos a Windows 10, con menú, ventanas, red, volumen y
+  reloj; íconos en el escritorio; sin efectos visuales. También se puede
+  instalar sin escritorio. Se instala sin internet. El menú de cada
+  ventana (cerrar, maximizar...) sale en inglés: IceWM de Alpine viene
+  sin traducciones.
+- **Sesión de prueba con IceWM:** la sesión de prueba también es IceWM,
+  así que con **1 GB de memoria** se instala con el instalador gráfico,
+  igual que en 64 bits.
 - **Fondo de IceWM:** el logo de Lázaro. Para poner una foto tuya
   (por ejemplo, una descargada): clic derecho sobre la foto, **Usar como
   fondo del escritorio**. O clic derecho en el escritorio,
@@ -110,10 +114,7 @@ la Ligera o la Completa: tienen más opciones.
   la ISO, también la configuración final (sonido, memoria comprimida,
   indicador de red, impresoras) y los programas de "Software adicional".
   Nada queda pendiente para cuando haya conexión.
-- **Pantalla de inicio de LXQt:** se dibuja sin usar la tarjeta de
-  video, porque las gráficas de esa época (Intel 945 y parecidas) no
-  mostraban las letras.
-- **Navegador:** con cualquiera de los dos escritorios se instala
+- **Navegador:** se instala
   **NetSurf**, muy liviano (usa unos 30 MB de memoria), para páginas
   sencillas. **Firefox** es una casilla
   de "Software adicional" (viene marcada): hace falta para el banco, el
@@ -126,19 +127,18 @@ la Ligera o la Completa: tienen más opciones.
   mpv, mucho más liviano que el navegador). mpv viene ajustado para
   procesadores viejos. Para YouTube también está
   [YouTube ligero](#youtube-ligero).
-- **Equipos con 1 GB de memoria o menos:** la sesión de prueba no abre
-  el escritorio, porque no cabría en la memoria. En su lugar aparece un
-  aviso para instalar desde esa misma pantalla, con el teclado
-  (`doas lazaro-instalar-texto`): hace las mismas preguntas y el sistema
-  instalado queda igual, con su escritorio. Con 1,5 GB o más, la sesión
-  de prueba abre normalmente. En el menú de arranque también está la
-  opción "instalar en modo texto, poca memoria" para elegirlo a mano.
+- **Equipos con menos de 1 GB de memoria** (por ejemplo 768 MB): la
+  sesión de prueba no abre el escritorio, porque no cabría en la
+  memoria. En su lugar aparece un aviso para instalar desde esa misma
+  pantalla, con el teclado (`doas lazaro-instalar-texto`): hace las
+  mismas preguntas y el sistema instalado queda igual, con su
+  escritorio. En el menú de arranque también está la opción "instalar
+  en modo texto, poca memoria" para elegirlo a mano.
 - **Lo que no tiene:** Flatpak ni la tienda Flathub (OnlyOffice, Chrome
   y Brave no existen para 32 bits), VLC (mpv, el reproductor de YouTube
   ligero, ya abre videos y música), el kernel Lázaro, el controlador
-  privativo de wifi Broadcom y, en IceWM y en LXQt instalado sin
-  internet, la tienda de aplicaciones (Discover trae cientos de paquetes de KDE y no
-  cabe en la ISO; XFCE sí trae GNOME Software).
+  privativo de wifi Broadcom y la tienda de aplicaciones (pesa
+  demasiado para estos equipos).
 - **Mejoras de Lázaro:** igual que en 64 bits, **Actualizar el sistema**
   trae las herramientas nuevas de Lázaro y aplica solas las
   [mejoras para equipos ya instalados](#mejoras-para-equipos-ya-instalados).
@@ -874,8 +874,9 @@ el disco que se elija.
 
 La ISO de 32 bits (`*-x86.iso`) se prueba sola en una máquina con
 procesador de 32 bits y 2 GB de memoria, en modo BIOS. `poca` comprueba
-que con 1 GB aparece el aviso del instalador en modo texto, y
-`MEM_32=1024` instala con 1 GB:
+que con 1 GB se abren IceWM y el instalador gráfico, `muypoca` que con
+768 MB aparece el aviso del instalador en modo texto, y `MEM_32=1024`
+instala con 1 GB:
 
 ```sh
 ./pruebas/qemu.sh live salida/lazaro-linux-0.2-3.24-x86.iso bios
@@ -906,9 +907,10 @@ mano, también con la siguiente (edge):
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
 | Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |
 | Instalación | BIOS | Sin escritorio | No | Arranca en modo texto, sin pantalla de inicio gráfica |
-| 32 bits: sesión live | BIOS | XFCE | Sí | Lo mismo que la de 64 bits, en una máquina con procesador de 32 bits y 2 GB de memoria |
-| 32 bits: poca memoria | BIOS | (no se carga) | No | Con 1 GB la live no carga el escritorio, muestra el aviso del instalador en modo texto y la consola entra sola como `lazaro` |
-| 32 bits: instalación | BIOS | XFCE, LXQt, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. Sin red, la configuración final también termina durante la instalación. LXQt además se instala y arranca con 1 GB de memoria |
+| 32 bits: sesión live | BIOS | IceWM | Sí | Lo mismo que la de 64 bits, en una máquina con procesador de 32 bits y 2 GB de memoria |
+| 32 bits: 1 GB | BIOS | IceWM | No | Con 1 GB la sesión de prueba (IceWM) abre el instalador gráfico y ve el disco; muestra la memoria libre con el instalador abierto |
+| 32 bits: poca memoria | BIOS | (no se carga) | No | Con 768 MB la live no carga el escritorio, muestra el aviso del instalador en modo texto y la consola entra sola como `lazaro` |
+| 32 bits: instalación | BIOS | IceWM, sin escritorio | Sí / No | Se instalan y arrancan; NetSurf y Firefox salen del USB. Sin red, la configuración final también termina durante la instalación |
 | 32 bits: IceWM | BIOS | IceWM | No | Se instala sin red con 1 GB de memoria y arranca con su barra, el escritorio de PCManFM, el indicador de red y el agente de permisos; Firefox queda con sus tres extensiones y ff2mpv conectado a mpv. Imprime la memoria usada en la sesión |
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
