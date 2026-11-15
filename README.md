@@ -100,6 +100,12 @@ la Ligera o la Completa: tienen más opciones.
   visuales), **XFCE** y **LXQt** (o sin escritorio). Los tres se
   instalan sin internet. En IceWM, el menú de cada ventana (cerrar,
   maximizar...) sale en inglés: IceWM de Alpine viene sin traducciones.
+- **Fondo de IceWM:** el logo de Lázaro. Para poner una foto tuya
+  (por ejemplo, una descargada): clic derecho sobre la foto, **Usar como
+  fondo del escritorio**. O clic derecho en el escritorio,
+  **Preferencias del escritorio**: si el modo dice "Rellenar con el
+  color del fondo", el campo "Fondo" sale apagado hasta que eliges otro
+  modo, como "Estirar y recortar para llenar toda el área del monitor". La papelera aparece en el escritorio.
 - **Sin internet de principio a fin:** todo lo que se instala viene en
   la ISO, también la configuración final (sonido, memoria comprimida,
   indicador de red, impresoras) y los programas de "Software adicional".
