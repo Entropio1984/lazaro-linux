@@ -75,6 +75,16 @@ rama() {
 }
 url_base() { echo "${LAZARO_REPO_URL:-$PROYECTO/repo-$(rama)}"; }
 arquitectura() { cat "$RAIZ/etc/apk/arch" 2>/dev/null || uname -m; }
+# Una Release no tiene carpetas: el índice de 32 bits (x86) se publica
+# con otro nombre, junto al de 64. Los paquetes son los mismos (las
+# herramientas sirven para las dos; el kernel Lázaro solo está en el de
+# 64 bits).
+indice() {
+	case "$(arquitectura)" in
+		x86) echo APKINDEX-x86.tar.gz ;;
+		*) echo APKINDEX.tar.gz ;;
+	esac
+}
 
 bajar() { # URL DESTINO
 	if command -v curl >/dev/null 2>&1; then
@@ -96,9 +106,9 @@ sincronizar() {
 	d="$DIR/$(arquitectura)"
 	mkdir -p "$d"
 	t="$(mktemp -d)"
-	if ! bajar "$(url_base)/APKINDEX.tar.gz" "$t/APKINDEX.tar.gz"; then
+	if ! bajar "$(url_base)/$(indice)" "$t/APKINDEX.tar.gz"; then
 		rm -rf "$t"
-		aviso "No se pudo descargar el índice del repositorio de Lázaro ($(url_base)). ¿Hay internet?"
+		aviso "No se pudo descargar el índice del repositorio de Lázaro ($(url_base)/$(indice)). ¿Hay internet?"
 		return 1
 	fi
 	todos="$(tar -xzOf "$t/APKINDEX.tar.gz" APKINDEX 2>/dev/null |

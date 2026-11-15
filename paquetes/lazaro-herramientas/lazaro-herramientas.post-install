@@ -7,8 +7,12 @@ S=/usr/share/lazaro
 # Con un archivo nuevo y mv: un programa que está corriendo (por ejemplo
 # lazaro-repositorio, que llamó a apk) sigue leyendo su versión vieja.
 mkdir -p /usr/local/sbin
+# 32 bits: sin kernel Lázaro ni Flatpak (no existen para x86); sin el
+# programa, la Bienvenida no muestra esos botones.
+arch="$(apk --print-arch 2>/dev/null)"
 for p in "$S"/programas/lazaro-*; do
 	[ -f "$p" ] || continue
+	case "$arch:${p##*/}" in x86:lazaro-kernel|x86:lazaro-flatpak) continue ;; esac
 	n="/usr/local/sbin/${p##*/}"
 	install -m755 "$p" "$n.nuevo" && mv -f "$n.nuevo" "$n"
 done

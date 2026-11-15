@@ -1,7 +1,8 @@
 # Repositorio de paquetes de Lázaro: arma y publica, firmados con la clave
 # de Lázaro, el paquete lazaro-herramientas (afinador, controladores,
 # diagnóstico, kernel, repositorio) y el kernel Lázaro (linux-lazaro), en
-# la Release "repo-<versión de Alpine>". Los equipos lo copian con
+# la Release "repo-<versión de Alpine>" (APKINDEX.tar.gz para 64 bits y
+# APKINDEX-x86.tar.gz, solo con las herramientas, para 32). Los equipos lo copian con
 # lazaro-repositorio (tarea diaria) y lo instalan con la actualización
 # normal del sistema.
 #
@@ -171,6 +172,19 @@ jobs:
             cat salida/herramientas/resumen.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      # El índice de 32 bits sale del mismo paquete (aquí solo se
+      # comprueba que se arma; el que se publica lo firma "publicar").
+      # Sin firmar: en un PR la clave de prueba cambia con cada contenedor
+      # y el paquete no se podría verificar (y tocar repo/firma.sh haría
+      # recompilar el kernel).
+      - name: Probar el índice de 32 bits
+        run: |
+          mkdir -p /tmp/repo-x86
+          cp salida/herramientas/x86_64/lazaro-herramientas-*.apk /tmp/repo-x86/
+          docker run --rm -v /tmp/repo-x86:/r -w /r alpine:3.24 \
+            sh -c 'apk index --quiet --allow-untrusted -o APKINDEX.tar.gz --rewrite-arch x86 ./*.apk'
+          tar -xzOf /tmp/repo-x86/APKINDEX.tar.gz APKINDEX | grep -qx 'A:x86'
+          tar -xzOf /tmp/repo-x86/APKINDEX.tar.gz APKINDEX | grep -qx 'P:lazaro-herramientas'
       - uses: actions/upload-artifact@v6
         with:
           name: lazaro-herramientas
@@ -226,6 +240,13 @@ jobs:
           cp -n nuevo/*/x86_64/*.apk repo-x86_64/
           ./repo/indexar.sh repo-x86_64 | tee indexar.txt
           grep -qx 'FIRMA=oficial' indexar.txt
+          # 32 bits: un índice aparte (APKINDEX-x86.tar.gz) con las mismas
+          # herramientas, que no dependen del procesador. El kernel Lázaro
+          # es de 64 bits y no va.
+          mkdir -p repo-x86
+          cp repo-x86_64/lazaro-herramientas-*.apk repo-x86/
+          ALPINE_ARCH=x86 ./repo/indexar.sh repo-x86 | tee indexar-x86.txt
+          grep -qx 'FIRMA=oficial' indexar-x86.txt
 
       - name: Actualizar la Release
         env:
@@ -258,6 +279,8 @@ jobs:
           cp live/usr/sbin/lazaro-repositorio lazaro-repositorio
           gh release upload "$ETIQUETA" lazaro-repositorio repo/lazaro.rsa.pub --clobber
           gh release upload "$ETIQUETA" repo-x86_64/APKINDEX.tar.gz --clobber
+          cp repo-x86/APKINDEX.tar.gz APKINDEX-x86.tar.gz
+          gh release upload "$ETIQUETA" APKINDEX-x86.tar.gz --clobber
           # Las versiones anteriores ya no las nombra el índice.
           quedan="$(cd repo-x86_64 && ls ./*.apk | sed 's|^\./||')"
           printf '%s\n' "$publicados" | grep '\.apk$' | while read -r a; do

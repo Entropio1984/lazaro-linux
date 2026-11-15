@@ -222,6 +222,29 @@ lr --sincronizar
 	ok "quitar: la tarea diaria ya no baja el kernel" || mal "quitar: el kernel sigue en el repositorio local"
 grep -q lazaro "$R/boot/grub/grub.cfg" && mal "quitar: el menú sigue con el Lázaro" || ok "quitar: el menú solo tiene el de Alpine"
 
+# --- Repositorio: 32 bits (x86) lee su propio índice --------------------------------
+# Una Release no tiene carpetas: el índice de x86 se publica aparte, como
+# APKINDEX-x86.tar.gz, con las mismas herramientas y sin el kernel.
+R32="$TMP/sistema32"
+mkdir -p "$R32/etc/apk" "$R32/lib/apk/db"
+: > "$R32/lib/apk/db/installed"
+echo x86 > "$R32/etc/apk/arch"
+echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/main" > "$R32/etc/apk/repositories"
+(cd "$TMP/indice" && printf 'C:Q1abc=\nP:lazaro-herramientas\nV:0.1-r501\n\n' > APKINDEX && tar -czf "$PUB/APKINDEX-x86.tar.gz" APKINDEX)
+publicar "lazaro-herramientas 0.1-r501" "linux-lazaro 6.18.60-r0" "linux-lazaro-dev 6.18.60-r0"
+env LAZARO_REPO_RAIZ="$R32" LAZARO_REPO_URL="file://$PUB" sh "$REPO_PROG" --sincronizar >/dev/null 2>&1 ||
+	mal "32 bits: sincronizar terminó con error"
+L32="$R32/var/lib/lazaro-repositorio/x86"
+[ -s "$L32/APKINDEX.tar.gz" ] && [ -s "$L32/lazaro-herramientas-0.1-r501.apk" ] &&
+	ok "32 bits: baja las herramientas con el índice de x86" || mal "32 bits: no bajó las herramientas"
+espera "32 bits: guarda el índice de x86" "$(tar -xzOf "$L32/APKINDEX.tar.gz" APKINDEX | grep -c '^P:')" 1
+rm -f "$PUB/APKINDEX-x86.tar.gz"
+if env LAZARO_REPO_RAIZ="$R32" LAZARO_REPO_URL="file://$PUB" sh "$REPO_PROG" --sincronizar 2>/dev/null; then
+	mal "32 bits: usó el índice de 64 bits"
+else
+	ok "32 bits: nunca usa el índice de 64 bits"
+fi
+
 # --- Repositorio: desactivar --------------------------------------------------------
 espera "desactivar: responde" "$(lr --desactivar)" LAZARO-REPOSITORIO-DESACTIVADO
 espera "desactivar: repositorios como estaban" "$(cat "$R/etc/apk/repositories")" "https://dl-cdn.alpinelinux.org/alpine/v3.24/main"
