@@ -46,14 +46,8 @@ cp "$LLAVES/$NOMBRE.pub" /etc/apk/keys/
 chown -R constructor:abuild "$CASA"
 
 # firmar_indice DIR: arma DIR/APKINDEX.tar.gz con los .apk de DIR y lo firma.
-# Con la clave de prueba cada contenedor genera una nueva, así que un
-# paquete armado en otro contenedor no se puede verificar: solo ahí se
-# acepta sin firma conocida (lo oficial siempre se verifica).
 firmar_indice() {
-	fi_extra=""
-	[ "$FIRMA" = oficial ] || fi_extra="--allow-untrusted"
-	# shellcheck disable=SC2086
-	(cd "$1" && apk index --quiet $fi_extra -o APKINDEX.tar.gz --rewrite-arch "$ALPINE_ARCH" \
+	(cd "$1" && apk index --quiet -o APKINDEX.tar.gz --rewrite-arch "$ALPINE_ARCH" \
 		-d "Lázaro Linux para Alpine $ALPINE_BRANCH" ./*.apk)
 	cp "$1/APKINDEX.tar.gz" "$CASA/APKINDEX.tar.gz"
 	chown constructor:abuild "$CASA/APKINDEX.tar.gz"
