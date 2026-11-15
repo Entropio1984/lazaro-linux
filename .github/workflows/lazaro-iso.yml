@@ -393,15 +393,13 @@ jobs:
         prueba:
           - live bios
           - texto bios
-          # Con 1 GB de RAM: sin escritorio de prueba, aviso del modo texto.
+          # Con 1 GB de RAM: escritorio de prueba (IceWM) e instalador gráfico.
           - poca bios
-          - instalar bios xfce sin-red
-          - instalar bios xfce con-red
-          - instalar bios lxqt con-red
+          # Con 768 MB: sin escritorio de prueba, aviso del modo texto.
+          - muypoca bios
           - instalar bios ninguno sin-red
-          # Equipo de 1 GB: se instala y arranca LXQt con esa memoria.
-          - instalar bios lxqt sin-red 1024
-          # IceWM (estilo LXDE), el escritorio para equipos de 1 GB.
+          - instalar bios icewm con-red
+          # IceWM, el único escritorio de 32 bits, en un equipo de 1 GB.
           - instalar bios icewm sin-red 1024
     steps:
       - uses: actions/checkout@v5

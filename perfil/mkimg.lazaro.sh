@@ -23,6 +23,15 @@ LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
 	xfce4 elogind gvfs lightdm lightdm-gtk-greeter polkit-elogind
 	xfce4-screensaver xfce4-terminal font-dejavu dbus dbus-x11
 	$LAZARO_NAVEGADOR_LIVE"
+# 32 bits: la sesión de prueba es IceWM, el único escritorio de esta ISO
+# (Julián, 2026-11-15: XFCE y LXQt van lentos en estos equipos). Mucho
+# más liviano que XFCE: así el escritorio de prueba y el instalador
+# gráfico entran en un equipo de 1 GB. Sin PCManFM ni lxsession: el fondo
+# lo pone IceWM y los programas de inicio los abre /etc/icewm/startup.
+[ "$LAZARO_ARCH" != x86 ] || LAZARO_XFCE="xorg-server xf86-input-libinput xinit eudev mesa-dri-gallium
+	icewm elogind lightdm lightdm-gtk-greeter polkit-elogind
+	lxterminal font-dejavu dbus dbus-x11
+	$LAZARO_NAVEGADOR_LIVE"
 
 # util-linux: Calamares (kpmcore) busca los discos con "lsblk --json" y
 # usa blkid, blockdev y sfdisk; busybox no trae lsblk y sin él Calamares
@@ -206,16 +215,15 @@ LAZARO_ESCRITORIOS="
 	pavucontrol polkit-gnome greetd-gtkgreet seatd
 	labwc adwaita-icon-theme network-manager-applet"
 
-# 32 bits: XFCE (el de la live), LXQt e IceWM con apariencia de LXDE
-# (lo que instalan lazaro-instalar y desktop-postinstall.sh para IceWM;
-# paquetes-completa.sh agrega además lo que el script pida).
+# 32 bits: solo IceWM (lo que instalan lazaro-instalar y
+# desktop-postinstall.sh para IceWM; paquetes-completa.sh agrega además
+# lo que el script pida).
 [ "$LAZARO_ARCH" != x86 ] || LAZARO_ESCRITORIOS="
-	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
-	udisks2 adwaita-qt oxygen lxqt-policykit xdg-desktop-portal-lxqt
-	adwaita-icon-theme network-manager-applet
+	adwaita-icon-theme network-manager-applet udisks2
 	icewm lxsession lightdm lightdm-gtk-greeter dbus-x11 pcmanfm lxterminal
 	papirus-icon-theme greybird-themes rsvg-convert pulseaudio-utils pavucontrol
-	gpicview mousepad galculator xarchiver scrot xdg-user-dirs"
+	gpicview mousepad galculator xarchiver scrot xdg-user-dirs
+	python3 py3-gobject3 gtk+3.0"
 
 # Programas de "Software adicional" que vienen en la ISO (unos 325 MB):
 # lazaro-instalar los instala desde el USB, sin internet, y
@@ -296,7 +304,7 @@ profile_lazaro() {
 	if [ "$LAZARO_ARCH" = x86 ]; then
 		title="Lázaro Linux 32 bits"
 		desc="Tu hardware aún tiene pulso.
-		Para equipos de 32 bits: XFCE o LXQt."
+		Para equipos de 32 bits: IceWM, liviano y moderno."
 		lazaro_edicion=" 32 bits"
 		# Lo que instala desktop-postinstall.sh, para que la configuración
 		# final no necesite internet (lista de build.sh).

@@ -76,23 +76,24 @@ textos_completa() {
 }
 [ "${LAZARO_EDICION:-ligera}" != completa ] || textos_completa
 
-# ISO de 32 bits: IceWM (apariencia de LXDE), XFCE, LXQt y "Sin
-# escritorio"; sin Flatpak (Flathub
-# no tiene aplicaciones de 32 bits); NetSurf va siempre y Firefox pasa a
-# ser una casilla. Se quitan de las pantallas de Calamares las opciones
-# que no existen y se comprueba que quedó lo esperado.
+# ISO de 32 bits: IceWM (el único escritorio: Julián, 2026-11-15) y
+# "Sin escritorio"; sin Flatpak (Flathub no tiene aplicaciones de 32
+# bits); NetSurf va siempre y Firefox pasa a ser una casilla. Se quitan de
+# las pantallas de Calamares las opciones que no existen y se comprueba
+# que quedó lo esperado. La sesión de prueba también es IceWM (live_icewm).
 textos_32() {
 	t3_cal="$tmp/etc/calamares/modules"
 	awk '
-		/^    - id:/ { ver = ($3 == "xfce" || $3 == "lxqt" || $3 == "ninguno") }
-		# IceWM va primero (es el más liviano).
+		/^    - id:/ { ver = ($3 == "ninguno") }
+		/^default:/ { print "default: icewm"; next }
+		# IceWM va primero.
 		/^items:/ {
 			print
 			print "    - id: icewm"
-			print "      name: \"IceWM (LXDE style)\""
-			print "      name[es]: \"IceWM (estilo LXDE)\""
-			print "      description: \"The lightest: IceWM with the look of LXDE, for 1 GB of memory. Installs without internet.\""
-			print "      description[es]: \"El más liviano: IceWM con la apariencia de LXDE (barra abajo, menú, iconos en el escritorio), para equipos con 1 GB de memoria. Se instala sin internet desde el USB.\""
+			print "      name: \"IceWM (recommended)\""
+			print "      name[es]: \"IceWM (recomendado)\""
+			print "      description: \"Light and modern: dark bar and menus like Windows 10, made for 1 GB of memory. Installs without internet.\""
+			print "      description[es]: \"Liviano y moderno: barra y menús oscuros parecidos a Windows 10, pensado para equipos con 1 GB de memoria. Se instala sin internet desde el USB.\""
 			print "      screenshot: \"escritorio-icewm.png\""
 			next
 		}
@@ -100,13 +101,8 @@ textos_32() {
 		{ print }
 	' "$t3_cal/packagechooser-escritorio.conf" > "$t3_cal/escritorio.nuevo"
 	mv "$t3_cal/escritorio.nuevo" "$t3_cal/packagechooser-escritorio.conf"
-	[ "$(grep -c '^    - id:' "$t3_cal/packagechooser-escritorio.conf")" = 4 ] ||
-		{ echo "genapkovl-lazaro: la lista de escritorios de 32 bits no quedó con 4 opciones" >&2; exit 1; }
-	# Con IceWM, LXQt ya no es el más liviano.
-	sed -i \
-		-e 's/El más liviano, para equipos con muy poca memoria\./Liviano y moderno./' \
-		-e 's/The lightest option\./Light and modern./' \
-		"$t3_cal/packagechooser-escritorio.conf"
+	[ "$(grep -c '^    - id:' "$t3_cal/packagechooser-escritorio.conf")" = 2 ] ||
+		{ echo "genapkovl-lazaro: la lista de escritorios de 32 bits no quedó con 2 opciones" >&2; exit 1; }
 	# Software adicional: fuera el grupo de Flatpak (es el último) y VLC
 	# (mpv ya reproduce video y música, y así entra en 2 GB); entra
 	# Firefox, marcado, después de LibreOffice.
@@ -143,6 +139,142 @@ textos_32() {
 		"$tmp/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf"
 }
 [ "${ALPINE_ARCH:-x86_64}" != x86 ] || textos_32
+
+# ISO de 32 bits: la sesión de prueba es IceWM (icewm-session), con el
+# mismo tema "moderno" que deja desktop-postinstall.sh (se genera con sus
+# funciones, así hay una sola copia) y el logo de Lázaro de fondo. Sin
+# PCManFM ni lxsession, para que el escritorio y el instalador gráfico
+# entren en 1 GB: el fondo lo pone IceWM y los programas de inicio
+# (/etc/xdg/autostart: Bienvenida, red, aviso de gráfica) los abre
+# /etc/icewm/startup, porque icewm-session no lo hace.
+live_icewm() {
+	li_dir="$tmp/etc/icewm"
+	mkdir -p "$li_dir/themes"
+	li_func="$(mktemp)"
+	sed -n '/^ICEWM_TEMA=/p; /^icewm_tema()/,/^}/p; /^icewm_botones()/,/^}/p; /^icewm_boton_menu()/,/^}/p' \
+		"$LAZARO_SCRIPT" > "$li_func"
+	# shellcheck disable=SC1090
+	( . "$li_func" && icewm_tema "$li_dir/themes" )
+	rm -f "$li_func"
+	[ -s "$li_dir/themes/moderno/default.theme" ] && [ -s "$li_dir/themes/moderno/closeA.xpm" ] ||
+		{ echo "genapkovl-lazaro: no se pudo generar el tema de IceWM con desktop-postinstall.sh" >&2; exit 1; }
+
+	cat > "$li_dir/preferences" <<-'EOF'
+		# Sesión de prueba de Lázaro Linux (32 bits).
+		Theme="moderno/default.theme"
+		TaskBarAtTop=0
+		TaskBarAutoHide=0
+		TaskBarShowStartMenu=1
+		TaskBarShowWindows=1
+		TaskBarShowTray=1
+		TaskBarShowClock=1
+		TaskBarClockLeds=0
+		TimeFormat="%H:%M"
+		TaskBarShowShowDesktopButton=1
+		TaskBarShowWorkspaces=0
+		TaskBarShowWindowListMenu=0
+		TaskBarShowCPUStatus=0
+		TaskBarShowNetStatus=0
+		TaskBarShowMEMStatus=0
+		TaskBarShowMailboxStatus=0
+		TaskBarShowCollapseButton=0
+		TaskBarShowAPMStatus=0
+		TaskBarShowAPMAuto=1
+		TaskBarLaunchOnSingleClick=1
+		ShowProgramsMenu=0
+		ShowSettingsMenu=0
+		ShowFocusModeMenu=0
+		ShowThemesMenu=0
+		ShowHelp=0
+		ShowAbout=0
+		ShowRun=0
+		ShowWindowList=0
+		ShowLogoutMenu=0
+		ShowLogoutSubMenu=0
+		MenuMouseTracking=1
+		SubmenuMenuActivateDelay=150
+		ClickToFocus=1
+		RaiseOnFocus=1
+		FocusOnAppRaise=1
+		QuickSwitch=1
+		EdgeSwitch=0
+		OpaqueMove=1
+		OpaqueResize=0
+		SupportSemitransparency=0
+		IconPath="/usr/share/icons/hicolor/64x64/apps:/usr/share/icons/hicolor/48x48/apps:/usr/share/pixmaps"
+		MenuIconSize=16
+		SmallIconSize=16
+		LargeIconSize=32
+		TitleFontNameXft="DejaVu Sans:size=10:bold"
+		MenuFontNameXft="DejaVu Sans:size=10"
+		NormalTaskBarFontNameXft="DejaVu Sans:size=10"
+		ActiveTaskBarFontNameXft="DejaVu Sans:size=10"
+		ToolButtonFontNameXft="DejaVu Sans:size=10"
+		ClockFontNameXft="DejaVu Sans:size=10"
+		ToolTipFontNameXft="DejaVu Sans:size=10"
+		QuickSwitchFontNameXft="DejaVu Sans:size=10"
+		DesktopBackgroundColor="#06223a"
+		DesktopBackgroundImage="/usr/share/backgrounds/lazaro/lazaro-fondo.jpg"
+		DesktopBackgroundScaled=1
+	EOF
+
+	cat > "$li_dir/toolbar" <<-'EOF'
+		prog "Instalar Lázaro Linux" lazaro-bienvenida lazaro-abrir-instalador
+		prog "Navegador" netsurf netsurf-gtk3
+		prog "Terminal" lxterminal lxterminal
+	EOF
+
+	# El menú, en el idioma de la sesión (la Bienvenida puede cambiarlo).
+	mkdir -p "$tmp/usr/share/lazaro"
+	cat > "$tmp/usr/share/lazaro/icewm-menu" <<-'EOF'
+		#!/bin/sh
+		# Menú de IceWM de la sesión de prueba (32 bits), según el idioma.
+		case "${LANG:-es}" in
+		en*) t="Install Lázaro Linux|Welcome|Lázaro manual|Web browser|Terminal|Partition editor (GParted)|Restart|Shut down" ;;
+		pt*) t="Instalar o Lázaro Linux|Boas-vindas|Manual do Lázaro|Navegador|Terminal|Editor de partições (GParted)|Reiniciar|Desligar" ;;
+		*) t="Instalar Lázaro Linux|Bienvenida|Manual de Lázaro|Navegador|Terminal|Editor de particiones (GParted)|Reiniciar|Apagar" ;;
+		esac
+		IFS='|'
+		# shellcheck disable=SC2086
+		set -- $t
+		echo "prog \"$1\" lazaro-bienvenida lazaro-abrir-instalador"
+		echo "prog \"$2\" lazaro-bienvenida lazaro-bienvenida"
+		command -v lazaro-manual >/dev/null 2>&1 && echo "prog \"$3\" help-browser lazaro-manual"
+		echo "prog \"$4\" netsurf netsurf-gtk3"
+		echo "prog \"$5\" lxterminal lxterminal"
+		echo "prog \"$6\" gparted lazaro-abrir-gparted"
+		echo "separator"
+		echo "prog \"$7\" system-reboot doas -n /sbin/reboot"
+		echo "prog \"$8\" system-shutdown doas -n /sbin/poweroff"
+	EOF
+	chmod 755 "$tmp/usr/share/lazaro/icewm-menu"
+	echo "includeprog /usr/share/lazaro/icewm-menu" > "$li_dir/menu"
+
+	cat > "$li_dir/startup" <<-'EOF'
+		#!/bin/sh
+		# Sesión de prueba (32 bits): icewm-session no abre los programas de
+		# /etc/xdg/autostart (Bienvenida, red, aviso de gráfica); se abren
+		# aquí. Se saltan los ocultos y los que son solo de otro escritorio.
+		for f in /etc/xdg/autostart/*.desktop; do
+			[ -f "$f" ] || continue
+			grep -qi '^Hidden=true' "$f" && continue
+			solo=$(sed -n 's/^OnlyShowIn=//p' "$f")
+			case "$solo" in ''|*XFCE*|*ICEWM*) ;; *) continue ;; esac
+			prueba=$(sed -n 's/^TryExec=//p' "$f")
+			[ -z "$prueba" ] || command -v "$prueba" >/dev/null 2>&1 || continue
+			orden=$(sed -n 's/^Exec=//p' "$f" | head -n 1 | sed 's/ %[a-zA-Z]//g')
+			[ -n "$orden" ] || continue
+			sh -c "$orden" >/dev/null 2>&1 &
+		done
+	EOF
+	chmod 755 "$li_dir/startup"
+
+	sed -i 's/^autologin-session=xfce$/autologin-session=icewm-session/' \
+		"$tmp/etc/lightdm/lightdm.conf.d/50-lazaro-live.conf"
+	grep -q '^autologin-session=icewm-session$' "$tmp/etc/lightdm/lightdm.conf.d/50-lazaro-live.conf" ||
+		{ echo "genapkovl-lazaro: no se pudo poner IceWM en el inicio automático de LightDM" >&2; exit 1; }
+}
+[ "${ALPINE_ARCH:-x86_64}" != x86 ] || live_icewm
 
 # El script del usuario se copia a la ISO desde la raíz del repositorio:
 # así hay una sola copia que mantener.

@@ -49,15 +49,15 @@ ESCRITORIOS_OFFLINE="xfce mate lxqt sway xfce-wayland ninguno"
 # desktop-postinstall.sh, que entonces corre aunque no haya internet.
 LAZARO_EDICION="${LAZARO_EDICION:-ligera}"
 [ "$LAZARO_EDICION" != completa ] || ESCRITORIOS_OFFLINE="$ESCRITORIOS"
-# ISO de 32 bits: IceWM (con apariencia de LXDE, el más liviano), XFCE y
-# LXQt, todos en el USB. No hay
+# ISO de 32 bits: solo IceWM (y "Sin escritorio"), en el USB: XFCE y LXQt
+# iban lentos en estos equipos (Julián, 2026-11-15). No hay
 # Flatpak (Flathub no tiene aplicaciones de 32 bits) ni kernel Lázaro;
 # NetSurf, un navegador liviano, se instala siempre y Firefox solo si se
 # marcó ("firefox" entre los EXTRAS).
 BITS32=no
 if [ "$ARCH" = x86 ]; then
 	BITS32=si
-	ESCRITORIOS="icewm xfce lxqt ninguno"
+	ESCRITORIOS="icewm ninguno"
 	ESCRITORIOS_OFFLINE="$ESCRITORIOS"
 fi
 
@@ -572,7 +572,7 @@ paso_escritorio() {
 		# para entrar (sesión de LXDE y LightDM), como lo instala
 		# desktop-postinstall.sh --escritorio icewm. El script después
 		# arma la barra, el menú y el tema (setup_icewm).
-		log "Instalando el escritorio 'icewm' (IceWM con apariencia de LXDE)..."
+		log "Instalando el escritorio 'icewm' (IceWM moderno)..."
 		avance_iniciar "el escritorio"
 		# setup-xorg-base termina arrancando udev, lo que falla dentro del
 		# chroot ("failed to acquire lock") aunque los paquetes ya quedaron

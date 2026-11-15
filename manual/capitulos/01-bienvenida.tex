@@ -135,17 +135,19 @@ Ligera o la Completa: tienen más opciones. La de 32 bits es el archivo
 que termina en \texttt{x86.iso} y se diferencia en esto:
 
 \begin{description}
-  \item[Escritorios] solo los más livianos: IceWM con apariencia de
-    LXDE (el recomendado con 1 GB de memoria: barra abajo con menú,
-    ventanas, red, volumen y reloj, e íconos en el escritorio), XFCE y
-    LXQt (o sin escritorio). Los tres se instalan sin internet. En
-    IceWM, el menú de cada ventana (cerrar, maximizar\ldots) sale en
-    inglés.
+  \item[Escritorio] solo IceWM, liviano y moderno (XFCE y LXQt iban
+    lentos en estos equipos): barra y menús oscuros con los colores de
+    Lázaro, parecidos a Windows~10, con menú, ventanas, red, volumen y
+    reloj, e íconos en el escritorio. También se puede instalar sin
+    escritorio. Se instala sin internet. El menú de cada ventana
+    (cerrar, maximizar\ldots) sale en inglés.
+  \item[Sesión de prueba] también es IceWM: con 1 GB de memoria se
+    instala con el instalador gráfico, igual que en 64 bits.
   \item[Sin internet] todo lo que se instala viene en la ISO, también la
     configuración final (sonido, memoria comprimida, indicador de red,
     impresoras) y los programas de \emph{Software adicional}. Nada queda
     pendiente para cuando haya conexión.
-  \item[Navegador] con cualquiera de los dos escritorios se instala
+  \item[Navegador] se instala
     NetSurf, muy liviano, para páginas sencillas. Firefox es una casilla de \emph{Software adicional} (viene
     marcada): hace falta para el banco, el correo y los sitios modernos,
     pero es el programa más pesado. Con 1 GB de memoria úsalo con pocas
@@ -154,18 +156,17 @@ que termina en \texttt{x86.iso} y se diferencia en esto:
     equipos viejos reproducen sin trabarse) y ff2mpv: con el botón
     derecho sobre un video, \emph{Play in MPV} lo abre en mpv, mucho más
     liviano. Para los videos también está YouTube ligero.
-  \item[Con 1 GB de memoria o menos] la sesión de prueba no abre el
-    escritorio, porque no cabría en la memoria. Aparece un aviso para
-    instalar desde esa misma pantalla, con el teclado: escribe
-    \comando{doas lazaro-instalar-texto} y pulsa Enter. Hace las mismas preguntas que el
-    instalador gráfico y el sistema instalado queda igual, con su
-    escritorio. Con 1,5 GB o más, la sesión de prueba abre normalmente.
+  \item[Con menos de 1 GB de memoria] (por ejemplo 768 MB) la sesión de
+    prueba no abre el escritorio, porque no cabría en la memoria.
+    Aparece un aviso para instalar desde esa misma pantalla, con el
+    teclado: escribe \comando{doas lazaro-instalar-texto} y pulsa Enter.
+    Hace las mismas preguntas que el instalador gráfico y el sistema
+    instalado queda igual, con su escritorio.
   \item[Lo que no tiene] la tienda Flathub (OnlyOffice, Google Chrome y
     Brave no existen para 32 bits), VLC (mpv ya abre videos y música),
     el kernel Lázaro, el controlador privativo del wifi
-    Broadcom y, en IceWM y en LXQt instalado sin internet, la tienda de aplicaciones
-    (Discover es demasiado grande para la ISO; XFCE sí trae GNOME
-    Software).
+    Broadcom y la tienda de aplicaciones (pesa demasiado para estos
+    equipos).
   \item[Mejoras de Lázaro] igual que en 64 bits: \menu{Actualizar el
     sistema} trae las herramientas nuevas de Lázaro y aplica solas las
     mejoras para equipos ya instalados

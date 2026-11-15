@@ -856,19 +856,15 @@ msgid "Escritorio"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "IceWM (estilo LXDE): el más liviano, para 1 GB"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "XFCE: liviano y clásico"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "LXQt: liviano y moderno"
+msgid "IceWM: liviano y moderno, para 1 GB"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "Sin escritorio: solo la consola"
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "XFCE: liviano y clásico"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto

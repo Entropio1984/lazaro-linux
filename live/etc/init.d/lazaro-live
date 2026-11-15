@@ -5,6 +5,18 @@
 
 description="Sesión live de Lázaro Linux"
 
+# La sesión de prueba es XFCE (64 bits) o IceWM (32 bits): procesos que
+# muestran que está abierta (el de la sesión y el de la barra) y una
+# traducción que la sesión usa (para revisar el idioma en las pruebas).
+SESION_PROC=xfce4-session
+PANEL_PROC=xfce4-panel
+MO_SESION=xfce4-panel.mo
+if ! command -v xfce4-session >/dev/null 2>&1 && command -v icewm-session >/dev/null 2>&1; then
+	SESION_PROC=icewm-session
+	PANEL_PROC=icewm
+	MO_SESION=gtk30.mo
+fi
+
 depend() {
 	need localmount
 	after udev-settle
@@ -116,8 +128,8 @@ idioma_de() {
 # trae solo en ese idioma (build.sh las saca de los paquetes -lang).
 revisar_idioma() {
 	trad=no
-	[ -s /usr/share/locale/es/LC_MESSAGES/xfce4-panel.mo ] && trad=si
-	serie "LAZARO-IDIOMA-LIVE $(idioma_de xfce4-panel) traducciones=$trad"
+	[ -s /usr/share/locale/es/LC_MESSAGES/$MO_SESION ] && trad=si
+	serie "LAZARO-IDIOMA-LIVE $(idioma_de "$PANEL_PROC") traducciones=$trad"
 }
 
 # Solo en las pruebas: reinicia la sesión como el botón "Cambiar idioma"
@@ -128,7 +140,7 @@ revisar_idioma() {
 # volver (más que el minuto que espera el vigilante de la sesión).
 reiniciar_como_boton() {
 	pkill -x calamares 2>/dev/null || true
-	panel_viejo=$(pidof xfce4-panel 2>/dev/null || true)
+	panel_viejo=$(pidof "$PANEL_PROC" 2>/dev/null || true)
 	if [ "${1:-}" = lento ]; then
 		setsid -f sh -c 'sleep 1; exec env LAZARO_IDIOMA_DEMORA=90 lazaro-idioma --reiniciar-sesion' </dev/null >/dev/null 2>&1
 	else
@@ -136,7 +148,7 @@ reiniciar_como_boton() {
 	fi
 	j=0
 	while [ $j -lt 36 ]; do
-		p=$(pidof xfce4-panel 2>/dev/null || true)
+		p=$(pidof "$PANEL_PROC" 2>/dev/null || true)
 		[ -n "$p" ] && [ "$p" != "$panel_viejo" ] && break
 		j=$((j + 1))
 		sleep 5
@@ -159,7 +171,7 @@ probar_cambio_idioma() {
 	trad=no
 	if lazaro-traducciones instalar pt_BR.UTF-8 > /tmp/lazaro-traducciones.log 2>&1 \
 		&& lazaro-traducciones tiene pt_BR.UTF-8 \
-		&& [ -s /usr/share/locale/pt_BR/LC_MESSAGES/xfce4-panel.mo ]; then
+		&& [ -s /usr/share/locale/pt_BR/LC_MESSAGES/$MO_SESION ]; then
 		trad=si
 	fi
 	despues=$(df -m / | awk 'NR == 2 { print $3 }')
@@ -176,11 +188,11 @@ probar_cambio_idioma() {
 		[ -z "$capa" ] || { teclado="$capa"; break; }
 	done
 	[ "$teclado" != no ] || grep -hi xkb /var/log/Xorg.0.log /var/log/lightdm/x-0.log 2>/dev/null | head -n 8 | serie
-	serie "LAZARO-IDIOMA-CAMBIO sesion=$(idioma_de xfce4-panel) calamares=$(idioma_de calamares) teclado=$teclado traducciones=$trad"
+	serie "LAZARO-IDIOMA-CAMBIO sesion=$(idioma_de "$PANEL_PROC") calamares=$(idioma_de calamares) teclado=$teclado traducciones=$trad"
 	# Al inglés, en un equipo lento (así falló una vez en un equipo real).
 	lazaro-idioma --guardar en_US.UTF-8 us
 	reiniciar_como_boton lento
-	serie "LAZARO-IDIOMA-INGLES sesion=$(idioma_de xfce4-panel) calamares=$(idioma_de calamares)"
+	serie "LAZARO-IDIOMA-INGLES sesion=$(idioma_de "$PANEL_PROC") calamares=$(idioma_de calamares)"
 }
 
 AVISO_TEXTO="
@@ -213,7 +225,7 @@ AVISO_POCA_MEMORIA="
 "
 
 hay_sesion() {
-	pidof xfce4-session >/dev/null 2>&1
+	pidof "$SESION_PROC" >/dev/null 2>&1
 }
 
 # El botón "Idioma y teclado" reinicia la sesión a propósito y deja esta
@@ -349,7 +361,7 @@ vigilar_sesion() {
 		# (otro xfce4-session que el que había al dejarla): después, una
 		# caída de verdad se cuenta otra vez sin esperar los 4 minutos.
 		if [ -f "$MARCA_REINICIO" ]; then
-			actual=$(pidof xfce4-session 2>/dev/null || echo ninguna)
+			actual=$(pidof "$SESION_PROC" 2>/dev/null || echo ninguna)
 			if [ -z "$sesion_marca" ]; then
 				sesion_marca="$actual"
 			elif [ "$actual" != ninguna ] && [ "$actual" != "$sesion_marca" ] && marca_asentada; then
@@ -501,6 +513,15 @@ start() {
 				serie "LAZARO-CALAMARES-LANG ${idioma:-sin-LANG}"
 				# Memoria con todo abierto (informativo).
 				serie "LAZARO-MEMORIA $(free -m | awk '$1 == "Mem:" { print "libre=" $7 "MB" } $1 == "Swap:" { print "zram-usado=" $3 "MB" }' | tr '\n' ' ')"
+				# Otra vez un minuto después, con Calamares ya cargado, y
+				# los programas que más memoria usan (informativo).
+				(
+					sleep 60
+					serie "LAZARO-MEMORIA-CALAMARES $(free -m | awk '$1 == "Mem:" { print "total=" $2 "MB libre=" $7 "MB" } $1 == "Swap:" { print "zram-usado=" $3 "MB" }' | tr '\n' ' ')raiz=$(df -m / | awk 'NR == 2 { print $3 }')MB"
+					for d in /proc/[0-9]*; do
+						awk -v n="$(cat "$d/comm" 2>/dev/null)" '/^VmRSS/ { printf "%6.1f %s\n", $2 / 1024, n }' "$d/status" 2>/dev/null
+					done | sort -rn | head -n 10 | serie
+				) &
 				revisar_idioma
 				# Nada debe apagar la pantalla mientras se instala.
 				if pidof xfce4-screensaver >/dev/null 2>&1; then
@@ -561,7 +582,7 @@ start() {
 		dmesg 2>/dev/null | grep -iE 'out of memory|oom|killed process' | tail -n 5 | serie
 		grep -iE 'earlyoom|calamares|bienvenida' /var/log/messages 2>/dev/null | tail -n 8 | serie
 		for f in /proc/[0-9]*/cmdline; do
-			tr '\0' ' ' < "$f" 2>/dev/null | grep -E 'Xorg|lightdm|sddm|xfce4-session|xfwm|calamares|bienvenida' | cut -c1-120
+			tr '\0' ' ' < "$f" 2>/dev/null | grep -E 'Xorg|lightdm|sddm|xfce4-session|xfwm|icewm|calamares|bienvenida' | cut -c1-120
 		done | serie
 		tail -n 15 /home/*/.xsession-errors 2>/dev/null | serie
 		serie -- cat /tmp/lazaro-bienvenida.log
@@ -576,13 +597,13 @@ start() {
 	if [ -e /dev/virtio-ports/lazaro.capturas ]; then
 		(
 			i=0
-			until pidof xfce4-panel >/dev/null 2>&1 || [ $i -ge 180 ]; do
+			until pidof "$PANEL_PROC" >/dev/null 2>&1 || [ $i -ge 180 ]; do
 				i=$((i + 1))
 				sleep 5
 			done
 			# Después de la foto de la sesión con la Bienvenida.
 			sleep 200
-			p=$(pidof xfce4-panel 2>/dev/null | awk '{ print $1 }')
+			p=$(pidof "$PANEL_PROC" 2>/dev/null | awk '{ print $1 }')
 			[ -n "$p" ] || exit 0
 			entorno=$(tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null \
 				| grep -E '^(DISPLAY|XAUTHORITY|DBUS_SESSION_BUS_ADDRESS|LANG|XDG_[A-Z_]*)=' | tr '\n' ' ')

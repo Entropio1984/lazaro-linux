@@ -1411,9 +1411,6 @@ msgid "Se activó la tienda de programas (antes solo mostraba lo ya instalado)"
 msgstr "A loja de programas foi ativada (antes só mostrava o que já estava instalado)"
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "IceWM (estilo LXDE): el más liviano, para 1 GB"
-msgstr "IceWM (estilo LXDE): o mais leve, para 1 GB"
+msgid "IceWM: liviano y moderno, para 1 GB"
+msgstr "IceWM: leve e moderno, para 1 GB"
 
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "LXQt: liviano y moderno"
-msgstr "LXQt: leve e moderno"
