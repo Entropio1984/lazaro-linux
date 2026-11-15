@@ -174,11 +174,15 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       # El índice de 32 bits sale del mismo paquete (aquí solo se
       # comprueba que se arma; el que se publica lo firma "publicar").
+      # Sin firmar: en un PR la clave de prueba cambia con cada contenedor
+      # y el paquete no se podría verificar (y tocar repo/firma.sh haría
+      # recompilar el kernel).
       - name: Probar el índice de 32 bits
         run: |
           mkdir -p /tmp/repo-x86
           cp salida/herramientas/x86_64/lazaro-herramientas-*.apk /tmp/repo-x86/
-          ALPINE_ARCH=x86 ./repo/indexar.sh /tmp/repo-x86
+          docker run --rm -v /tmp/repo-x86:/r -w /r alpine:3.24 \
+            sh -c 'apk index --quiet --allow-untrusted -o APKINDEX.tar.gz --rewrite-arch x86 ./*.apk'
           tar -xzOf /tmp/repo-x86/APKINDEX.tar.gz APKINDEX | grep -qx 'A:x86'
           tar -xzOf /tmp/repo-x86/APKINDEX.tar.gz APKINDEX | grep -qx 'P:lazaro-herramientas'
       - uses: actions/upload-artifact@v6
