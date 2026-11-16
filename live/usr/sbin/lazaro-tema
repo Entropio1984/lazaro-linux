@@ -1,0 +1,387 @@
+#!/bin/sh
+# lazaro-tema: pone o quita el tema Lázaro (colores, ventanas, íconos y
+# fondo de pantalla) en el escritorio de la persona que lo usa.
+#
+# El tema está instalado para todos (/usr/share/themes/Lazaro y
+# Lazaro-Oscuro, /usr/share/icons/Lazaro, /usr/share/backgrounds/lazaro y
+# los paquetes de Plasma), así que también se puede elegir pieza por
+# pieza en "Apariencia" de cada escritorio. Este programa solo hace todo
+# junto, con un clic, y guarda cómo estaba antes para poder volver.
+#
+#   lazaro-tema --ventana        pregunta qué aspecto quiere (Bienvenida)
+#   lazaro-tema --aplicar claro  pone el tema Lázaro (ventanas claras)
+#   lazaro-tema --aplicar oscuro pone el tema Lázaro Oscuro
+#   lazaro-tema --quitar         vuelve al aspecto que había antes
+#   lazaro-tema --primera-vez    al iniciar sesión: lo pone una sola vez
+#                                si el equipo empieza con el tema
+#                                (/etc/lazaro/tema-de-entrada)
+#   lazaro-tema --estado         dice "claro", "oscuro" o "original"
+#
+# Escritorios: XFCE, MATE, GNOME, Plasma, LXQt y Sway. Todo se hace con
+# las herramientas de cada escritorio (xfconf-query, gsettings,
+# plasma-apply-*, los archivos de LXQt), sin ser administrador.
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
+TITULO="$(_ 'Tema Lázaro')"
+FONDOS="${LAZARO_TEMA_FONDOS:-/usr/share/backgrounds/lazaro}"
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/lazaro"
+# Cómo estaba el escritorio antes del tema: una línea "clave<TAB>valor".
+ANTES="$CONF/tema-antes"
+ESTADO="$CONF/tema"
+DE_ENTRADA="${LAZARO_TEMA_ENTRADA:-/etc/lazaro/tema-de-entrada}"
+
+hay() { command -v "$1" >/dev/null 2>&1; }
+
+escritorio() {
+	d="$(printf '%s' "${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}" | tr '[:upper:]' '[:lower:]')"
+	case "$d" in
+		*xfce*) echo xfce ;;
+		*mate*) echo mate ;;
+		*kde* | *plasma*) echo plasma ;;
+		*lxqt*) echo lxqt ;;
+		*gnome*) echo gnome ;;
+		*sway*) echo sway ;;
+		*) [ -n "${SWAYSOCK:-}" ] && echo sway || echo otro ;;
+	esac
+}
+
+fondo_de() { # claro|oscuro: fondo que acompaña a cada variante
+	case "$1" in
+		oscuro) f="$FONDOS/lazaro-pulso.jpg" ;;
+		*) f="$FONDOS/lazaro-amanecer.jpg" ;;
+	esac
+	[ -r "$f" ] || f="$FONDOS/lazaro-fondo.jpg"
+	echo "$f"
+}
+
+# --- Lo de antes ---------------------------------------------------------
+
+# Guarda el valor de antes solo la primera vez: si la persona pasa de
+# claro a oscuro, "quitar" vuelve igual a lo que tenía antes de Lázaro.
+guardar() { # CLAVE VALOR
+	mkdir -p "$CONF"
+	[ -e "$ANTES" ] && grep -q "^$1	" "$ANTES" && return 0
+	printf '%s\t%s\n' "$1" "$2" >> "$ANTES"
+}
+
+antes() { # CLAVE -> valor guardado (vacío si no hay)
+	[ -r "$ANTES" ] || return 1
+	grep "^$1	" "$ANTES" | head -n 1 | cut -f 2-
+}
+
+tiene_antes() { [ -r "$ANTES" ] && grep -q "^$1	" "$ANTES"; }
+
+# --- Archivos .ini (LXQt, GTK) --------------------------------------------
+
+ini_leer() { # ARCHIVO GRUPO CLAVE
+	[ -r "$1" ] || return 0
+	awk -v g="[$2]" -v k="$3" '
+		$0 == g { en = 1; next }
+		/^\[/ { en = 0 }
+		en && index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }
+	' "$1"
+}
+
+ini_poner() { # ARCHIVO GRUPO CLAVE VALOR (VALOR vacío: borra la clave)
+	mkdir -p "$(dirname "$1")"
+	[ -e "$1" ] || : > "$1"
+	awk -v g="[$2]" -v k="$3" -v v="$4" '
+		function poner() { if (!hecho && v != "") print k "=" v; hecho = 1 }
+		$0 == g { en = 1; visto = 1; print; next }
+		/^\[/ { if (en) poner(); en = 0 }
+		en && index($0, k "=") == 1 { poner(); next }
+		{ print }
+		END {
+			if (en) poner()
+			else if (!visto && v != "") { print ""; print g; print k "=" v }
+		}
+	' "$1" > "$1.nuevo" && mv "$1.nuevo" "$1"
+}
+
+# --- XFCE ---------------------------------------------------------------
+
+xf() { xfconf-query "$@" 2>/dev/null; }
+
+xfce_fondos() { # propiedades del fondo de cada pantalla y escritorio
+	l="$(xf -c xfce4-desktop -l | grep '/last-image$')"
+	if [ -z "$l" ] && hay xrandr; then
+		# Antes de que xfdesktop guarde nada: las pantallas conectadas.
+		for m in $(xrandr --query 2>/dev/null | awk '$2 == "connected" { print $1 }'); do
+			l="$l /backdrop/screen0/monitor$m/workspace0/last-image"
+		done
+	fi
+	echo "$l"
+}
+
+xfce() { # claro|oscuro|original
+	if [ "$1" = original ]; then
+		for p in xsettings:/Net/ThemeName xsettings:/Net/IconThemeName xfwm4:/general/theme; do
+			c="${p%%:*}"; k="${p#*:}"
+			if v="$(antes "xfce$k")" && [ -n "$v" ]; then xf -c "$c" -p "$k" -s "$v"; else xf -c "$c" -p "$k" -r; fi
+		done
+		for p in $(xfce_fondos); do
+			if v="$(antes "xfce$p")" && [ -n "$v" ]; then xf -c xfce4-desktop -p "$p" -s "$v"; else xf -c xfce4-desktop -p "$p" -r; fi
+		done
+		return 0
+	fi
+	gtk=Lazaro; [ "$1" = oscuro ] && gtk=Lazaro-Oscuro
+	guardar xfce/Net/ThemeName "$(xf -c xsettings -p /Net/ThemeName)"
+	guardar xfce/Net/IconThemeName "$(xf -c xsettings -p /Net/IconThemeName)"
+	guardar xfce/general/theme "$(xf -c xfwm4 -p /general/theme)"
+	xf -c xsettings -p /Net/ThemeName -n -t string -s "$gtk"
+	xf -c xsettings -p /Net/IconThemeName -n -t string -s Lazaro
+	xf -c xfwm4 -p /general/theme -n -t string -s Lazaro
+	f="$(fondo_de "$1")"
+	for p in $(xfce_fondos); do
+		guardar "xfce$p" "$(xf -c xfce4-desktop -p "$p")"
+		xf -c xfce4-desktop -p "$p" -n -t string -s "$f"
+		xf -c xfce4-desktop -p "${p%/last-image}/image-style" -n -t int -s 5
+	done
+}
+
+# --- GNOME, MATE y Sway (gsettings) --------------------------------------
+
+gs_poner() { # ESQUEMA CLAVE VALOR: guarda lo de antes y cambia
+	gsettings writable "$1" "$2" >/dev/null 2>&1 || return 0
+	guardar "gs:$1:$2" "$(gsettings get "$1" "$2" 2>/dev/null)"
+	gsettings set "$1" "$2" "$3"
+}
+
+gs_volver() { # ESQUEMA CLAVE
+	gsettings writable "$1" "$2" >/dev/null 2>&1 || return 0
+	if v="$(antes "gs:$1:$2")" && [ -n "$v" ]; then gsettings set "$1" "$2" "$v"; else gsettings reset "$1" "$2"; fi
+}
+
+gs_lista() { # escritorio -> "esquema clave" de lo que el tema cambia
+	case "$1" in
+		gnome) echo "org.gnome.desktop.interface gtk-theme
+org.gnome.desktop.interface icon-theme
+org.gnome.desktop.interface color-scheme
+org.gnome.desktop.interface accent-color
+org.gnome.desktop.background picture-uri
+org.gnome.desktop.background picture-uri-dark
+org.gnome.desktop.background picture-options" ;;
+		mate) echo "org.mate.interface gtk-theme
+org.mate.interface icon-theme
+org.mate.Marco.general theme
+org.mate.background picture-filename
+org.mate.background picture-options" ;;
+		sway) echo "org.gnome.desktop.interface gtk-theme
+org.gnome.desktop.interface icon-theme
+org.gnome.desktop.interface color-scheme" ;;
+	esac
+}
+
+gsettings_tema() { # ESCRITORIO claro|oscuro|original
+	hay gsettings || return 0
+	if [ "$2" = original ]; then
+		gs_lista "$1" | while read -r e k; do gs_volver "$e" "$k"; done
+		return 0
+	fi
+	gtk=Lazaro; esquema=default
+	[ "$2" = oscuro ] && { gtk=Lazaro-Oscuro; esquema=prefer-dark; }
+	f="$(fondo_de "$2")"
+	case "$1" in
+		gnome | sway)
+			gs_poner org.gnome.desktop.interface gtk-theme "$gtk"
+			gs_poner org.gnome.desktop.interface icon-theme Lazaro
+			gs_poner org.gnome.desktop.interface color-scheme "$esquema"
+			# GNOME 47 o más nuevo: el color de los detalles (azul).
+			gsettings range org.gnome.desktop.interface accent-color >/dev/null 2>&1 &&
+				[ "$1" = gnome ] && gs_poner org.gnome.desktop.interface accent-color blue
+			if [ "$1" = gnome ]; then
+				gs_poner org.gnome.desktop.background picture-uri "file://$f"
+				gs_poner org.gnome.desktop.background picture-uri-dark "file://$f"
+				gs_poner org.gnome.desktop.background picture-options zoom
+			fi
+			;;
+		mate)
+			gs_poner org.mate.interface gtk-theme "$gtk"
+			gs_poner org.mate.interface icon-theme Lazaro
+			gs_poner org.mate.Marco.general theme Lazaro
+			gs_poner org.mate.background picture-filename "$f"
+			gs_poner org.mate.background picture-options zoom
+			;;
+	esac
+}
+
+# Sway no tiene ventana de Apariencia: el fondo va en un archivo que
+# incluye la configuración de Lázaro (~/.config/sway/config.d).
+sway_fondo() { # claro|oscuro|original
+	a="${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/90-lazaro-tema.conf"
+	if [ "$1" = original ]; then
+		rm -f "$a"
+		! hay swaymsg || swaymsg reload >/dev/null 2>&1
+		return 0
+	fi
+	mkdir -p "$(dirname "$a")"
+	printf '# Puesto por lazaro-tema. Para quitarlo: lazaro-tema --quitar\noutput * bg "%s" fill\n' \
+		"$(fondo_de "$1")" > "$a"
+	! hay swaymsg || swaymsg "output * bg \"$(fondo_de "$1")\" fill" >/dev/null 2>&1
+}
+
+# --- Plasma ---------------------------------------------------------------
+
+kleer() { # ARCHIVO GRUPO CLAVE
+	for k in kreadconfig6 kreadconfig5; do
+		hay "$k" && { "$k" --file "$1" --group "$2" --key "$3" 2>/dev/null; return; }
+	done
+}
+
+plasma_fondo_actual() {
+	a="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
+	[ -r "$a" ] && sed -n 's|^Image=\(file://\)\{0,1\}||p' "$a" | head -n 1
+}
+
+plasma() { # claro|oscuro|original
+	if [ "$1" = original ]; then
+		v="$(antes plasma:lookandfeel)"
+		hay plasma-apply-lookandfeel && plasma-apply-lookandfeel -a "${v:-org.kde.breeze.desktop}" >/dev/null 2>&1
+		v="$(antes plasma:fondo)"
+		[ -z "$v" ] || ! hay plasma-apply-wallpaperimage || plasma-apply-wallpaperimage "$v" >/dev/null 2>&1
+		return 0
+	fi
+	guardar plasma:lookandfeel "$(kleer kdeglobals KDE LookAndFeelPackage)"
+	guardar plasma:fondo "$(plasma_fondo_actual)"
+	paquete=org.lazaro.claro.desktop; [ "$1" = oscuro ] && paquete=org.lazaro.oscuro.desktop
+	hay plasma-apply-lookandfeel && plasma-apply-lookandfeel -a "$paquete" >/dev/null 2>&1
+	hay plasma-apply-wallpaperimage && plasma-apply-wallpaperimage "$(fondo_de "$1")" >/dev/null 2>&1
+	return 0
+}
+
+# --- LXQt ---------------------------------------------------------------
+
+LXQT_PALETAS="${LAZARO_TEMA_PALETAS:-/usr/share/lxqt/palettes}"
+LXQT_COLORES="base_color highlight_color highlighted_text_color link_color link_visited_color text_color window_color window_text_color"
+
+lxqt() { # claro|oscuro|original
+	c="${XDG_CONFIG_HOME:-$HOME/.config}"
+	lx="$c/lxqt/lxqt.conf"
+	ob="$c/openbox/lxqt-rc.xml"
+	pc="$c/pcmanfm-qt/lxqt/settings.conf"
+	gt="$c/gtk-3.0/settings.ini"
+	if [ "$1" = original ]; then
+		ini_poner "$lx" General theme "$(antes lxqt:theme)"
+		ini_poner "$lx" General icon_theme "$(antes lxqt:icon_theme)"
+		for k in $LXQT_COLORES; do ini_poner "$lx" Palette "$k" "$(antes "lxqt:$k")"; done
+		ini_poner "$gt" Settings gtk-theme-name "$(antes lxqt:gtk)"
+		ini_poner "$gt" Settings gtk-icon-theme-name "$(antes lxqt:gtk-iconos)"
+		v="$(antes lxqt:openbox)"
+		[ ! -w "$ob" ] || [ -z "$v" ] || sed -i "/<theme>/,/<\/theme>/s|<name>[^<]*</name>|<name>$v</name>|" "$ob"
+		v="$(antes lxqt:fondo)"
+		if [ -n "$v" ]; then
+			ini_poner "$pc" Desktop Wallpaper "$v"
+			! pgrep -x pcmanfm-qt >/dev/null 2>&1 || pcmanfm-qt --set-wallpaper="$v" >/dev/null 2>&1
+		fi
+	else
+		gtk=Lazaro; lxtema=Lazaro; [ "$1" = oscuro ] && gtk=Lazaro-Oscuro
+		guardar lxqt:theme "$(ini_leer "$lx" General theme)"
+		guardar lxqt:icon_theme "$(ini_leer "$lx" General icon_theme)"
+		guardar lxqt:gtk "$(ini_leer "$gt" Settings gtk-theme-name)"
+		guardar lxqt:gtk-iconos "$(ini_leer "$gt" Settings gtk-icon-theme-name)"
+		guardar lxqt:fondo "$(ini_leer "$pc" Desktop Wallpaper)"
+		# LXQt copia su configuración de Openbox la primera vez que abre
+		# la sesión; si todavía no lo hizo, se copia la de fábrica.
+		if [ ! -r "$ob" ]; then
+			for o in /etc/xdg/openbox/lxqt-rc.xml /usr/share/lxqt/openbox/rc.xml /etc/xdg/openbox/rc.xml; do
+				[ -r "$o" ] && mkdir -p "$(dirname "$ob")" && cp "$o" "$ob" && break
+			done
+		fi
+		if [ -w "$ob" ]; then
+			guardar lxqt:openbox "$(sed -n '/<theme>/,/<\/theme>/s|.*<name>\([^<]*\)</name>.*|\1|p' "$ob" | head -n 1)"
+			sed -i "/<theme>/,/<\/theme>/s|<name>[^<]*</name>|<name>Lazaro</name>|" "$ob"
+		fi
+		# Colores de los programas Qt (los mismos que trae Apariencia >
+		# Paleta: /usr/share/lxqt/palettes/Lazaro y Lazaro-Oscuro).
+		pal="$LXQT_PALETAS/$gtk"
+		for k in $LXQT_COLORES; do
+			guardar "lxqt:$k" "$(ini_leer "$lx" Palette "$k")"
+			ini_poner "$lx" Palette "$k" "$(ini_leer "$pal" Palette "$k")"
+		done
+		ini_poner "$lx" General theme "$lxtema"
+		ini_poner "$lx" General icon_theme Lazaro
+		ini_poner "$gt" Settings gtk-theme-name "$gtk"
+		ini_poner "$gt" Settings gtk-icon-theme-name Lazaro
+		f="$(fondo_de "$1")"
+		ini_poner "$pc" Desktop Wallpaper "$f"
+		ini_poner "$pc" Desktop WallpaperMode zoom
+		! pgrep -x pcmanfm-qt >/dev/null 2>&1 || pcmanfm-qt --set-wallpaper="$f" --wallpaper-mode=zoom >/dev/null 2>&1
+	fi
+	! pgrep -x openbox >/dev/null 2>&1 || openbox --reconfigure >/dev/null 2>&1
+	return 0
+}
+
+# --- Todo junto -----------------------------------------------------------
+
+aplicar() { # claro|oscuro|original
+	de="$(escritorio)"
+	case "$de" in
+		xfce) hay xfconf-query && xfce "$1" ;;
+		gnome | mate) gsettings_tema "$de" "$1" ;;
+		sway) gsettings_tema sway "$1"; sway_fondo "$1" ;;
+		plasma) plasma "$1" ;;
+		lxqt) lxqt "$1" ;;
+		*) echo "$(_ 'Este escritorio no se conoce'): ${XDG_CURRENT_DESKTOP:-?}" >&2; return 1 ;;
+	esac
+	mkdir -p "$CONF"
+	if [ "$1" = original ]; then
+		rm -f "$ANTES" "$ESTADO"
+	else
+		echo "$1" > "$ESTADO"
+	fi
+	return 0
+}
+
+estado() {
+	if [ -r "$ESTADO" ]; then cat "$ESTADO"; else echo original; fi
+}
+
+ventana() {
+	hay zenity || { echo "Falta zenity." >&2; exit 1; }
+	actual="$(estado)"
+	marca() { [ "$actual" = "$1" ] && echo TRUE || echo FALSE; }
+	elegido="$(zenity --list --radiolist --title="$TITULO" --width=520 --height=300 \
+		--text="$(_ 'Elige el aspecto del escritorio. Se puede cambiar cuando quieras.')" \
+		--column="" --column="" --column="$(_ 'Aspecto')" --hide-column=2 \
+		"$(marca claro)" claro "$(_ 'Lázaro: ventanas claras y barra azul noche')" \
+		"$(marca oscuro)" oscuro "$(_ 'Lázaro Oscuro: todo en azul noche')" \
+		"$(marca original)" original "$(_ 'Aspecto original del escritorio')" 2>/dev/null)" || exit 0
+	[ -n "$elegido" ] || exit 0
+	# Los íconos Papirus completan el tema (sin ellos se usan los del
+	# escritorio). Los equipos instalados antes del tema no los tienen:
+	# se ofrecen con la contraseña de administrador.
+	if [ "$elegido" != original ] && [ ! -d /usr/share/icons/Papirus ] && hay pkexec; then
+		pkexec apk add -q papirus-icon-theme >/dev/null 2>&1 || true
+	fi
+	if aplicar "$elegido"; then
+		zenity --info --title="$TITULO" --width=360 \
+			--text="$(_ 'Listo. Algunos programas que ya estaban abiertos toman el aspecto nuevo al volver a abrirlos.')" 2>/dev/null
+	else
+		zenity --error --title="$TITULO" --width=360 \
+			--text="$(_ 'No se pudo cambiar el aspecto en este escritorio.')" 2>/dev/null
+	fi
+}
+
+case "${1:-}" in
+	--aplicar)
+		case "${2:-claro}" in claro | oscuro) aplicar "${2:-claro}" ;; *) echo "uso: $0 --aplicar claro|oscuro" >&2; exit 2 ;; esac ;;
+	--quitar) aplicar original ;;
+	--primera-vez)
+		# Una sola vez por persona: si después elige otro aspecto, se
+		# respeta.
+		[ -e "$DE_ENTRADA" ] || exit 0
+		[ ! -e "$CONF/tema-primera-vez" ] || exit 0
+		mkdir -p "$CONF"
+		# Plasma y XFCE terminan de leer su configuración unos segundos
+		# después de abrir la sesión.
+		sleep "${LAZARO_TEMA_ESPERA:-4}"
+		v="$(cat "$DE_ENTRADA" 2>/dev/null)"
+		case "$v" in oscuro) ;; *) v=claro ;; esac
+		aplicar "$v" && : > "$CONF/tema-primera-vez" ;;
+	--estado) estado ;;
+	--ventana) ventana ;;
+	*)
+		sed -n '2,20s/^# \{0,1\}//p' "$0"
+		exit 2 ;;
+esac

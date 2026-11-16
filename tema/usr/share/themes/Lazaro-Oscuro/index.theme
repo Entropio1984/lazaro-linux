@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Lázaro Oscuro
+Comment=Tema de Lázaro Linux: todo en azul noche con detalles celestes
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=Lazaro-Oscuro
+MetacityTheme=Lazaro
+IconTheme=Lazaro
+CursorTheme=Adwaita
+ButtonLayout=menu:minimize,maximize,close

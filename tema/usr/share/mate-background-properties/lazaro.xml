@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "mate-wp-list.dtd">
+<!-- Fondos de Lázaro Linux: aparecen en la ventana de fondos del escritorio. -->
+<wallpapers>
+  <wallpaper deleted="false">
+    <name>Lázaro: Logo</name>
+    <filename>/usr/share/backgrounds/lazaro/lazaro-fondo.jpg</filename>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#0a1f36</pcolor>
+    <scolor>#0a1f36</scolor>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Lázaro: Pulso</name>
+    <filename>/usr/share/backgrounds/lazaro/lazaro-pulso.jpg</filename>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#0a1f36</pcolor>
+    <scolor>#0a1f36</scolor>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Lázaro: Amanecer</name>
+    <filename>/usr/share/backgrounds/lazaro/lazaro-amanecer.jpg</filename>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#0a1f36</pcolor>
+    <scolor>#0a1f36</scolor>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Lázaro: Claro</name>
+    <filename>/usr/share/backgrounds/lazaro/lazaro-claro.jpg</filename>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#0a1f36</pcolor>
+    <scolor>#0a1f36</scolor>
+  </wallpaper>
+</wallpapers>

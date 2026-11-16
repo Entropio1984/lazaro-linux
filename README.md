@@ -45,6 +45,10 @@ imprimir.
   quitar con un clic.
 - **Avisa de las actualizaciones.** Un icono en la barra te avisa cuando
   hay actualizaciones, y se instalan con un clic.
+- **Con cara de Lázaro.** En la edición de 64 bits, el escritorio empieza
+  con el [tema Lázaro](#tema-lázaro-el-aspecto-del-escritorio): fondos
+  propios, ventanas con la barra azul noche y el pulso en el botón del
+  menú. Se puede volver al aspecto original con un clic.
 - **La tienda de aplicaciones lista.** Si la marcas, queda la tienda
   Flathub con miles de programas, y puedes elegir de entrada OnlyOffice,
   Google Chrome o Brave.
@@ -427,7 +431,8 @@ Diagnóstico queda siempre en español, para que quien ayuda lo lea igual.
 Al iniciar sesión (también en la sesión de prueba) se abre la **Bienvenida**, una ventana con botones para
 todo lo que trae Lázaro: instalar (en la sesión de prueba), actualizar,
 controladores, tienda de aplicaciones y Flatpak, revisión del hardware,
-Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
+aspecto del escritorio (tema Lázaro), Afinador, Kernel Lázaro,
+Diagnóstico y cómo pedir ayuda. Toma los colores,
 letras e iconos del escritorio que hayas elegido. Si no quieres verla en
 cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
 siempre queda en el menú como **Bienvenida**.
@@ -451,6 +456,38 @@ Icono=accessories-calculator
 
 El archivo `LEEME` de esa carpeta explica todas las opciones, y
 `lazaro-bienvenida --comprobar` avisa si algún archivo quedó mal escrito.
+
+### Tema Lázaro: el aspecto del escritorio
+
+En la edición de 64 bits, cada escritorio (XFCE, MATE, LXQt, Plasma,
+GNOME y Sway) empieza con el **tema Lázaro**: ventanas con la barra de
+título azul noche, detalles celestes, íconos Papirus con el **pulso de
+Lázaro en el botón del menú** y uno de sus fondos. Hay dos variantes:
+
+- **Lázaro**: ventanas claras (lo que viene puesto).
+- **Lázaro Oscuro**: todo en azul noche.
+
+Para cambiarlo, en la **Bienvenida** (sección *Tu equipo*) está el botón
+**Aspecto del escritorio**: eliges Lázaro, Lázaro Oscuro o el **aspecto
+original** del escritorio, y vuelve todo como estaba antes del tema.
+También se puede elegir pieza por pieza en las herramientas de cada
+escritorio, donde el tema aparece con el nombre "Lázaro":
+
+| Escritorio | Dónde |
+|---|---|
+| XFCE | Configuración > Apariencia (estilo e íconos) y Gestor de ventanas (ventanas); fondos: clic derecho en el escritorio |
+| MATE | Sistema > Preferencias > Apariencia (temas y fondos) |
+| LXQt | Preferencias > Apariencia (tema de LXQt, paleta, íconos y GTK) y Openbox (ventanas) |
+| Plasma | Preferencias del sistema > Tema global ("Lázaro" y "Lázaro Oscuro"), Colores y Fondo de pantalla |
+| GNOME | Configuración > Apariencia (fondos "Lázaro") |
+| Sway | No tiene ventana de ajustes: se usa el botón de la Bienvenida |
+
+Fondos: **Logo**, **Pulso**, **Amanecer** y **Claro**, en
+`/usr/share/backgrounds/lazaro/`. En los equipos que se instalaron antes
+del tema, llega con "Actualizar el sistema" pero no se pone solo: queda
+disponible para quien lo elija (el botón de la Bienvenida instala los
+íconos Papirus si faltan). La edición de 32 bits mantiene el tema propio
+de IceWM.
 
 ### Afinador: que el equipo responda mejor
 
@@ -809,6 +846,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Pasos de instalación | `live/usr/sbin/lazaro-instalar` | Usa `setup-disk` y `setup-desktop` de Alpine |
 | Pantallas del instalador | `live/etc/calamares/modules/` | Escritorio, oficina, aplicaciones, disco, usuario |
 | Pantalla de arranque | `live/usr/share/plymouth/themes/lazaro/` | El logo con el pulso (Plymouth) |
+| Tema Lázaro | `tema/` (con las rutas del sistema) + `live/usr/sbin/lazaro-tema` | Fondos, GTK (`Lazaro` y `Lazaro-Oscuro`, sobre `adw-gtk3`), íconos (`Lazaro`, sobre Papirus), ventanas de XFCE, MATE y Openbox, tema y paletas de LXQt, temas globales y colores de Plasma. `tema/generar-imagenes.py` dibuja los fondos, el ícono del menú y las ventanas de XFCE; `tema/LEEME.md` explica cada pieza. `lazaro-tema` lo pone o lo quita en cada escritorio |
 | Pruebas | `pruebas/qemu.sh` | Arranque live e instalación en QEMU, BIOS y UEFI |
 | Comprobaciones dentro del sistema de prueba | `live/usr/share/lazaro/pruebas/` | Solo las usa la instalación desatendida |
 | Compilación automática | `.github/workflows/lazaro-iso.yml` | Estable en cada cambio; edge solo los lunes y a mano |
@@ -831,7 +869,10 @@ prueban y publican solas en cada cambio de la rama principal.
    aplicaciones) y las premarcadas de su menú. Si no hay internet, el
    script queda programado para el primer arranque con red (servicio
    `lazaro-primer-arranque`).
-7. `lazaro-afinador --aplicar --raiz`: los ajustes recomendados para el
+7. `lazaro-instalar` copia el tema Lázaro (64 bits, con escritorio),
+   instala `adw-gtk3` y Papirus y deja `/etc/lazaro/tema-de-entrada`:
+   `lazaro-tema --primera-vez` lo pone al entrar por primera vez.
+8. `lazaro-afinador --aplicar --raiz`: los ajustes recomendados para el
    hardware (bloque con marcas en `/etc/default/grub`,
    `/etc/sysctl.d/60-lazaro-afinador.conf` y el servicio
    `lazaro-afinador`, que aplica lo de `/sys` en cada arranque).
@@ -935,7 +976,11 @@ tiene su propia prueba, `pruebas/afinador.sh`, con un portátil viejo, un
 equipo nuevo y uno sin escritorio simulados (qué ajustes elige y que
 aplicar y deshacer dejen GRUB como estaba); en las instalaciones de QEMU
 se comprueba además que el sistema arranca con `preempt=full` y con la
-protección de memoria puesta. `pruebas/traducciones.sh` revisa que las
+protección de memoria puesta. `pruebas/tema.sh` revisa que el tema
+Lázaro esté completo y que `lazaro-tema` lo ponga y lo quite en cada
+escritorio con programas simulados; en las instalaciones de 64 bits con
+escritorio, QEMU comprueba además que la sesión empieza con el tema
+puesto. `pruebas/traducciones.sh` revisa que las
 traducciones de las herramientas estén completas y que los programas
 las encuentren según el idioma.
 

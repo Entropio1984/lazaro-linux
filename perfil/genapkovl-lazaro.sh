@@ -28,6 +28,13 @@ rc_add() {
 # Archivos fijos de la sesión live (Calamares, servicios, accesos).
 cp -a "$LAZARO_LIVE_DIR"/. "$tmp"/
 [ ! -d "${LAZARO_DATOS_HW:-}" ] || cp -a "$LAZARO_DATOS_HW"/. "$tmp"/
+# Tema Lázaro (fondos, colores, ventanas e íconos de cada escritorio):
+# está en tema/ del repositorio, con las rutas del sistema. La lista le
+# dice a lazaro-instalar qué copiar al disco.
+LAZARO_TEMA_DIR="${LAZARO_TEMA_DIR:-$LAZARO_LIVE_DIR/../tema}"
+[ -d "$LAZARO_TEMA_DIR/usr" ] || { echo "genapkovl-lazaro: falta $LAZARO_TEMA_DIR/usr" >&2; exit 1; }
+cp -a "$LAZARO_TEMA_DIR/usr" "$tmp"/
+(cd "$LAZARO_TEMA_DIR" && find usr ! -type d | sort) > "$tmp/usr/share/lazaro/tema-archivos"
 chown -R root:root "$tmp"
 chmod 0755 "$tmp"/usr/sbin/* "$tmp"/usr/bin/* "$tmp"/etc/init.d/*
 
@@ -137,6 +144,11 @@ textos_32() {
 		"$tmp/usr/share/lazaro/lazaro-kernel.initd" \
 		"$tmp/usr/share/lazaro/bienvenida/funciones/34-kernel.conf" \
 		"$tmp/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf"
+	# El tema Lázaro es para los escritorios de 64 bits: IceWM tiene el
+	# suyo (el "moderno" de desktop-postinstall.sh).
+	rm -f "$tmp/usr/sbin/lazaro-tema" "$tmp/etc/xdg/autostart/lazaro-tema.desktop" \
+		"$tmp/etc/lazaro/tema-de-entrada" "$tmp/usr/share/lazaro/lazaro-tema-sesion.desktop" \
+		"$tmp/usr/share/lazaro/bienvenida/funciones/38-tema.conf"
 }
 [ "${ALPINE_ARCH:-x86_64}" != x86 ] || textos_32
 

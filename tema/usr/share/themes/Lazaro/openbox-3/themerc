@@ -1,0 +1,77 @@
+# Ventanas de Lázaro para Openbox (LXQt): barra azul noche, título blanco.
+border.width: 1
+padding.width: 6
+padding.height: 4
+window.handle.width: 0
+window.client.padding.width: 0
+window.client.padding.height: 0
+menu.overlap.x: 0
+menu.overlap.y: 0
+
+window.active.border.color: #091c32
+window.inactive.border.color: #1c2c40
+window.active.title.bg: flat solid
+window.active.title.bg.color: #0d2642
+window.inactive.title.bg: flat solid
+window.inactive.title.bg.color: #22344a
+window.active.label.bg: parentrelative
+window.inactive.label.bg: parentrelative
+window.active.label.text.color: #ffffff
+window.inactive.label.text.color: #a9b8ca
+window.label.text.justify: center
+window.active.button.unpressed.bg: parentrelative
+window.active.button.unpressed.image.color: #e8f0fa
+window.active.button.hover.bg: flat solid
+window.active.button.hover.bg.color: #29b6f6
+window.active.button.hover.image.color: #ffffff
+window.active.button.pressed.bg: flat solid
+window.active.button.pressed.bg.color: #1a7fd0
+window.active.button.pressed.image.color: #ffffff
+window.active.button.toggled.bg: parentrelative
+window.active.button.toggled.image.color: #29b6f6
+window.active.button.disabled.bg: parentrelative
+window.active.button.disabled.image.color: #5d7290
+window.inactive.button.unpressed.bg: parentrelative
+window.inactive.button.unpressed.image.color: #93a4ba
+window.inactive.button.hover.bg: flat solid
+window.inactive.button.hover.bg.color: #29b6f6
+window.inactive.button.hover.image.color: #ffffff
+window.inactive.button.pressed.bg: flat solid
+window.inactive.button.pressed.bg.color: #1a7fd0
+window.inactive.button.pressed.image.color: #ffffff
+window.inactive.button.toggled.bg: parentrelative
+window.inactive.button.toggled.image.color: #93a4ba
+window.inactive.button.disabled.bg: parentrelative
+window.inactive.button.disabled.image.color: #4a5a70
+window.active.handle.bg: flat solid
+window.active.handle.bg.color: #0d2642
+window.inactive.handle.bg: flat solid
+window.inactive.handle.bg.color: #22344a
+window.active.grip.bg: flat solid
+window.active.grip.bg.color: #0d2642
+window.inactive.grip.bg: flat solid
+window.inactive.grip.bg.color: #22344a
+
+menu.border.width: 1
+menu.border.color: #12324f
+menu.items.bg: flat solid
+menu.items.bg.color: #0f2742
+menu.items.text.color: #eef4fb
+menu.items.disabled.text.color: #7d8ea3
+menu.items.active.bg: flat solid
+menu.items.active.bg.color: #1a7fd0
+menu.items.active.text.color: #ffffff
+menu.title.bg: flat solid
+menu.title.bg.color: #0a1f36
+menu.title.text.color: #29b6f6
+menu.title.text.justify: center
+menu.separator.color: #1d3d60
+
+osd.bg: flat solid
+osd.bg.color: #0f2742
+osd.border.color: #12324f
+osd.label.text.color: #eef4fb
+osd.hilight.bg: flat solid
+osd.hilight.bg.color: #29b6f6
+osd.unhilight.bg: flat solid
+osd.unhilight.bg.color: #1d3d60

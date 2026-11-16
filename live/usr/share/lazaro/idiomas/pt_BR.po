@@ -1417,3 +1417,39 @@ msgstr "IceWM: leve e moderno, para 1 GB"
 
 msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
 msgstr "IceWM: a tecla Print Screen abre o programa de capturas (vale ao entrar de novo)"
+
+msgid "Tema Lázaro"
+msgstr "Tema Lázaro"
+
+msgid "Este escritorio no se conoce"
+msgstr "Área de trabalho desconhecida"
+
+msgid "Elige el aspecto del escritorio. Se puede cambiar cuando quieras."
+msgstr "Escolha a aparência da área de trabalho. Pode mudar quando quiser."
+
+msgid "Aspecto"
+msgstr "Aparência"
+
+msgid "Lázaro: ventanas claras y barra azul noche"
+msgstr "Lázaro: janelas claras e barra azul-noite"
+
+msgid "Lázaro Oscuro: todo en azul noche"
+msgstr "Lázaro Escuro: tudo em azul-noite"
+
+msgid "Aspecto original del escritorio"
+msgstr "Aparência original da área de trabalho"
+
+msgid "Listo. Algunos programas que ya estaban abiertos toman el aspecto nuevo al volver a abrirlos."
+msgstr "Pronto. Alguns programas que já estavam abertos mostram a nova aparência ao serem abertos de novo."
+
+msgid "No se pudo cambiar el aspecto en este escritorio."
+msgstr "Não foi possível mudar a aparência nesta área de trabalho."
+
+msgid "Aspecto del escritorio"
+msgstr "Aparência da área de trabalho"
+
+msgid "Elegir"
+msgstr "Escolher"
+
+msgid "Elige el tema Lázaro (claro u oscuro) o vuelve al aspecto original del escritorio."
+msgstr "Escolha o tema Lázaro (claro ou escuro) ou volte à aparência original da área de trabalho."

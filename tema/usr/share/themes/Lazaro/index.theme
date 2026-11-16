@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Lázaro
+Comment=Tema de Lázaro Linux: ventanas claras, barra azul noche y detalles celestes
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=Lazaro
+MetacityTheme=Lazaro
+IconTheme=Lazaro
+CursorTheme=Adwaita
+ButtonLayout=menu:minimize,maximize,close
