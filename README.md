@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/imagenes/pulso.gif" width="560" alt="Logo de Lázaro Linux con la línea de pulso que aparece al encender el equipo">
+</p>
+
 # Lázaro Linux
 
 **Tu hardware aún tiene pulso.**
@@ -11,6 +15,12 @@ imprimir.
 > **Todavía está en desarrollo.** Ya se instala bien en varios equipos
 > reales, pero pruébalo primero en un equipo de sobra o en una máquina
 > virtual, y guarda una copia de tus archivos antes de instalar.
+
+<p align="center">
+  <img src="manual/imagenes/capturas/bienvenida.png" width="720" alt="La ventana de Bienvenida de Lázaro Linux sobre el escritorio XFCE">
+  <br>
+  <em>Lo primero que ves al encender: la Bienvenida, con todo a mano.</em>
+</p>
 
 ## ¿Qué tiene de distinto?
 
@@ -437,6 +447,10 @@ letras e iconos del escritorio que hayas elegido. Si no quieres verla en
 cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
 siempre queda en el menú como **Bienvenida**.
 
+| Con un escritorio claro | Con un escritorio oscuro |
+|---|---|
+| <img src="docs/imagenes/bienvenida-claro.png" alt="Bienvenida, sección Tu equipo, con colores claros"> | <img src="docs/imagenes/bienvenida-oscuro.png" alt="Bienvenida, sección Ayuda, con colores oscuros"> |
+
 Cada botón solo aparece si sirve en tu equipo: por ejemplo, la tienda se
 muestra cuando hay una tienda instalada.
 
@@ -484,7 +498,7 @@ escritorio, donde el tema aparece con el nombre "Lázaro":
 
 Fondos: **Logo**, **Pulso**, **Amanecer** y **Claro**, en
 `/usr/share/backgrounds/lazaro/`. En los equipos que se instalaron antes
-del tema, llega con "Actualizar el sistema" pero no se pone solo: queda
+del tema, llega con "Actualizar el sistema" cuando sale la versión siguiente de Lázaro, pero no se pone solo: queda
 disponible para quien lo elija (el botón de la Bienvenida instala los
 íconos Papirus si faltan). La edición de 32 bits mantiene el tema propio
 de IceWM.
@@ -701,6 +715,9 @@ Los que hay:
   del 16 de noviembre de 2026, instala el programa de capturas y hace que
   Imprimir Pantalla abra su ventana (Mayús+Imprimir una zona, Alt+Imprimir
   la ventana). Se nota al cerrar sesión y volver a entrar, o al reiniciar.
+- **Botón "mostrar escritorio" en IceWM** (003): en los equipos con IceWM
+  instalados antes del 16 de noviembre de 2026, le pone un icono que se
+  ve en la barra oscura. También se nota al volver a entrar.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en

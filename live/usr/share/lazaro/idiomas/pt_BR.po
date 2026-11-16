@@ -1453,3 +1453,6 @@ msgstr "Escolher"
 
 msgid "Elige el tema Lázaro (claro u oscuro) o vuelve al aspecto original del escritorio."
 msgstr "Escolha o tema Lázaro (claro ou escuro) ou volte à aparência original da área de trabalho."
+
+msgid "IceWM: el botón \"mostrar escritorio\" tiene un icono que se ve en la barra (se nota al volver a entrar)"
+msgstr "IceWM: o botão \"mostrar área de trabalho\" tem um ícone que aparece na barra (vale ao entrar de novo)"
