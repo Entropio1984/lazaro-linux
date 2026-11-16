@@ -1417,3 +1417,6 @@ msgstr "IceWM: leve e moderno, para 1 GB"
 
 msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
 msgstr "IceWM: a tecla Print Screen abre o programa de capturas (vale ao entrar de novo)"
+
+msgid "IceWM: el botón \"mostrar escritorio\" tiene un icono que se ve en la barra (se nota al volver a entrar)"
+msgstr "IceWM: o botão \"mostrar área de trabalho\" tem um ícone que aparece na barra (vale ao entrar de novo)"
