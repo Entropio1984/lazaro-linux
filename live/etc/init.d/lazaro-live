@@ -94,6 +94,24 @@ revisar_discos() {
 # La live no debe apagar la pantalla ni suspenderse: se pregunta a
 # elogind qué hará con la inactividad y la tapa, y se mira en el registro
 # de Xorg que el ahorro de energía del monitor (DPMS) quedó apagado.
+# Tema Lázaro (64 bits): lazaro-tema --primera-vez lo pone al abrir la
+# sesión y lo anota en ~/.config/lazaro/tema. Se espera hasta un minuto.
+revisar_tema() {
+	[ -e /etc/lazaro/tema-de-entrada ] || return 0
+	(
+		j=0
+		until [ -s /home/lazaro/.config/lazaro/tema ] || [ $j -ge 12 ]; do
+			j=$((j + 1))
+			sleep 5
+		done
+		x=/home/lazaro/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
+		gtk=$(sed -n 's/.*name="ThemeName" type="string" value="\([^"]*\)".*/\1/p' "$x" 2>/dev/null | head -n 1)
+		serie "LAZARO-TEMA-LIVE $(cat /home/lazaro/.config/lazaro/tema 2>/dev/null || echo no) gtk=${gtk:-?}"
+		# Para saber por qué no se puso: lo que dijo lazaro-tema.
+		[ -s /home/lazaro/.config/lazaro/tema ] || serie -- tail -n 15 /home/lazaro/.cache/lazaro-tema.log
+	) &
+}
+
 revisar_energia() {
 	energia=""
 	for p in IdleAction HandleLidSwitch HandleSuspendKey; do
@@ -529,6 +547,7 @@ start() {
 				else
 					serie "LAZARO-SALVAPANTALLAS-NO"
 				fi
+				revisar_tema
 				# La Bienvenida se abre con la sesión (en las pruebas,
 				# junto con el instalador).
 				j=0

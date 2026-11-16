@@ -373,12 +373,21 @@ case "${1:-}" in
 		[ -e "$DE_ENTRADA" ] || exit 0
 		[ ! -e "$CONF/tema-primera-vez" ] || exit 0
 		mkdir -p "$CONF"
+		# Lo que salga mal queda anotado (no hay terminal a la vista).
+		reg="${XDG_CACHE_HOME:-$HOME/.cache}/lazaro-tema.log"
+		mkdir -p "$(dirname "$reg")" && exec 2>>"$reg"
+		echo "$(date '+%F %T') primera vez: escritorio=$(escritorio) (${XDG_CURRENT_DESKTOP:-?})" >&2
 		# Plasma y XFCE terminan de leer su configuración unos segundos
 		# después de abrir la sesión.
 		sleep "${LAZARO_TEMA_ESPERA:-4}"
 		v="$(cat "$DE_ENTRADA" 2>/dev/null)"
 		case "$v" in oscuro) ;; *) v=claro ;; esac
-		aplicar "$v" && : > "$CONF/tema-primera-vez" ;;
+		if aplicar "$v"; then
+			: > "$CONF/tema-primera-vez"
+			echo "$(date '+%F %T') listo: $v" >&2
+		else
+			echo "$(date '+%F %T') no se pudo poner el tema" >&2
+		fi ;;
 	--estado) estado ;;
 	--ventana) ventana ;;
 	*)
