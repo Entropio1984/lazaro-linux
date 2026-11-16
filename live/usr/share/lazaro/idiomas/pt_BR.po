@@ -1414,3 +1414,6 @@ msgstr "A loja de programas foi ativada (antes só mostrava o que já estava ins
 msgid "IceWM: liviano y moderno, para 1 GB"
 msgstr "IceWM: leve e moderno, para 1 GB"
 
+
+msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
+msgstr "IceWM: a tecla Print Screen abre o programa de capturas (vale ao entrar de novo)"
