@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/imagenes/pulso.gif" width="560" alt="Logo de Lázaro Linux con la línea de pulso que aparece al encender el equipo">
+</p>
+
 # Lázaro Linux
 
 **Tu hardware aún tiene pulso.**
@@ -11,6 +15,12 @@ imprimir.
 > **Todavía está en desarrollo.** Ya se instala bien en varios equipos
 > reales, pero pruébalo primero en un equipo de sobra o en una máquina
 > virtual, y guarda una copia de tus archivos antes de instalar.
+
+<p align="center">
+  <img src="manual/imagenes/capturas/bienvenida.png" width="720" alt="La ventana de Bienvenida de Lázaro Linux sobre el escritorio XFCE">
+  <br>
+  <em>Lo primero que ves al encender: la Bienvenida, con todo a mano.</em>
+</p>
 
 ## ¿Qué tiene de distinto?
 
@@ -431,6 +441,10 @@ Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
 letras e iconos del escritorio que hayas elegido. Si no quieres verla en
 cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
 siempre queda en el menú como **Bienvenida**.
+
+| Con un escritorio claro | Con un escritorio oscuro |
+|---|---|
+| <img src="docs/imagenes/bienvenida-claro.png" alt="Bienvenida, sección Tu equipo, con colores claros"> | <img src="docs/imagenes/bienvenida-oscuro.png" alt="Bienvenida, sección Ayuda, con colores oscuros"> |
 
 Cada botón solo aparece si sirve en tu equipo: por ejemplo, la tienda se
 muestra cuando hay una tienda instalada.
