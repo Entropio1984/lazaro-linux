@@ -1335,3 +1335,7 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/002-capturas-icewm.sh
 msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/003-boton-escritorio-icewm.sh
+msgid "IceWM: el botón \"mostrar escritorio\" tiene un icono que se ve en la barra (se nota al volver a entrar)"
+msgstr ""

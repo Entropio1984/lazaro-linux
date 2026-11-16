@@ -678,6 +678,9 @@ Los que hay:
   del 16 de noviembre de 2026, instala el programa de capturas y hace que
   Imprimir Pantalla abra su ventana (Mayús+Imprimir una zona, Alt+Imprimir
   la ventana). Se nota al cerrar sesión y volver a entrar, o al reiniciar.
+- **Botón "mostrar escritorio" en IceWM** (003): en los equipos con IceWM
+  instalados antes del 16 de noviembre de 2026, le pone un icono que se
+  ve en la barra oscura. También se nota al volver a entrar.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en

@@ -246,6 +246,19 @@ es "capturas: el ayudante abre la ventana y tiene buena sintaxis" 'grep -q gnome
 capturas
 es "capturas: ya arreglado, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
 
+# 003-boton-escritorio-icewm en un sistema de mentira.
+E="$TMP/boton"
+mkdir -p "$E"
+boton() { rc=0; LAZARO_ARREGLO_RAIZ="$E" sh "$REALES/003-boton-escritorio-icewm.sh" > /dev/null 2>&1 || rc=$?; }
+boton
+es "botón escritorio: sin el tema moderno no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -e "$E/etc" ]'
+mkdir -p "$E/etc/icewm/themes/moderno"
+: > "$E/etc/icewm/themes/moderno/default.theme"
+boton
+es "botón escritorio: dibuja el icono de 24x24" '[ "$rc" = 0 ] && head -n 1 "$E/etc/icewm/themes/moderno/taskbar/desktop.xpm" | grep -q XPM && [ "$(grep -c "^\"[ .#]\{24\}\"" "$E/etc/icewm/themes/moderno/taskbar/desktop.xpm")" = 24 ]'
+boton
+es "botón escritorio: ya puesto, no hace falta" '[ "$rc" = 10 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'
