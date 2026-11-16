@@ -1331,3 +1331,7 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/001-tienda.sh
 msgid "Se activó la tienda de programas (antes solo mostraba lo ya instalado)"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/002-capturas-icewm.sh
+msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
+msgstr ""

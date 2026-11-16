@@ -656,9 +656,14 @@ del paquete firmado de las herramientas.
 - Un equipo recién instalado ya trae todas las mejoras de su ISO: en él
   no corre ninguno.
 
-El primero es el de la **tienda de programas**, que en los equipos
-instalados antes del 11 de noviembre de 2026 solo mostraba lo ya
-instalado.
+Los que hay:
+
+- **Tienda de programas** (001): en los equipos instalados antes del 11
+  de noviembre de 2026 solo mostraba lo ya instalado.
+- **Capturas en IceWM** (002): en los equipos con IceWM instalados antes
+  del 16 de noviembre de 2026, instala el programa de capturas y hace que
+  Imprimir Pantalla abra su ventana (Mayús+Imprimir una zona, Alt+Imprimir
+  la ventana). Se nota al cerrar sesión y volver a entrar, o al reiniciar.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en

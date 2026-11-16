@@ -1414,3 +1414,6 @@ msgstr "The software store was turned on (before, it only showed what was alread
 msgid "IceWM: liviano y moderno, para 1 GB"
 msgstr "IceWM: light and modern, for 1 GB"
 
+
+msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
+msgstr "IceWM: the Print Screen key opens the screenshot program (takes effect next time you log in)"

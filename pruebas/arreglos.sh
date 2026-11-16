@@ -212,6 +212,40 @@ rm -rf "$T/etc/periodic" "$T/etc/runlevels/default/apk-polkit-server"
 tienda
 es "tienda: con Discover solo hace falta el catálogo" '[ "$rc" = 0 ] && [ -x "$T/etc/periodic/hourly/alpine-tienda-catalogo" ] && ! grep -q polkit "$TMP/llamadas"'
 
+# 002-capturas-icewm en un sistema de mentira, con apk falso.
+C="$TMP/capturas"
+mkdir -p "$C/lib/apk/db" "$C/etc/icewm" "$C/usr/local/libexec/icewm-lxde"
+cat > "$B/apk" <<EOF2
+#!/bin/sh
+echo "apk \$*" >> "$TMP/llamadas"
+[ ! -e "$TMP/sin-internet" ] || exit 1
+for p in "\$@"; do
+	case "\$p" in -*) ;; *) echo "P:\$p" >> "$C/lib/apk/db/installed" ;; esac
+done
+EOF2
+chmod 755 "$B/apk"
+capturas() { rc=0; : > "$TMP/llamadas"; PATH="$B:$PATH" LAZARO_ARREGLO_RAIZ="$C" sh "$REALES/002-capturas-icewm.sh" > /dev/null 2>&1 || rc=$?; }
+echo "P:icewm" > "$C/lib/apk/db/installed"
+capturas
+es "capturas: sin la sesión de IceWM del script no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
+cat > "$C/etc/icewm/keys" <<'EOF2'
+# Generado por desktop-postinstall.sh
+key "XF86AudioMute"         pactl set-sink-mute @DEFAULT_SINK@ toggle
+key "Print"                 /usr/local/libexec/icewm-lxde/captura
+key "Super+e"               pcmanfm
+EOF2
+printf '#!/bin/sh\nexec scrot x.png\n' > "$C/usr/local/libexec/icewm-lxde/captura"
+: > "$TMP/sin-internet"
+capturas
+es "capturas: sin internet queda pendiente y no toca las teclas" '[ "$rc" = 1 ] && ! grep -q "captura --area" "$C/etc/icewm/keys"'
+rm "$TMP/sin-internet"
+capturas
+es "capturas: instala el programa y pone las tres teclas" '[ "$rc" = 0 ] && grep -qx "P:gnome-screenshot" "$C/lib/apk/db/installed" && [ "$(grep -c "Print\"" "$C/etc/icewm/keys")" = 3 ] && grep -q "captura --window" "$C/etc/icewm/keys"'
+es "capturas: el resto de las teclas queda igual" 'grep -q "^key \"Super+e\"" "$C/etc/icewm/keys" && grep -q XF86AudioMute "$C/etc/icewm/keys"'
+es "capturas: el ayudante abre la ventana y tiene buena sintaxis" 'grep -q gnome-screenshot "$C/usr/local/libexec/icewm-lxde/captura" && [ -x "$C/usr/local/libexec/icewm-lxde/captura" ] && sh -n "$C/usr/local/libexec/icewm-lxde/captura"'
+capturas
+es "capturas: ya arreglado, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'
