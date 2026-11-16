@@ -222,7 +222,7 @@ LAZARO_ESCRITORIOS="
 	adwaita-icon-theme network-manager-applet udisks2
 	icewm lxsession lightdm lightdm-gtk-greeter dbus-x11 pcmanfm lxterminal
 	papirus-icon-theme greybird-themes rsvg-convert pulseaudio-utils pavucontrol
-	gpicview mousepad galculator xarchiver scrot xdg-user-dirs
+	gpicview mousepad galculator xarchiver gnome-screenshot xdg-user-dirs
 	python3 py3-gobject3 gtk+3.0"
 
 # Programas de "Software adicional" que vienen en la ISO (unos 325 MB):

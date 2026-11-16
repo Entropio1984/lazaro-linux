@@ -97,7 +97,10 @@ la Ligera o la Completa: tienen más opciones.
 - **Escritorio:** solo **IceWM**, liviano y moderno (XFCE y LXQt iban
   lentos en estos equipos): barra y menús oscuros con los colores de
   Lázaro, parecidos a Windows 10, con menú, ventanas, red, volumen y
-  reloj; íconos en el escritorio; sin efectos visuales. También se puede
+  reloj; íconos en el escritorio; sin efectos visuales. En el sistema
+  instalado, la tecla Imprimir Pantalla abre **Capturas** para sacar
+  pantallazos (toda la pantalla, una ventana o una zona); la sesión de
+  prueba no lo trae, para dejarle la memoria al instalador. También se puede
   instalar sin escritorio. Se instala sin internet. El menú de cada
   ventana (cerrar, maximizar...) sale en inglés: IceWM de Alpine viene
   sin traducciones.
