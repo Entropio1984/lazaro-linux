@@ -151,7 +151,7 @@ live_icewm() {
 	li_dir="$tmp/etc/icewm"
 	mkdir -p "$li_dir/themes"
 	li_func="$(mktemp)"
-	sed -n '/^ICEWM_TEMA=/p; /^icewm_tema()/,/^}/p; /^icewm_botones()/,/^}/p; /^icewm_boton_menu()/,/^}/p' \
+	sed -n '/^ICEWM_TEMA=/p; /^icewm_tema()/,/^}/p; /^icewm_boton[a-z_]*()/,/^}/p' \
 		"$LAZARO_SCRIPT" > "$li_func"
 	# shellcheck disable=SC1090
 	( . "$li_func" && icewm_tema "$li_dir/themes" )
