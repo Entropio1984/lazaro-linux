@@ -237,9 +237,6 @@ prueba_live() {
 			echo "OK: la sesión live arrancó en español ($MODO), Calamares se abrió, ve el disco y el portapapeles compartido funciona."
 			grep -m1 -o 'LAZARO-ZRAM-OK.*' "$serie" | tr -d '\r' || true
 			grep -m1 -o 'LAZARO-MEMORIA.*' "$serie" | tr -d '\r' || true
-			# Tema Lázaro en la sesión de prueba (64 bits; por ahora solo se
-			# muestra).
-			grep -A 15 'LAZARO-TEMA-LIVE' "$serie" | tr -d '\r' || true
 			# Cambio de idioma como el de la Bienvenida: descarga el
 			# portugués de Brasil (la Completa lo trae en el USB), reinicia
 			# la sesión y el escritorio y el instalador vuelven en portugués,

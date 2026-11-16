@@ -503,6 +503,11 @@ disponible para quien lo elija (el botón de la Bienvenida instala los
 íconos Papirus si faltan). La edición de 32 bits mantiene el tema propio
 de IceWM.
 
+La **sesión de prueba** (la del USB) mantiene el aspecto de siempre: el
+tema usa unos 50 MB más de memoria, y en un equipo de 2 GB esa sesión
+necesita todo lo que haya para instalar. Se puede probar igual con el
+botón de la Bienvenida.
+
 ### Afinador: que el equipo responda mejor
 
 El afinador revisa tu equipo (procesador, memoria, discos) y ajusta el

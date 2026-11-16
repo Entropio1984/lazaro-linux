@@ -146,8 +146,7 @@ textos_32() {
 		"$tmp/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf"
 	# El tema Lázaro es para los escritorios de 64 bits: IceWM tiene el
 	# suyo (el "moderno" de desktop-postinstall.sh).
-	rm -f "$tmp/usr/sbin/lazaro-tema" "$tmp/etc/xdg/autostart/lazaro-tema.desktop" \
-		"$tmp/etc/lazaro/tema-de-entrada" "$tmp/usr/share/lazaro/lazaro-tema-sesion.desktop" \
+	rm -f "$tmp/usr/sbin/lazaro-tema" "$tmp/usr/share/lazaro/lazaro-tema-sesion.desktop" \
 		"$tmp/usr/share/lazaro/bienvenida/funciones/38-tema.conf"
 }
 [ "${ALPINE_ARCH:-x86_64}" != x86 ] || textos_32

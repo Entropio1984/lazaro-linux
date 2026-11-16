@@ -83,9 +83,11 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	xf86-video-vesa dialog tar
 	plymouth plymouth-drm plymouth-openrc-plugin
 	$LAZARO_RED_LIVE"
-# Tema Lázaro en la sesión de prueba de 64 bits: los colores de las
-# ventanas se apoyan en adw-gtk3 (1 MB). Los íconos Papirus no van en la
-# live (más de 100 MB en memoria): ahí el tema usa los del escritorio.
+# Tema Lázaro: la sesión de prueba no lo pone sola (unos 50 MB más de
+# memoria, y con 2 GB el cambio de idioma ya no entraba), pero se puede
+# probar desde la Bienvenida; los colores de las ventanas se apoyan en
+# adw-gtk3 (1 MB). Los íconos Papirus no van en la live (más de 100 MB en
+# memoria): ahí el tema usa los del escritorio.
 [ "$LAZARO_ARCH" = x86 ] || LAZARO_LIVE="$LAZARO_LIVE adw-gtk3"
 
 # ISO de 32 bits: la live arranca solo con lo básico (LAZARO_LIVE_BASE:
