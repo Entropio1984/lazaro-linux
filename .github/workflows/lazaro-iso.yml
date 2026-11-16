@@ -101,6 +101,9 @@ jobs:
         alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/'))) && '["estable", "edge"]' || '["estable"]') }}
     steps:
       - uses: actions/checkout@v5
+        # Historia completa: build.sh cuenta los cambios (LAZARO_NIVEL).
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v7
         with:
@@ -170,6 +173,9 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v5
+        # Historia completa: build.sh cuenta los cambios (LAZARO_NIVEL).
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v7
         with:
@@ -333,6 +339,9 @@ jobs:
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v5
+        # Historia completa: build.sh cuenta los cambios (LAZARO_NIVEL).
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v7
         with:
@@ -742,6 +751,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      # Para lanzar "Repositorio Lázaro" sobre la etiqueta (ver el final).
+      actions: write
     concurrency:
       group: lazaro-publicar-version-${{ github.ref }}
       cancel-in-progress: false
@@ -848,3 +859,16 @@ jobs:
           gh release create "$etiqueta" --verify-tag --latest="$ultima" \
             --title "Lázaro Linux $version" --notes-file notas.md \
             version/lazaro-linux-"$version"-*
+
+      # Las mejoras de Lázaro llegan a los equipos ya instalados solo con
+      # las versiones (decisión de Julián, 2026-11-16): recién ahora, con
+      # la versión publicada, se publican sus herramientas en el
+      # repositorio de Lázaro (botón "Actualizar el sistema"). Una
+      # ejecución lanzada desde aquí con el GITHUB_TOKEN sí arranca.
+      - name: Llevar la versión a los equipos instalados
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh workflow run lazaro-repositorio.yml --ref "$GITHUB_REF_NAME"
+          echo "Lanzado \"Repositorio Lázaro\" sobre $GITHUB_REF_NAME: publica las herramientas de esta versión."

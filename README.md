@@ -604,6 +604,22 @@ nueva, tu equipo la recibe con el **aviso de actualizaciones** de
 siempre. Todo lo que viene de ahí está **firmado** con la clave de
 Lázaro: el sistema rechaza cualquier paquete que no tenga esa firma.
 
+**Las mejoras de Lázaro llegan con cada versión, no con cada cambio.**
+Las herramientas nuevas y las [mejoras para equipos ya
+instalados](#mejoras-para-equipos-ya-instalados) se juntan y llegan a tu
+equipo todas juntas cuando se publica una **versión numerada** de Lázaro
+(0.2, 0.3...), después de probarlas. Mientras tanto tu equipo no cambia,
+salvo por las actualizaciones normales de Alpine (programas, seguridad),
+que siguen llegando como siempre. La única excepción es el **kernel
+Lázaro** (si lo instalaste): cuando Alpine arregla un problema de
+seguridad en su kernel, el kernel Lázaro se rehace con esos arreglos,
+sin otros cambios.
+
+Si instalaste con una ISO **en desarrollo** (la que se actualiza con cada
+cambio), tu equipo ya trae herramientas más nuevas que la última versión
+publicada: el repositorio no las cambia por las viejas y espera a la
+próxima versión.
+
 Vale para las dos versiones: la de 64 bits y la de
 [32 bits](#lázaro-de-32-bits) (que recibe las mismas herramientas, sin el
 kernel Lázaro).
@@ -640,7 +656,9 @@ activar un servicio, poner una tarea, corregir un archivo. Esas cosas se
 hacen una sola vez, al instalar, así que antes solo las recibía quien
 instalaba con una ISO nueva. Ahora llegan también a los equipos ya
 instalados, como **arreglos**: pasos cortos y numerados que vienen dentro
-del paquete firmado de las herramientas.
+del paquete firmado de las herramientas. Como el resto de las
+herramientas, llegan cuando se publica una **versión numerada** de
+Lázaro, todos los de esa versión juntos.
 
 - **No hay que elegir nada.** Al pulsar **Actualizar el sistema** se
   aplican solos, en orden, los que a tu equipo le falten. Cada uno corre
@@ -961,12 +979,28 @@ para probar, no para publicar). En GitHub, la clave es el secreto
 `LAZARO_APK_KEY`, y su mitad pública es `repo/lazaro.rsa.pub` (también va
 escrita dentro de `lazaro-repositorio`, y `pruebas/kernel.sh` revisa que
 sean iguales); la compilación se niega a firmar si no coinciden. Solo se
-publica lo firmado con la clave oficial, y solo desde main. Un paquete ya
-publicado nunca se reemplaza por otro con el mismo nombre: cada cambio de
-main lleva un número de versión nuevo (`git rev-list --count HEAD`).
+publica lo firmado con la clave oficial. Un paquete ya publicado nunca se
+reemplaza por otro con el mismo nombre: cada cambio lleva un número de
+versión nuevo (`git rev-list --count HEAD`, el "nivel").
+
+**Cuándo se publica** (`.github/workflows/lazaro-repositorio.yml`):
+
+| Cuándo | Qué hace |
+| --- | --- |
+| PR o cambio en main | Arma y prueba las herramientas (y en un PR el kernel, si cambió su receta). **No publica.** |
+| Al sacar una versión | Al final de "Publicar la versión", `lazaro-iso.yml` lanza este flujo sobre la etiqueta `vX.Y`: publica las herramientas de esa versión (y el kernel si cambió `KERNEL_REV`). |
+| Revisión diaria | Si Alpine sacó un `linux-lts` nuevo, rehace el kernel Lázaro con la receta (`kernel/`) de la **última versión publicada** y lo publica. Las herramientas no se tocan. |
+| A mano sobre una etiqueta | Actions → **Repositorio Lázaro** → Run workflow, eligiendo `vX.Y` en lugar de main: vuelve a publicar esa versión (por si falló). |
+
+Así las mejoras llegan a los equipos instalados solo con las versiones
+(decisión de Julián, 16 de noviembre de 2026). Una ISO guarda su nivel en
+`version.env` (`LAZARO_NIVEL`, lo calcula `build.sh`; hace falta la
+historia completa de git); `lazaro-repositorio` no instala
+`lazaro-herramientas` si el publicado tiene un nivel menor, para no
+cambiar las herramientas de una ISO en desarrollo por otras más viejas.
 
 Si cambias las herramientas, no hace falta tocar nada más: el workflow
-arma el paquete solo. Si un programa nuevo debe llegar a los equipos,
+arma el paquete solo y llega a los equipos con la próxima versión. Si un programa nuevo debe llegar a los equipos,
 agrégalo en `repo/herramientas.sh` (y en `lazaro-instalar` para las
 instalaciones nuevas). Para cambiar la configuración, edita `kernel/lazaro.fragment` y
 sube `KERNEL_REV` en `kernel/version`. La prueba `pruebas/kernel.sh`
@@ -992,6 +1026,9 @@ carpeta `Versiones/X.Y` en SourceForge con las dos ediciones.
    2 horas la versión aparece en
    [Releases](https://github.com/Entropio1984/lazaro-linux/releases), con
    la lista de cambios (los títulos de los PR) desde la versión anterior.
+   Al final, la misma compilación publica las herramientas de esa versión
+   en el repositorio de Lázaro: recién entonces las mejoras llegan a los
+   equipos ya instalados (con **Actualizar el sistema**).
 4. Después, en un PR, sube `ISO_VERSION` a la siguiente versión.
 
 Los números: se sube el último (0.2 → 0.3) con cada versión, y se pasa a

@@ -12,8 +12,12 @@ que se hace **una sola vez al instalar**, sobre todo en
 
 ## Cómo llegan
 
-1. El archivo se fusiona en `main`.
-2. GitHub arma `lazaro-herramientas` con él adentro y lo firma.
+1. El archivo se fusiona en `main`. Ahí todavía no llega a nadie.
+2. Al sacar la próxima **versión numerada** (Actions → "Sacar una
+   versión"), GitHub arma `lazaro-herramientas` con él adentro, lo firma
+   y lo publica en el repositorio de Lázaro. Las mejoras llegan a los
+   equipos instalados solo con las versiones, todas las de esa versión
+   juntas (decisión de Julián, 2026-11-16).
 3. En cada equipo, "Actualizar el sistema" instala el paquete y después
    corre `lazaro-arreglos --aplicar`, que ejecuta los arreglos que ese
    equipo todavía no tiene, en orden y una sola vez.

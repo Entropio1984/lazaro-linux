@@ -6,9 +6,21 @@
 # lazaro-repositorio (tarea diaria) y lo instalan con la actualización
 # normal del sistema.
 #
-# Las herramientas se arman en cada cambio de main. El kernel tarda horas:
-# solo se compila cuando cambia su receta (kernel/) o cuando Alpine saca
-# un linux-lts nuevo (la revisión diaria).
+# Las mejoras llegan a los equipos instalados SOLO con las versiones
+# numeradas (decisión de Julián, 2026-11-16):
+# - Cada cambio de main (y cada PR) arma y prueba las herramientas, y el
+#   kernel si cambió su receta, pero NO publica nada.
+# - Al sacar una versión ("Sacar una versión"), "Lázaro Linux ISO" la
+#   publica y al final lanza este flujo sobre la etiqueta vX.Y: ahí se
+#   publican las herramientas (y el kernel, si su receta cambió).
+# - La revisión diaria solo mira si Alpine sacó un linux-lts nuevo
+#   (arreglos de seguridad del kernel) y, si es así, rehace el kernel
+#   Lázaro con la receta (kernel/) de la última versión publicada. No es
+#   una mejora de Lázaro sino de Alpine, que también llega a diario a los
+#   equipos con el kernel normal.
+# Para volver a publicar una versión a mano: Actions → "Repositorio
+# Lázaro" → Run workflow, eligiendo la etiqueta (por ejemplo v0.2) en
+# lugar de main.
 name: Repositorio Lázaro
 
 on:
@@ -60,6 +72,9 @@ jobs:
       kernel: ${{ steps.r.outputs.kernel }}
       version: ${{ steps.r.outputs.version }}
       etiqueta: ${{ steps.r.outputs.etiqueta }}
+      fuente: ${{ steps.r.outputs.fuente }}
+      herramientas: ${{ steps.r.outputs.herramientas }}
+      publicar: ${{ steps.r.outputs.publicar }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -73,6 +88,39 @@ jobs:
           ANTES: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           LAZARO_DIR=$PWD . ./lib.sh
+          # De dónde sale lo que se arma y si se publica:
+          #   etiqueta vX.Y  -> esa versión, se publica todo (herramientas
+          #                     y kernel si hace falta)
+          #   diaria / a mano en main -> solo el kernel, con la receta de
+          #                     la última versión publicada
+          #   main, PR, otra rama -> se arma y se prueba, no se publica
+          fuente="$GITHUB_SHA"
+          herramientas=si
+          publicar=no
+          case "$GITHUB_REF" in
+            refs/tags/v*)
+              [ "$EVENTO" = workflow_dispatch ] || { echo "::error::Una versión se publica lanzando el flujo sobre la etiqueta."; exit 1; }
+              # Solo una etiqueta que está en main (protegida).
+              estado="$(gh api "repos/$GH_REPO/compare/main...$GITHUB_SHA" --jq .status)"
+              case "$estado" in
+                identical | behind) ;;
+                *) echo "::error::La etiqueta $GITHUB_REF_NAME no está en main: no se publica."; exit 1 ;;
+              esac
+              publicar=si
+              ;;
+            refs/heads/main)
+              if [ "$EVENTO" = schedule ] || [ "$EVENTO" = workflow_dispatch ]; then
+                ultima="$(git tag -l 'v*' | grep -E '^v[0-9]+(\.[0-9]+)+$' | sort -V | tail -n 1 || true)"
+                [ -n "$ultima" ] || { echo "Todavía no hay ninguna versión publicada: nada que hacer."; ultima=""; }
+                herramientas=no
+                if [ -n "$ultima" ]; then
+                  fuente="$ultima"
+                  publicar=si
+                  git checkout -q "$ultima" -- kernel
+                fi
+              fi
+              ;;
+          esac
           KERNEL_REV="$(sed -n 's/^KERNEL_REV=\([0-9][0-9]*\)$/\1/p' kernel/version)"
           [ -n "$KERNEL_REV" ] || { echo "kernel/version: falta KERNEL_REV=<número>"; exit 1; }
           apkbuild="$(curl -fsSL --retry 3 "https://raw.githubusercontent.com/alpinelinux/aports/$APORTS_BRANCH/main/linux-lts/APKBUILD")"
@@ -85,8 +133,13 @@ jobs:
           case "$EVENTO" in
             schedule) kernel=$([ "$publicado" = si ] && echo no || echo si) ;;
             workflow_dispatch) kernel=$([ "$publicado" = si ] && [ "$FORZAR" != true ] && echo no || echo si) ;;
+            push)
+              # Un cambio de main ya no se publica, y la receta del kernel
+              # ya se probó en su PR: no se gastan 2 horas en compilarlo.
+              kernel=no
+              ;;
             *)
-              # Cambios en la receta del kernel (o la primera vez).
+              # PR: cambios en la receta del kernel (o la primera vez).
               kernel=no
               [ "$publicado" = si ] || kernel=si
               if [ -n "$ANTES" ] && git cat-file -e "$ANTES" 2>/dev/null; then
@@ -96,10 +149,16 @@ jobs:
               fi
               ;;
           esac
+          # Diaria en main sin ninguna versión todavía: nada.
+          [ "$publicar" = si ] || [ "$herramientas" = si ] || kernel=no
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
           echo "kernel=$kernel" >> "$GITHUB_OUTPUT"
+          echo "fuente=$fuente" >> "$GITHUB_OUTPUT"
+          echo "herramientas=$herramientas" >> "$GITHUB_OUTPUT"
+          echo "publicar=$publicar" >> "$GITHUB_OUTPUT"
           echo "linux-lazaro $version ($etiqueta): publicado=$publicado compilar=$kernel"
+          echo "Desde: $fuente  herramientas=$herramientas  publicar=$publicar"
 
   kernel:
     name: Compilar y probar linux-lazaro ${{ needs.revisar.outputs.version }}
@@ -108,7 +167,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
+      # En la revisión diaria, la receta de la última versión publicada.
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.revisar.outputs.fuente }}
 
       - name: Liberar espacio en disco
         run: |
@@ -154,7 +216,7 @@ jobs:
   herramientas:
     name: Armar lazaro-herramientas
     needs: revisar
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.revisar.outputs.herramientas == 'si' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -194,10 +256,13 @@ jobs:
   publicar:
     name: Publicar el repositorio
     needs: [revisar, kernel, herramientas]
+    # Solo una versión (etiqueta vX.Y) o el kernel de la revisión diaria
+    # (ver arriba). Un cambio de main ya no se publica.
     if: >-
-      !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
-      needs.herramientas.result == 'success' &&
-      (needs.kernel.result == 'success' || needs.kernel.result == 'skipped')
+      !cancelled() && needs.revisar.outputs.publicar == 'si' && github.event_name != 'pull_request' &&
+      (needs.herramientas.result == 'success' || (needs.herramientas.result == 'skipped' && needs.revisar.outputs.herramientas == 'no')) &&
+      (needs.kernel.result == 'success' || needs.kernel.result == 'skipped') &&
+      (needs.herramientas.result == 'success' || needs.kernel.result == 'success')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -212,6 +277,7 @@ jobs:
       # (nuevo/resumen.txt): eso pasaba cada vez que no se compilaba el
       # kernel y el repositorio no se publicaba desde el 9 de noviembre.
       - uses: actions/download-artifact@v7
+        if: needs.herramientas.result == 'success'
         with:
           name: lazaro-herramientas
           path: nuevo/lazaro-herramientas
@@ -253,8 +319,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           ETIQUETA: ${{ needs.revisar.outputs.etiqueta }}
+          HERRAMIENTAS: ${{ needs.herramientas.result }}
         run: |
+          # De qué versión de Lázaro son las herramientas publicadas.
+          if [ "$HERRAMIENTAS" = success ]; then
+            echo "$GITHUB_REF_NAME" > version-lazaro.txt
+          else
+            gh release download "$ETIQUETA" -p version-lazaro.txt 2>/dev/null || echo "?" > version-lazaro.txt
+          fi
           notas="Repositorio de paquetes de Lázaro Linux con Alpine ${ETIQUETA#repo-}, firmado con la clave de Lázaro. No hace falta descargar nada a mano: los equipos lo usan solos (lazaro-repositorio).
+
+          Herramientas de Lázaro $(cat version-lazaro.txt): las mejoras llegan a los equipos instalados solo al publicar una versión.
 
           Para activarlo en un equipo instalado antes de que existiera, una sola vez en la Terminal:
 
@@ -276,8 +351,12 @@ jobs:
           for a in repo-x86_64/*.apk; do
             printf '%s\n' "$publicados" | grep -qx "${a##*/}" || gh release upload "$ETIQUETA" "$a"
           done
-          cp live/usr/sbin/lazaro-repositorio lazaro-repositorio
-          gh release upload "$ETIQUETA" lazaro-repositorio repo/lazaro.rsa.pub --clobber
+          # El programa suelto (para activar equipos viejos) es el de la
+          # versión: en la revisión diaria no se toca.
+          if [ "$HERRAMIENTAS" = success ]; then
+            cp live/usr/sbin/lazaro-repositorio lazaro-repositorio
+            gh release upload "$ETIQUETA" lazaro-repositorio repo/lazaro.rsa.pub version-lazaro.txt --clobber
+          fi
           gh release upload "$ETIQUETA" repo-x86_64/APKINDEX.tar.gz --clobber
           cp repo-x86/APKINDEX.tar.gz APKINDEX-x86.tar.gz
           gh release upload "$ETIQUETA" APKINDEX-x86.tar.gz --clobber

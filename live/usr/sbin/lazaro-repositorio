@@ -12,7 +12,11 @@
 # Lázaro no se instala.
 #
 # Una vez activado, las herramientas nuevas llegan con la actualización
-# normal del sistema (el aviso de actualizaciones).
+# normal del sistema (el aviso de actualizaciones). GitHub solo publica
+# herramientas nuevas al sacar una versión numerada (v0.2, v0.3...): los
+# cambios del día a día esperan a la próxima versión. Lo único que se
+# publica entre versiones es el kernel Lázaro rehecho cuando Alpine saca
+# arreglos de seguridad de su kernel (con la receta de la última versión).
 #
 # Uso (como root):
 #   lazaro-repositorio --activar      pone la clave, el repositorio, la
@@ -190,8 +194,29 @@ poner_tareas() {
 	[ -e "$RAIZ/etc/init.d/crond" ] && ln -sf /etc/init.d/crond "$RAIZ/etc/runlevels/default/crond" || true
 }
 
+# Nivel de las herramientas: el número que va después de -r en la
+# versión del paquete (cuántos cambios tenía lazaro-linux al armarlo).
+# La ISO guarda el suyo en version.env (LAZARO_NIVEL).
+nivel_sistema() {
+	sed -n 's/^LAZARO_NIVEL="\{0,1\}\([0-9][0-9]*\)"\{0,1\}$/\1/p' "$RAIZ/usr/share/lazaro/version.env" 2>/dev/null | head -n 1
+}
+nivel_publicado() {
+	tar -xzOf "$DIR/$(arquitectura)/APKINDEX.tar.gz" APKINDEX 2>/dev/null |
+		awk '/^P:/ { p = ($0 == "P:lazaro-herramientas") } p && /^V:/ { v = substr($0, 3); sub(/.*-r/, "", v); print v; exit }'
+}
+
 instalar_herramientas() {
 	apk info -e lazaro-herramientas >/dev/null 2>&1 && return 0
+	# Una ISO en desarrollo trae herramientas más nuevas que la última
+	# versión publicada: instalar ese paquete las reemplazaría por las
+	# viejas. Se espera a la próxima versión, que ya las incluye.
+	n_sis="$(nivel_sistema)"
+	n_pub="$(nivel_publicado)"
+	if [ -n "$n_sis" ] && [ -n "$n_pub" ] && [ "$n_pub" -lt "$n_sis" ]; then
+		registrar "Este sistema trae herramientas más nuevas (nivel $n_sis) que las publicadas (nivel $n_pub): se instalan con la próxima versión de Lázaro."
+		echo "LAZARO-REPOSITORIO-ESPERA-VERSION"
+		return 0
+	fi
 	if apk add lazaro-herramientas@lazaro >>"$LOG" 2>&1; then
 		registrar "lazaro-herramientas instalado."
 		echo "LAZARO-REPOSITORIO-HERRAMIENTAS-OK"

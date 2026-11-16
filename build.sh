@@ -44,7 +44,18 @@ if [ "${1:-}" != "--dentro" ]; then
 		fi
 	fi
 	LAZARO_FECHA="${LAZARO_FECHA:-$(date -u '+%Y-%m-%d %H:%M UTC')}"
-	export LAZARO_COMMIT LAZARO_FECHA
+	# Nivel de las herramientas que lleva la ISO: cuántos cambios tiene
+	# lazaro-linux (el mismo número que el paquete lazaro-herramientas
+	# lleva después de -r). Con él, un sistema instalado desde una ISO en
+	# desarrollo no cambia sus herramientas por las de una versión
+	# anterior (ver lazaro-repositorio). Hace falta la historia completa:
+	# en una copia recortada (shallow) se deja vacío.
+	if [ -z "${LAZARO_NIVEL:-}" ] &&
+		[ "$(git -C "$LAZARO_DIR" rev-parse --is-shallow-repository 2>/dev/null)" = false ]; then
+		LAZARO_NIVEL="$(git -C "$LAZARO_DIR" rev-list --count HEAD 2>/dev/null)" || LAZARO_NIVEL=""
+	fi
+	LAZARO_NIVEL="${LAZARO_NIVEL:-}"
+	export LAZARO_COMMIT LAZARO_FECHA LAZARO_NIVEL
 	msg "Compilando en alpine:$ALPINE_DOCKER_TAG (Alpine $ALPINE_BRANCH)"
 	# Copia local del script (opcional): se monta dentro del contenedor.
 	set --
@@ -60,7 +71,7 @@ if [ "${1:-}" != "--dentro" ]; then
 	exec docker run --rm "$@" \
 		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR \
 		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL -e LAZARO_EDICION \
-		-e LAZARO_COMMIT -e LAZARO_FECHA -e LAZARO_CANAL -e LAZARO_SCRIPT_COMMIT \
+		-e LAZARO_COMMIT -e LAZARO_FECHA -e LAZARO_CANAL -e LAZARO_SCRIPT_COMMIT -e LAZARO_NIVEL \
 		-e SALIDA=/salida -e CACHE=/cache \
 		-v "$LAZARO_DIR:/src:ro" \
 		-v "$SALIDA:/salida" \
@@ -251,6 +262,7 @@ cat >> "$CONSTRUCTOR_HOME/version.env" <<EOF
 LAZARO_CANAL="${LAZARO_CANAL:-local}"
 LAZARO_FECHA="$LAZARO_FECHA"
 LAZARO_COMMIT="${LAZARO_COMMIT:-desconocido}"
+LAZARO_NIVEL="${LAZARO_NIVEL:-}"
 LAZARO_SCRIPT_COMMIT="$LAZARO_SCRIPT_COMMIT"
 LAZARO_SCRIPT_SHA256="$(sha256sum "$SCRIPT" | cut -c1-64)"
 EOF

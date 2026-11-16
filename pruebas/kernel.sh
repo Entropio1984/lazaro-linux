@@ -150,6 +150,24 @@ fi
 [ -s "$L/APKINDEX.tar.gz" ] && [ -s "$L/lazaro-herramientas-0.1-r501.apk" ] &&
 	ok "sin internet: el repositorio anterior sigue" || mal "sin internet: perdió el repositorio"
 
+# --- Repositorio: ISO en desarrollo más nueva que la versión publicada ------------
+# Las herramientas solo se publican con las versiones: un sistema
+# instalado desde una ISO en desarrollo (nivel 600) no cambia las suyas
+# por las publicadas (r501), que son más viejas.
+cp "$R/lib/apk/db/installed" "$TMP/installed.antes"
+: > "$R/lib/apk/db/installed"
+echo 'LAZARO_NIVEL="600"' > "$R/usr/share/lazaro/version.env"
+: > "$ANOTA"
+salida="$(lr --activar 2>&1)" || mal "nivel: activar terminó con error: $salida"
+case "$salida" in *LAZARO-REPOSITORIO-ESPERA-VERSION*) ok "nivel: espera a la próxima versión" ;; *) mal "nivel: no esperó: $salida" ;; esac
+grep -q 'apk add lazaro-herramientas' "$ANOTA" && mal "nivel: instaló herramientas más viejas" || ok "nivel: no instala herramientas más viejas"
+echo 'LAZARO_NIVEL="501"' > "$R/usr/share/lazaro/version.env"
+: > "$ANOTA"
+lr --activar >/dev/null 2>&1 || mal "nivel igual: activar terminó con error"
+contiene "nivel igual: instala la versión publicada" "apk add lazaro-herramientas@lazaro" "$ANOTA"
+rm -f "$R/usr/share/lazaro/version.env"
+cp "$TMP/installed.antes" "$R/lib/apk/db/installed"
+
 lk() { # UNAME ARGS...
 	u="$1"; shift
 	env LAZARO_KERNEL_RAIZ="$R" LAZARO_KERNEL_UNAME="$u" LAZARO_REPO_PROG="$TMP/bin/lr" sh "$PROG" "$@"
