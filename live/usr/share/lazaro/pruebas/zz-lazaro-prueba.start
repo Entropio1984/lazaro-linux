@@ -67,6 +67,16 @@ idioma_sesion() {
 			break
 		done
 	fi
+	# Tema Lázaro (64 bits): lazaro-tema lo pone la primera vez que se
+	# entra al escritorio y lo anota en ~/.config/lazaro/tema.
+	if [ -e /etc/lazaro/tema-de-entrada ]; then
+		i=0
+		while [ "$i" -lt 40 ] && [ ! -s /home/prueba/.config/lazaro/tema ]; do
+			sleep 1
+			i=$((i + 1))
+		done
+		echo "LAZARO-TEMA-SESION $(cat /home/prueba/.config/lazaro/tema 2>/dev/null || echo no) $(cat "$panel/comm")"
+	fi
 }
 {
 	echo "LAZARO-INSTALADO-ARRANCO"

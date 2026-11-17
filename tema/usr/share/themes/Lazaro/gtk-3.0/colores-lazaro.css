@@ -1,0 +1,64 @@
+/* Colores de Lázaro comunes a las dos variantes (claro y oscuro).
+ * Lo de abajo de cada gtk.css solo cambia colores: la forma de los
+ * botones, menús y casillas es la de adw-gtk3 (paquete de Alpine). */
+
+@define-color lazaro_noche #0a1f36;
+@define-color lazaro_noche_clara #12324f;
+@define-color lazaro_celeste #29b6f6;
+@define-color lazaro_azul #1a7fd0;
+@define-color lazaro_sol #f6c344;
+
+@define-color accent_bg_color @lazaro_azul;
+@define-color accent_fg_color #ffffff;
+@define-color warning_bg_color @lazaro_sol;
+
+/* Barra de XFCE: azul noche con texto claro, también en la variante
+ * clara (así se parece al fondo de pantalla de Lázaro). */
+.xfce4-panel.background {
+  background-color: @lazaro_noche;
+  background-image: none;
+  color: #e6eef8;
+}
+.xfce4-panel.background button {
+  color: #e6eef8;
+}
+.xfce4-panel.background button:hover {
+  background-color: alpha(@lazaro_celeste, 0.18);
+}
+.xfce4-panel.background button:checked,
+.xfce4-panel.background button:active {
+  background-color: alpha(@lazaro_celeste, 0.30);
+  color: #ffffff;
+}
+.xfce4-panel.background .tasklist button:checked {
+  box-shadow: inset 0 -3px @lazaro_celeste;
+}
+
+/* Barras de MATE: igual. */
+#PanelPlug,
+.mate-panel-menu-bar,
+PanelToplevel.background {
+  background-color: @lazaro_noche;
+  background-image: none;
+  color: #e6eef8;
+}
+.mate-panel-menu-bar menubar,
+.mate-panel-menu-bar menuitem,
+#PanelApplet button {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+#PanelApplet label,
+#PanelApplet button,
+.mate-panel-menu-bar menubar > menuitem {
+  color: #e6eef8;
+}
+#PanelApplet button:hover,
+.mate-panel-menu-bar menubar > menuitem:hover {
+  background-color: alpha(@lazaro_celeste, 0.18);
+}
+#PanelApplet button:checked {
+  background-color: alpha(@lazaro_celeste, 0.30);
+  box-shadow: inset 0 -3px @lazaro_celeste;
+}

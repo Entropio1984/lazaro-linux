@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [ { "Name": "Lázaro Linux" } ],
+        "Description": "Ventanas claras con barra de título azul noche y detalles celestes",
+        "Id": "org.lazaro.claro.desktop",
+        "License": "GPL-3.0-or-later",
+        "Name": "Lázaro",
+        "Website": "https://github.com/Entropio1984/lazaro-linux"
+    },
+    "X-Plasma-APIVersion": "2"
+}

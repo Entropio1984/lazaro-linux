@@ -1,0 +1,36 @@
+[Icon Theme]
+Name=Lázaro
+Comment=Íconos de Lázaro Linux: Papirus con el pulso de Lázaro en el botón del menú
+Inherits=Papirus,Adwaita,hicolor
+Example=folder
+
+Directories=16x16/apps,22x22/apps,24x24/apps,scalable/apps,symbolic/apps
+
+[16x16/apps]
+Context=Applications
+Size=16
+Type=Fixed
+
+[22x22/apps]
+Context=Applications
+Size=22
+Type=Fixed
+
+[24x24/apps]
+Context=Applications
+Size=24
+Type=Fixed
+
+[scalable/apps]
+Context=Applications
+Size=64
+MinSize=32
+MaxSize=512
+Type=Scalable
+
+[symbolic/apps]
+Context=Applications
+Size=16
+MinSize=16
+MaxSize=512
+Type=Scalable

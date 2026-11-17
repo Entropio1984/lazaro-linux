@@ -1418,5 +1418,41 @@ msgstr "IceWM: light and modern, for 1 GB"
 msgid "IceWM: la tecla Imprimir Pantalla abre el programa de capturas (se nota al volver a entrar)"
 msgstr "IceWM: the Print Screen key opens the screenshot program (takes effect next time you log in)"
 
+msgid "Tema Lázaro"
+msgstr "Lázaro theme"
+
+msgid "Este escritorio no se conoce"
+msgstr "Unknown desktop"
+
+msgid "Elige el aspecto del escritorio. Se puede cambiar cuando quieras."
+msgstr "Choose how your desktop looks. You can change it whenever you like."
+
+msgid "Aspecto"
+msgstr "Look"
+
+msgid "Lázaro: ventanas claras y barra azul noche"
+msgstr "Lázaro: light windows and a night-blue bar"
+
+msgid "Lázaro Oscuro: todo en azul noche"
+msgstr "Lázaro Dark: everything in night blue"
+
+msgid "Aspecto original del escritorio"
+msgstr "The desktop's original look"
+
+msgid "Listo. Algunos programas que ya estaban abiertos toman el aspecto nuevo al volver a abrirlos."
+msgstr "Done. Some programs that were already open will show the new look when you reopen them."
+
+msgid "No se pudo cambiar el aspecto en este escritorio."
+msgstr "The look could not be changed on this desktop."
+
+msgid "Aspecto del escritorio"
+msgstr "Desktop look"
+
+msgid "Elegir"
+msgstr "Choose"
+
+msgid "Elige el tema Lázaro (claro u oscuro) o vuelve al aspecto original del escritorio."
+msgstr "Choose the Lázaro theme (light or dark) or go back to the desktop's original look."
+
 msgid "IceWM: el botón \"mostrar escritorio\" tiene un icono que se ve en la barra (se nota al volver a entrar)"
 msgstr "IceWM: the \"show desktop\" button has an icon you can see on the bar (takes effect next time you log in)"

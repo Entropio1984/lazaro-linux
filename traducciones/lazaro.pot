@@ -1164,6 +1164,42 @@ msgstr ""
 msgid "Listo. Al reiniciar se usa el kernel de Alpine."
 msgstr ""
 
+#: live/usr/sbin/lazaro-tema
+msgid "Tema Lázaro"
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Este escritorio no se conoce"
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Elige el aspecto del escritorio. Se puede cambiar cuando quieras."
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Aspecto"
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Lázaro: ventanas claras y barra azul noche"
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Lázaro Oscuro: todo en azul noche"
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Aspecto original del escritorio"
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "Listo. Algunos programas que ya estaban abiertos toman el aspecto nuevo al volver a abrirlos."
+msgstr ""
+
+#: live/usr/sbin/lazaro-tema
+msgid "No se pudo cambiar el aspecto en este escritorio."
+msgstr ""
+
 #: live/usr/sbin/lazaro-bienvenida
 msgid "Abrir"
 msgstr ""
@@ -1244,7 +1280,7 @@ msgstr ""
 msgid "Ver el hardware"
 msgstr ""
 
-#: live/usr/share/lazaro/bienvenida/funciones/30-hardware.conf live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf live/usr/share/lazaro/bienvenida/funciones/34-kernel.conf live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf
+#: live/usr/share/lazaro/bienvenida/funciones/30-hardware.conf live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf live/usr/share/lazaro/bienvenida/funciones/34-kernel.conf live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf live/usr/share/lazaro/bienvenida/funciones/38-tema.conf
 msgid "Tu equipo"
 msgstr ""
 
@@ -1270,6 +1306,18 @@ msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/funciones/36-resolucion.conf
 msgid "Para tarjetas NVIDIA antiguas que funcionan en modo seguro: elige el tamaño de la imagen."
+msgstr ""
+
+#: live/usr/share/lazaro/bienvenida/funciones/38-tema.conf
+msgid "Aspecto del escritorio"
+msgstr ""
+
+#: live/usr/share/lazaro/bienvenida/funciones/38-tema.conf
+msgid "Elegir"
+msgstr ""
+
+#: live/usr/share/lazaro/bienvenida/funciones/38-tema.conf
+msgid "Elige el tema Lázaro (claro u oscuro) o vuelve al aspecto original del escritorio."
 msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/funciones/40-diagnostico.conf

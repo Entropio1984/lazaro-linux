@@ -1,0 +1,9 @@
+/* Lázaro (claro): ventanas claras con detalles celestes. */
+@import url("../../adw-gtk3/gtk-3.0/gtk.css");
+@import url("colores-lazaro.css");
+
+@define-color window_bg_color #f6f8fb;
+@define-color view_bg_color #ffffff;
+@define-color headerbar_bg_color #e7eef6;
+@define-color sidebar_bg_color #eaf0f7;
+@define-color accent_color #0f6cb8;
