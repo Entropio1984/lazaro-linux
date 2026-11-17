@@ -1,8 +1,0 @@
-{
-    "KPlugin": {
-        "Authors": [ { "Name": "Lázaro Linux" } ],
-        "Id": "Lazaro-Pulso",
-        "License": "GPL-3.0-or-later",
-        "Name": "Lázaro: Pulso"
-    }
-}

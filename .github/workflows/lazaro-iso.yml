@@ -478,11 +478,6 @@ jobs:
       # el Python de Alpine.
       - run: sh pruebas/bienvenida.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
-      # Tema Lázaro: archivos completos y lazaro-tema pone y quita el tema
-      # en cada escritorio (con programas falsos). También con el
-      # busybox de Alpine.
-      - run: sh pruebas/tema.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/tema.sh'
       # Idioma de la sesión de prueba: qué traducciones se guardan de cada
       # paquete -lang (en Alpine, con uno de verdad) y lo que escribe el
       # selector de idioma y teclado de la Bienvenida.

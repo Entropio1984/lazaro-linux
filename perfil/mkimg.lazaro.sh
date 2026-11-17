@@ -83,12 +83,6 @@ LAZARO_LIVE="alpine-base $LAZARO_XFCE util-linux e2fsprogs dosfstools ckbcomp
 	xf86-video-vesa dialog tar
 	plymouth plymouth-drm plymouth-openrc-plugin
 	$LAZARO_RED_LIVE"
-# Tema Lázaro: la sesión de prueba no lo pone sola (unos 50 MB más de
-# memoria, y con 2 GB el cambio de idioma ya no entraba), pero se puede
-# probar desde la Bienvenida; los colores de las ventanas se apoyan en
-# adw-gtk3 (1 MB). Los íconos Papirus no van en la live (más de 100 MB en
-# memoria): ahí el tema usa los del escritorio.
-[ "$LAZARO_ARCH" = x86 ] || LAZARO_LIVE="$LAZARO_LIVE adw-gtk3"
 
 # ISO de 32 bits: la live arranca solo con lo básico (LAZARO_LIVE_BASE:
 # consola, red, discos e instalador en modo texto) y el servicio
@@ -211,8 +205,7 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 # (alpine-conf 3.22.0) más lo que desktop-postinstall.sh agrega en ese
 # escritorio (applets de red y sonido, barra de Sway, agente de
 # contraseñas). GNOME y Plasma no caben (más de 2 GB) y se descargan.
-# Más lo que pide el tema Lázaro (adw-gtk3 y los íconos Papirus, unos
-# 24 MB). Unos 265 MB en total.
+# Unos 240 MB en total.
 LAZARO_ESCRITORIOS="
 	mate-desktop-environment polkit mate-media mate-polkit
 	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
@@ -220,8 +213,7 @@ LAZARO_ESCRITORIOS="
 	sway swaybg swayidle swaylockd foot grim i3status brightnessctl
 	util-linux-login wl-clipboard wmenu xwayland waybar font-awesome fuzzel
 	pavucontrol polkit-gnome greetd-gtkgreet seatd
-	labwc adwaita-icon-theme network-manager-applet
-	adw-gtk3 papirus-icon-theme"
+	labwc adwaita-icon-theme network-manager-applet"
 
 # 32 bits: solo IceWM (lo que instalan lazaro-instalar y
 # desktop-postinstall.sh para IceWM; paquetes-completa.sh agrega además

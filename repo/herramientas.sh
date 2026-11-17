@@ -48,7 +48,7 @@ L="$LAZARO_DIR/live"
 # /etc que ya existen (los equipos instalados antes del paquete los
 # tienen sueltos).
 for p in lazaro-diagnostico lazaro-controladores lazaro-afinador lazaro-kernel lazaro-repositorio \
-	lazaro-bienvenida lazaro-flatpak lazaro-actualizador lazaro-arreglos lazaro-actualizar-raiz lazaro-tema; do
+	lazaro-bienvenida lazaro-flatpak lazaro-actualizador lazaro-arreglos lazaro-actualizar-raiz; do
 	install -Dm755 "$L/usr/sbin/$p" "$A/usr/share/lazaro/programas/$p"
 done
 for f in lazaro-controladores.initd lazaro-afinador.initd lazaro-kernel.initd; do
@@ -80,11 +80,6 @@ grep -q '^Exec=/usr/local/sbin/lazaro-bienvenida --sesion$' "$A/usr/share/lazaro
 for t in 64x64 256x256; do
 	install -Dm644 "$L/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png" "$A/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png"
 done
-# Tema Lázaro: fondos, colores, ventanas e íconos, en sus rutas de
-# siempre (/usr/share/themes, icons, backgrounds...). Así los equipos ya
-# instalados también lo tienen en "Apariencia" y en la Bienvenida; nadie
-# lo recibe puesto: lo elige la persona.
-cp -a "$LAZARO_DIR/tema/usr/." "$A/usr/"
 install -Dm644 "$LAZARO_DIR/repo/lazaro.rsa.pub" "$A/usr/share/lazaro/lazaro.rsa.pub"
 [ ! -e "$A/etc" ] && [ ! -e "$A/usr/local" ] || die "el paquete no debe llevar archivos en /etc ni en /usr/local"
 # Lectores de huellas que reconoce libfprint (igual que build.sh).

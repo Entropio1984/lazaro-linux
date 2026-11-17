@@ -737,11 +737,6 @@ prueba_instalar() {
 			grep LAZARO-IDIOMA-SESION "$serie2" >&2 || echo "(no se encontró el panel de la sesión)" >&2
 			sed -n '/LAZARO-IDIOMA-SIN-PANEL/,+60p' "$serie2" | grep -E '^(LAZARO-IDIOMA-SIN-PANEL|  )' >&2 || true
 			ok=1
-		elif [ "$BITS32" = no ] && [ "$configurado" = si ] && [ "$de" != ninguno ] &&
-			! grep -q 'LAZARO-TEMA-SESION claro' "$serie2"; then
-			echo "FALLO: el escritorio no empezó con el tema Lázaro." >&2
-			grep LAZARO-TEMA-SESION "$serie2" >&2 || echo "(no se encontró la línea LAZARO-TEMA-SESION)" >&2
-			ok=1
 		elif [ "$de" = sway ] && ! grep -q LAZARO-GTKGREET-LISTO "$serie2"; then
 			echo "FALLO: Sway no muestra su pantalla de inicio gráfica (gtkgreet)." >&2
 			ok=1
