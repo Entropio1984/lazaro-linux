@@ -34,7 +34,6 @@ on:
       - "live/usr/share/lazaro/**"
       - "live/usr/share/applications/**"
       - "live/etc/xdg/autostart/**"
-      - "tema/**"
       - "pruebas/kernel-arranque.sh"
       - ".github/workflows/lazaro-repositorio.yml"
   pull_request:
@@ -46,7 +45,6 @@ on:
       - "live/usr/share/lazaro/**"
       - "live/usr/share/applications/**"
       - "live/etc/xdg/autostart/**"
-      - "tema/**"
       - "pruebas/kernel-arranque.sh"
       - ".github/workflows/lazaro-repositorio.yml"
   schedule:

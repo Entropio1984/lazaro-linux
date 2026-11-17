@@ -750,46 +750,6 @@ paso_bienvenida() { # RAIZ
 	log "LAZARO-BIENVENIDA-INSTALADA"
 }
 
-# Tema Lázaro (64 bits, con escritorio; Julián, 2026-11-16): fondos,
-# colores, ventanas e íconos para XFCE, MATE, GNOME, Plasma, LXQt y Sway.
-# Queda instalado para todos (aparece en "Apariencia" de cada escritorio)
-# y, como el equipo empieza con el tema (/etc/lazaro/tema-de-entrada),
-# lazaro-tema lo pone la primera vez que cada persona entra al
-# escritorio. Se quita desde la Bienvenida ("Aspecto del escritorio") o
-# eligiendo otro tema en Apariencia.
-paso_tema() { # RAIZ
-	[ "$BITS32" = no ] || return 0
-	[ ! -e "$1/etc/lazaro/sin-escritorio" ] || return 0
-	[ -x /usr/sbin/lazaro-tema ] && [ -r "$DATOS/tema-archivos" ] || return 0
-	# Los archivos del tema, tal como están en la live.
-	(cd / && tar -cf - -T "$DATOS/tema-archivos") | tar -C "$1" -xf - ||
-		{ log "Aviso: no se pudo copiar el tema Lázaro."; return 0; }
-	# Las ventanas se apoyan en adw-gtk3 y los íconos en Papirus: del USB
-	# o, si no están ahí, de internet. Si no hay ninguno de los dos, se
-	# anotan en la lista del sistema y llegan con la configuración final.
-	pt_paq="adw-gtk3 papirus-icon-theme"
-	# shellcheck disable=SC2086
-	if ! en_destino "$1" apk add --no-network $pt_paq </dev/null >>"$LOG" 2>&1 &&
-		! en_destino "$1" apk add $pt_paq </dev/null >>"$LOG" 2>&1; then
-		log "Aviso: adw-gtk3 y Papirus se instalarán con la configuración final."
-		for pt_p in $pt_paq; do
-			grep -qx "$pt_p" "$1/etc/apk/world" 2>/dev/null || echo "$pt_p" >> "$1/etc/apk/world"
-		done
-	fi
-	install -Dm755 /usr/sbin/lazaro-tema "$1/usr/local/sbin/lazaro-tema"
-	install -Dm644 "$DATOS/lazaro-tema-sesion.desktop" "$1/etc/xdg/autostart/lazaro-tema.desktop"
-	sed -i 's|^Exec=lazaro-tema|Exec=/usr/local/sbin/lazaro-tema|' "$1/etc/xdg/autostart/lazaro-tema.desktop"
-	# Sway no abre lo de /etc/xdg/autostart: va con su configuración (se
-	# deja siempre, porque Sway puede instalarse recién en el primer
-	# arranque; en los demás escritorios no se lee).
-	mkdir -p "$1/etc/sway/config.d"
-	printf '%s\n' "# Tema Lázaro la primera vez (lazaro-tema)." \
-		"exec /usr/local/sbin/lazaro-tema --primera-vez" > "$1/etc/sway/config.d/95-lazaro-tema.conf"
-	mkdir -p "$1/etc/lazaro"
-	echo claro > "$1/etc/lazaro/tema-de-entrada"
-	log "LAZARO-TEMA-INSTALADO"
-}
-
 # Afinador (lazaro-afinador): ajustes para que el equipo responda mejor,
 # todos reversibles. Se deja la herramienta, su servicio de arranque y el
 # menú "Afinador", y se aplica lo recomendado para este hardware. Va al
@@ -998,7 +958,6 @@ paso_ajustes() {
 	fi
 	paso_afinador "$raiz"
 	paso_bienvenida "$raiz"
-	paso_tema "$raiz"
 
 	cp "$LOG" "$raiz/var/log/lazaro-instalar.log" 2>/dev/null || true
 	log "Instalación terminada."
