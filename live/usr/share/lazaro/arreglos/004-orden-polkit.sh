@@ -18,20 +18,29 @@ R="${LAZARO_ARREGLO_RAIZ:-}"
 # después, se vuelve a mirar.
 [ -e "$R/etc/init.d/polkit" ] || exit 11
 
-tiene() { grep -q '^rc_before=' "$R/etc/conf.d/$1" 2>/dev/null; }
-tiene polkit && tiene modemmanager && exit 10
+# Lo que falta en rc_before de /etc/conf.d/SERVICIO (vale la última
+# línea, como en OpenRC). Si alguien ya puso su propio orden, se suma.
+faltan() { # SERVICIO NOMBRES...
+	f="$R/etc/conf.d/$1"; shift
+	actual="$(sed -n 's/^rc_before="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$f" 2>/dev/null | tail -n 1)"
+	for n in "$@"; do
+		case " $actual " in *" $n "*) ;; *) printf '%s ' "$n" ;; esac
+	done
+}
+poner() { # SERVICIO COMENTARIO NOMBRES...
+	s="$1" c="$2"; shift 2
+	falta="$(faltan "$s" "$@")"
+	[ -n "$falta" ] || return 0
+	actual="$(sed -n 's/^rc_before="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$R/etc/conf.d/$s" 2>/dev/null | tail -n 1)"
+	nuevo="$(echo $actual $falta)"
+	printf '%s\nrc_before="%s"\n' "$c" "$nuevo" >> "$R/etc/conf.d/$s"
+}
+
+[ -z "$(faltan polkit networkmanager fwupd)$(faltan modemmanager networkmanager)" ] && exit 10
 
 mkdir -p "$R/etc/conf.d" || exit 1
-if ! tiene polkit; then
-	printf '%s\n' \
-		'# desktop-postinstall.sh: polkit arranca antes que quienes lo despiertan' \
-		'# por D-Bus; si no, su servicio choca con ese polkit y queda "failed".' \
-		'rc_before="networkmanager fwupd"' >> "$R/etc/conf.d/polkit" || exit 1
-fi
-if ! tiene modemmanager; then
-	printf '%s\n' \
-		'# desktop-postinstall.sh: ModemManager arranca antes que NetworkManager,' \
-		'# que si no lo despierta por D-Bus y su servicio queda "failed".' \
-		'rc_before="networkmanager"' >> "$R/etc/conf.d/modemmanager" || exit 1
-fi
+poner polkit '# Lázaro: polkit arranca antes que quienes lo despiertan por D-Bus; si no, su servicio choca con ese polkit y queda "failed".' \
+	networkmanager fwupd || exit 1
+poner modemmanager '# Lázaro: ModemManager arranca antes que NetworkManager, que si no lo despierta por D-Bus y su servicio queda "failed".' \
+	networkmanager || exit 1
 exit 0

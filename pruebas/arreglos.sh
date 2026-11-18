@@ -273,6 +273,11 @@ es "orden de polkit: polkit antes que NetworkManager y fwupd, ModemManager antes
 es "orden de polkit: lo que ya había en conf.d se queda" 'grep -qx "modemmanager_opts=\"--debug\"" "$P/etc/conf.d/modemmanager"'
 polkit_orden
 es "orden de polkit: ya puesto, no hace falta ni repite líneas" '[ "$rc" = 10 ] && [ "$(grep -c rc_before "$P/etc/conf.d/polkit")" = 1 ]'
+echo 'rc_before="cupsd"' > "$P/etc/conf.d/polkit"
+polkit_orden
+es "orden de polkit: a un orden propio le suma lo que falta" '[ "$rc" = 0 ] && [ "$(sed -n "s/^rc_before=//p" "$P/etc/conf.d/polkit" | tail -n 1)" = "\"cupsd networkmanager fwupd\"" ]'
+polkit_orden
+es "orden de polkit: completo, no hace falta" '[ "$rc" = 10 ]'
 
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do

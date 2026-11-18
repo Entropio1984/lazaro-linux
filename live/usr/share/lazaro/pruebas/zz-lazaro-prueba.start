@@ -489,6 +489,8 @@ idioma_sesion() {
 			cat /etc/conf.d/polkit 2>&1
 			grep -E 'polkitd|PolicyKit1|ModemManager1' /var/log/messages 2>/dev/null | tail -n 10
 		fi
+	else
+		echo "LAZARO-POLKIT-FALTA"
 	fi
 	# Ajustes del afinador en el sistema en marcha: el servicio puso la
 	# protección de memoria y el arranque trae preempt=full (con
