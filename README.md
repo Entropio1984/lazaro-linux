@@ -56,8 +56,9 @@ imprimir.
 - **Avisa de las actualizaciones.** Un icono en la barra te avisa cuando
   hay actualizaciones, y se instalan con un clic.
 - **La tienda de aplicaciones lista.** Si la marcas, queda la tienda
-  Flathub con miles de programas, y puedes elegir de entrada OnlyOffice,
-  Google Chrome o Brave.
+  Flathub con miles de programas, y puedes elegir de entrada OnlyOffice
+  o Brave. Google Chrome se instala después, con un clic, desde la
+  Bienvenida.
 
 ## ¿Funciona en mi equipo?
 
@@ -84,7 +85,7 @@ varias épocas.
 | | **Ligera** | **Completa** |
 |---|---|---|
 | Tamaño | menos de 2 GB | unos 4,6 GB |
-| ¿Necesita internet al instalar? | Para GNOME, KDE Plasma y las aplicaciones de Flathub, sí | No, nunca (solo Google Chrome) |
+| ¿Necesita internet al instalar? | Para GNOME, KDE Plasma y las aplicaciones de Flathub, sí | No, nunca |
 | Escritorios sin internet | XFCE, MATE, LXQt, Sway, XFCE Wayland | Los 7, en todos los idiomas |
 | Firmware (controladores de wifi y otros) | El de red, completo | Todo |
 | Módems USB 3G/4G, ADSL (PPPoE), internet del celular por cable o Bluetooth (los módems 3G/4G y el Bluetooth, en el sistema instalado) | Sí | Sí |
@@ -284,11 +285,15 @@ El instalador pregunta, en este orden:
    - **YouTube ligero**: ver abajo.
    - **Flatpak + tienda Flathub**: una tienda con miles de programas.
    - **OnlyOffice** (otra alternativa a Office, muy parecida en su
-     aspecto), **Google Chrome** y **Brave** (navegadores). En la edición
+     aspecto) y **Brave** (navegador que bloquea anuncios). En la edición
      Ligera se instalan solos unos minutos después del primer arranque
      con internet. Son descargas grandes: si Flathub no responde o se
      corta la conexión, se reintenta solo, cada vez más espaciado (hasta
      cada 30 minutos), y sigue en el próximo encendido hasta terminar.
+     En la Completa vienen en el USB.
+   - **Google Chrome** ya no está aquí: se instala después, con un clic,
+     desde la Bienvenida (ver
+     [Aplicaciones de Flathub](#aplicaciones-de-flathub)).
 4. **Disco**: **se borra el disco que elijas**, con todo lo que tenga.
    Si el equipo tiene Windows u otro sistema y quieres conservarlo, el
    instalador puede ofrecer la opción de instalar a su lado, pero
@@ -306,6 +311,8 @@ Al terminar, reinicia y saca el USB.
 
 - Si marcaste aplicaciones de Flathub, se instalan solas en segundo plano
   cuando haya internet. Dales unos minutos.
+- Para Google Chrome, abre la Bienvenida y pulsa **Aplicaciones de
+  Flathub** (necesita internet).
 - Si instalaste **sin internet con la Ligera**, falta la configuración
   final, y el equipo arranca en una **pantalla de texto** con un aviso
   (no es un error). Conecta el cable de red, o entra con tu usuario y
@@ -438,7 +445,7 @@ Diagnóstico queda siempre en español, para que quien ayuda lo lea igual.
 
 Al iniciar sesión (también en la sesión de prueba) se abre la **Bienvenida**, una ventana con botones para
 todo lo que trae Lázaro: instalar (en la sesión de prueba), actualizar,
-controladores, tienda de aplicaciones y Flatpak, revisión del hardware,
+controladores, tienda de aplicaciones, aplicaciones de Flathub, revisión del hardware,
 Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
 letras e iconos del escritorio que hayas elegido. Si no quieres verla en
 cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
@@ -467,6 +474,31 @@ Icono=accessories-calculator
 
 El archivo `LEEME` de esa carpeta explica todas las opciones, y
 `lazaro-bienvenida --comprobar` avisa si algún archivo quedó mal escrito.
+
+### Aplicaciones de Flathub
+
+**Flathub** es una tienda gratuita con miles de programas que no vienen
+en Alpine (OnlyOffice, Google Chrome, Brave, Spotify, Zoom...).
+**Flatpak** es el sistema que los instala. Al instalar se pueden marcar
+Flatpak, OnlyOffice y Brave; **Google Chrome** solo se instala desde la
+Bienvenida, con el botón **Aplicaciones de Flathub** (sección
+**Programas**, y también en la página de inicio). El mismo botón sirve
+para activar Flathub o sumar OnlyOffice y Brave si no los marcaste.
+
+La ventana muestra el espacio libre del disco y deja marcar las que aún
+no están instaladas. Al pulsar **Activar** (o **Instalar**, si Flathub
+ya está activo) pide tu contraseña, instala Flatpak si falta, agrega
+Flathub y descarga lo que marcaste, con una barra que dice qué está
+bajando. Cada aplicación pesa varios cientos de MB. Si una descarga se
+corta, se reintenta sola; si aun así falla, el aviso lo dice y basta
+con pulsar el botón otra vez (lo ya descargado no se baja de nuevo).
+Al terminar, cierra la sesión y vuelve a entrar para verlas en el menú.
+
+<img src="docs/imagenes/flathub.png" alt="Ventana Aplicaciones de Flathub con las casillas de OnlyOffice, Google Chrome y Brave" width="480">
+
+Con la terminal: `doas lazaro-flatpak --activar chrome` (también
+`onlyoffice` y `brave`, o solo `--activar` para activar Flathub). En la
+de **32 bits** no hay Flathub (no publica programas para 32 bits).
 
 ### Afinador: que el equipo responda mejor
 
@@ -953,7 +985,7 @@ mano, también con la siguiente (edge):
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
 | Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, la consola entra sola como `lazaro` y la live trae `dialog` |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |
-| Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo y la pantalla de inicio recuerda la resolución que eligió el usuario |
+| Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo, el botón Aplicaciones de Flathub de la Bienvenida funciona, y la pantalla de inicio recuerda la resolución que eligió el usuario |
 | Instalación | UEFI | KDE Plasma | Sí | Lo mismo con Plasma |
 | Instalación | BIOS | GNOME | Sí | Lo mismo con GNOME (reinicia una vez y mide la pantalla de inicio) |
 | Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos |

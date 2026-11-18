@@ -17,7 +17,9 @@
 #   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
 #     EXTRAS: lo marcado en "Software adicional", separado por espacios,
 #     detrás de "base": fastfetch btop vlc youtube libreoffice (Alpine) y
-#     flatpak onlyoffice chrome brave (Flathub). Sin EXTRAS: "base flatpak".
+#     flatpak onlyoffice brave (Flathub). Sin EXTRAS: "base flatpak".
+#     Google Chrome ya no se ofrece al instalar (se instala desde la
+#     Bienvenida); "chrome" se sigue aceptando por si alguien lo pasa.
 #   lazaro-instalar autologin RAIZ USUARIO
 #     Inicio de sesión automático para USUARIO (casilla de Calamares).
 #   lazaro-instalar texto DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA

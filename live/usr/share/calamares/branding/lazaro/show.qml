@@ -75,7 +75,7 @@ Presentation
     }
     SlideLazaro {
         titulo: "Aplicaciones de Flathub"
-        texto: "Las aplicaciones de Flathub que marcaste (OnlyOffice, Chrome, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet."
+        texto: "Las aplicaciones de Flathub que marcaste (OnlyOffice, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet. Google Chrome se instala desde la Bienvenida, con el botón Aplicaciones de Flathub."
     }
     SlideLazaro {
         titulo: "Mantén tu sistema al día"

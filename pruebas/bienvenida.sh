@@ -45,7 +45,7 @@ cat "$TMP/c.txt"
 correr instalado "$TMP/bin:$TMP/vacio" --listar > "$TMP/inst.txt"
 es "instalado: se ve el Afinador" 'grep -q "	Afinador	visible	" "$TMP/inst.txt"'
 es "instalado: se ve el Manual" 'grep -q "	Manual de Lázaro	visible	" "$TMP/inst.txt"'
-es "instalado: se ve Flatpak y Flathub" 'grep -q "	Flatpak y Flathub	visible	" "$TMP/inst.txt"'
+es "instalado: se ve Aplicaciones de Flathub" 'grep -q "	Aplicaciones de Flathub	visible	" "$TMP/inst.txt"'
 es "instalado: se ve el Diagnóstico" 'grep -q "	Diagnóstico	visible	" "$TMP/inst.txt"'
 es "instalado: no se ve Instalar Lázaro" 'grep -q "	Instalar Lázaro	oculta	" "$TMP/inst.txt"'
 # Sin tienda instalada (ni GNOME Software ni Discover), su botón no sale.
@@ -163,6 +163,34 @@ es "actualizador: una orden desconocida se rechaza" '[ "$rc" = 2 ] && grep -q "^
 es "entrada del menú" 'grep -qx "Exec=lazaro-bienvenida" "$DIR/live/usr/share/applications/lazaro-bienvenida.desktop"'
 es "arranque con la sesión" 'grep -qx "Exec=lazaro-bienvenida --sesion" "$DIR/live/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"'
 es "sintaxis de lazaro-flatpak" 'sh -n "$DIR/live/usr/sbin/lazaro-flatpak"'
+
+# 10. lazaro-flatpak (botón "Aplicaciones de Flathub"), con un flatpak de
+# mentira: activa Flathub, instala lo elegido y avisa lo que falló.
+FP="$TMP/fp"
+mkdir -p "$FP/bin"
+cat > "$FP/bin/flatpak" <<'EOF'
+#!/bin/sh
+case "$1" in
+	remotes) [ ! -e "$FP_DIR/remoto" ] || echo flathub ;;
+	remote-add) [ "$*" = "remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" ] || exit 1
+		touch "$FP_DIR/remoto" ;;
+	list) cat "$FP_DIR/apps" 2>/dev/null ;;
+	install) [ "$1 $2 $3 $4 $5" = "install --system -y --noninteractive flathub" ] || exit 1
+		[ "$6" != "${FP_FALLA:-}" ] || exit 1; echo "$6" >> "$FP_DIR/apps" ;;
+	info) grep -qx "$3" "$FP_DIR/apps" 2>/dev/null ;;
+esac
+EOF
+chmod +x "$FP/bin/flatpak"
+fp() { FP_DIR="$FP" PATH="$FP/bin:$PATH" LAZARO_FLATPAK_SIN_APK=1 LAZARO_FLATPAK_ESPERA=0 sh "$DIR/live/usr/sbin/lazaro-flatpak" "$@"; }
+es "flatpak: sin activar dice falta" '[ "$(fp --estado)" = falta ]'
+es "flatpak: activa e instala OnlyOffice y Brave" 'fp --activar onlyoffice com.brave.Browser > "$TMP/fp1.txt" 2>&1 && [ "$(fp --estado)" = activo ] && [ "$(fp --instaladas | tr "\n" " ")" = "org.onlyoffice.desktopeditors com.brave.Browser " ]'
+es "flatpak: avanza por pasos para la barra" 'grep -qx "# Descargando Brave (paso 3 de 3). Puede tardar varios minutos…" "$TMP/fp1.txt"'
+echo org.otra.Aplicacion >> "$FP/apps"
+es "flatpak: --instaladas solo nombra las de la lista" '! fp --instaladas | grep -q otra'
+rc=0; FP_FALLA=com.google.Chrome fp --activar chrome > "$TMP/fp2.txt" 2>&1 || rc=$?
+es "flatpak: si una aplicación falla termina con 3" '[ "$rc" = 3 ] && grep -q "No se pudo instalar: Google Chrome" "$TMP/fp2.txt"'
+rc=0; fp --activar zoom > /dev/null 2>&1 || rc=$?
+es "flatpak: una aplicación desconocida se rechaza" '[ "$rc" = 2 ]'
 
 echo
 if [ "$fallos" -gt 0 ]; then

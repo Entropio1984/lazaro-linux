@@ -698,6 +698,13 @@ prueba_instalar() {
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
 			ok=1
+		elif grep -q LAZARO-FLATPAK-BIENVENIDA-NO "$serie2" ||
+			{ [ "$BITS32" = no ] && [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-BIENVENIDA-OK "$serie2"; }; then
+			# Con internet, el botón "Aplicaciones de Flathub" de la
+			# Bienvenida debe dejar Flatpak y Flathub activos.
+			echo "FALLO: el botón de la Bienvenida no logró activar Flatpak y Flathub." >&2
+			grep -A 15 LAZARO-FLATPAK-BIENVENIDA "$serie2" >&2 || true
+			ok=1
 		elif grep -q LAZARO-BIENVENIDA-NO "$serie2" ||
 			{ [ "$de" != ninguno ] && ! grep -q LAZARO-BIENVENIDA-OK "$serie2"; }; then
 			echo "FALLO: la Bienvenida no quedó lista en el sistema instalado (programa, funciones o GTK para Python)." >&2

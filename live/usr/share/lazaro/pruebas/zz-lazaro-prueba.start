@@ -519,6 +519,21 @@ idioma_sesion() {
 			echo "LAZARO-DIAGNOSTICO-NO ${diag_sal:-sin archivo}"
 		fi
 	fi
+	# Botón "Aplicaciones de Flathub" de la Bienvenida: con internet,
+	# activa Flatpak y Flathub como lo hace el botón, sin aplicaciones
+	# (si ya estaban activos, no cambia nada).
+	if [ -x /usr/local/sbin/lazaro-flatpak ]; then
+		if wget -q --spider -T 20 https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1; then
+			fp_sal="$(timeout 900 /usr/local/sbin/lazaro-flatpak --activar 2>&1)"
+			fp_rc=$?
+			if [ "$fp_rc" = 0 ] && [ "$(/usr/local/sbin/lazaro-flatpak --estado)" = activo ]; then
+				echo "LAZARO-FLATPAK-BIENVENIDA-OK"
+			else
+				echo "LAZARO-FLATPAK-BIENVENIDA-NO rc=$fp_rc"
+				printf '%s\n' "$fp_sal" | tail -n 15
+			fi
+		fi
+	fi
 	# Bienvenida: con escritorio, el programa quedó instalado, sus
 	# archivos de funciones están bien escritos y Python encuentra GTK 3
 	# (sin eso la ventana no abre).

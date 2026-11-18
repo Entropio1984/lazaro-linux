@@ -63,16 +63,13 @@ textos_completa() {
 		"Aplicaciones Flatpak (OnlyOffice y Brave vienen en el USB)"
 	tc_cambiar "$tc_cal/netinstall.conf" \
 		"Vienen de Flathub. Se descargan en segundo plano unos minutos después de encender el equipo conectado a internet." \
-		"Vienen de Flathub. OnlyOffice y Brave se instalan desde el USB, sin internet. Google Chrome no se puede incluir: se descarga solo después del primer arranque, con internet."
-	tc_cambiar "$tc_cal/netinstall.conf" \
-		"(paquete comunitario de Flathub, no oficial de Google)." \
-		"(paquete comunitario de Flathub, no oficial de Google). Necesita internet."
+		"Vienen de Flathub. OnlyOffice y Brave se instalan desde el USB, sin internet. Google Chrome se instala después, con internet, desde la Bienvenida."
 	tc_cambiar "$tc_qml" \
-		"Las aplicaciones de Flathub que marcaste (OnlyOffice, Chrome, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet." \
-		"OnlyOffice y Brave se instalan desde el USB. Google Chrome, si lo marcaste, se instala solo en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet."
+		"Las aplicaciones de Flathub que marcaste (OnlyOffice, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet. Google Chrome se instala desde la Bienvenida, con el botón Aplicaciones de Flathub." \
+		"OnlyOffice y Brave se instalan desde el USB. Google Chrome se instala desde la Bienvenida, con el botón Aplicaciones de Flathub, cuando el equipo tenga internet."
 	tc_cambiar "$tc_qml" \
 		"Si instalaste sin internet, la configuración final se completa sola la primera vez que el equipo se conecte a una red." \
-		"Esta edición trae todo en el USB: el sistema queda completo aunque no haya internet. Solo Google Chrome espera a que el equipo se conecte."
+		"Esta edición trae todo en el USB: el sistema queda completo aunque no haya internet."
 }
 [ "${LAZARO_EDICION:-ligera}" != completa ] || textos_completa
 
