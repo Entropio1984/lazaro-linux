@@ -1423,3 +1423,6 @@ msgstr "IceWM: o botão \"mostrar área de trabalho\" tem um ícone que aparece 
 
 msgid "El servicio de permisos (polkit) ya no aparece como fallido al encender (se nota al reiniciar)"
 msgstr "O serviço de permissões (polkit) não aparece mais como falho ao ligar (vale depois de reiniciar)"
+
+msgid "OnlyOffice, Chrome y Brave: si Flathub no responde, la descarga se reintenta con más paciencia"
+msgstr "OnlyOffice, Chrome e Brave: se o Flathub não responder, o download é tentado de novo com mais paciência"

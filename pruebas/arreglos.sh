@@ -279,6 +279,20 @@ es "orden de polkit: a un orden propio le suma lo que falta" '[ "$rc" = 0 ] && [
 polkit_orden
 es "orden de polkit: completo, no hace falta" '[ "$rc" = 10 ]'
 
+# 005-reintentos-flathub en un sistema de mentira.
+F="$TMP/flathub"
+mkdir -p "$F/etc/local.d" "$F/etc/runlevels/default"
+flathub() { rc=0; LAZARO_ARREGLO_RAIZ="$F" sh "$REALES/005-reintentos-flathub.sh" > /dev/null 2>&1 || rc=$?; }
+flathub
+es "reintentos de Flathub: sin pendientes no hace falta" '[ "$rc" = 10 ] && [ ! -e "$F/etc/local.d/flatpak-pendientes.start" ]'
+echo org.onlyoffice.desktopeditors > "$F/etc/flatpak-pendientes"
+printf '#!/bin/sh\n# version vieja\n' > "$F/etc/local.d/flatpak-pendientes.start"
+flathub
+es "reintentos de Flathub: cambia el reintento viejo por el paciente" '[ "$rc" = 0 ] && grep -q "Paciente con la red" "$F/etc/local.d/flatpak-pendientes.start" && [ -x "$F/etc/local.d/flatpak-pendientes.start" ] && sh -n "$F/etc/local.d/flatpak-pendientes.start" && [ -L "$F/etc/runlevels/default/local" ]'
+es "reintentos de Flathub: la lista de pendientes queda igual" 'grep -qx org.onlyoffice.desktopeditors "$F/etc/flatpak-pendientes"'
+flathub
+es "reintentos de Flathub: ya cambiado, no hace falta" '[ "$rc" = 10 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

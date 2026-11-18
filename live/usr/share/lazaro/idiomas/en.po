@@ -1423,3 +1423,6 @@ msgstr "IceWM: the \"show desktop\" button has an icon you can see on the bar (t
 
 msgid "El servicio de permisos (polkit) ya no aparece como fallido al encender (se nota al reiniciar)"
 msgstr "The permissions service (polkit) no longer shows as failed at startup (takes effect after restarting)"
+
+msgid "OnlyOffice, Chrome y Brave: si Flathub no responde, la descarga se reintenta con más paciencia"
+msgstr "OnlyOffice, Chrome and Brave: if Flathub does not respond, the download is retried more patiently"
