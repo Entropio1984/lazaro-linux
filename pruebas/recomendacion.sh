@@ -50,7 +50,7 @@ caso() {
 	NET="$d/calamares/netinstall.conf"
 }
 
-# espera ESCRITORIO 3D(si/no) FLATPAK(true/false)
+# espera ESCRITORIO 3D(si/no) DISCO_PEQUENO(si/no)
 espera() {
 	grep -qx "default: $1" "$ESC" || fallo "por defecto $(grep '^default:' "$ESC"), se esperaba $1"
 	n=$(grep -c '(recomendado para tu equipo)"$' "$ESC")
@@ -63,8 +63,9 @@ espera() {
 		[ "$avisados" = "xfce-wayland gnome plasma sway " ] \
 			|| fallo "sin 3D se esperaba el aviso en xfce-wayland gnome plasma sway y está en: $avisados"
 	fi
-	sel=$(awk '/- name: "Flatpak/ { f = 1; next } f && /selected:/ { print $2; exit }' "$NET")
-	[ "$sel" = "$3" ] || fallo "Flatpak marcado=$sel, se esperaba $3"
+	grep -qx "DISCO_PEQUENO=$3" "$d/run/recomendacion" || fallo "se esperaba DISCO_PEQUENO=$3: $(grep DISCO "$d/run/recomendacion")"
+	# Flatpak ya no se ofrece al instalar: "Software adicional" no se toca.
+	cmp -s "$NET" "$CONF/netinstall.conf" || fallo "netinstall.conf cambió"
 	n=$(grep -c 'Recomendado para tu equipo' "$ESC")
 	[ "$n" = 1 ] || fallo "la frase de recomendación aparece $n veces"
 	grep -q 'disco=' "$d/salida" || fallo "no hay resumen: $(cat "$d/salida")"
@@ -74,33 +75,32 @@ espera() {
 
 antes=0
 caso portatil-viejo-1gb 1000 i915 sin-nvidia 120
-espera lxqt si true
+espera lxqt si no
 [ "$avisados" = "xfce-wayland gnome plasma sway " ] \
 	|| fallo "con 1 GB se esperaba el aviso en xfce-wayland gnome plasma sway y está en: $avisados"
 
 caso portatil-2gb 1750 i915 sin-nvidia 160
-espera xfce si true
+espera xfce si no
 [ "$avisados" = "xfce-wayland gnome plasma sway " ] \
 	|| fallo "con 2 GB se esperaba el aviso en xfce-wayland gnome plasma sway y está en: $avisados"
 
 caso k53sv-4gb 3800 i915 activa 500
-espera xfce si true
+espera xfce si no
 grep -q 'equipo: 4 GB de RAM' "$ESC" || fallo "la memoria no aparece en el texto"
 
 caso maquina-virtual 4000 qxl sin-nvidia 20
-espera xfce no false
-grep -q 'Tu disco es pequeño (20 GB)' "$NET" || fallo "falta el aviso de disco pequeño"
+espera xfce no si
 
 caso fermi-sola 8000 nouveau seguro 250
-espera xfce no true
+espera xfce no no
 
 caso ryzen-rtx 32000 nouveau activa 1000
-espera xfce si true
+espera xfce si no
 grep -q 'también puede con cualquiera' "$ESC" || fallo "con 32 GB y 3D debería decir que puede con cualquiera"
 if grep -q 'No recomendado para este equipo' "$ESC"; then fallo "con 32 GB y 3D no se desaconseja nada"; fi
 
 caso disco-32gb 2048 amdgpu sin-nvidia 32
-espera xfce si false
+espera xfce si si
 
 if [ "$fallos" -gt 0 ]; then
 	echo "$fallos fallo(s)."

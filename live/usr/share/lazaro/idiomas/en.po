@@ -565,10 +565,6 @@ msgstr "Share it in the chat (it contains no passwords)."
 msgid "Estás en la sesión live: copia el archivo a otro USB o envíalo antes de apagar."
 msgstr "You are in the live session: copy the file to another USB stick or send it before shutting down."
 
-#: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
-msgid "Flatpak y Flathub"
-msgstr "Flatpak and Flathub"
-
 #: live/usr/sbin/lazaro-flatpak
 msgid "Este sistema no tiene tienda de aplicaciones."
 msgstr "This system has no app store."
@@ -581,41 +577,13 @@ msgstr "App store"
 msgid "Abrir la tienda"
 msgstr "Open the store"
 
-#: live/usr/sbin/lazaro-flatpak
-msgid ""
-"Flatpak y Flathub ya están activos en este equipo.\n"
-"\n"
-"Las aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones."
-msgstr ""
-"Flatpak and Flathub are already active on this computer.\n"
-"\n"
-"Flathub apps are searched for and installed from the app store."
-
 #: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
 msgid "Activar"
 msgstr "Turn on"
 
 #: live/usr/sbin/lazaro-flatpak
-msgid ""
-"Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala.\n"
-"\n"
-"Al activarlos, esas aplicaciones aparecen en la tienda de aplicaciones. Necesita internet y descarga unos 20 MB; cada aplicación de Flathub ocupa bastante más que una de Alpine.\n"
-"\n"
-"¿Activar Flatpak y Flathub?"
-msgstr ""
-"Flathub is a collection of apps that do not come with Alpine, such as OnlyOffice, Chrome, Brave, Spotify or Zoom. Flatpak is the system that installs them.\n"
-"\n"
-"Once they are turned on, those apps show up in the app store. It needs internet and downloads about 20 MB; each Flathub app takes up quite a lot more space than an Alpine one.\n"
-"\n"
-"Turn on Flatpak and Flathub?"
-
-#: live/usr/sbin/lazaro-flatpak
 msgid "Activando Flatpak y Flathub…"
 msgstr "Turning on Flatpak and Flathub…"
-
-#: live/usr/sbin/lazaro-flatpak
-msgid "Listo. Cierra la sesión y vuelve a entrar para que la tienda de aplicaciones muestre lo de Flathub."
-msgstr "Done. Log out and back in so the app store shows the Flathub apps."
 
 #: live/usr/sbin/lazaro-flatpak
 msgid "No se pudo activar. Revisa la conexión a internet y vuelve a intentar."
@@ -982,10 +950,6 @@ msgid "Btop: monitor de recursos"
 msgstr "Btop: resource monitor"
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "necesita internet"
-msgstr "needs internet"
-
-#: live/usr/sbin/lazaro-instalar-texto
 msgid "viene en el USB"
 msgstr "comes on the USB stick"
 
@@ -1004,10 +968,6 @@ msgstr "Light YouTube: videos without a browser (480p)"
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "LibreOffice: oficina (documentos, hojas de cálculo)"
 msgstr "LibreOffice: office suite (documents, spreadsheets)"
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "Flatpak con Flathub: tienda de aplicaciones"
-msgstr "Flatpak with Flathub: app store"
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "Idioma"
@@ -1301,10 +1261,6 @@ msgstr "Programs"
 msgid "Busca, instala y quita programas con un clic."
 msgstr "Find, install and remove programs with one click."
 
-#: live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
-msgid "Activa la colección Flathub para instalar desde la tienda programas que no vienen en Alpine, como OnlyOffice, Chrome, Brave o Spotify."
-msgstr "Turns on the Flathub collection to install programs from the store that do not come with Alpine, such as OnlyOffice, Chrome, Brave or Spotify."
-
 #: live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
 msgid "YouTube ligero"
 msgstr "Light YouTube"
@@ -1426,3 +1382,57 @@ msgstr "The permissions service (polkit) no longer shows as failed at startup (t
 
 msgid "OnlyOffice, Chrome y Brave: si Flathub no responde, la descarga se reintenta con más paciencia"
 msgstr "OnlyOffice, Chrome and Brave: if Flathub does not respond, the download is retried more patiently"
+
+msgid "Aplicaciones de Flathub"
+msgstr "Flathub apps"
+
+msgid "Instalando Flatpak (paso %s de %s)…"
+msgstr "Installing Flatpak (step %s of %s)…"
+
+msgid "Descargando %s (paso %s de %s). Puede tardar varios minutos…"
+msgstr "Downloading %s (step %s of %s). This may take several minutes…"
+
+msgid "Listo."
+msgstr "Done."
+
+msgid "Oficina parecida a Microsoft Office (cerca de 1 GB)."
+msgstr "Office suite similar to Microsoft Office (about 1 GB)."
+
+msgid "Navegador de Google (paquete comunitario, no oficial)."
+msgstr "Google's browser (community package, not official)."
+
+msgid "Navegador con bloqueo de anuncios."
+msgstr "Browser with ad blocking."
+
+msgid ""
+"Flathub ya está activo y OnlyOffice, Google Chrome y Brave ya están instalados.\n"
+"\n"
+"Otras aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones."
+msgstr "Flathub is already active and OnlyOffice, Google Chrome and Brave are already installed.\n\nOther Flathub apps are found and installed from the app store."
+
+msgid "Flathub ya está activo. Marca las aplicaciones que quieras instalar; las demás de Flathub se buscan en la tienda de aplicaciones."
+msgstr "Flathub is already active. Tick the apps you want to install; other Flathub apps are found in the app store."
+
+msgid ""
+"Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala. Al activarlos, esas aplicaciones aparecen también en la tienda de aplicaciones.\n"
+"\n"
+"Si quieres, marca las que se instalan de una vez. Activar Flatpak y Flathub descarga unos 20 MB; cada aplicación, varios cientos de MB."
+msgstr "Flathub is a collection of apps that do not come with Alpine, such as OnlyOffice, Chrome, Brave, Spotify or Zoom. Flatpak is the system that installs them. Once activated, those apps also appear in the app store.\n\nIf you like, tick the ones to install right away. Activating Flatpak and Flathub downloads about 20 MB; each app, several hundred MB."
+
+msgid "Espacio libre en el disco: %s."
+msgstr "Free disk space: %s."
+
+msgid "Programa"
+msgstr "Program"
+
+msgid "Listo. Cierra la sesión y vuelve a entrar: las aplicaciones aparecerán en el menú y la tienda mostrará lo de Flathub."
+msgstr "Done. Log out and log back in: the apps will appear in the menu and the store will show Flathub."
+
+msgid "Flathub quedó activo, pero alguna aplicación no se pudo descargar. Revisa la conexión a internet y vuelve a intentarlo con este mismo botón: lo ya descargado no se baja otra vez."
+msgstr "Flathub is active, but some app could not be downloaded. Check the internet connection and try again with this same button: what was already downloaded is not downloaded again."
+
+msgid "Elegir"
+msgstr "Choose"
+
+msgid "Activa Flatpak y Flathub e instala con un clic OnlyOffice, Google Chrome o Brave. Después, la tienda ofrece miles de aplicaciones más."
+msgstr "Activates Flatpak and Flathub and installs OnlyOffice, Google Chrome or Brave with one click. Then the store offers thousands more apps."

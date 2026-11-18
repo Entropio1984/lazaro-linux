@@ -467,7 +467,7 @@ msgstr ""
 msgid "Clave"
 msgstr ""
 
-#: live/usr/sbin/lazaro-controladores
+#: live/usr/sbin/lazaro-controladores live/usr/sbin/lazaro-flatpak
 msgid "Qué es"
 msgstr ""
 
@@ -487,7 +487,7 @@ msgstr ""
 msgid "Falta algo para tu hardware:"
 msgstr ""
 
-#: live/usr/sbin/lazaro-controladores live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
+#: live/usr/sbin/lazaro-controladores live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
 msgid "Instalar"
 msgstr ""
 
@@ -551,7 +551,19 @@ msgid "Estás en la sesión live: copia el archivo a otro USB o envíalo antes d
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
-msgid "Flatpak y Flathub"
+msgid "Aplicaciones de Flathub"
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Instalando Flatpak (paso %s de %s)…"
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Descargando %s (paso %s de %s). Puede tardar varios minutos…"
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Listo."
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
@@ -563,27 +575,49 @@ msgid "Tienda de aplicaciones"
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
+msgid "Oficina parecida a Microsoft Office (cerca de 1 GB)."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Navegador de Google (paquete comunitario, no oficial)."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Navegador con bloqueo de anuncios."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
 msgid "Abrir la tienda"
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
 msgid ""
-"Flatpak y Flathub ya están activos en este equipo.\n"
+"Flathub ya está activo y OnlyOffice, Google Chrome y Brave ya están instalados.\n"
 "\n"
-"Las aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones."
+"Otras aplicaciones de Flathub se buscan e instalan desde la tienda de aplicaciones."
 msgstr ""
 
-#: live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
-msgid "Activar"
+#: live/usr/sbin/lazaro-flatpak
+msgid "Flathub ya está activo. Marca las aplicaciones que quieras instalar; las demás de Flathub se buscan en la tienda de aplicaciones."
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
 msgid ""
-"Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala.\n"
+"Flathub es una colección de aplicaciones que no vienen en Alpine, como OnlyOffice, Chrome, Brave, Spotify o Zoom. Flatpak es el sistema que las instala. Al activarlos, esas aplicaciones aparecen también en la tienda de aplicaciones.\n"
 "\n"
-"Al activarlos, esas aplicaciones aparecen en la tienda de aplicaciones. Necesita internet y descarga unos 20 MB; cada aplicación de Flathub ocupa bastante más que una de Alpine.\n"
-"\n"
-"¿Activar Flatpak y Flathub?"
+"Si quieres, marca las que se instalan de una vez. Activar Flatpak y Flathub descarga unos 20 MB; cada aplicación, varios cientos de MB."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Activar"
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Espacio libre en el disco: %s."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Programa"
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
@@ -591,7 +625,11 @@ msgid "Activando Flatpak y Flathub…"
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
-msgid "Listo. Cierra la sesión y vuelve a entrar para que la tienda de aplicaciones muestre lo de Flathub."
+msgid "Listo. Cierra la sesión y vuelve a entrar: las aplicaciones aparecerán en el menú y la tienda mostrará lo de Flathub."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
+msgid "Flathub quedó activo, pero alguna aplicación no se pudo descargar. Revisa la conexión a internet y vuelve a intentarlo con este mismo botón: lo ya descargado no se baja otra vez."
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
@@ -937,7 +975,7 @@ msgid "LibreOffice: oficina (documentos, hojas de cálculo)"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "necesita internet"
+msgid "VLC: reproductor de video y música"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
@@ -946,14 +984,6 @@ msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre."
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "VLC: reproductor de video y música"
-msgstr ""
-
-#: live/usr/sbin/lazaro-instalar-texto
-msgid "Flatpak con Flathub: tienda de aplicaciones"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
@@ -1229,7 +1259,11 @@ msgid "Busca, instala y quita programas con un clic."
 msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
-msgid "Activa la colección Flathub para instalar desde la tienda programas que no vienen en Alpine, como OnlyOffice, Chrome, Brave o Spotify."
+msgid "Elegir"
+msgstr ""
+
+#: live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
+msgid "Activa Flatpak y Flathub e instala con un clic OnlyOffice, Google Chrome o Brave. Después, la tienda ofrece miles de aplicaciones más."
 msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf

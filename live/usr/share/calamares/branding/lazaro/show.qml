@@ -71,11 +71,11 @@ Presentation
     }
     SlideLazaro {
         titulo: "Más programas, desde la tienda"
-        texto: "Para instalar otros programas, abre la tienda de aplicaciones desde el menú (Discover en Plasma y LXQt, GNOME Software en los demás escritorios). Con Flathub tienes miles de programas a un clic."
+        texto: "Para instalar otros programas, abre la tienda de aplicaciones desde el menú (Discover en Plasma y LXQt, GNOME Software en los demás escritorios). Si activas Flathub desde la Bienvenida, tendrás miles de programas más."
     }
     SlideLazaro {
         titulo: "Aplicaciones de Flathub"
-        texto: "Las aplicaciones de Flathub que marcaste (OnlyOffice, Chrome, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet."
+        texto: "Flatpak y las aplicaciones de Flathub (OnlyOffice, Google Chrome, Brave) se activan después de instalar, con un clic, desde la Bienvenida de Lázaro. Así la instalación termina antes."
     }
     SlideLazaro {
         titulo: "Mantén tu sistema al día"

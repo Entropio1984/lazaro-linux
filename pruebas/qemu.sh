@@ -196,10 +196,10 @@ prueba_live() {
 			echo "FALLO: la revisión de tarjetas gráficas no corrió o no decidió lo esperado ($MODO)." >&2
 			grep 'LAZARO-GRAFICAS' "$serie" >&2 || true
 			ok=1
-		elif ! grep -q "LAZARO-RECOMENDACION escritorio=$([ "$BITS32" = si ] && echo icewm || echo xfce) .*disco=21GB flatpak=no" "$serie"; then
+		elif ! grep -q "LAZARO-RECOMENDACION escritorio=$([ "$BITS32" = si ] && echo icewm || echo xfce) .*disco=21GB" "$serie"; then
 			# 4 GB de RAM y disco de 20 GiB (qemu-img "20G" = 21 GB
 			# decimales): XFCE (IceWM en la ISO de 32 bits, su único
-			# escritorio), y Flatpak sin marcar por el disco pequeño.
+			# escritorio), y el disco medido.
 			echo "FALLO: la recomendación del instalador no corrió o no recomendó lo esperado ($MODO)." >&2
 			grep 'LAZARO-RECOMENDACION' "$serie" >&2 || true
 			ok=1
@@ -531,21 +531,13 @@ prueba_instalar() {
 		echo "FALLO: el instalador no mostró el avance por paquete." >&2
 		return 1
 	fi
-	# Los programas adicionales marcados (la prueba marca flatpak y
-	# fastfetch) y las tipografías vienen en la ISO: se instalan desde el
+	# Los programas adicionales marcados (la prueba marca fastfetch, btop
+	# y YouTube ligero) y las tipografías vienen en la ISO: se instalan desde el
 	# USB, con o sin internet.
 	if ! grep -q '^\[lazaro\] Programas adicionales instalados desde el USB' "$serie"; then
 		terminar "$pid"
 		echo "FALLO: los programas adicionales no se instalaron desde el USB." >&2
 		grep -A 15 'Instalando desde el USB' "$serie" | head -n 30 >&2 || true
-		return 1
-	fi
-	# Flatpak viene por defecto: con red debe quedar Flathub agregado.
-	# (No en 32 bits: Flathub no tiene aplicaciones de 32 bits.)
-	if [ "$BITS32" = no ] && [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-OK "$serie"; then
-		terminar "$pid"
-		echo "FALLO: Flatpak/Flathub no quedó instalado." >&2
-		sed -n '/LAZARO-FLATPAK-NO/,$p' "$serie" | head -n 60 >&2 || true
 		return 1
 	fi
 	if [ "$todo_en_iso" = si ] && [ "$de" != ninguno ]; then
@@ -697,6 +689,20 @@ prueba_instalar() {
 		elif ! grep -q LAZARO-DIAGNOSTICO-OK "$serie2"; then
 			echo "FALLO: el comando lazaro-diagnostico no dejó su informe en el sistema instalado." >&2
 			grep LAZARO-DIAGNOSTICO "$serie2" >&2 || true
+			ok=1
+		elif [ "$BITS32" = no ] && [ "$completa" = no ] && [ "$de" != ninguno ] &&
+			! grep -q 'LAZARO-FLATPAK-AL-INSTALAR flathub=no' "$serie2"; then
+			# Flatpak ya no se instala con el sistema: se activa desde la
+			# Bienvenida (la Completa sí lo trae, con OnlyOffice y Brave).
+			echo "FALLO: Flathub quedó agregado durante la instalación (o no se pudo revisar); ahora se activa desde la Bienvenida." >&2
+			grep LAZARO-FLATPAK "$serie2" >&2 || true
+			ok=1
+		elif grep -q LAZARO-FLATPAK-BIENVENIDA-NO "$serie2" ||
+			{ [ "$BITS32" = no ] && [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-FLATPAK-BIENVENIDA-OK "$serie2"; }; then
+			# Con internet, el botón "Aplicaciones de Flathub" debe dejar
+			# Flatpak y Flathub activos.
+			echo "FALLO: el botón de la Bienvenida no logró activar Flatpak y Flathub." >&2
+			grep -A 15 LAZARO-FLATPAK-BIENVENIDA "$serie2" >&2 || true
 			ok=1
 		elif grep -q LAZARO-BIENVENIDA-NO "$serie2" ||
 			{ [ "$de" != ninguno ] && ! grep -q LAZARO-BIENVENIDA-OK "$serie2"; }; then

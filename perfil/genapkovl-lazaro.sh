@@ -58,21 +58,33 @@ textos_completa() {
 		"desde el USB; la barra y la pantalla de inicio gráfica llegan al conectarse a internet." "desde el USB."
 	tc_cambiar "$tc_cal/netinstall.conf" \
 		"Viene en el USB (en español; otro idioma se descarga)." "Viene en el USB, en todos los idiomas."
-	tc_cambiar "$tc_cal/netinstall.conf" \
-		"Aplicaciones Flatpak (se instalan solas después del primer arranque, con internet)" \
-		"Aplicaciones Flatpak (OnlyOffice y Brave vienen en el USB)"
-	tc_cambiar "$tc_cal/netinstall.conf" \
-		"Vienen de Flathub. Se descargan en segundo plano unos minutos después de encender el equipo conectado a internet." \
-		"Vienen de Flathub. OnlyOffice y Brave se instalan desde el USB, sin internet. Google Chrome no se puede incluir: se descarga solo después del primer arranque, con internet."
-	tc_cambiar "$tc_cal/netinstall.conf" \
-		"(paquete comunitario de Flathub, no oficial de Google)." \
-		"(paquete comunitario de Flathub, no oficial de Google). Necesita internet."
+	# OnlyOffice y Brave vienen en el USB (carpeta flatpak/ de la ISO): se
+	# siguen ofreciendo al instalar, sin marcar, porque se copian sin
+	# internet y en pocos minutos. Flatpak, la tienda Flathub y Google
+	# Chrome se activan desde la Bienvenida, como en la Ligera (Julián,
+	# 2026-11-18).
+	cat >> "$tc_cal/netinstall.conf" <<-'EOF'
+	    - name: "Aplicaciones de Flathub que vienen en el USB"
+	      description: "Se instalan sin internet. Flatpak, la tienda Flathub y Google Chrome se activan después, si los quieres, desde la Bienvenida."
+	      expanded: true
+	      noncheckable: true
+	      selected: false
+	      subgroups:
+	          - name: "OnlyOffice"
+	            description: "Se parece a Microsoft Office y abre bien sus documentos. Necesita bastante espacio."
+	            selected: false
+	            packages: [ onlyoffice ]
+	          - name: "Brave"
+	            description: "Navegador centrado en la privacidad, con bloqueo de anuncios."
+	            selected: false
+	            packages: [ brave ]
+	EOF
 	tc_cambiar "$tc_qml" \
-		"Las aplicaciones de Flathub que marcaste (OnlyOffice, Chrome, Brave) se instalan solas en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet." \
-		"OnlyOffice y Brave se instalan desde el USB. Google Chrome, si lo marcaste, se instala solo en segundo plano unos minutos después del primer arranque, cuando el equipo tenga internet."
+		"Flatpak y las aplicaciones de Flathub (OnlyOffice, Google Chrome, Brave) se activan después de instalar, con un clic, desde la Bienvenida de Lázaro. Así la instalación termina antes." \
+		"OnlyOffice y Brave, si los marcaste, se instalan desde el USB. Flatpak, la tienda Flathub y Google Chrome se activan después, con un clic, desde la Bienvenida de Lázaro."
 	tc_cambiar "$tc_qml" \
 		"Si instalaste sin internet, la configuración final se completa sola la primera vez que el equipo se conecte a una red." \
-		"Esta edición trae todo en el USB: el sistema queda completo aunque no haya internet. Solo Google Chrome espera a que el equipo se conecte."
+		"Esta edición trae todo en el USB: el sistema queda completo aunque no haya internet."
 }
 [ "${LAZARO_EDICION:-ligera}" != completa ] || textos_completa
 
@@ -131,6 +143,20 @@ textos_32() {
 		"$t3_cal/netinstall.conf"
 	grep -q 'NetSurf, un navegador liviano' "$t3_cal/netinstall.conf" ||
 		{ echo "genapkovl-lazaro: no se pudo cambiar el título de netinstall.conf" >&2; exit 1; }
+	# La presentación del instalador: sin Flathub en 32 bits, fuera la
+	# diapositiva de Flathub y su mención en la de la tienda.
+	t3_qml="$tmp/usr/share/calamares/branding/lazaro/show.qml"
+	awk '
+		/^    SlideLazaro \{/ { bloque = $0; dentro = 1; next }
+		dentro { bloque = bloque "\n" $0
+			if ($0 ~ /^    \}/) { dentro = 0; if (bloque !~ /Flathub"/) print bloque }
+			next }
+		{ print }
+	' "$t3_qml" > "$t3_qml.nuevo"
+	mv "$t3_qml.nuevo" "$t3_qml"
+	sed -i 's/ Si activas Flathub desde la Bienvenida, tendrás miles de programas más\.//' "$t3_qml"
+	! grep -q 'Flathub' "$t3_qml" ||
+		{ echo "genapkovl-lazaro: quedó Flathub en la presentación de 32 bits" >&2; exit 1; }
 	# Sin estas herramientas en la live, lazaro-instalar no las copia al
 	# sistema instalado y la Bienvenida no muestra sus botones.
 	rm -f "$tmp/usr/sbin/lazaro-kernel" "$tmp/usr/sbin/lazaro-flatpak" \
