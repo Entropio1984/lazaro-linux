@@ -286,7 +286,9 @@ El instalador pregunta, en este orden:
    - **OnlyOffice** (otra alternativa a Office, muy parecida en su
      aspecto), **Google Chrome** y **Brave** (navegadores). En la edición
      Ligera se instalan solos unos minutos después del primer arranque
-     con internet.
+     con internet. Son descargas grandes: si Flathub no responde o se
+     corta la conexión, se reintenta solo, cada vez más espaciado (hasta
+     cada 30 minutos), y sigue en el próximo encendido hasta terminar.
 4. **Disco**: **se borra el disco que elijas**, con todo lo que tenga.
    Si el equipo tiene Windows u otro sistema y quieres conservarlo, el
    instalador puede ofrecer la opción de instalar a su lado, pero
@@ -699,6 +701,15 @@ Los que hay:
 - **Botón "mostrar escritorio" en IceWM** (003): en los equipos con IceWM
   instalados antes del 16 de noviembre de 2026, le pone un icono que se
   ve en la barra oscura. También se nota al volver a entrar.
+- **Orden de polkit** (004): en los equipos instalados antes del 18 de
+  noviembre de 2026, polkit (el servicio que da permisos de administrador
+  desde el escritorio, por ejemplo para montar un USB) arranca antes que
+  la red. Antes, la red lo despertaba primero y su servicio quedaba como
+  "fallido" aunque funcionaba. Se nota al reiniciar.
+- **Reintentos de Flathub** (005): en los equipos donde OnlyOffice,
+  Chrome o Brave todavía no terminaron de bajar, el reintento espera
+  internet sin gastar intentos y, si Flathub no responde, vuelve a probar
+  cada vez más espaciado en lugar de rendirse a los 20 minutos.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en

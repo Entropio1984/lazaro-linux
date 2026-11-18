@@ -661,6 +661,12 @@ prueba_instalar() {
 		elif [ "$de" != ninguno ] && ! grep -q LAZARO-YOUTUBE-OK "$serie2"; then
 			echo "FALLO: no se confirmó YouTube ligero (Pipe Viewer + mpv + yt-dlp con QuickJS)." >&2
 			ok=1
+		elif grep -q LAZARO-POLKIT-NO "$serie2" ||
+			{ [ "$de" != ninguno ] && [ "$configurado" = si ] && ! grep -q LAZARO-POLKIT-OK "$serie2"; }; then
+			# Con escritorio configurado, polkit tiene que estar y correr.
+			echo "FALLO: el servicio de polkit (permisos del escritorio) falta o quedó fallido en el sistema instalado." >&2
+			grep -A 14 'LAZARO-POLKIT-' "$serie2" >&2 || true
+			ok=1
 		elif ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*ttl=1000' "$serie2" \
 			|| { [ "$BITS32" = no ] && [ "$de" != ninguno ] && ! grep -q 'LAZARO-AFINADOR-ARRANQUE .*Dynamic Preempt: full' "$serie2"; }; then
 			echo "FALLO: el sistema instalado no arrancó con los ajustes del afinador." >&2

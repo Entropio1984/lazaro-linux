@@ -259,6 +259,40 @@ es "botón escritorio: dibuja el icono de 24x24" '[ "$rc" = 0 ] && head -n 1 "$E
 boton
 es "botón escritorio: ya puesto, no hace falta" '[ "$rc" = 10 ]'
 
+# 004-orden-polkit en un sistema de mentira.
+P="$TMP/polkit"
+mkdir -p "$P"
+polkit_orden() { rc=0; LAZARO_ARREGLO_RAIZ="$P" sh "$REALES/004-orden-polkit.sh" > /dev/null 2>&1 || rc=$?; }
+polkit_orden
+es "orden de polkit: sin polkit no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -e "$P/etc/conf.d" ]'
+mkdir -p "$P/etc/init.d" "$P/etc/conf.d"
+: > "$P/etc/init.d/polkit"
+echo 'modemmanager_opts="--debug"' > "$P/etc/conf.d/modemmanager"
+polkit_orden
+es "orden de polkit: polkit antes que NetworkManager y fwupd, ModemManager antes que NetworkManager" '[ "$rc" = 0 ] && grep -qx "rc_before=\"networkmanager fwupd\"" "$P/etc/conf.d/polkit" && grep -qx "rc_before=\"networkmanager\"" "$P/etc/conf.d/modemmanager"'
+es "orden de polkit: lo que ya había en conf.d se queda" 'grep -qx "modemmanager_opts=\"--debug\"" "$P/etc/conf.d/modemmanager"'
+polkit_orden
+es "orden de polkit: ya puesto, no hace falta ni repite líneas" '[ "$rc" = 10 ] && [ "$(grep -c rc_before "$P/etc/conf.d/polkit")" = 1 ]'
+echo 'rc_before="cupsd"' > "$P/etc/conf.d/polkit"
+polkit_orden
+es "orden de polkit: a un orden propio le suma lo que falta" '[ "$rc" = 0 ] && [ "$(sed -n "s/^rc_before=//p" "$P/etc/conf.d/polkit" | tail -n 1)" = "\"cupsd networkmanager fwupd\"" ]'
+polkit_orden
+es "orden de polkit: completo, no hace falta" '[ "$rc" = 10 ]'
+
+# 005-reintentos-flathub en un sistema de mentira.
+F="$TMP/flathub"
+mkdir -p "$F/etc/local.d" "$F/etc/runlevels/default"
+flathub() { rc=0; LAZARO_ARREGLO_RAIZ="$F" sh "$REALES/005-reintentos-flathub.sh" > /dev/null 2>&1 || rc=$?; }
+flathub
+es "reintentos de Flathub: sin pendientes no hace falta" '[ "$rc" = 10 ] && [ ! -e "$F/etc/local.d/flatpak-pendientes.start" ]'
+echo org.onlyoffice.desktopeditors > "$F/etc/flatpak-pendientes"
+printf '#!/bin/sh\n# version vieja\n' > "$F/etc/local.d/flatpak-pendientes.start"
+flathub
+es "reintentos de Flathub: cambia el reintento viejo por el paciente" '[ "$rc" = 0 ] && grep -q "Paciente con la red" "$F/etc/local.d/flatpak-pendientes.start" && [ -x "$F/etc/local.d/flatpak-pendientes.start" ] && sh -n "$F/etc/local.d/flatpak-pendientes.start" && [ -L "$F/etc/runlevels/default/local" ]'
+es "reintentos de Flathub: la lista de pendientes queda igual" 'grep -qx org.onlyoffice.desktopeditors "$F/etc/flatpak-pendientes"'
+flathub
+es "reintentos de Flathub: ya cambiado, no hace falta" '[ "$rc" = 10 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

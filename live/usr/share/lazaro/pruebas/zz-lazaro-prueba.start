@@ -477,6 +477,21 @@ idioma_sesion() {
 	for s in lightdm sddm gdm greetd; do
 		cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$s" && echo "LAZARO-DM-ACTIVO $s"
 	done
+	# Polkit (permisos del escritorio): su servicio debe quedar encendido.
+	# Si algo lo despierta antes por D-Bus (NetworkManager -> ModemManager
+	# -> polkit), el de OpenRC choca con ese y queda "failed" (Acer Aspire
+	# 4739). /etc/conf.d/polkit lo pone antes (ordenar_polkit del script).
+	if rc-service --exists polkit; then
+		if rc-service polkit status >/dev/null 2>&1; then
+			echo "LAZARO-POLKIT-OK"
+		else
+			echo "LAZARO-POLKIT-NO $(rc-service polkit status 2>&1 | tr '\n' ' ')"
+			cat /etc/conf.d/polkit 2>&1
+			grep -E 'polkitd|PolicyKit1|ModemManager1' /var/log/messages 2>/dev/null | tail -n 10
+		fi
+	else
+		echo "LAZARO-POLKIT-FALTA"
+	fi
 	# Ajustes del afinador en el sistema en marcha: el servicio puso la
 	# protección de memoria y el arranque trae preempt=full (con
 	# escritorio), que el kernel confirma con "Dynamic Preempt: full".
