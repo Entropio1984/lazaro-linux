@@ -8,13 +8,13 @@
 #   - gráfica: sin aceleración 3D (máquina virtual, controlador básico o
 #     NVIDIA en modo seguro) se desaconsejan GNOME, Plasma, Sway y XFCE
 #     Wayland, que irían lentos;
-#   - disco: se anota su tamaño (DISCO_PEQUENO=si con 32 GB o menos).
-#     Antes servía para desmarcar Flatpak; Flatpak ya no se ofrece al
-#     instalar (se activa desde la Bienvenida).
+#   - disco: con 32 GB o menos se desmarca Flatpak (las aplicaciones de
+#     Flathub ocupan varios cientos de MB cada una).
 #
 # Corre después de lazaro-graficas (usa su decisión) y antes de la
 # pantalla de inicio. Reescribe, a partir de una copia del original:
 #   /etc/calamares/modules/packagechooser-escritorio.conf
+#   /etc/calamares/modules/netinstall.conf
 # El resultado queda en /run/lazaro/recomendacion y, en las pruebas
 # automáticas, en el puerto serie (LAZARO-RECOMENDACION ...).
 #
@@ -142,6 +142,22 @@ escribir_escritorios() { # RECOMENDADO FRASE_RECOMENDADO FRASE_PESADOS
 	mv "$MODULOS/$conf.nuevo" "$MODULOS/$conf"
 }
 
+# Reescribe "Software adicional": con disco pequeño, Flatpak sin marcar.
+escribir_programas() { # DISCO_PEQUENO(si/no) TEXTO_DISCO
+	conf=netinstall.conf
+	orig="$(original "$conf")"
+	awk -v pequeno="$1" -v disco="$2" '
+		/^          - name: "Flatpak/ { flatpak = 1 }
+		/^          - name:/ && !/"Flatpak/ { flatpak = 0 }
+		flatpak && pequeno == "si" && /^            selected: true/ { sub(/true/, "false") }
+		flatpak && pequeno == "si" && /^            description:/ {
+			sub(/"$/, " Tu disco es pequeño (" disco "): se dejó sin marcar para ahorrar espacio.\"")
+		}
+		{ print }
+	' "$orig" > "$MODULOS/$conf.nuevo"
+	mv "$MODULOS/$conf.nuevo" "$MODULOS/$conf"
+}
+
 mb="$(memoria_mb)"
 ram="$(memoria_texto "$mb")"
 acel="$(tiene_3d)"
@@ -189,6 +205,7 @@ if [ "$disco" -gt 0 ]; then
 fi
 
 escribir_escritorios "$escritorio" "$frase" "$pesada"
+escribir_programas "$pequeno" "$disco_txt"
 
 mkdir -p "$(dirname "$SALIDA")"
 cat > "$SALIDA" <<EOF
@@ -200,6 +217,6 @@ DISCO="$disco_txt"
 DISCO_PEQUENO=$pequeno
 MOTIVO="$motivo"
 EOF
-resumen="escritorio=$escritorio memoria=${mb}MB 3d=$acel disco=$(echo "$disco_txt" | tr -d ' ')"
+resumen="escritorio=$escritorio memoria=${mb}MB 3d=$acel disco=$(echo "$disco_txt" | tr -d ' ') flatpak=$([ "$pequeno" = si ] && echo no || echo si)"
 echo "lazaro-recomendar: $resumen"
 serie "LAZARO-RECOMENDACION $resumen"

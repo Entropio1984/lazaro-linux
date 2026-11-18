@@ -2,8 +2,10 @@
 # lazaro-flatpak: activa Flatpak y Flathub (la colección de aplicaciones
 # que no vienen en Alpine: OnlyOffice, Chrome, Brave, Spotify, Zoom...) e
 # instala, si se eligen, OnlyOffice, Google Chrome y Brave. Es el botón
-# "Aplicaciones de Flathub" de la Bienvenida: el instalador ya no lo
-# ofrece, para que la instalación termine antes (Julián, 2026-11-18).
+# "Aplicaciones de Flathub" de la Bienvenida. Google Chrome solo se
+# ofrece aquí, no en el instalador (Julián, 2026-11-18); sirve también
+# para activar Flathub o sumar OnlyOffice y Brave si no se marcaron al
+# instalar.
 # También abre la tienda de aplicaciones del escritorio.
 #
 #   lazaro-flatpak --ventana            ventana para elegir e instalar (botón de la Bienvenida)

@@ -166,23 +166,21 @@ elif [ "$bits32" = si ]; then
 		youtube "$(_ 'YouTube ligero: videos sin navegador (480p)')" on \
 		libreoffice "$(_ 'LibreOffice: oficina (documentos, hojas de cálculo)')" off) || cancelar
 else
-	# Flatpak y las aplicaciones de Flathub ya no se ofrecen al instalar
-	# (alargaban la instalación): se activan desde la Bienvenida. La
-	# edición Completa ofrece OnlyOffice y Brave, que vienen en el USB.
-	set -- \
+	flat=on
+	fp_usb=", $(_ 'necesita internet')"
+	[ "$LAZARO_EDICION" != completa ] || fp_usb=", $(_ 'viene en el USB')"
+	[ -r /run/lazaro/recomendacion ] && grep -qx 'DISCO_PEQUENO=si' /run/lazaro/recomendacion && flat=off
+	elegidos=$(pedir --title "$(_ 'Software adicional')" --separate-output --checklist \
+"$(_ 'Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre.')" \
+		19 76 8 \
 		fastfetch "$(_ 'Fastfetch: resumen del equipo en la terminal')" off \
 		btop "$(_ 'Btop: monitor de recursos')" off \
 		vlc "$(_ 'VLC: reproductor de video y música')" off \
 		youtube "$(_ 'YouTube ligero: videos sin navegador (480p)')" on \
-		libreoffice "$(_ 'LibreOffice: oficina (documentos, hojas de cálculo)')" off
-	if [ "$LAZARO_EDICION" = completa ]; then
-		set -- "$@" \
-			onlyoffice "OnlyOffice (Flathub, $(_ 'viene en el USB'))" off \
-			brave "Brave (Flathub, $(_ 'viene en el USB'))" off
-	fi
-	elegidos=$(pedir --title "$(_ 'Software adicional')" --separate-output --checklist \
-"$(_ 'Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre.')" \
-		17 76 $(($# / 3)) "$@") || cancelar
+		libreoffice "$(_ 'LibreOffice: oficina (documentos, hojas de cálculo)')" off \
+		flatpak "$(_ 'Flatpak con Flathub: tienda de aplicaciones')" "$flat" \
+		onlyoffice "OnlyOffice (Flathub$fp_usb)" off \
+		brave "Brave (Flathub$fp_usb)" off) || cancelar
 fi
 for e in $elegidos; do extras="$extras $e"; done
 

@@ -1438,3 +1438,9 @@ msgid "Activa Flatpak y Flathub e instala con un clic OnlyOffice, Google Chrome 
 msgstr "Activates Flatpak and Flathub and installs OnlyOffice, Google Chrome or Brave with one click. Then the store offers thousands more apps."
 msgid "Flathub quedó activo y las aplicaciones elegidas se instalaron, pero la tienda de aplicaciones no pudo recibir su complemento para Flathub: por ahora no mostrará esas aplicaciones. Vuelve a intentarlo con este mismo botón más tarde, o actualiza el sistema."
 msgstr "Flathub is active and the chosen apps were installed, but the app store could not get its Flathub plugin: for now it will not show those apps. Try again later with this same button, or update the system."
+
+msgid "necesita internet"
+msgstr "needs internet"
+
+msgid "Flatpak con Flathub: tienda de aplicaciones"
+msgstr "Flatpak with Flathub: app store"

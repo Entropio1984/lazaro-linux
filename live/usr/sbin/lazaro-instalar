@@ -16,11 +16,10 @@
 #   lazaro-instalar escritorio RAIZ ESCRITORIO
 #   lazaro-instalar ajustes RAIZ USUARIO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
 #     EXTRAS: lo marcado en "Software adicional", separado por espacios,
-#     detrás de "base": fastfetch btop vlc youtube libreoffice (Alpine) y,
-#     en la edición Completa, onlyoffice brave (Flathub, desde el USB).
-#     Sin EXTRAS: "base". Flatpak ya no se ofrece al instalar: se activa
-#     después desde la Bienvenida (lazaro-flatpak); "flatpak" y "chrome"
-#     se siguen aceptando por si alguien los pasa a mano.
+#     detrás de "base": fastfetch btop vlc youtube libreoffice (Alpine) y
+#     flatpak onlyoffice brave (Flathub). Sin EXTRAS: "base flatpak".
+#     Google Chrome ya no se ofrece al instalar (se instala desde la
+#     Bienvenida); "chrome" se sigue aceptando por si alguien lo pasa.
 #   lazaro-instalar autologin RAIZ USUARIO
 #     Inicio de sesión automático para USUARIO (casilla de Calamares).
 #   lazaro-instalar texto DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA
@@ -645,12 +644,7 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 	for e in $3; do
 		case "$e" in
 			fastfetch|btop) pe_paq="${pe_paq:+$pe_paq }$e" ;;
-			# OnlyOffice y Brave de la Completa (flatpak_desde_usb) necesitan Flatpak.
-			flatpak|onlyoffice|brave)
-				[ "$pe_grafico" = no ] || [ "$BITS32" = si ] || case " $pe_paq " in
-					*" flatpak "*) ;;
-					*) pe_paq="$pe_paq flatpak" ;;
-				esac ;;
+			flatpak) [ "$pe_grafico" = no ] || [ "$BITS32" = si ] || pe_paq="$pe_paq flatpak" ;;
 			# ff2mpv-rust: el "Play in MPV" de la extensión ff2mpv (paso_firefox_32).
 			firefox) [ "$pe_grafico" = no ] || [ "$BITS32" = no ] || pe_paq="$pe_paq firefox ff2mpv-rust" ;;
 			vlc) [ "$pe_grafico" = no ] || pe_paq="$pe_paq vlc vlc-qt" ;;
@@ -833,7 +827,7 @@ paso_ajustes() {
 	teclado="${4:-latam}"
 	variante="${5:-}"
 	zona="${6:-America/Bogota}"
-	extras="${7:-base}"
+	extras="${7:-base flatpak}"
 	# Programas para desktop-postinstall.sh --con. El script ya se encarga
 	# de las dependencias: las apps de Flathub activan Flatpak y, sin
 	# escritorio, descarta todo lo gráfico.
@@ -1273,6 +1267,20 @@ crear_usuario() { # USUARIO NOMBRE CLAVE EQUIPO [CLAVE_ROOT]
 	printf '127.0.0.1\tlocalhost\n127.0.1.1\t%s\n::1\t\tlocalhost\n' "$4" > "$raiz/etc/hosts"
 }
 
+# Flatpak viene por defecto: con red, Flathub debe quedar agregado.
+auto_revisar_flatpak() {
+	[ "$BITS32" = no ] || return 0
+	[ ! -e "$raiz/etc/lazaro/sin-escritorio" ] && hay_red || return 0
+	# Se lee la configuración en vez de ejecutar flatpak dentro del
+	# sistema instalado: un proceso que quede vivo ahí impide desmontarlo.
+	if grep -q '^\[remote "flathub"\]' "$raiz/var/lib/flatpak/repo/config" 2>/dev/null; then
+		echo "LAZARO-FLATPAK-OK"
+	else
+		echo "LAZARO-FLATPAK-NO"
+		grep -n -i -A6 "flatpak" "$raiz/var/log/desktop-postinstall.log" 2>&1 | head -n 40
+	fi
+}
+
 # Recorrido real de la resolución: "prueba" entra sola a su sesión,
 # cambia la pantalla a 800x600, la prueba cierra la sesión y la
 # pantalla de inicio debe volver con 800x600 (LightDM o SDDM). Con
@@ -1423,7 +1431,7 @@ paso_auto() {
 	# Manual de Lázaro. Lleva todo el software adicional y entra solo.
 	if grep -qw 'lazaro.capturas=si' /proc/cmdline 2>/dev/null; then
 		LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
-			es_ES.UTF-8 es "" Europe/Madrid "base fastfetch btop youtube libreoffice vlc" no
+			es_ES.UTF-8 es "" Europe/Madrid "base flatpak fastfetch btop youtube libreoffice vlc" no
 		paso_autologin "$raiz" prueba
 		mkdir -p "$raiz/etc/local.d"
 		install -m 755 "$PRUEBAS/zz-lazaro-capturas.start" "$raiz/etc/local.d/zz-lazaro-capturas.start"
@@ -1433,7 +1441,8 @@ paso_auto() {
 		return 0
 	fi
 	LAZARO_VIGIA=si instalar_disco "$1" "$2" prueba "Prueba" lazaro lazaro-prueba \
-		es_CO.UTF-8 latam "" America/Bogota "base fastfetch btop youtube$auto_flathub" no
+		es_CO.UTF-8 latam "" America/Bogota "base flatpak fastfetch btop youtube$auto_flathub" no
+	auto_revisar_flatpak
 	auto_revisar_flatpak_usb
 	auto_prueba_resolucion "$2"
 	auto_prueba_arranque

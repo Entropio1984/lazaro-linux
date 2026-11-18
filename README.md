@@ -28,7 +28,8 @@ imprimir.
   [Alpine Linux](https://alpinelinux.org), uno de los sistemas más
   livianos que existen. Al arrancar mira tu equipo y te recomienda el
   escritorio que mejor le va según la memoria (con menos de 2 GB, LXQt;
-  de 2 a 4 GB, XFCE) y la tarjeta gráfica.
+  de 2 a 4 GB, XFCE) y la tarjeta gráfica. Si el disco es pequeño,
+  desmarca la tienda Flathub para no llenarlo.
 - **Sin pasos técnicos.** No hay que escribir comandos ni configurar nada
   a mano: idioma, teclado, sonido, wifi, impresoras y controladores de
   video quedan listos solos. Firefox viene siempre (salvo si eliges
@@ -54,10 +55,10 @@ imprimir.
   quitar con un clic.
 - **Avisa de las actualizaciones.** Un icono en la barra te avisa cuando
   hay actualizaciones, y se instalan con un clic.
-- **La tienda de aplicaciones lista.** Después de instalar, el botón
-  **Aplicaciones de Flathub** de la Bienvenida activa con un clic la
-  tienda Flathub, con miles de programas, e instala OnlyOffice, Google
-  Chrome o Brave si los marcas. Así la instalación termina antes.
+- **La tienda de aplicaciones lista.** Si la marcas, queda la tienda
+  Flathub con miles de programas, y puedes elegir de entrada OnlyOffice
+  o Brave. Google Chrome se instala después, con un clic, desde la
+  Bienvenida.
 
 ## ¿Funciona en mi equipo?
 
@@ -84,8 +85,7 @@ varias épocas.
 | | **Ligera** | **Completa** |
 |---|---|---|
 | Tamaño | menos de 2 GB | unos 4,6 GB |
-| ¿Necesita internet al instalar? | Para GNOME y KDE Plasma, sí | No, nunca |
-| OnlyOffice y Brave | Desde la Bienvenida, con internet | En el USB: se pueden marcar al instalar |
+| ¿Necesita internet al instalar? | Para GNOME, KDE Plasma y las aplicaciones de Flathub, sí | No, nunca |
 | Escritorios sin internet | XFCE, MATE, LXQt, Sway, XFCE Wayland | Los 7, en todos los idiomas |
 | Firmware (controladores de wifi y otros) | El de red, completo | Todo |
 | Módems USB 3G/4G, ADSL (PPPoE), internet del celular por cable o Bluetooth (los módems 3G/4G y el Bluetooth, en el sistema instalado) | Sí | Sí |
@@ -283,14 +283,17 @@ El instalador pregunta, en este orden:
    - **LibreOffice**: procesador de textos, hojas de cálculo y
      presentaciones (como Word, Excel y PowerPoint).
    - **YouTube ligero**: ver abajo.
-   - Solo en la **Completa**: **OnlyOffice** (otra alternativa a Office,
-     muy parecida en su aspecto) y **Brave** (navegador), que vienen en
-     el USB y se instalan sin internet.
-   - La tienda **Flathub** y **Google Chrome** (y, en la Ligera, también
-     OnlyOffice y Brave) ya no están aquí: se activan después de
-     instalar, con un clic, desde la Bienvenida (ver
-     [Aplicaciones de Flathub](#aplicaciones-de-flathub)). Así la
-     instalación termina antes.
+   - **Flatpak + tienda Flathub**: una tienda con miles de programas.
+   - **OnlyOffice** (otra alternativa a Office, muy parecida en su
+     aspecto) y **Brave** (navegador que bloquea anuncios). En la edición
+     Ligera se instalan solos unos minutos después del primer arranque
+     con internet. Son descargas grandes: si Flathub no responde o se
+     corta la conexión, se reintenta solo, cada vez más espaciado (hasta
+     cada 30 minutos), y sigue en el próximo encendido hasta terminar.
+     En la Completa vienen en el USB.
+   - **Google Chrome** ya no está aquí: se instala después, con un clic,
+     desde la Bienvenida (ver
+     [Aplicaciones de Flathub](#aplicaciones-de-flathub)).
 4. **Disco**: **se borra el disco que elijas**, con todo lo que tenga.
    Si el equipo tiene Windows u otro sistema y quieres conservarlo, el
    instalador puede ofrecer la opción de instalar a su lado, pero
@@ -306,9 +309,10 @@ Al terminar, reinicia y saca el USB.
 
 ### Paso 7: el primer arranque
 
-- Si quieres la tienda Flathub, OnlyOffice, Google Chrome o Brave,
-  abre la Bienvenida y pulsa **Aplicaciones de Flathub** (necesita
-  internet).
+- Si marcaste aplicaciones de Flathub, se instalan solas en segundo plano
+  cuando haya internet. Dales unos minutos.
+- Para Google Chrome, abre la Bienvenida y pulsa **Aplicaciones de
+  Flathub** (necesita internet).
 - Si instalaste **sin internet con la Ligera**, falta la configuración
   final, y el equipo arranca en una **pantalla de texto** con un aviso
   (no es un error). Conecta el cable de red, o entra con tu usuario y
@@ -475,28 +479,26 @@ El archivo `LEEME` de esa carpeta explica todas las opciones, y
 
 **Flathub** es una tienda gratuita con miles de programas que no vienen
 en Alpine (OnlyOffice, Google Chrome, Brave, Spotify, Zoom...).
-**Flatpak** es el sistema que los instala. Antes se elegían en el
-instalador, pero alargaban mucho la instalación; ahora se activan
-después, cuando quieras, desde la Bienvenida (sección **Programas**, y
-también en la página de inicio): botón **Aplicaciones de Flathub**.
+**Flatpak** es el sistema que los instala. Al instalar se pueden marcar
+Flatpak, OnlyOffice y Brave; **Google Chrome** solo se instala desde la
+Bienvenida, con el botón **Aplicaciones de Flathub** (sección
+**Programas**, y también en la página de inicio). El mismo botón sirve
+para activar Flathub o sumar OnlyOffice y Brave si no los marcaste.
 
-La ventana muestra el espacio libre del disco y deja marcar
-**OnlyOffice**, **Google Chrome** y **Brave**. Al pulsar **Activar**
-pide tu contraseña, instala Flatpak, agrega Flathub y descarga lo que
-marcaste, con una barra que dice qué está bajando. Activar Flathub
-descarga unos 20 MB; cada aplicación, varios cientos. Si una descarga
-se corta, se reintenta sola; si aun así falla, el aviso lo dice y basta
+La ventana muestra el espacio libre del disco y deja marcar las que aún
+no están instaladas. Al pulsar **Activar** (o **Instalar**, si Flathub
+ya está activo) pide tu contraseña, instala Flatpak si falta, agrega
+Flathub y descarga lo que marcaste, con una barra que dice qué está
+bajando. Cada aplicación pesa varios cientos de MB. Si una descarga se
+corta, se reintenta sola; si aun así falla, el aviso lo dice y basta
 con pulsar el botón otra vez (lo ya descargado no se baja de nuevo).
 Al terminar, cierra la sesión y vuelve a entrar para verlas en el menú.
 
 <img src="docs/imagenes/flathub.png" alt="Ventana Aplicaciones de Flathub con las casillas de OnlyOffice, Google Chrome y Brave" width="480">
 
-Con la terminal: `doas lazaro-flatpak --activar onlyoffice chrome brave`
-(o solo `--activar` para activar Flathub sin aplicaciones).
-
-En la edición **Completa**, OnlyOffice y Brave vienen en el USB y se
-pueden marcar al instalar, sin internet. En la de **32 bits** no hay
-Flathub (no publica programas para 32 bits).
+Con la terminal: `doas lazaro-flatpak --activar chrome` (también
+`onlyoffice` y `brave`, o solo `--activar` para activar Flathub). En la
+de **32 bits** no hay Flathub (no publica programas para 32 bits).
 
 ### Afinador: que el equipo responda mejor
 
@@ -894,8 +896,7 @@ prueban y publican solas en cada cambio de la rama principal.
 ### Qué pasa al instalar
 
 1. Calamares pregunta idioma, zona horaria, teclado, escritorio,
-   programas adicionales, disco y usuario. Flatpak y Flathub no: se
-   activan después desde la Bienvenida (`lazaro-flatpak`).
+   oficina, aplicaciones, disco y usuario.
 2. Calamares particiona y monta el disco (ext4; partición EFI en UEFI).
 3. `lazaro-instalar base`: `setup-disk` instala el sistema base, el kernel,
    el firmware del hardware detectado y GRUB (BIOS o UEFI, con la ruta de
@@ -984,7 +985,7 @@ mano, también con la siguiente (edge):
 | Sesión live | UEFI | XFCE | Sí | Lo mismo, en un equipo UEFI |
 | Sin escritorio | BIOS | (Xorg no arranca) | No | En la consola aparece el aviso del instalador en modo texto, la consola entra sola como `lazaro` y la live trae `dialog` |
 | Instalación | BIOS | XFCE | No | Se instala solo desde la ISO y el sistema arranca con su pantalla de inicio y el pulso |
-| Instalación | UEFI | XFCE | Sí | Además: la instalación no agrega Flathub, el botón Aplicaciones de Flathub lo activa, y la pantalla de inicio recuerda la resolución que eligió el usuario |
+| Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo, el botón Aplicaciones de Flathub de la Bienvenida funciona, y la pantalla de inicio recuerda la resolución que eligió el usuario |
 | Instalación | UEFI | KDE Plasma | Sí | Lo mismo con Plasma |
 | Instalación | BIOS | GNOME | Sí | Lo mismo con GNOME (reinicia una vez y mide la pantalla de inicio) |
 | Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos |

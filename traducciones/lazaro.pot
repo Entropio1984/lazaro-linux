@@ -979,7 +979,7 @@ msgid "LibreOffice: oficina (documentos, hojas de cálculo)"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
-msgid "VLC: reproductor de video y música"
+msgid "necesita internet"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
@@ -988,6 +988,14 @@ msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto
 msgid "Marca con la barra espaciadora lo que quieras instalar. Firefox se instala siempre."
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "VLC: reproductor de video y música"
+msgstr ""
+
+#: live/usr/sbin/lazaro-instalar-texto
+msgid "Flatpak con Flathub: tienda de aplicaciones"
 msgstr ""
 
 #: live/usr/sbin/lazaro-instalar-texto

@@ -519,16 +519,10 @@ idioma_sesion() {
 			echo "LAZARO-DIAGNOSTICO-NO ${diag_sal:-sin archivo}"
 		fi
 	fi
-	# Flatpak ya no se instala con el sistema (alargaba la instalación):
-	# se activa desde el botón "Aplicaciones de Flathub" de la Bienvenida.
-	# Se anota si Flathub ya estaba agregado (la Completa lo deja con
-	# OnlyOffice y Brave; el paquete flatpak solo puede venir como
-	# dependencia de un escritorio) y, con internet, se activa como lo
-	# hace el botón, sin aplicaciones.
+	# Botón "Aplicaciones de Flathub" de la Bienvenida: con internet,
+	# activa Flatpak y Flathub como lo hace el botón, sin aplicaciones
+	# (si ya estaban activos, no cambia nada).
 	if [ -x /usr/local/sbin/lazaro-flatpak ]; then
-		fp_antes=no
-		! grep -q '^\[remote "flathub"\]' /var/lib/flatpak/repo/config 2>/dev/null || fp_antes=si
-		echo "LAZARO-FLATPAK-AL-INSTALAR flathub=$fp_antes"
 		if wget -q --spider -T 20 https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1; then
 			fp_sal="$(timeout 900 /usr/local/sbin/lazaro-flatpak --activar 2>&1)"
 			fp_rc=$?
