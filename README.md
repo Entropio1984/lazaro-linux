@@ -699,6 +699,11 @@ Los que hay:
 - **Botón "mostrar escritorio" en IceWM** (003): en los equipos con IceWM
   instalados antes del 16 de noviembre de 2026, le pone un icono que se
   ve en la barra oscura. También se nota al volver a entrar.
+- **Orden de polkit** (004): en los equipos instalados antes del 18 de
+  noviembre de 2026, polkit (el servicio que da permisos de administrador
+  desde el escritorio, por ejemplo para montar un USB) arranca antes que
+  la red. Antes, la red lo despertaba primero y su servicio quedaba como
+  "fallido" aunque funcionaba. Se nota al reiniciar.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en

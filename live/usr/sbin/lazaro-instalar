@@ -472,6 +472,19 @@ paso_base() {
 		mkdir -p "$ovl/etc/runlevels/${s#*:}"
 		ln -s "/etc/init.d/${s%:*}" "$ovl/etc/runlevels/${s#*:}/${s%:*}"
 	done
+	# Orden de arranque: polkit antes que NetworkManager y fwupd, y
+	# ModemManager antes que NetworkManager. Si no, al encender
+	# NetworkManager despierta a ModemManager por D-Bus, este a polkit, y
+	# los servicios de OpenRC de los dos chocan con esos y quedan
+	# "failed" (Acer Aspire 4739). Lo mismo hace ordenar_polkit de
+	# desktop-postinstall.sh, y el arreglo 004 en equipos ya instalados.
+	mkdir -p "$ovl/etc/conf.d"
+	printf '%s\n' '# Lázaro: polkit arranca antes que quienes lo despiertan por D-Bus;' \
+		'# si no, su servicio choca con ese polkit y queda "failed".' \
+		'rc_before="networkmanager fwupd"' > "$ovl/etc/conf.d/polkit"
+	printf '%s\n' '# Lázaro: ModemManager arranca antes que NetworkManager, que si no' \
+		'# lo despierta por D-Bus y su servicio queda "failed".' \
+		'rc_before="networkmanager"' > "$ovl/etc/conf.d/modemmanager"
 	tar -C "$ovl" -czf /tmp/lazaro-destino.apkovl.tar.gz etc
 	rm -rf "$ovl"
 

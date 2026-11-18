@@ -1339,3 +1339,7 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/003-boton-escritorio-icewm.sh
 msgid "IceWM: el botón \"mostrar escritorio\" tiene un icono que se ve en la barra (se nota al volver a entrar)"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/004-orden-polkit.sh
+msgid "El servicio de permisos (polkit) ya no aparece como fallido al encender (se nota al reiniciar)"
+msgstr ""

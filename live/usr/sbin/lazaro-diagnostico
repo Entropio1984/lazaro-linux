@@ -179,7 +179,16 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	fi
 	# Las herramientas se actualizan solas después de instalar: su
 	# versión dice qué tan al día está el equipo.
-	echo "Herramientas de Lázaro: $(apk info -e -v lazaro-herramientas 2>/dev/null || echo 'sin el paquete lazaro-herramientas')"
+	# Sin el paquete, el motivo está en el registro del repositorio de
+	# Lázaro. Lo normal en una ISO en desarrollo: trae herramientas más
+	# nuevas que las publicadas y espera a la próxima versión.
+	if herr="$(apk info -e -v lazaro-herramientas 2>/dev/null)" && [ -n "$herr" ]; then
+		echo "Herramientas de Lázaro: $herr"
+	elif grep -q 'se instalan con la próxima versión' /var/log/lazaro-repositorio.log 2>/dev/null; then
+		echo "Herramientas de Lázaro: las de la ISO (más nuevas que las publicadas; el paquete llega con la próxima versión)"
+	else
+		echo "Herramientas de Lázaro: sin el paquete lazaro-herramientas ($(tail -n 1 /var/log/lazaro-repositorio.log 2>/dev/null | cut -c 21- || true))"
+	fi
 	echo "Fecha: $(date)"
 	echo "Equipo: $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) $(cat /sys/class/dmi/id/product_name 2>/dev/null) $(cat /sys/class/dmi/id/product_version 2>/dev/null)"
 	echo "BIOS: $(cat /sys/class/dmi/id/bios_version 2>/dev/null) ($(cat /sys/class/dmi/id/bios_date 2>/dev/null))"
@@ -209,6 +218,13 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	archivo /var/log/desktop-postinstall.log 60
 	archivo /var/log/lazaro-primer-arranque.log 60
 	archivo /var/log/flatpak-pendientes.log 40
+	# ¿Se están descargando ahora? (las pendientes se bajan en segundo
+	# plano después de encender, y pueden tardar varios minutos)
+	if grep -l 'flatpak' /proc/[0-9]*/cmdline 2>/dev/null | xargs -r grep -l 'install' 2>/dev/null | grep -q .; then
+		echo "Flatpak: descargando aplicaciones en este momento"
+	fi
+	command -v flatpak >/dev/null 2>&1 && { echo "--- flatpak list --app"; corre flatpak list --app --columns=application,version; }
+	archivo /var/log/lazaro-repositorio.log 15
 
 	seccion "Memoria y discos"
 	corre free -m
