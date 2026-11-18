@@ -172,9 +172,11 @@ cat > "$FP/bin/flatpak" <<'EOF'
 #!/bin/sh
 case "$1" in
 	remotes) [ ! -e "$FP_DIR/remoto" ] || echo flathub ;;
-	remote-add) touch "$FP_DIR/remoto" ;;
+	remote-add) [ "$*" = "remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" ] || exit 1
+		touch "$FP_DIR/remoto" ;;
 	list) cat "$FP_DIR/apps" 2>/dev/null ;;
-	install) [ "$6" != "${FP_FALLA:-}" ] || exit 1; echo "$6" >> "$FP_DIR/apps" ;;
+	install) [ "$1 $2 $3 $4 $5" = "install --system -y --noninteractive flathub" ] || exit 1
+		[ "$6" != "${FP_FALLA:-}" ] || exit 1; echo "$6" >> "$FP_DIR/apps" ;;
 	info) grep -qx "$3" "$FP_DIR/apps" 2>/dev/null ;;
 esac
 EOF

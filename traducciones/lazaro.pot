@@ -633,6 +633,10 @@ msgid "Flathub quedó activo, pero alguna aplicación no se pudo descargar. Revi
 msgstr ""
 
 #: live/usr/sbin/lazaro-flatpak
+msgid "Flathub quedó activo y las aplicaciones elegidas se instalaron, pero la tienda de aplicaciones no pudo recibir su complemento para Flathub: por ahora no mostrará esas aplicaciones. Vuelve a intentarlo con este mismo botón más tarde, o actualiza el sistema."
+msgstr ""
+
+#: live/usr/sbin/lazaro-flatpak
 msgid "No se pudo activar. Revisa la conexión a internet y vuelve a intentar."
 msgstr ""
 
