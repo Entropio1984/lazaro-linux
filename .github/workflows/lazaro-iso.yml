@@ -38,16 +38,47 @@ jobs:
   manual:
     name: Manual (PDF)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
+      # Los paquetes de LaTeX (~250 MB) se guardan entre compilaciones: el
+      # servidor de Ubuntu a veces baja a pocos KB/s y la instalación se
+      # quedaba colgada hasta la media hora del límite.
+      - name: Paquetes de LaTeX guardados
+        uses: actions/cache@v5
+        with:
+          path: ~/latex-debs
+          key: latex-debs-ubuntu-24.04-v1
+
+      # Si un servidor de Ubuntu está lento, se corta a los 7 minutos y se
+      # prueba con otro (los paquetes ya bajados se conservan).
       - name: Instalar LaTeX
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends latexmk \
-            texlive-latex-extra texlive-lang-spanish texlive-fonts-recommended \
-            tex-gyre lmodern texlive-bibtex-extra biber ghostscript
+          paquetes="latexmk texlive-latex-extra texlive-lang-spanish \
+            texlive-fonts-recommended tex-gyre lmodern texlive-bibtex-extra \
+            biber ghostscript"
+          mkdir -p ~/latex-debs
+          sudo cp ~/latex-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          fuente=/etc/apt/sources.list.d/ubuntu.sources
+          original=$(sed -n 's|^URIs: *\(http[^ ]*/ubuntu/\?\).*|\1|p' "$fuente" | head -n1)
+          listo=0
+          for espejo in "$original" http://archive.ubuntu.com/ubuntu/ \
+              http://mirrors.edge.kernel.org/ubuntu/ http://mirror.math.princeton.edu/pub/ubuntu/; do
+            echo "== Probando $espejo"
+            sudo dpkg --configure -a || true
+            sudo sed -i "s|^URIs: *http[^ ]*/ubuntu/\?\$|URIs: $espejo|" "$fuente"
+            rc=0
+            sudo timeout 120 apt-get update -q || rc=$?
+            if [ "$rc" -eq 0 ]; then
+              rc=0
+              sudo timeout 420 apt-get install -y -q --no-install-recommends $paquetes || rc=$?
+              if [ "$rc" -eq 0 ]; then listo=1; break; fi
+            fi
+            echo "::warning::El servidor $espejo no sirvió (código $rc); pruebo otro."
+          done
+          cp /var/cache/apt/archives/*.deb ~/latex-debs/ 2>/dev/null || true
+          [ "$listo" = 1 ] || { echo "::error::No se pudo instalar LaTeX desde ningún servidor."; exit 1; }
 
       - name: Compilar el manual
         run: |
