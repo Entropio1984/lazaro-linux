@@ -319,6 +319,107 @@ matar_restos() {
 	done
 }
 
+# --- Descargas que se quedan colgadas --------------------------------------
+# apk (3.0) abre la conexión segura (HTTPS) con el servidor sin tiempo
+# límite: si el servidor o la red dejan de responder justo en ese momento,
+# apk espera para siempre. Pasó en una VM con la Completa (2026-11-19): el
+# índice de community llegó cortado ("unexpected end of file") y después
+# el "apk update" que hace setup-desktop se quedó quieto hasta que
+# Calamares cortó el paso a los 90 minutos. desktop-postinstall.sh ya se
+# cuida de esto (apk_vigilado); aquí se hace lo mismo con setup-desktop.
+
+# El proceso PID y todos los que nacieron de él (busybox ps no muestra el
+# padre: se lee de /proc).
+descendientes() { # PID
+	grep -H '^PPid:' /proc/[0-9]*/status 2>/dev/null | awk -v raiz="$1" '
+		{ p = $1; sub(/^\/proc\//, "", p); sub(/\/status:.*/, "", p); padre[p] = $2 }
+		END {
+			lista[raiz] = 1
+			do {
+				cambio = 0
+				for (p in padre) if (!(p in lista) && (padre[p] in lista)) { lista[p] = 1; cambio = 1 }
+			} while (cambio)
+			for (p in lista) print p
+		}'
+}
+
+# Bytes leídos y escritos hasta ahora por esos procesos (disco y red).
+io_total() { # PID...
+	for it_p in "$@"; do cat "/proc/$it_p/io" 2>/dev/null; done |
+		awk '/^(rchar|wchar):/ { s += $2 } END { printf "%.0f\n", s }'
+}
+
+# en_destino_vigilado RAIZ COMANDO...: como en_destino (con la salida en
+# $LOG), pero si el comando y todos sus procesos pasan CUELGUE_LIMITE
+# segundos (3 minutos) sin leer ni escribir nada, se cortan y se intenta
+# de nuevo, hasta 3 veces. apk recuerda lo que ya instaló, así que el
+# intento siguiente sigue donde quedó. Devuelve lo que devolvió el
+# comando, o 124 si se colgó las 3 veces.
+CUELGUE_LIMITE=180
+en_destino_vigilado() { # RAIZ COMANDO...
+	for ev_intento in 1 2 3; do
+		en_destino "$@" </dev/null >>"$LOG" 2>&1 &
+		ev_pid=$!
+		ev_antes=""
+		ev_quieto=0
+		ev_rc=""
+		while kill -0 "$ev_pid" 2>/dev/null; do
+			sleep 5
+			ev_procs=$(descendientes "$ev_pid")
+			# shellcheck disable=SC2086 # una lista de números
+			ev_ahora=$(io_total $ev_procs)
+			# Si no se puede medir (sin /proc), nunca se corta.
+			if [ -z "$ev_procs" ] || [ "$ev_ahora" != "$ev_antes" ]; then
+				ev_antes=$ev_ahora
+				ev_quieto=0
+				continue
+			fi
+			ev_quieto=$((ev_quieto + 5))
+			[ "$ev_quieto" -ge "$CUELGUE_LIMITE" ] || continue
+			log "Aviso: $2 lleva $((CUELGUE_LIMITE / 60)) minutos sin avanzar (una descarga se quedó colgada). Se corta (intento $ev_intento de 3)."
+			# Se cortan los procesos de dentro, no el primero: así
+			# en_destino termina normal y desmonta lo que montó.
+			for ev_senal in TERM KILL; do
+				for ev_p in $(descendientes "$ev_pid"); do
+					[ "$ev_p" = "$ev_pid" ] || kill -s "$ev_senal" "$ev_p" 2>/dev/null || true
+				done
+				sleep 2
+			done
+			ev_rc=124
+			break
+		done
+		ev_fin=0
+		wait "$ev_pid" || ev_fin=$?
+		[ -n "$ev_rc" ] || return "$ev_fin"
+	done
+	return 124
+}
+
+# Durante los pasos que instalan lo que trae el USB, el sistema nuevo usa
+# solo el repositorio de la ISO: sin internet de por medio, una red lenta
+# o que se corta no puede dejar la instalación colgada.
+# repos_solo_usb RAIZ guarda los repositorios que tenía y deja solo el de
+# la ISO (devuelve 1 si no hay ISO); repos_volver RAIZ los devuelve.
+repos_solo_usb() { # RAIZ
+	ru_iso="$(repo_iso)"
+	[ -n "$ru_iso" ] || return 1
+	# Si quedó una copia de un intento anterior que se cortó (Calamares
+	# canceló el paso), esa es la buena: no se pisa.
+	[ -f "$1/etc/apk/repositories.lazaro-antes" ] ||
+		cp "$1/etc/apk/repositories" "$1/etc/apk/repositories.lazaro-antes" || return 1
+	escribir_repos "$1/etc/apk/repositories" "$ru_iso" no
+}
+
+repos_volver() { # RAIZ
+	[ -f "$1/etc/apk/repositories.lazaro-antes" ] || return 0
+	mv "$1/etc/apk/repositories.lazaro-antes" "$1/etc/apk/repositories"
+}
+
+# ¿Los repositorios guardados por repos_solo_usb incluyen los de internet?
+repos_antes_con_red() { # RAIZ
+	grep -qs '^https\?://' "$1/etc/apk/repositories.lazaro-antes"
+}
+
 # --- Wifi Broadcom con driver privativo -----------------------------------
 # Tarjetas Broadcom (fabricante 14e4) que con el kernel no tienen un
 # driver libre que funcione: b43 necesitaría un firmware que no se puede
@@ -455,8 +556,19 @@ paso_base() {
 	fi
 	[ -n "$iso" ] || [ "$red" = si ] || die "No se encontró el repositorio de la ISO ni hay internet."
 
-	# setup-disk instala con los repositorios del sistema live.
-	escribir_repos /etc/apk/repositories "$iso" "$red"
+	# setup-disk instala con los repositorios del sistema live. En la
+	# Completa y la de 32 bits, solo el de la ISO: traen el sistema base y
+	# todo el firmware, y así una red lenta o que se corta no puede dejar la
+	# instalación colgada. La Ligera no trae todo el firmware (setup-disk
+	# elige el del hardware detectado): ahí sigue usando internet si hay.
+	# Internet vuelve para los pasos siguientes (escritorios que se
+	# descargan, driver Broadcom, controladores, ajustes).
+	red_base="$red"
+	if [ -n "$iso" ] && { [ "$LAZARO_EDICION" = completa ] || [ "$BITS32" = si ]; }; then
+		red_base=no
+		log "El sistema base se instala desde el USB, sin descargar nada."
+	fi
+	escribir_repos /etc/apk/repositories "$iso" "$red_base"
 	lz_apk update >>"$LOG" 2>&1 || log "Aviso: apk update terminó con errores (ver $LOG)."
 
 	# Configuración inicial del destino. setup-disk la desempaqueta en la
@@ -465,7 +577,7 @@ paso_base() {
 	ovl="$(mktemp -d)"
 	mkdir -p "$ovl/etc/apk"
 	grep -v '^#' "$DATOS/paquetes-base" | grep -v '^$' > "$ovl/etc/apk/world"
-	escribir_repos "$ovl/etc/apk/repositories" "$iso" "$red"
+	escribir_repos "$ovl/etc/apk/repositories" "$iso" "$red_base"
 	echo lazaro > "$ovl/etc/hostname"
 	for s in devfs:sysinit dmesg:sysinit mdev:sysinit hwdrivers:sysinit \
 		hwclock:boot modules:boot sysctl:boot hostname:boot bootmisc:boot \
@@ -507,6 +619,10 @@ paso_base() {
 		die "setup-disk falló (detalles en $LOG)"
 	fi
 	avance_parar
+	# Con el sistema base ya en el disco, vuelven los repositorios de
+	# internet (si hay conexión), en la live y en el sistema nuevo.
+	escribir_repos /etc/apk/repositories "$iso" "$red"
+	escribir_repos "$raiz/etc/apk/repositories" "$iso" "$red"
 	# Comando lazaro-diagnostico (informe para pedir ayuda) y la versión
 	# de la ISO con que se instaló, que el informe muestra.
 	install -Dm755 /usr/sbin/lazaro-diagnostico "$raiz/usr/local/sbin/lazaro-diagnostico"
@@ -564,6 +680,48 @@ servicios_a_default() {
 }
 
 # --- Paso 2: escritorio ---------------------------------------------------
+# instalar_escritorio RAIZ ESCRITORIO COMANDO...: instala el escritorio con
+# COMANDO dentro del sistema nuevo, vigilando que no se quede colgado
+# (en_destino_vigilado). Si el escritorio viene en el USB (siempre en la
+# Completa), solo desde el repositorio de la ISO: así no depende de
+# internet aunque haya conexión. Si desde el USB falla y hay internet, se
+# intenta otra vez con internet.
+instalar_escritorio() { # RAIZ ESCRITORIO COMANDO...
+	ie_raiz=$1
+	ie_de=$2
+	shift 2
+	ie_rc=0
+	if escritorio_offline "$ie_de" && repos_solo_usb "$ie_raiz"; then
+		log "El escritorio se instala desde el USB, sin descargar nada."
+		en_destino_vigilado "$ie_raiz" "$@" || ie_rc=$?
+		if [ "$ie_rc" != 0 ] && repos_antes_con_red "$ie_raiz"; then
+			log "Aviso: desde el USB terminó con error $ie_rc; se intenta de nuevo con internet."
+			repos_volver "$ie_raiz"
+			ie_rc=0
+			en_destino_vigilado "$ie_raiz" "$@" || ie_rc=$?
+		fi
+		repos_volver "$ie_raiz"
+		return "$ie_rc"
+	fi
+	en_destino_vigilado "$ie_raiz" "$@" || ie_rc=$?
+	return "$ie_rc"
+}
+
+# IceWM con la base gráfica (ver paso_escritorio) e icewm_esta RAIZ: si
+# sus paquetes principales quedaron instalados.
+icewm_xorg() {
+	en_destino_vigilado "$raiz" setup-xorg-base icewm lxsession lightdm lightdm-gtk-greeter \
+		dbus dbus-x11 elogind polkit-elogind gvfs udisks2 font-dejavu
+}
+
+icewm_esta() { # RAIZ
+	en_destino "$1" apk info -e xorg-server icewm lxsession lightdm >>"$LOG" 2>&1
+}
+
+escritorio_colgado() {
+	printf '%s' "La descarga del escritorio se quedó detenida 3 veces (el servidor o la red dejaron de responder). Revisa la conexión a internet y vuelve a instalar, o elige un escritorio que venga en el USB. Detalles en $LOG"
+}
+
 paso_escritorio() {
 	raiz="${1%/}"
 	de="$2"
@@ -593,11 +751,22 @@ paso_escritorio() {
 		# chroot ("failed to acquire lock") aunque los paquetes ya quedaron
 		# instalados: se mira que estén y se dejan los servicios de udev
 		# en el arranque a mano.
+		# Todo viene en el USB: solo el repositorio de la ISO (ver
+		# instalar_escritorio). Si desde el USB faltó algún paquete y hay
+		# internet, se intenta otra vez con internet.
 		rc=0
-		en_destino "$raiz" setup-xorg-base icewm lxsession lightdm lightdm-gtk-greeter \
-			dbus dbus-x11 elogind polkit-elogind gvfs udisks2 font-dejavu </dev/null >>"$LOG" 2>&1 || rc=$?
+		repos_solo_usb "$raiz" || true
+		icewm_xorg || rc=$?
+		if [ "$rc" != 0 ] && ! icewm_esta "$raiz" && repos_antes_con_red "$raiz"; then
+			log "Aviso: desde el USB faltaron paquetes de IceWM; se intenta de nuevo con internet."
+			repos_volver "$raiz"
+			rc=0
+			icewm_xorg || rc=$?
+		fi
+		repos_volver "$raiz"
 		if [ "$rc" != 0 ]; then
-			if ! en_destino "$raiz" apk info -e xorg-server icewm lxsession lightdm >>"$LOG" 2>&1; then
+			if ! icewm_esta "$raiz"; then
+				[ "$rc" != 124 ] || die "$(escritorio_colgado)"
 				die "no se pudo instalar IceWM (detalles en $LOG)"
 			fi
 			log "setup-xorg-base terminó con error $rc (udev no arranca dentro del chroot); los paquetes están instalados."
@@ -616,9 +785,10 @@ paso_escritorio() {
 	fi
 	log "Instalando el escritorio '$de' con setup-desktop..."
 	avance_iniciar "el escritorio"
-	if ! en_destino "$raiz" setup-desktop "$de" </dev/null >>"$LOG" 2>&1; then
-		die "setup-desktop $de falló (detalles en $LOG)"
-	fi
+	rc=0
+	instalar_escritorio "$raiz" "$de" setup-desktop "$de" || rc=$?
+	[ "$rc" != 124 ] || die "$(escritorio_colgado)"
+	[ "$rc" = 0 ] || die "setup-desktop $de falló (detalles en $LOG)"
 	avance_parar
 	servicios_a_default "$raiz"
 	log "Escritorio '$de' instalado."

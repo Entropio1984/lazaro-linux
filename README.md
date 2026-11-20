@@ -900,10 +900,18 @@ prueban y publican solas en cada cambio de la rama principal.
 2. Calamares particiona y monta el disco (ext4; partición EFI en UEFI).
 3. `lazaro-instalar base`: `setup-disk` instala el sistema base, el kernel,
    el firmware del hardware detectado y GRUB (BIOS o UEFI, con la ruta de
-   respaldo `EFI/boot/bootx64.efi` para firmwares viejos).
+   respaldo `EFI/boot/bootx64.efi` para firmwares viejos). En la Completa
+   y la de 32 bits todo sale del repositorio de la ISO, aunque haya
+   internet (traen todo el firmware); la Ligera usa también internet si
+   hay, para el firmware que no trae.
 4. Calamares crea el usuario (grupo `wheel`, con `doas`).
 5. `lazaro-instalar escritorio`: `setup-desktop <escritorio>` (con
-   "Sin escritorio" no se instala ninguno).
+   "Sin escritorio" no se instala ninguno). Los escritorios que vienen en
+   el USB (todos en la Completa) se instalan solo desde la ISO, aunque
+   haya internet; si eso falla y hay conexión, se reintenta con internet.
+   Si una descarga pasa 3 minutos sin avanzar (apk puede quedarse
+   esperando para siempre a un servidor que dejó de responder), se corta
+   y se reintenta, hasta 3 veces. Calamares le da 3 horas a este paso.
 6. `lazaro-instalar ajustes`: idioma, teclado, zona horaria y
    `desktop-postinstall.sh` con las opciones elegidas (oficina,
    aplicaciones) y las premarcadas de su menú. Si no hay internet, el
