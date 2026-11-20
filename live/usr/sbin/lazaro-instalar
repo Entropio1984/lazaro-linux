@@ -420,6 +420,17 @@ repos_antes_con_red() { # RAIZ
 	grep -qs '^https\?://' "$1/etc/apk/repositories.lazaro-antes"
 }
 
+# ¿Edición Completa con su repositorio a mano? Esa edición trae todo lo
+# que se instala, así que cada paso (sistema base, escritorio, driver
+# Broadcom, controladores, programas y configuración final) usa solo el
+# USB, haya o no internet: tarda lo mismo con buena o mala conexión y
+# una red lenta no puede dejar la instalación colgada. Si desde el USB
+# algo falla y hay internet, ese paso se intenta otra vez con internet.
+# Las versiones nuevas llegan después, con el aviso de actualizaciones.
+completa_usb() {
+	[ "$LAZARO_EDICION" = completa ] && [ -n "$(repo_iso)" ]
+}
+
 # --- Wifi Broadcom con driver privativo -----------------------------------
 # Tarjetas Broadcom (fabricante 14e4) que con el kernel no tienen un
 # driver libre que funcione: b43 necesitaría un firmware que no se puede
@@ -659,7 +670,21 @@ paso_base() {
 		mkdir -p "$raiz/etc/runlevels/default"
 		ln -sf /etc/init.d/plymouth-salir "$raiz/etc/runlevels/default/plymouth-salir"
 	fi
-	paso_broadcom "$raiz"
+	# Driver wifi Broadcom: en la Completa, desde el USB (trae el driver,
+	# el compilador y las cabeceras del kernel); con internet solo si
+	# desde el USB no se pudo.
+	if completa_usb && broadcom_wl_tarjeta >/dev/null && repos_solo_usb "$raiz"; then
+		log "Driver wifi Broadcom: se instala desde el USB, sin descargar nada."
+		paso_broadcom "$raiz"
+		if [ ! -e "$raiz/etc/modprobe.d/lazaro-broadcom-wl.conf" ] && repos_antes_con_red "$raiz"; then
+			log "Aviso: desde el USB no se pudo preparar el driver Broadcom; se intenta de nuevo con internet."
+			repos_volver "$raiz"
+			paso_broadcom "$raiz"
+		fi
+		repos_volver "$raiz"
+	else
+		paso_broadcom "$raiz"
+	fi
 	log "Sistema base instalado."
 }
 
@@ -887,8 +912,25 @@ paso_controladores() { # RAIZ
 	# Las pruebas en QEMU buscan esta línea en la consola.
 	log "LAZARO-CONTROLADORES-FALTAN $(printf '%s\n' "$pc_lista" | cut -f2 | tr '\n' ' ')"
 	avance_iniciar "los controladores"
+	# En la Completa, desde el USB (trae todos los controladores de
+	# Alpine); con internet solo si desde el USB faltó algo.
+	pc_usb=no
+	if completa_usb && repos_solo_usb "$1"; then
+		pc_usb=si
+		log "Controladores: se instalan desde el USB, sin descargar nada."
+	fi
 	pc_rc=0
 	pc_salida="$(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar-alpine </dev/null 2>&1)" || pc_rc=$?
+	if [ "$pc_usb" = si ]; then
+		if [ "$pc_rc" != 0 ] && repos_antes_con_red "$1"; then
+			log "Aviso: desde el USB faltaron controladores; se intenta de nuevo con internet."
+			repos_volver "$1"
+			pc_rc=0
+			pc_salida="$pc_salida
+$(en_destino "$1" /usr/local/sbin/lazaro-controladores --instalar-alpine </dev/null 2>&1)" || pc_rc=$?
+		fi
+		repos_volver "$1"
+	fi
 	# Licencia aceptada en la live pero el firmware no alcanzó a copiarse.
 	for pc_c in ipw2100 ipw2200; do
 		printf '%s\n' "$pc_lista" | grep -q "	$pc_c	" || continue
@@ -1084,22 +1126,27 @@ paso_ajustes() {
 	install -Dm755 "$DATOS/lazaro-postinstalacion" "$raiz/usr/libexec/lazaro/lazaro-postinstalacion"
 	red_ajustes=no
 	esperar_red && red_ajustes=si
-	# Edición Completa y la de 32 bits, sin internet: el script corre igual, solo con el
-	# repositorio de la ISO (sin repositorios de internet, el script no
-	# espera la red y todo lo que instala viene en la ISO).
-	sin_red_completa=no
-	if [ "$red_ajustes" = no ] && [ -n "$(repo_iso)" ] &&
-		{ [ "$LAZARO_EDICION" = completa ] || [ "$BITS32" = si ]; }; then
-		sin_red_completa=si
+	# Solo con el repositorio de la ISO (sin repositorios de internet, el
+	# script no espera la red y todo lo que instala viene en la ISO):
+	# - Edición Completa: siempre, también con internet (ver completa_usb).
+	# - 32 bits: cuando no hay internet.
+	solo_usb=no
+	if completa_usb; then
+		solo_usb=si
+		log "La configuración final se hace con lo que trae el USB, sin descargar nada."
+	elif [ "$red_ajustes" = no ] && [ -n "$(repo_iso)" ] && [ "$BITS32" = si ]; then
+		solo_usb=si
 		log "Sin internet: la configuración final se hace con lo que trae el USB."
 	fi
-	if [ "$red_ajustes" = si ] || [ "$sin_red_completa" = si ]; then
-		# Mientras corre el script, el repositorio de la ISO sigue a mano
+	if [ "$red_ajustes" = si ] || [ "$solo_usb" = si ]; then
+		# Con internet (Ligera), el repositorio de la ISO sigue a mano
 		# junto a los de internet: si la conexión se corta (wifi
 		# inestable), lo que está en la ISO se instala igual.
+		red_script="$red_ajustes"
+		[ "$solo_usb" = no ] || red_script=no
 		iso="$(repo_iso)"
 		if [ -n "$iso" ] && montar_si_falta bind "$iso" "$raiz$iso"; then
-			escribir_repos "$raiz/etc/apk/repositories" "$iso" "$red_ajustes"
+			escribir_repos "$raiz/etc/apk/repositories" "$iso" "$red_script"
 		fi
 		# El script corre desde la sesión live: con --destino monta el
 		# sistema nuevo y se ejecuta dentro de él.
@@ -1109,6 +1156,16 @@ paso_ajustes() {
 		# shellcheck disable=SC2086
 		sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
 			</dev/null >>"$LOG" 2>&1 || pi=$?
+		# Desde el USB falló y hay internet: otra vez, ahora con internet
+		# (el script salta lo que ya quedó hecho).
+		if [ "$pi" != 0 ] && [ "$red_script" = no ] && [ "$red_ajustes" = si ] && [ -n "$iso" ]; then
+			log "Aviso: con lo del USB la configuración final terminó con error $pi; se intenta de nuevo con internet."
+			escribir_repos "$raiz/etc/apk/repositories" "$iso" si
+			pi=0
+			# shellcheck disable=SC2086
+			sh "$DATOS/desktop-postinstall.sh" --destino "$raiz" $args \
+				</dev/null >>"$LOG" 2>&1 || pi=$?
+		fi
 		avance_parar
 		desmontar_propios
 		repos_definitivos "$raiz"
