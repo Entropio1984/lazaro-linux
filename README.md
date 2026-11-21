@@ -35,7 +35,10 @@ imprimir.
   video quedan listos solos. Firefox viene siempre (salvo si eliges
   "Sin escritorio").
 - **Funciona sin internet.** La edición Completa trae todo dentro del USB
-  y se instala en un equipo que no tiene red. Si instalas sin internet
+  y se instala en un equipo que no tiene red. Aunque haya internet, la
+  Completa instala todo desde el USB y no descarga nada: tarda lo mismo
+  con buena o mala conexión. Las versiones nuevas llegan después, con el
+  aviso de actualizaciones. Si instalas sin internet
   con la edición Ligera, lo que falta se completa la primera vez que el
   equipo se conecte (ver el [paso 7](#paso-7-el-primer-arranque)).
 - **YouTube ligero.** Un reproductor de YouTube que no usa el navegador y
@@ -85,7 +88,7 @@ varias épocas.
 | | **Ligera** | **Completa** |
 |---|---|---|
 | Tamaño | menos de 2 GB | unos 4,6 GB |
-| ¿Necesita internet al instalar? | Para GNOME, KDE Plasma y las aplicaciones de Flathub, sí | No, nunca |
+| ¿Necesita internet al instalar? | Para GNOME, KDE Plasma y las aplicaciones de Flathub, sí | No, nunca (aunque haya, instala todo desde el USB) |
 | Escritorios sin internet | XFCE, MATE, LXQt, Sway, XFCE Wayland | Los 7, en todos los idiomas |
 | Firmware (controladores de wifi y otros) | El de red, completo | Todo |
 | Módems USB 3G/4G, ADSL (PPPoE), internet del celular por cable o Bluetooth (los módems 3G/4G y el Bluetooth, en el sistema instalado) | Sí | Sí |
@@ -916,7 +919,17 @@ prueban y publican solas en cada cambio de la rama principal.
    `desktop-postinstall.sh` con las opciones elegidas (oficina,
    aplicaciones) y las premarcadas de su menú. Si no hay internet, el
    script queda programado para el primer arranque con red (servicio
-   `lazaro-primer-arranque`).
+   `lazaro-primer-arranque`). En la Completa el script, los controladores
+   (`lazaro-controladores --instalar-alpine`) y el driver Broadcom usan
+   solo el repositorio de la ISO, aunque haya internet (`completa_usb`);
+   si algo falla desde el USB y hay conexión, ese paso se reintenta con
+   internet. Al terminar, el sistema instalado queda con los repositorios
+   de internet para las actualizaciones y, si hay conexión, baja la lista
+   de programas de la tienda (el catálogo AppStream de Alpine, unos pocos
+   MB, que no viene en ningún paquete). Lo que nunca viene en el USB:
+   esa lista, Google Chrome (botón de la Bienvenida) y el firmware que no
+   se puede repartir (b43, Prism54, Intel 2100/2200), que se descarga con
+   permiso.
 7. `lazaro-afinador --aplicar --raiz`: los ajustes recomendados para el
    hardware (bloque con marcas en `/etc/default/grub`,
    `/etc/sysctl.d/60-lazaro-afinador.conf` y el servicio

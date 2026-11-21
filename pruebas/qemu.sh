@@ -556,6 +556,28 @@ prueba_instalar() {
 			return 1
 		fi
 	fi
+	# Completa: todo sale del USB aunque haya internet (también los
+	# controladores y la configuración final).
+	if [ "$completa" = si ]; then
+		for m in 'El sistema base se instala desde el USB, sin descargar nada' \
+			'Controladores: se instalan desde el USB, sin descargar nada' \
+			'La configuración final se hace con lo que trae el USB, sin descargar nada'; do
+			[ "$de" != ninguno ] || [ "${m#La configuración}" = "$m" ] || continue
+			if ! grep -q "^\[lazaro\] $m" "$serie"; then
+				terminar "$pid"
+				echo "FALLO: en la Completa falta '$m' ($red)." >&2
+				grep -E '^\[lazaro\]' "$serie" | tail -n 40 >&2 || true
+				return 1
+			fi
+		done
+		if grep -q '^\[lazaro\] Aviso: .*se intenta de nuevo con internet' "$serie"; then
+			terminar "$pid"
+			echo "FALLO: en la Completa algo no se pudo instalar desde el USB y se descargó:" >&2
+			grep '^\[lazaro\] Aviso: .*se intenta de nuevo con internet' "$serie" >&2 || true
+			return 1
+		fi
+		echo "OK: Completa ($red): sistema base, controladores y configuración final desde el USB, sin descargar nada."
+	fi
 	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
 		if ! grep -q 'LAZARO-FLATPAK-USB-OK org.onlyoffice.desktopeditors' "$serie" \
 			|| ! grep -q 'LAZARO-FLATPAK-USB-OK com.brave.Browser' "$serie" \
