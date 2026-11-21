@@ -6,30 +6,6 @@ on:
     paths: [.github/workflows/prueba-claude.yml]
   workflow_dispatch:
 jobs:
-  claude-code:
-    runs-on: ubuntu-latest
-    container: alpine:3.24
-    steps:
-      - name: Instalar Claude Code desde el repositorio oficial de Anthropic
-        run: |
-          set -x
-          apk add --no-cache wget libgcc libstdc++ ripgrep
-          wget -qO /etc/apk/keys/claude-code.rsa.pub https://downloads.claude.ai/keys/claude-code.rsa.pub
-          sha256sum /etc/apk/keys/claude-code.rsa.pub
-          echo "https://downloads.claude.ai/claude-code/apk/stable" >> /etc/apk/repositories
-          apk update
-          apk add claude-code
-          apk info -s claude-code
-          which claude; claude --version
-          /usr/bin/time -v claude --version 2>&1 | grep -E "Maximum resident|Elapsed" || true
-          adduser -D julian
-          su julian -c 'claude --help | head -20'
-          su julian -c 'timeout 20 claude doctor </dev/null' || echo "doctor rc=$?"
-      - name: Instalador por curl (alternativa)
-        run: |
-          apk add --no-cache bash curl
-          adduser -D prueba
-          su prueba -c 'curl -fsSL https://claude.ai/install.sh | bash' && su prueba -c '~/.local/bin/claude --version' || echo "curl install rc=$?"
   claude-desktop:
     runs-on: ubuntu-latest
     container: alpine:3.24
@@ -37,11 +13,13 @@ jobs:
       - name: Intentar la app de escritorio (.deb, glibc) con gcompat
         run: |
           set -x
-          apk add --no-cache wget gcompat binutils xz zstd tar file
+          apk add --no-cache wget gcompat libc6-compat binutils xz zstd tar file gtk+3.0 nss alsa-lib libxkbcommon mesa-gbm libxshmfence cups-libs at-spi2-core libdrm xvfb-run xvfb dbus libsecret libnotify
           wget -qO- https://downloads.claude.ai/claude-desktop/apt/stable/dists/stable/main/binary-amd64/Packages | tee /tmp/Packages | grep -E "^(Version|Filename|Depends|Installed-Size)" | head -8
           f=$(grep -m1 '^Filename:' /tmp/Packages | awk '{print $2}')
           wget -qO /tmp/cd.deb "https://downloads.claude.ai/claude-desktop/apt/stable/$f"
           mkdir /tmp/cd && cd /tmp/cd && ar x /tmp/cd.deb && ls && tar xf data.tar.* && find . -maxdepth 4 -type f -perm -u+x | head
           bin=$(find . -type f -name 'claude-desktop' -perm -u+x | head -1); [ -n "$bin" ] || bin=$(find . -type f -name 'claude' -perm -u+x | head -1)
           file "$bin"
-          "$bin" --version --no-sandbox 2>&1 | head -20 || echo "rc=$?"
+          ldd "$bin" 2>&1 | grep -iE "not found|symbol" | head -20 || true
+          timeout 60 xvfb-run -a "$bin" --no-sandbox --disable-gpu > /tmp/out.txt 2>&1; echo "rc=$?"
+          head -40 /tmp/out.txt
