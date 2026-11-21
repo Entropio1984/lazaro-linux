@@ -1169,6 +1169,18 @@ paso_ajustes() {
 		avance_parar
 		desmontar_propios
 		repos_definitivos "$raiz"
+		# La lista de programas de la tienda de aplicaciones (catálogo de
+		# Alpine) no viene en ningún paquete ni en el USB: sin repositorios
+		# de internet el script no pudo bajarla. Con internet se baja ya
+		# (unos pocos MB, no instala nada); si no, la tarea de cada hora
+		# lo hace cuando haya conexión.
+		if [ "$red_script" = no ] && [ "$red_ajustes" = si ] &&
+			[ -x "$raiz/etc/periodic/hourly/alpine-tienda-catalogo" ]; then
+			log "Descargando la lista de programas de la tienda (no instala nada)..."
+			en_destino "$raiz" /etc/periodic/hourly/alpine-tienda-catalogo </dev/null >>"$LOG" 2>&1 ||
+				log "Aviso: no se pudo bajar la lista de la tienda; se bajará sola con internet."
+			cat "$raiz/var/log/alpine-tienda-catalogo.log" >>"$LOG" 2>/dev/null || true
+		fi
 		flatpak_desde_usb "$raiz" "$extras"
 		if [ "$pi" = 0 ]; then
 			log "desktop-postinstall.sh terminó bien."

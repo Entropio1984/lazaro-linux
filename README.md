@@ -924,9 +924,12 @@ prueban y publican solas en cada cambio de la rama principal.
    solo el repositorio de la ISO, aunque haya internet (`completa_usb`);
    si algo falla desde el USB y hay conexión, ese paso se reintenta con
    internet. Al terminar, el sistema instalado queda con los repositorios
-   de internet para las actualizaciones. Lo que nunca viene en el USB:
-   Google Chrome (botón de la Bienvenida) y el firmware que no se puede
-   repartir (b43, Prism54, Intel 2100/2200), que se descarga con permiso.
+   de internet para las actualizaciones y, si hay conexión, baja la lista
+   de programas de la tienda (el catálogo AppStream de Alpine, unos pocos
+   MB, que no viene en ningún paquete). Lo que nunca viene en el USB:
+   esa lista, Google Chrome (botón de la Bienvenida) y el firmware que no
+   se puede repartir (b43, Prism54, Intel 2100/2200), que se descarga con
+   permiso.
 7. `lazaro-afinador --aplicar --raiz`: los ajustes recomendados para el
    hardware (bloque con marcas en `/etc/default/grub`,
    `/etc/sysctl.d/60-lazaro-afinador.conf` y el servicio
