@@ -650,6 +650,8 @@ paso_base() {
 		install -Dm644 /usr/share/doc/lazaro/manual-lazaro.pdf "$raiz/usr/share/doc/lazaro/manual-lazaro.pdf"
 		install -Dm755 /usr/bin/lazaro-manual "$raiz/usr/local/bin/lazaro-manual"
 		install -Dm644 /usr/share/applications/lazaro-manual.desktop "$raiz/usr/share/applications/lazaro-manual.desktop"
+		sed -i 's|^Exec=lazaro-manual|Exec=/usr/local/bin/lazaro-manual|' \
+			"$raiz/usr/share/applications/lazaro-manual.desktop"
 	fi
 	# btop mide la GPU Intel sin doas: un gancho de apk le da el permiso
 	# CAP_PERFMON cada vez que se instala o actualiza (libcap-setcap se
@@ -892,6 +894,11 @@ paso_controladores() { # RAIZ
 			"$1/usr/share/applications/lazaro-controladores.desktop"
 		install -Dm644 /etc/xdg/autostart/lazaro-controladores.desktop \
 			"$1/etc/xdg/autostart/lazaro-controladores.desktop"
+		# Con la ruta completa, como la Bienvenida: hay sesiones
+		# gráficas sin /usr/local/sbin en el PATH.
+		sed -i 's|^Exec=lazaro-controladores|Exec=/usr/local/sbin/lazaro-controladores|' \
+			"$1/usr/share/applications/lazaro-controladores.desktop" \
+			"$1/etc/xdg/autostart/lazaro-controladores.desktop"
 	fi
 	# Decisiones y firmware de la live.
 	if [ -e /etc/lazaro/controladores.conf ]; then
@@ -1018,6 +1025,9 @@ paso_afinador() { # RAIZ
 	fi
 	[ -e "$1/etc/lazaro/sin-escritorio" ] ||
 		install -Dm644 "$DATOS/lazaro-afinador.desktop" "$1/usr/share/applications/lazaro-afinador.desktop"
+	[ ! -f "$1/usr/share/applications/lazaro-afinador.desktop" ] ||
+		sed -i 's|^Exec=lazaro-afinador|Exec=/usr/local/sbin/lazaro-afinador|' \
+			"$1/usr/share/applications/lazaro-afinador.desktop"
 	pa_salida="$("$pa_af" --aplicar --raiz "$1" 2>>"$LOG")" || {
 		log "Aviso: el afinador no pudo aplicar sus ajustes (se pueden poner después desde el menú)."
 		return 0

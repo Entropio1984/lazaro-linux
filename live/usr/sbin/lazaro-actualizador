@@ -273,7 +273,14 @@ def ventana_principal():
             if estado["fase"] in ("buscar", "clave", "trabajo"):
                 barra.pulse()
                 return True
+            estado["pulsando"] = False
             return False
+
+        def pulsar():
+            # Un solo reloj para la barra: con dos, se movería al doble.
+            if not estado.get("pulsando"):
+                estado["pulsando"] = True
+                GLib.timeout_add(120, pulso)
 
         def leer_registro():
             """Lo nuevo del archivo de avance desde la última lectura.
@@ -323,7 +330,9 @@ def ventana_principal():
                 aviso(_("Revisa la conexión a internet y vuelve a intentar. Los detalles "
                         "quedaron en %s.") % estado["registro"])
                 detalles.set_expanded(True)
-            if despues and despues != estado["antes"] and \
+            # Solo si terminó bien: tras un fallo, reiniciar un sistema a
+            # medio cambiar de versión puede dejarlo sin arrancar.
+            if codigo == 0 and despues and despues != estado["antes"] and \
                     despues.rsplit(".", 1)[0] != estado["antes"].rsplit(".", 1)[0]:
                 aviso(_("El sistema ahora es Alpine %s. Reinicia el equipo para terminar "
                         "el cambio de versión.") % despues)
@@ -407,7 +416,7 @@ def ventana_principal():
                 salida.close()
             estado["fase"] = "clave"
             decir(_("Escribe tu contraseña en la ventana que aparece…"))
-            GLib.timeout_add(120, pulso)
+            pulsar()
             GLib.timeout_add(300, vigilar)
 
         def ofrecer(par):
@@ -448,7 +457,7 @@ def ventana_principal():
         b_cerrar.connect("clicked", al_cerrar)
 
         decir(_("Buscando si hay una versión nueva de Alpine…"))
-        GLib.timeout_add(120, pulso)
+        pulsar()
         threading.Thread(target=lambda: GLib.idle_add(ofrecer, siguiente_version()),
                          daemon=True).start()
         v.show_all()

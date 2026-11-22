@@ -18,10 +18,10 @@ strings:
     versionedName: "Lázaro Linux 0.1"
     shortVersionedName: "Lázaro 0.1"
     bootloaderEntryName: "Lazaro"
-    productUrl: "https://github.com/Entropio1984/alpine-desktop-setup"
-    supportUrl: "https://github.com/Entropio1984/alpine-desktop-setup/issues"
-    knownIssuesUrl: "https://github.com/Entropio1984/alpine-desktop-setup/issues"
-    releaseNotesUrl: "https://github.com/Entropio1984/alpine-desktop-setup"
+    productUrl: "https://github.com/Entropio1984/lazaro-linux"
+    supportUrl: "https://github.com/Entropio1984/lazaro-linux/issues"
+    knownIssuesUrl: "https://github.com/Entropio1984/lazaro-linux/issues"
+    releaseNotesUrl: "https://github.com/Entropio1984/lazaro-linux/releases"
 
 images:
     productIcon: "icono.png"
