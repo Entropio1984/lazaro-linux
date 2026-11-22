@@ -100,6 +100,10 @@ class Notificador:
         bus.signal_subscribe(None, "org.freedesktop.Notifications", "ActionInvoked",
                              "/org/freedesktop/Notifications", None,
                              Gio.DBusSignalFlags.NONE, self._accion)
+        # Un aviso que se cierra sin pulsar (o que vence) ya no necesita su acción
+        bus.signal_subscribe(None, "org.freedesktop.Notifications", "NotificationClosed",
+                             "/org/freedesktop/Notifications", None,
+                             Gio.DBusSignalFlags.NONE, self._cerrada)
 
     def enviar(self, titulo, cuerpo, icono="nubes-rclone", accion=None, texto_accion="Abrir"):
         acciones = ["default", texto_accion] if accion else []
@@ -124,6 +128,11 @@ class Notificador:
         funcion = self.acciones.pop(nid, None)
         if funcion:
             funcion()
+
+    def _cerrada(self, _bus, _remitente, _ruta, _iface, _senal, parametros, *_):
+        nid = parametros.unpack()[0]
+        # ActionInvoked llega antes que NotificationClosed: si se pulsó, ya se usó
+        self.acciones.pop(nid, None)
 
 
 # ==========================================================================

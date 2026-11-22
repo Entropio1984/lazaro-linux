@@ -13,6 +13,9 @@ set -eu
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 export LAZARO_TEXTO_DIR="$DIR/live/usr/share/lazaro"
+# Las pruebas eligen el idioma con LANG: LC_ALL y LC_MESSAGES le ganan,
+# así que en una computadora que las tenga puestas daban fallos falsos.
+unset LC_ALL LC_MESSAGES LANGUAGE
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 # Sin restos de Python (__pycache__) en el repositorio.
@@ -124,6 +127,7 @@ else
 fi
 
 # 6. Los menús (.desktop) de Lázaro tienen nombre en inglés y portugués.
+antes="$fallos"
 for f in "$DIR"/live/usr/share/applications/lazaro-*.desktop "$DIR"/live/etc/xdg/autostart/lazaro-*.desktop \
 	"$DIR"/live/usr/share/lazaro/lazaro-*.desktop; do
 	for i in en pt_BR; do
@@ -131,7 +135,7 @@ for f in "$DIR"/live/usr/share/applications/lazaro-*.desktop "$DIR"/live/etc/xdg
 		grep -q "^Name\[$i\]=." "$f" || mal "$(basename "$f"): falta Name[$i]"
 	done
 done
-ok "menús con nombre en inglés y portugués"
+[ "$fallos" != "$antes" ] || ok "menús con nombre en inglés y portugués"
 
 echo
 if [ "$fallos" -gt 0 ]; then

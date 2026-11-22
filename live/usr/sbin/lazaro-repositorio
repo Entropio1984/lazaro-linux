@@ -111,7 +111,13 @@ poner_llave() {
 sincronizar() {
 	d="$DIR/$(arquitectura)"
 	mkdir -p "$d"
-	t="$(mktemp -d)"
+	# El temporal va en la misma carpeta (mismo disco): así mv es
+	# instantáneo y un corte de luz no deja un paquete a medias que después
+	# parecería completo.
+	rm -rf "$d"/.bajando.*
+	t="$(mktemp -d "$d/.bajando.XXXXXX")"
+	trap 'rm -rf "$t"' EXIT
+	trap 'exit 130' INT TERM HUP
 	if ! bajar "$(url_base)/$(indice)" "$t/APKINDEX.tar.gz"; then
 		rm -rf "$t"
 		aviso "No se pudo descargar el índice del repositorio de Lázaro ($(url_base)/$(indice)). ¿Hay internet?"
@@ -120,6 +126,18 @@ sincronizar() {
 	todos="$(tar -xzOf "$t/APKINDEX.tar.gz" APKINDEX 2>/dev/null |
 		awk '/^P:/ { p = substr($0, 3) } /^V:/ { print p "\t" p "-" substr($0, 3) ".apk" }')"
 	[ -n "$todos" ] || { rm -rf "$t"; aviso "El índice del repositorio de Lázaro está vacío o dañado."; return 1; }
+	# apk revisa la firma recién al instalar: antes de eso, los nombres del
+	# índice se usan para descargar y guardar archivos como administrador.
+	# Solo se aceptan nombres de paquete normales (sin "/" ni "..").
+	malos="$(printf '%s\n' "$todos" | while IFS='	' read -r n a; do
+		case "$a" in
+			*/*|*..*|.*) echo "$a"; continue ;;
+		esac
+		case "$n$a" in
+			*[!A-Za-z0-9._+-]*) echo "$a" ;;
+		esac
+	done)"
+	[ -z "$malos" ] || { rm -rf "$t"; aviso "El índice del repositorio de Lázaro trae nombres no válidos: no se usa."; return 1; }
 	# Solo lo que este equipo usa: el kernel (decenas de MB) solo si está
 	# instalado o se va a instalar.
 	paquetes="$(printf '%s\n' "$todos" | while IFS='	' read -r n a; do
@@ -134,7 +152,7 @@ sincronizar() {
 	rm -rf "$t"
 	for a in "$d"/*.apk; do
 		[ -e "$a" ] || continue
-		printf '%s\n' "$paquetes" | grep -qx "${a##*/}" || rm -f "$a"
+		printf '%s\n' "$paquetes" | grep -qxF "${a##*/}" || rm -f "$a"
 	done
 	# El repositorio va en /etc/apk/repositories recién cuando tiene su
 	# índice: sin él, apk update daría error en cada actualización.

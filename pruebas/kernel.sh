@@ -150,6 +150,26 @@ fi
 [ -s "$L/APKINDEX.tar.gz" ] && [ -s "$L/lazaro-herramientas-0.1-r501.apk" ] &&
 	ok "sin internet: el repositorio anterior sigue" || mal "sin internet: perdió el repositorio"
 
+# --- Repositorio: índice con nombres tramposos ------------------------------------
+# Antes de que apk revise la firma, los nombres del índice se usan para
+# guardar archivos como administrador: uno con "../" no se acepta.
+mkdir -p "$TMP/trampa/indice"
+printf 'C:Q1abc=\nP:lazaro-herramientas\nV:0.1-r502/../../../../trampa\n\n' > "$TMP/trampa/indice/APKINDEX"
+(cd "$TMP/trampa/indice" && tar -czf "$TMP/trampa/APKINDEX.tar.gz" APKINDEX)
+mkdir -p "$TMP/trampa/0.1-r502" && : > "$TMP/trampa/lazaro-herramientas-0.1-r502" &&
+	printf 'malo\n' > "$TMP/trampa/trampa.apk"
+# Tiene que rechazarse por el nombre, antes de descargar nada (no porque
+# la descarga falle).
+if trampa="$(env LAZARO_REPO_RAIZ="$R" LAZARO_REPO_URL="file://$TMP/trampa" sh "$REPO_PROG" --sincronizar 2>&1)"; then
+	mal "índice tramposo: lo aceptó"
+elif printf '%s' "$trampa" | grep -q 'nombres no válidos'; then
+	ok "índice tramposo: no se usa"
+else
+	mal "índice tramposo: falló por otra cosa: $trampa"
+fi
+[ ! -e "$R/trampa.apk" ] && [ ! -e "$R/var/trampa.apk" ] && [ -s "$L/lazaro-herramientas-0.1-r501.apk" ] &&
+	ok "índice tramposo: no escribió fuera y el repositorio anterior sigue" || mal "índice tramposo: escribió fuera o perdió el repositorio"
+
 # --- Repositorio: ISO en desarrollo más nueva que la versión publicada ------------
 # Las herramientas solo se publican con las versiones: un sistema
 # instalado desde una ISO en desarrollo (nivel 600) no cambia las suyas

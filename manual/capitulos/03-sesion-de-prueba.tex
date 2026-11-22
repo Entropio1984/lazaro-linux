@@ -107,9 +107,10 @@ modo texto).
         no pide usuario ni contraseña. Si no ves una línea para escribir,
         pulsa \keys{Enter}.
   \item Si quieres internet durante la instalación y no tienes cable,
-        conecta el wifi escribiendo (con las comillas):
+        conecta el wifi escribiendo (con las comillas); después te pide
+        la clave:
 \begin{terminal}
-nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"
+nmcli --ask device wifi connect "NOMBRE DE LA RED"
 \end{terminal}
   \item Escribe \texttt{doas lazaro-instalar-texto} y pulsa \keys{Enter}.
 \end{pasos}

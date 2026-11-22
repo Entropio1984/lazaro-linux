@@ -125,7 +125,8 @@ nubes-rclone --sincronizar-servicio
 
 Con el modo «equipo compartido» (botón en «Mis nubes» o `--equipo-compartido` al
 instalar), cada inicio de sesión desconecta y olvida todas las nubes y borra la
-caché, para que la siguiente persona no acceda a las cuentas de la anterior. Se
+caché (también los registros y las listas de archivos de la sincronización),
+para que la siguiente persona no acceda a las cuentas de la anterior. Se
 hace **una sola vez por sesión**: si el icono se reinicia a mitad de clase no se
 borra lo que el docente acaba de conectar. Al terminar, el menú del icono ofrece
 «Desconectar todas las cuentas»: si algún programa retiene archivos abiertos,
@@ -142,8 +143,9 @@ ventana privada para iniciar sesión.
 - Ajustes en `~/.config/nubes-rclone` con permisos `0700`/`0600`.
 - Sockets de control, bloqueos y peticiones en `$XDG_RUNTIME_DIR/nubes-rclone` (privado).
 - El `client_secret` propio no aparece en la lista de procesos durante el inicio de
-  sesión (se pasa por el entorno); al terminar se guarda en `rclone.conf` con una orden
-  que dura unos milisegundos.
+  sesión (se pasa por el entorno); al terminar se escribe directamente en `rclone.conf`
+  (permisos `0600`). Solo si esa configuración está cifrada se guarda con una orden de
+  rclone, que dura unos milisegundos.
 - La caché de archivos abiertos se limita a 2 GB (`cache_max` en `ajustes.json`).
 
 ## Archivos

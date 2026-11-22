@@ -619,6 +619,63 @@ def eliminar_remoto(nombre):
     return ejecutar([rc, "config", "delete", nombre], timeout=30)
 
 
+def archivo_config_rclone():
+    """Ruta de rclone.conf («rclone config file»), o None."""
+    rc = rclone_bin()
+    if not rc:
+        return None
+    codigo, salida = ejecutar([rc, "config", "file"], timeout=20)
+    if codigo != 0:
+        return None
+    lineas = [l.strip() for l in salida.splitlines() if l.strip()]
+    return lineas[-1] if lineas and os.path.isabs(lineas[-1]) else None
+
+
+def guardar_secreto(nombre, secreto):
+    """Guarda client_secret en la sección [nombre] de rclone.conf sin pasarlo por la
+    línea de órdenes (ahí cualquier usuario del equipo lo vería en /proc).
+    Devuelve (codigo, mensaje) como ejecutar()."""
+    ruta = archivo_config_rclone()
+    try:
+        with open(ruta or "", encoding="utf-8") as f:
+            contenido = f.read()
+    except (OSError, ValueError):
+        contenido = None
+    if contenido is None:
+        return 1, "No se pudo leer la configuración de rclone."
+    if contenido.lstrip().startswith("# Encrypted rclone configuration"):
+        # Configuración cifrada: solo rclone puede escribirla
+        return ejecutar([rclone_bin(), "config", "update", nombre,
+                         "client_secret=" + secreto,
+                         "config_refresh_token=false", "--no-output"], timeout=20)
+    lineas = contenido.splitlines()
+    inicio = None
+    for i, l in enumerate(lineas):
+        if l.strip() == "[%s]" % nombre:
+            inicio = i
+            break
+    if inicio is None:
+        return 1, "No se encontró la conexión «%s» en rclone.conf." % nombre
+    fin = len(lineas)
+    for i in range(inicio + 1, len(lineas)):
+        if lineas[i].strip().startswith("["):
+            fin = i
+            break
+    seccion = [l for l in lineas[inicio + 1:fin]
+               if not re.match(r"\s*client_secret\s*=", l)]
+    # Tras la última línea con datos de la sección (antes de las líneas en blanco)
+    pos = len(seccion)
+    while pos > 0 and not seccion[pos - 1].strip():
+        pos -= 1
+    seccion.insert(pos, "client_secret = " + secreto)
+    nuevas = lineas[:inicio + 1] + seccion + lineas[fin:]
+    try:
+        escribir_atomico(ruta, "\n".join(nuevas) + "\n", privado=True)
+    except OSError as e:
+        return 1, str(e)
+    return 0, ""
+
+
 def permisos_solo_lectura(nombre):
     """True si la conexión se creó con permisos de solo lectura (no admite sincronizar)."""
     rc = rclone_bin()
@@ -667,6 +724,34 @@ def _uri(ruta):
     return "file://" + urllib.parse.quote(ruta)
 
 
+def escribir_atomico(archivo, contenido, privado=False):
+    """Escribe el archivo entero de una vez (temporal + os.replace): si se corta
+    la luz a la mitad, queda el archivo de antes, no uno a medias."""
+    tmp = "%s.%d.tmp" % (archivo, os.getpid())
+    try:
+        modo = os.stat(archivo).st_mode & 0o777
+    except OSError:
+        modo = 0o600
+    try:
+        # Nace privado (0600) y recién al final toma el permiso del original (o
+        # el pedido): nunca hay un momento en que otro usuario pueda leerlo.
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(contenido)
+            f.flush()
+            os.fsync(f.fileno())
+        if privado:
+            modo = 0o600
+        os.chmod(tmp, modo)
+        os.replace(tmp, archivo)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
 def _marcador_lineas(archivo, uri, titulo=None):
     """Añade (titulo dado) o quita (titulo None) una línea «uri título» de un archivo
     de marcadores GTK. Devuelve True si el archivo quedó bien."""
@@ -682,8 +767,7 @@ def _marcador_lineas(archivo, uri, titulo=None):
         else:
             nuevas = [l for l in lineas if l.split(" ", 1)[0] != uri]
         if nuevas != lineas:
-            with open(archivo, "w", encoding="utf-8") as f:
-                f.write("\n".join(nuevas) + ("\n" if nuevas else ""))
+            escribir_atomico(archivo, "\n".join(nuevas) + ("\n" if nuevas else ""))
         return True
     except OSError:
         return False
@@ -743,8 +827,7 @@ def _anadir_marcador_kde(ruta, titulo):
     if pos == -1:
         return
     contenido = contenido[:pos] + bloque + contenido[pos:]
-    with open(MARCADORES_KDE, "w", encoding="utf-8") as f:
-        f.write(contenido)
+    escribir_atomico(MARCADORES_KDE, contenido)
 
 
 def quitar_marcador(ruta):
@@ -761,8 +844,7 @@ def quitar_marcador(ruta):
             patron = r'[ \t]*<bookmark\b[^>]*\bhref="%s"[^>]*>.*?</bookmark>\n?' % re.escape(uri)
             nuevo = re.sub(patron, "", contenido, flags=re.S)
             if nuevo != contenido:
-                with open(MARCADORES_KDE, "w", encoding="utf-8") as f:
-                    f.write(nuevo)
+                escribir_atomico(MARCADORES_KDE, nuevo)
         except OSError:
             pass
 
@@ -937,10 +1019,21 @@ def olvidar_todo():
             continue
         quitar_marcador(punto_montaje(nombre, ajustes))
         eliminar_remoto(nombre)
+        if any(n == nombre for n, _ in listar_remotos()):
+            # La cuenta sigue guardada: se avisa en vez de decir que se olvidó
+            problemas.append(nombre)
+        if "/" in nombre or nombre in (".", ".."):
+            continue                    # no es un nombre de rclone: no se arma ninguna ruta
         for sub in ("vfs", "vfsMeta"):
             cache = os.path.join(XDG_CACHE, "rclone", sub, nombre)
             if os.path.isdir(cache):
                 shutil.rmtree(cache, ignore_errors=True)
+        # Los registros dicen nombres y carpetas de los archivos de esa nube
+        for archivo in (nombre + ".log", nombre + "-sincronizacion.log"):
+            try:
+                os.unlink(os.path.join(DIR_LOGS, archivo))
+            except OSError:
+                pass
 
     # Montajes que siguen ahí aunque su conexión ya no exista (p. ej. borrada desde la
     # terminal): también se desmontan, para que el botón del icono haga lo que promete
@@ -949,6 +1042,16 @@ def olvidar_todo():
             quitar_marcador(ruta)
         elif nombre not in problemas:
             problemas.append(nombre)
+
+    # Los listados de la sincronización (bisync) y el estado del icono tienen la
+    # lista de archivos de la persona anterior. Si alguna nube no se pudo olvidar,
+    # se conserva su historial de sincronización para no tener que volver a unir.
+    if not problemas:
+        shutil.rmtree(os.path.join(XDG_CACHE, "rclone", "bisync"), ignore_errors=True)
+    try:
+        os.unlink(ARCHIVO_ESTADO)
+    except OSError:
+        pass
 
     def limpiar(a):
         a["automontaje"] = []
@@ -2000,9 +2103,7 @@ def iniciar_interfaz():
                 secreto, self.secreto_pendiente = self.secreto_pendiente, ""
 
                 def guardar():
-                    return ejecutar([rclone_bin(), "config", "update", nombre,
-                                     "client_secret=" + secreto,
-                                     "config_refresh_token=false", "--no-output"], timeout=20)
+                    return guardar_secreto(nombre, secreto)
 
                 def guardado(res):
                     if isinstance(res, Exception) or res[0] != 0:

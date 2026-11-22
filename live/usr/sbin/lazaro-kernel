@@ -122,6 +122,17 @@ prueba_unica() {
 
 necesita_root() { [ "$(id -u)" = 0 ] || [ -n "$R" ] || die "Hace falta ser administrador: doas lazaro-kernel $1"; }
 
+# Un programa de Lázaro a la vez instala paquetes: si el primer arranque,
+# Controladores o el repositorio de Lázaro están usando apk, se espera el
+# turno (el mismo candado que usan ellos) en vez de fallar.
+apk_turno() { # ARGUMENTOS DE APK...
+	if command -v flock >/dev/null 2>&1 && [ -w /run ]; then
+		(exec 8>/run/lazaro-apk.lock && flock 8 && apk "$@" 8>&-)
+	else
+		apk "$@"
+	fi
+}
+
 instalar() {
 	# El repositorio de Lázaro (clave, @lazaro y la última versión).
 	"$REPO_PROG" --activar --con-kernel >>"$LOG" 2>&1 || die "No se pudo preparar el repositorio de Lázaro (¿hay internet?). Detalles en $LOG."
@@ -131,7 +142,7 @@ instalar() {
 	# wifi Broadcom wl), hacen falta sus cabeceras.
 	apk info -e akms >/dev/null 2>&1 && paq="$paq linux-lazaro-dev@lazaro"
 	# shellcheck disable=SC2086
-	apk add $paq >>"$LOG" 2>&1 || die "apk no pudo instalar el kernel Lázaro (detalles en $LOG)."
+	apk_turno add $paq >>"$LOG" 2>&1 || die "apk no pudo instalar el kernel Lázaro (detalles en $LOG)."
 	grub_poner_bloque
 	grub_regenerar
 	por_defecto lts
@@ -156,7 +167,7 @@ instalar() {
 quitar() {
 	if [ -f "$GRUB_CFG" ] && [ -n "$(entrada lts)" ]; then por_defecto lts; fi
 	grub_quitar_bloque
-	apk del linux-lazaro linux-lazaro-dev >>"$LOG" 2>&1 || true
+	apk_turno del linux-lazaro linux-lazaro-dev >>"$LOG" 2>&1 || true
 	rm -f "$R/etc/runlevels/default/lazaro-kernel" "$R/etc/apk/commit_hooks.d/lazaro-kernel.hook"
 	rm -rf "$DIR"
 	grub_regenerar

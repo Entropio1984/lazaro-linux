@@ -61,14 +61,25 @@ como_root() {
 	fi
 }
 
+# Un programa de Lázaro a la vez instala paquetes: si el primer arranque,
+# Controladores o el repositorio de Lázaro están usando apk, se espera el
+# turno (el mismo candado que usan ellos) en vez de fallar.
+apk_turno() { # ARGUMENTOS DE APK...
+	if command -v flock >/dev/null 2>&1 && [ -w /run ]; then
+		(exec 8>/run/lazaro-apk.lock && flock 8 && apk "$@" 8>&-)
+	else
+		apk "$@"
+	fi
+}
+
 paquetes() {
 	[ "${LAZARO_NUBES_SIN_APK:-}" != 1 ] || return 0
 	[ "$(id -u)" = 0 ] || { echo "Hace falta ser administrador: doas lazaro-nubes --paquetes" >&2; exit 1; }
 	# Índice al día: en un equipo que nunca actualizó, la lista vieja
 	# puede pedir versiones que ya no están.
-	apk update -q || true
+	apk_turno update -q || true
 	# shellcheck disable=SC2086
-	apk add $PAQUETES || { echo "No se pudieron instalar los paquetes (¿sin internet?)." >&2; exit 1; }
+	apk_turno add $PAQUETES || { echo "No se pudieron instalar los paquetes (¿sin internet?)." >&2; exit 1; }
 	# FUSE (lo que deja a rclone mostrar la nube como carpeta): ahora y en
 	# cada arranque.
 	[ -e /dev/fuse ] || modprobe fuse 2>/dev/null || true
@@ -104,7 +115,10 @@ ventana() {
 	fi
 	zenity --question --width=480 --title="$TITULO" --ok-label="$(_ 'Instalar')" --cancel-label="$(_ 'Cerrar')" \
 		--text="$texto" >/dev/null 2>&1 || return 0
-	sal="$(mktemp)" || exit 1
+	# En una carpeta propia: el código de salida (.rc) tampoco queda a la
+	# vista de otros usuarios en /tmp.
+	sal_dir="$(mktemp -d)" || exit 1
+	sal="$sal_dir/salida"
 	if [ "$e" = faltan-paquetes ]; then
 		( como_root "$0" --paquetes > "$sal" 2>&1; echo $? > "$sal.rc" ) |
 			zenity --progress --pulsate --auto-close --no-cancel --width=420 --title="$TITULO" \
@@ -113,17 +127,17 @@ ventana() {
 		if [ "$rc" != 0 ] || faltan_paquetes; then
 			zenity --error --width=460 --title="$TITULO" \
 				--text="$(_ 'No se pudo instalar. Revisa la conexión a internet y vuelve a intentar.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
-			rm -f "$sal" "$sal.rc"
+			rm -rf "$sal_dir"
 			return 1
 		fi
 	fi
 	if ! app > "$sal" 2>&1 || ! app_al_dia; then
 		zenity --error --width=460 --title="$TITULO" \
 			--text="$(_ 'No se pudo instalar la aplicación.')\n\n$(tail -n 3 "$sal" | sed 's/\x1b\[[0-9;]*m//g; s/[&<>]/ /g')" >/dev/null 2>&1 || true
-		rm -f "$sal" "$sal.rc"
+		rm -rf "$sal_dir"
 		return 1
 	fi
-	rm -f "$sal" "$sal.rc"
+	rm -rf "$sal_dir"
 	abrir
 }
 

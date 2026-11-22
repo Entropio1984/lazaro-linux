@@ -100,7 +100,9 @@ aplicar() {
 	fi
 	# Uno a la vez (el botón y la tarea diaria podrían coincidir).
 	if ! mkdir "$CANDADO" 2>/dev/null; then
-		otro="$(cat "$CANDADO/pid" 2>/dev/null)"
+		# Sin "|| otro=": con set -e, un candado sin pid cortaba el programa
+		# en vez de limpiarlo.
+		otro="$(cat "$CANDADO/pid" 2>/dev/null)" || otro=""
 		if [ -n "$otro" ] && kill -0 "$otro" 2>/dev/null; then
 			return 0
 		fi

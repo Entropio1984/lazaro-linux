@@ -374,8 +374,9 @@ espaciadora y Enter, y no borra nada hasta que confirmas el resumen.
 Revisa lo que escribes igual que el gráfico: la zona horaria tiene que ser
 una ciudad (por ejemplo `America/Bogota`, no solo `America`), el nombre
 del equipo no empieza ni termina con guion y no puede ser `localhost`. Para
-conectar el wifi antes, escribe (con las comillas):
-`nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"`.
+conectar el wifi antes, escribe (con las comillas)
+`nmcli --ask device wifi connect "NOMBRE DE LA RED"`; después te pide la
+clave (así no queda escrita en la pantalla ni en el historial).
 
 **No hay wifi.** Algunos portátiles tienen un botón o una combinación de
 teclas (por ejemplo Fn + F2) para encender el wifi; revisa que esté
@@ -594,7 +595,8 @@ leer datos de otros programas, como contraseñas**. Hazlo solo en un
 equipo que no se use para navegar, el banco o el correo. Se apaga desde
 el Afinador o con `doas lazaro-afinador --mitigaciones si`, y se vuelve a
 encender con `doas lazaro-afinador --mitigaciones no`. En ambos casos
-hay que reiniciar.
+hay que reiniciar. Si el cambio no se puede guardar en el arranque (GRUB),
+el Afinador lo dice y las protecciones quedan como estaban.
 
 **Si algo va peor después de un ajuste**, quítalos con **Quitar los
 ajustes** (o `doas lazaro-afinador --deshacer`) y reinicia: el equipo
