@@ -78,6 +78,10 @@ paquetes_alpine() {
 	paq="flatpak xdg-desktop-portal xdg-desktop-portal-gtk"
 	[ ! -e /usr/bin/startplasma-x11 ] && [ ! -e /usr/bin/startplasma-wayland ] || paq="$paq xdg-desktop-portal-kde"
 	[ ! -e /usr/bin/startlxqt ] || paq="$paq xdg-desktop-portal-lxqt"
+	# Índice al día: en un equipo recién instalado que nunca actualizó, la
+	# lista vieja puede pedir versiones que ya no están. Sin red no pasa
+	# nada (apk usa lo que tenga).
+	apk update -q >&2 || true
 	# shellcheck disable=SC2086
 	apk add $paq >&2 || {
 		# Con un portal que no exista en esta versión de Alpine, lo básico.

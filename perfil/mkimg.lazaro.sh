@@ -265,6 +265,7 @@ LAZARO_COMPLETA="gnome gnome-apps-core gdm
 
 profile_lazaro() {
 	profile_standard
+	lazaro_edicion=""
 	title="Lázaro Linux"
 	desc="Tu hardware aún tiene pulso.
 		Sesión live con XFCE e instalador Calamares."
