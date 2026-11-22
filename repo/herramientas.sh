@@ -68,7 +68,7 @@ install -Dm644 "$L/etc/xdg/autostart/lazaro-controladores.desktop" "$A/usr/share
 # Bienvenida: botones (un archivo por función), menú, icono y arranque
 # con la sesión.
 cp -r "$L/usr/share/lazaro/bienvenida" "$A/usr/share/lazaro/"
-# Nubes Rclone (botón "Nubes" de la Bienvenida; la instala cada persona).
+# Lázaro Nubes (botón "Nubes" de la Bienvenida; la instala cada persona).
 cp -r "$L/usr/share/lazaro/nubes-rclone" "$A/usr/share/lazaro/"
 install -Dm644 "$L/usr/share/applications/lazaro-bienvenida.desktop" "$A/usr/share/applications/lazaro-bienvenida.desktop"
 install -Dm644 "$L/usr/share/lazaro/lazaro-bienvenida-sesion.desktop" "$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"

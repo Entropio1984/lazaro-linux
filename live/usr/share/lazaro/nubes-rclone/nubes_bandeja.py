@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Icono de Nubes Rclone en el área de notificaciones (bandeja del sistema).
+Icono de Lázaro Nubes en el área de notificaciones (bandeja del sistema).
 
 - Sincroniza las carpetas locales configuradas con su nube (rclone bisync):
   cada pocos minutos y unos segundos después de que cambies algo en la carpeta.
@@ -673,7 +673,7 @@ class Bandeja:
                      "accion": lambda n=nombre: self.sincronizar(n)},
                 ]
                 if st.get("estado") == "error" and "Reconectar sesión" in st.get("mensaje", ""):
-                    hijos.append({"texto": "Reconectar sesión… (abre Nubes Rclone)",
+                    hijos.append({"texto": "Reconectar sesión… (abre Lázaro Nubes)",
                                   "icono": "view-refresh", "accion": self.abrir_interfaz})
                 if st.get("estado") == "error":
                     hijos.append({"texto": "Reparar (unir ambas copias sin borrar nada)",
@@ -732,7 +732,7 @@ class Bandeja:
                         "accion": lambda v=valor: self.cambiar_velocidad(v)}
                        for etiqueta, valor in nr.LIMITES_VELOCIDAD]},
             {"sep": True},
-            {"texto": "Abrir Nubes Rclone…", "icono": "nubes-rclone", "accion": self.abrir_interfaz},
+            {"texto": "Abrir Lázaro Nubes…", "icono": "nubes-rclone", "accion": self.abrir_interfaz},
         ]
         if self.ajustes.get("equipo_compartido"):
             menu += [{"texto": "Desconectar todas las cuentas (equipo compartido)",
@@ -750,7 +750,7 @@ class Bandeja:
         for nombre in sorted(self.sincs()):
             if nombre in self.remotos:
                 lineas.append("%s: %s" % (nombre, self._etiqueta_sinc(nombre)))
-        texto = "\n".join(lineas) or "Haz clic para abrir Nubes Rclone"
+        texto = "\n".join(lineas) or "Haz clic para abrir Lázaro Nubes"
 
         def firma(m):
             return [(i.get("texto"), i.get("activo", True), i.get("marcado"),
@@ -896,7 +896,7 @@ def main():
     try:
         fcntl.flock(bloqueo, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        print("El icono de Nubes Rclone ya está en ejecución.")
+        print("El icono de Lázaro Nubes ya está en ejecución.")
         return 0
     if not nr.rclone_bin():
         print("ERROR: rclone no está instalado.", file=sys.stderr)

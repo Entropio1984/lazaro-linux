@@ -1,5 +1,5 @@
 #!/bin/sh
-# lazaro-nubes: instala y abre "Nubes Rclone", la aplicación de Julián
+# lazaro-nubes: instala y abre "Lázaro Nubes", la aplicación de Julián
 # para conectar Google Drive, OneDrive y Dropbox como carpetas (con
 # rclone). Es el botón "Nubes" de la Bienvenida.
 #
@@ -24,7 +24,7 @@ if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TE
 APP_DIR="${LAZARO_NUBES_DIR:-/usr/share/lazaro/nubes-rclone}"
 DESTINO="${XDG_DATA_HOME:-$HOME/.local/share}/nubes-rclone"
 LANZADOR="$HOME/.local/bin/nubes-rclone"
-TITULO="$(_ 'Nubes: Google Drive, OneDrive y Dropbox')"
+TITULO="$(_ 'Lázaro Nubes: Google Drive, OneDrive y Dropbox')"
 # Lo que pide la aplicación en Alpine (rclone está en "community", que
 # Lázaro deja activo). Igual en 64 y en 32 bits.
 PAQUETES="rclone fuse3 python3 python3-tkinter py3-gobject3 xdg-utils"
@@ -98,7 +98,7 @@ ventana() {
 		app >/dev/null 2>&1 || true
 		abrir
 	fi
-	texto="$(_ 'Nubes Rclone conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n\nLa contraseña de tu cuenta se escribe en la página oficial de cada servicio: la aplicación nunca la ve.')"
+	texto="$(_ 'Lázaro Nubes conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n\nLa contraseña de tu cuenta se escribe en la página oficial de cada servicio: la aplicación nunca la ve.')"
 	if [ "$e" = faltan-paquetes ]; then
 		texto="$texto\n\n$(_ 'Para instalarla hace falta internet: se descargan rclone y lo que necesita (unos 25 MB) y se pide la contraseña de administrador.')"
 	fi

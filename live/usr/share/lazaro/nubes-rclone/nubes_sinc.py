@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Motor de sincronización de Nubes Rclone (Python puro, sin GLib ni GTK).
+Motor de sincronización de Lázaro Nubes (Python puro, sin GLib ni GTK).
 
 Mantiene al día las carpetas locales configuradas con su nube (rclone bisync):
 cada pocos minutos y unos segundos después de que cambie algo en la carpeta.
@@ -460,7 +460,7 @@ def main():
     try:
         fcntl.flock(bloqueo, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        print("La sincronización de Nubes Rclone ya está en marcha.")
+        print("La sincronización de Lázaro Nubes ya está en marcha.")
         return 0
     if not nr.rclone_bin():
         print("ERROR: rclone no está instalado.", file=sys.stderr)
@@ -488,7 +488,7 @@ def main():
         seguir[0] = False
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(sig, parar)
-    print("Sincronización de Nubes Rclone en marcha (sin icono). Ctrl+C para detener.")
+    print("Sincronización de Lázaro Nubes en marcha (sin icono). Ctrl+C para detener.")
     ultimo = 0
     while seguir[0]:
         motor.atender_cola()

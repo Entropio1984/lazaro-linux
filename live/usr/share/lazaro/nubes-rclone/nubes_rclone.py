@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Nubes Rclone - Interfaz gráfica sencilla para rclone en Linux.
+Lázaro Nubes - Interfaz gráfica sencilla para rclone en Linux.
 
 Permite conectar Google Drive, OneDrive y Dropbox, montarlos como carpetas
 y añadirlos a la barra lateral del explorador de archivos (Nautilus, Nemo,
@@ -32,7 +32,7 @@ import threading
 import time
 import urllib.parse
 
-APP_NOMBRE = "Nubes Rclone"
+APP_NOMBRE = "Lázaro Nubes"
 APP_ID = "nubes-rclone"
 VERSION = "1.0"
 
@@ -820,7 +820,7 @@ def actualizar_autoarranque(ajustes):
             f.write(
                 "[Desktop Entry]\n"
                 "Type=Application\n"
-                "Name=Nubes Rclone (montaje automático)\n"
+                "Name=Lázaro Nubes (montaje automático)\n"
                 "Comment=Monta Google Drive, OneDrive y Dropbox al iniciar sesión\n"
                 "Exec=%s\n"
                 "Icon=%s\n"
@@ -1106,7 +1106,7 @@ def interpretar_error(salida):
     casos = [
         (("didn't find section in config",), "La conexión ya no existe en rclone."),
         (("invalid_grant", "token expired", "couldn't fetch token", "unauthorized", "401"),
-         "La sesión con el servicio caducó. Abre Nubes Rclone → «Mis nubes» y pulsa "
+         "La sesión con el servicio caducó. Abre Lázaro Nubes → «Mis nubes» y pulsa "
          "«Reconectar sesión»."),
         (("too many deletes",),
          "Se detuvo por seguridad: se iban a borrar demasiados archivos de una vez. "
@@ -1225,7 +1225,7 @@ def crear_autoarranque_bandeja():
         f.write(
             "[Desktop Entry]\n"
             "Type=Application\n"
-            "Name=Nubes Rclone (icono de sincronización)\n"
+            "Name=Lázaro Nubes (icono de sincronización)\n"
             "Comment=Icono en el área de notificaciones con el estado de tus nubes\n"
             "Exec=%s\n"
             "Icon=%s\n"
@@ -1281,7 +1281,7 @@ def iniciar_interfaz():
         fcntl.flock(bloqueo, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         pedir_mostrar_ventana()
-        print("Nubes Rclone ya está abierta: se muestra la ventana existente.")
+        print("Lázaro Nubes ya está abierta: se muestra la ventana existente.")
         return 0
     # Modo «equipo compartido»: limpiar ANTES de mostrar nada, para que nadie vea las
     # cuentas del usuario anterior aunque abra la ventana nada más entrar al escritorio

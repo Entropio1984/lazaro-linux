@@ -1211,12 +1211,12 @@ msgid "Listo. Al reiniciar se usa el kernel de Alpine."
 msgstr ""
 
 #: live/usr/sbin/lazaro-nubes live/usr/share/lazaro/bienvenida/funciones/23-nubes.conf
-msgid "Nubes: Google Drive, OneDrive y Dropbox"
+msgid "Lázaro Nubes: Google Drive, OneDrive y Dropbox"
 msgstr ""
 
 #: live/usr/sbin/lazaro-nubes
 msgid ""
-"Nubes Rclone conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n"
+"Lázaro Nubes conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n"
 "\n"
 "La contraseña de tu cuenta se escribe en la página oficial de cada servicio: la aplicación nunca la ve."
 msgstr ""

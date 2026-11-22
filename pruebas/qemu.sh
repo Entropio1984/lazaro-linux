@@ -730,8 +730,8 @@ prueba_instalar() {
 		elif grep -q LAZARO-NUBES-NO "$serie2" ||
 			{ [ "$red" = con-red ] && [ "$de" != ninguno ] && ! grep -q LAZARO-NUBES-OK "$serie2"; }; then
 			# Con internet, el botón "Nubes" de la Bienvenida debe
-			# instalar rclone y la aplicación Nubes Rclone (64 y 32 bits).
-			echo "FALLO: el botón Nubes de la Bienvenida no logró instalar Nubes Rclone." >&2
+			# instalar rclone y la aplicación Lázaro Nubes (64 y 32 bits).
+			echo "FALLO: el botón Lázaro Nubes de la Bienvenida no logró instalar Lázaro Nubes." >&2
 			grep -A 15 LAZARO-NUBES "$serie2" >&2 || true
 			ok=1
 		elif grep -q LAZARO-BIENVENIDA-NO "$serie2" ||

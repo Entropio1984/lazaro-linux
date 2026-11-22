@@ -974,7 +974,7 @@ paso_bienvenida() { # RAIZ
 	install -Dm755 /usr/sbin/lazaro-bienvenida "$1/usr/local/sbin/lazaro-bienvenida"
 	[ ! -x /usr/sbin/lazaro-flatpak ] ||
 		install -Dm755 /usr/sbin/lazaro-flatpak "$1/usr/local/sbin/lazaro-flatpak"
-	# Botón "Nubes": lazaro-nubes y la aplicación Nubes Rclone, que cada
+	# Botón "Nubes": lazaro-nubes y la aplicación Lázaro Nubes, que cada
 	# persona instala en su carpeta con ese botón.
 	if [ -x /usr/sbin/lazaro-nubes ] && [ -d "$DATOS/nubes-rclone" ]; then
 		install -Dm755 /usr/sbin/lazaro-nubes "$1/usr/local/sbin/lazaro-nubes"

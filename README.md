@@ -507,9 +507,9 @@ Con la terminal: `doas lazaro-flatpak --activar chrome` (también
 `onlyoffice` y `brave`, o solo `--activar` para activar Flathub). En la
 de **32 bits** no hay Flathub (no publica programas para 32 bits).
 
-### Nubes: Google Drive, OneDrive y Dropbox
+### Lázaro Nubes: Google Drive, OneDrive y Dropbox
 
-**Nubes Rclone** es una aplicación hecha para Lázaro que conecta tus
+**Lázaro Nubes** es una aplicación hecha para Lázaro que conecta tus
 cuentas de **Google Drive**, **Microsoft OneDrive** y **Dropbox** y las
 muestra como carpetas normales (en `~/Nubes`, y en la barra lateral del
 explorador de archivos). También puede guardar una **copia que funciona
@@ -520,11 +520,11 @@ cada servicio: la aplicación nunca la ve. Por dentro usa
 [rclone](https://rclone.org), un programa muy conocido para copiar
 archivos a la nube.
 
-Se instala desde la Bienvenida con el botón **Nubes: Google Drive,
+Se instala desde la Bienvenida con el botón **Lázaro Nubes: Google Drive,
 OneDrive y Dropbox** (sección **Programas**, y también en la página de
 inicio). La primera vez pide tu contraseña de administrador y descarga
 rclone y lo que necesita (unos 25 MB, **necesita internet**); después el
-mismo botón, o **Nubes Rclone** en el menú, la abre directamente. Si
+mismo botón, o **Lázaro Nubes** en el menú, la abre directamente. Si
 una versión nueva de Lázaro trae una versión nueva de la aplicación, el
 botón la pone al día sola. Funciona en la de 64 y en la de **32 bits**.
 

@@ -535,7 +535,7 @@ idioma_sesion() {
 		fi
 	fi
 	# Botón "Nubes" de la Bienvenida: con internet, instala los paquetes
-	# (como administrador) y la aplicación Nubes Rclone en la carpeta de
+	# (como administrador) y la aplicación Lázaro Nubes en la carpeta de
 	# "prueba", como lo hace el botón, y la aplicación responde.
 	if [ -x /usr/local/sbin/lazaro-nubes ] && id prueba >/dev/null 2>&1; then
 		if wget -q --spider -T 20 https://dl-cdn.alpinelinux.org/alpine/ >/dev/null 2>&1; then

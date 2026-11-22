@@ -46,7 +46,7 @@ correr instalado "$TMP/bin:$TMP/vacio" --listar > "$TMP/inst.txt"
 es "instalado: se ve el Afinador" 'grep -q "	Afinador	visible	" "$TMP/inst.txt"'
 es "instalado: se ve el Manual" 'grep -q "	Manual de Lázaro	visible	" "$TMP/inst.txt"'
 es "instalado: se ve Aplicaciones de Flathub" 'grep -q "	Aplicaciones de Flathub	visible	" "$TMP/inst.txt"'
-es "instalado: se ve Nubes" 'grep -q "	Nubes: Google Drive, OneDrive y Dropbox	visible	" "$TMP/inst.txt"'
+es "instalado: se ve Nubes" 'grep -q "	Lázaro Nubes: Google Drive, OneDrive y Dropbox	visible	" "$TMP/inst.txt"'
 es "instalado: se ve el Diagnóstico" 'grep -q "	Diagnóstico	visible	" "$TMP/inst.txt"'
 es "instalado: no se ve Instalar Lázaro" 'grep -q "	Instalar Lázaro	oculta	" "$TMP/inst.txt"'
 # Sin tienda instalada (ni GNOME Software ni Discover), su botón no sale.
@@ -205,8 +205,8 @@ es "flatpak: una aplicación desconocida se rechaza" '[ "$rc" = 2 ]'
 # aplicación de verdad (su instalar.sh) en una carpeta personal de
 # mentira, dice si está al día y la pone al día si Lázaro trae otra.
 es "sintaxis de lazaro-nubes" 'sh -n "$DIR/live/usr/sbin/lazaro-nubes"'
-es "sintaxis del instalador de Nubes Rclone" 'sh -n "$DIR/live/usr/share/lazaro/nubes-rclone/instalar.sh"'
-es "Nubes Rclone: el programa compila" 'python3 -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" "$DIR"/live/usr/share/lazaro/nubes-rclone/*.py'
+es "sintaxis del instalador de Lázaro Nubes" 'sh -n "$DIR/live/usr/share/lazaro/nubes-rclone/instalar.sh"'
+es "Lázaro Nubes: el programa compila" 'python3 -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" "$DIR"/live/usr/share/lazaro/nubes-rclone/*.py'
 rc=0; sh "$DIR/live/usr/sbin/lazaro-nubes" --otra > /dev/null 2>&1 || rc=$?
 es "nubes: una orden desconocida se rechaza" '[ "$rc" = 2 ]'
 if [ "$(id -u)" != 0 ]; then
@@ -218,13 +218,13 @@ if [ "$(id -u)" != 0 ]; then
 		sh "$DIR/live/usr/sbin/lazaro-nubes" "$@"; }
 	es "nubes: antes de instalar falta la aplicación" '[ "$(nu --estado)" = falta-app ]'
 	es "nubes: instala la aplicación en la carpeta personal" 'nu --app > "$TMP/nu1.txt" 2>&1 && [ "$(nu --estado)" = lista ]'
-	es "nubes: deja el lanzador y la entrada del menú" '"$NU/casa/.local/bin/nubes-rclone" --version | grep -q "^Nubes Rclone " && grep -q "^Exec=.*nubes-rclone" "$NU/casa/.local/share/applications/nubes-rclone.desktop"'
+	es "nubes: deja el lanzador y la entrada del menú" '"$NU/casa/.local/bin/nubes-rclone" --version | grep -q "^Lázaro Nubes " && grep -q "^Exec=.*nubes-rclone" "$NU/casa/.local/share/applications/nubes-rclone.desktop"'
 	es "nubes: deja el icono junto al reloj al iniciar sesión" 'grep -q "^Exec=.*nubes-rclone --bandeja" "$NU/casa/.config/autostart/nubes-rclone-bandeja.desktop"'
 	echo "# cambio" >> "$NU/app/nubes_rclone.py"
 	es "nubes: si Lázaro trae otra versión, no está al día" '[ "$(nu --estado)" = falta-app ]'
 	es "nubes: se pone al día" 'nu --app > "$TMP/nu2.txt" 2>&1 && [ "$(nu --estado)" = lista ]'
 else
-	echo "(como administrador no se prueba instalar Nubes Rclone: su instalador no corre como root)"
+	echo "(como administrador no se prueba instalar Lázaro Nubes: su instalador no corre como root)"
 fi
 
 echo

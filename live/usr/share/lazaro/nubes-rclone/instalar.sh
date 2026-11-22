@@ -1,5 +1,5 @@
 #!/bin/sh
-# Instalador de «Nubes Rclone» para cualquier distribución Linux.
+# Instalador de «Lázaro Nubes» para cualquier distribución Linux.
 # Escrito en sh POSIX: funciona con bash, dash y el ash de BusyBox (Alpine).
 #
 #   ./instalar.sh                      instala dependencias y la aplicación
@@ -332,7 +332,7 @@ EOF
     cat > "$LANZADOR" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Nubes Rclone
+Name=Lázaro Nubes
 GenericName=Gestor de nubes
 Comment=Conecta Google Drive, OneDrive y Dropbox como carpetas
 Exec=$(exec_desktop "$BIN/$APP_ID")
@@ -364,7 +364,7 @@ instalar_bandeja() {
     cat > "$CONFIG/autostart/$APP_ID-bandeja.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Nubes Rclone (icono de sincronización)
+Name=Lázaro Nubes (icono de sincronización)
 Comment=Icono en el área de notificaciones con el estado de tus nubes
 Exec=$(exec_desktop "$BIN/$APP_ID") --bandeja
 Icon=$APP_ID
@@ -426,7 +426,7 @@ comprobar() {
         *) aviso "$BIN no está en tu PATH; ábrela desde el menú o con: $BIN/$APP_ID" ;;
     esac
     echo
-    ok "Listo. Busca «Nubes Rclone» en el menú de aplicaciones o ejecuta: $APP_ID"
+    ok "Listo. Busca «Lázaro Nubes» en el menú de aplicaciones o ejecuta: $APP_ID"
 }
 
 DEPENDENCIAS=1

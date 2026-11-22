@@ -1,4 +1,4 @@
-# Nubes Rclone
+# Lázaro Nubes
 
 Interfaz gráfica sencilla, en español, para usar **rclone** en Linux y conectar
 **Google Drive**, **Microsoft OneDrive** y **Dropbox** como carpetas normales
@@ -33,7 +33,7 @@ chmod +x instalar.sh
 El instalador detecta tu gestor de paquetes (`apk`, `apt`, `dnf`, `yum`,
 `pacman`, `zypper`, `xbps`, `eopkg`, `emerge`), instala `rclone`, `fuse3`,
 `python3-tk`, PyGObject y `xdg-utils` (pidiendo permisos con `sudo`, `doas` o `su`),
-crea el lanzador **Nubes Rclone** en el menú de aplicaciones y deja en marcha el
+crea el lanzador **Lázaro Nubes** en el menú de aplicaciones y deja en marcha el
 icono del área de notificaciones (que también se iniciará solo en cada sesión).
 
 En Alpine además carga el módulo `fuse` y lo añade a `/etc/modules`.
