@@ -238,7 +238,7 @@ activar() {
 		return 0
 	fi
 	sincronizar_con_candado || die "Sin el repositorio no se puede seguir. Revisa la conexión a internet y vuelve a intentarlo."
-	instalar_herramientas || exit 1
+	con_turno_apk instalar_herramientas || exit 1
 	echo "LAZARO-REPOSITORIO-ACTIVO"
 	echo "Listo: las herramientas de Lázaro se actualizarán con las actualizaciones del sistema."
 }
@@ -258,7 +258,11 @@ desactivar() {
 # repositorio de Lázaro (todos despiertan juntos al llegar internet).
 con_turno_apk() { # COMANDO...
 	if [ -z "$RAIZ" ] && command -v flock >/dev/null 2>&1 && [ -w /run ]; then
-		(exec 8>/run/lazaro-apk.lock && flock 8 && "$@")
+		# El candado lo guarda esta subshell; la orden no hereda el
+		# descriptor (8>&-). Si lo heredara, un programa que la orden deja
+		# corriendo (un servicio, las descargas de Flathub) mantendría el
+		# candado tomado por horas y los demás esperarían para siempre.
+		(exec 8>/run/lazaro-apk.lock && flock 8 && "$@" 8>&-)
 	else
 		"$@"
 	fi
@@ -269,7 +273,7 @@ con_turno_apk() { # COMANDO...
 # copias juntas borrarían los archivos que la otra está bajando.
 sincronizar_con_candado() {
 	if [ -z "$RAIZ" ] && command -v flock >/dev/null 2>&1 && [ -w /run ]; then
-		(exec 7>/run/lazaro-repositorio.lock && flock 7 && sincronizar)
+		(exec 7>/run/lazaro-repositorio.lock && flock 7 && sincronizar 7>&-)
 	else
 		sincronizar
 	fi

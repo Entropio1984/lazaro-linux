@@ -335,7 +335,7 @@ jobs:
 
           Para activarlo en un equipo instalado antes de que existiera, una sola vez en la Terminal:
 
-              wget -qO /tmp/lr https://github.com/$GH_REPO/releases/download/$ETIQUETA/lazaro-repositorio && doas sh /tmp/lr --activar
+              wget -qO ~/lr https://github.com/$GH_REPO/releases/download/$ETIQUETA/lazaro-repositorio && doas sh ~/lr --activar
 
           Paquetes:
           $(cd repo-x86_64 && ls ./*.apk | sed 's|^\./|- |')
