@@ -217,7 +217,7 @@ def ventana_principal():
                 break
         textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, valign=Gtk.Align.CENTER)
         titulo = Gtk.Label(xalign=0)
-        titulo.set_markup("<span size='x-large' weight='bold'>%s</span>" % NOMBRE)
+        titulo.set_markup("<span size='x-large' weight='bold'>%s</span>" % GLib.markup_escape_text(NOMBRE))
         paso = Gtk.Label(xalign=0, wrap=True, max_width_chars=60)
         paso.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         paso.get_style_context().add_class("dim-label")

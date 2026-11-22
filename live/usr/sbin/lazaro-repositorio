@@ -92,7 +92,9 @@ indice() {
 
 bajar() { # URL DESTINO
 	if command -v curl >/dev/null 2>&1; then
-		curl -fsSL --retry 3 --connect-timeout 20 -o "$2" "$1"
+		# Si la descarga se queda quieta un minuto, se corta (como wget -T).
+		# Sin tiempo total: el kernel pesa ~96 MB y hay conexiones lentas.
+		curl -fsSL --retry 3 --connect-timeout 20 --speed-limit 1 --speed-time 60 -o "$2" "$1"
 	else
 		wget -q -T 30 -O "$2" "$1"
 	fi
