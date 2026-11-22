@@ -534,6 +534,27 @@ idioma_sesion() {
 			fi
 		fi
 	fi
+	# Botón "Nubes" de la Bienvenida: con internet, instala los paquetes
+	# (como administrador) y la aplicación Lázaro Nubes en la carpeta de
+	# "prueba", como lo hace el botón, y la aplicación responde.
+	if [ -x /usr/local/sbin/lazaro-nubes ] && id prueba >/dev/null 2>&1; then
+		if wget -q --spider -T 20 https://dl-cdn.alpinelinux.org/alpine/ >/dev/null 2>&1; then
+			nu_sal="$(timeout 600 /usr/local/sbin/lazaro-nubes --paquetes 2>&1)"
+			nu_rc=$?
+			if [ "$nu_rc" = 0 ]; then
+				nu_sal="$(su -s /bin/sh prueba -c 'cd && timeout 300 /usr/local/sbin/lazaro-nubes --app' 2>&1)"
+				nu_rc=$?
+			fi
+			nu_est="$(su -s /bin/sh prueba -c 'cd && /usr/local/sbin/lazaro-nubes --estado' 2>/dev/null)"
+			nu_ver="$(su -s /bin/sh prueba -c 'cd && ~/.local/bin/nubes-rclone --version' 2>/dev/null)"
+			if [ "$nu_rc" = 0 ] && [ "$nu_est" = lista ] && [ -n "$nu_ver" ] && grep -qx fuse /etc/modules; then
+				echo "LAZARO-NUBES-OK $nu_ver, $(rclone version 2>/dev/null | head -n 1)"
+			else
+				echo "LAZARO-NUBES-NO rc=$nu_rc estado=$nu_est"
+				printf '%s\n' "$nu_sal" | tail -n 15
+			fi
+		fi
+	fi
 	# Bienvenida: con escritorio, el programa quedó instalado, sus
 	# archivos de funciones están bien escritos y Python encuentra GTK 3
 	# (sin eso la ventana no abre).

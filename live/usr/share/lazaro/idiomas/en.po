@@ -1447,3 +1447,27 @@ msgstr "Flatpak with Flathub: app store"
 
 msgid "Acepto la licencia de Intel para el firmware de mi tarjeta wifi"
 msgstr "I accept the Intel license for my wifi card's firmware"
+
+msgid "Lázaro Nubes: Google Drive, OneDrive y Dropbox"
+msgstr "Lázaro Nubes: Google Drive, OneDrive and Dropbox"
+
+msgid ""
+"Lázaro Nubes conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n"
+"\n"
+"La contraseña de tu cuenta se escribe en la página oficial de cada servicio: la aplicación nunca la ve."
+msgstr ""
+"Lázaro Nubes connects your Google Drive, Microsoft OneDrive and Dropbox accounts and shows them as folders on this computer, inside your home folder (Nubes). It can also keep a copy that works without internet, and an icon next to the clock tells you when everything is up to date.\n"
+"\n"
+"You type your account password on each service's official page: the app never sees it."
+
+msgid "Para instalarla hace falta internet: se descargan rclone y lo que necesita (unos 25 MB) y se pide la contraseña de administrador."
+msgstr "Installing it needs internet: rclone and what it needs are downloaded (about 25 MB) and the administrator password is requested."
+
+msgid "Descargando rclone y lo que necesita…"
+msgstr "Downloading rclone and what it needs…"
+
+msgid "No se pudo instalar la aplicación."
+msgstr "The app could not be installed."
+
+msgid "Conecta tus cuentas de Google Drive, OneDrive o Dropbox y úsalas como carpetas del equipo. La primera vez se instala (hace falta internet)."
+msgstr "Connect your Google Drive, OneDrive or Dropbox accounts and use them as folders on this computer. The first time it gets installed (internet needed)."

@@ -974,6 +974,14 @@ paso_bienvenida() { # RAIZ
 	install -Dm755 /usr/sbin/lazaro-bienvenida "$1/usr/local/sbin/lazaro-bienvenida"
 	[ ! -x /usr/sbin/lazaro-flatpak ] ||
 		install -Dm755 /usr/sbin/lazaro-flatpak "$1/usr/local/sbin/lazaro-flatpak"
+	# Botón "Nubes": lazaro-nubes y la aplicación Lázaro Nubes, que cada
+	# persona instala en su carpeta con ese botón.
+	if [ -x /usr/sbin/lazaro-nubes ] && [ -d "$DATOS/nubes-rclone" ]; then
+		install -Dm755 /usr/sbin/lazaro-nubes "$1/usr/local/sbin/lazaro-nubes"
+		rm -rf "$1/usr/share/lazaro/nubes-rclone"
+		mkdir -p "$1/usr/share/lazaro"
+		cp -a "$DATOS/nubes-rclone" "$1/usr/share/lazaro/"
+	fi
 	# La ventana de "Actualizar el sistema", con el aspecto de la Bienvenida.
 	install -Dm755 /usr/sbin/lazaro-actualizador "$1/usr/local/sbin/lazaro-actualizador"
 	mkdir -p "$1/usr/share/lazaro"

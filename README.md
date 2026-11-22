@@ -451,7 +451,8 @@ Diagnóstico queda siempre en español, para que quien ayuda lo lea igual.
 
 Al iniciar sesión (también en la sesión de prueba) se abre la **Bienvenida**, una ventana con botones para
 todo lo que trae Lázaro: instalar (en la sesión de prueba), actualizar,
-controladores, tienda de aplicaciones, aplicaciones de Flathub, revisión del hardware,
+controladores, tienda de aplicaciones, aplicaciones de Flathub, nubes
+(Google Drive, OneDrive y Dropbox), revisión del hardware,
 Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
 letras e iconos del escritorio que hayas elegido. Si no quieres verla en
 cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
@@ -505,6 +506,35 @@ Al terminar, cierra la sesión y vuelve a entrar para verlas en el menú.
 Con la terminal: `doas lazaro-flatpak --activar chrome` (también
 `onlyoffice` y `brave`, o solo `--activar` para activar Flathub). En la
 de **32 bits** no hay Flathub (no publica programas para 32 bits).
+
+### Lázaro Nubes: Google Drive, OneDrive y Dropbox
+
+**Lázaro Nubes** es una aplicación hecha para Lázaro que conecta tus
+cuentas de **Google Drive**, **Microsoft OneDrive** y **Dropbox** y las
+muestra como carpetas normales (en `~/Nubes`, y en la barra lateral del
+explorador de archivos). También puede guardar una **copia que funciona
+sin internet** (en `~/NubesSincronizadas`) y deja un **icono junto al
+reloj** que avisa si todo está al día, si está sincronizando o si hay un
+problema. La contraseña de tu cuenta se escribe en la página oficial de
+cada servicio: la aplicación nunca la ve. Por dentro usa
+[rclone](https://rclone.org), un programa muy conocido para copiar
+archivos a la nube.
+
+Se instala desde la Bienvenida con el botón **Lázaro Nubes: Google Drive,
+OneDrive y Dropbox** (sección **Programas**, y también en la página de
+inicio). La primera vez pide tu contraseña de administrador y descarga
+rclone y lo que necesita (unos 25 MB, **necesita internet**); después el
+mismo botón, o **Lázaro Nubes** en el menú, la abre directamente. Si
+una versión nueva de Lázaro trae una versión nueva de la aplicación, el
+botón la pone al día sola. Funciona en la de 64 y en la de **32 bits**.
+
+<img src="docs/imagenes/nubes.png" alt="Ventana de Lázaro Nubes antes de instalar, con los botones Cerrar e Instalar" width="480">
+
+Cada persona del equipo la instala con su usuario (queda en su carpeta
+personal, con sus propias cuentas). Para quitarla:
+`sh /usr/share/lazaro/nubes-rclone/instalar.sh --desinstalar` (no borra
+tus archivos ni tus conexiones). Su manual completo está en
+`/usr/share/lazaro/nubes-rclone/README.md`.
 
 ### Afinador: que el equipo responda mejor
 

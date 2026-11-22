@@ -35,7 +35,7 @@ msgstr ""
 msgid "Solo actualizar"
 msgstr ""
 
-#: live/usr/sbin/lazaro-actualizador live/usr/sbin/lazaro-afinador live/usr/sbin/lazaro-bienvenida live/usr/sbin/lazaro-diagnostico live/usr/sbin/lazaro-flatpak live/usr/sbin/lazaro-idioma live/usr/sbin/lazaro-kernel
+#: live/usr/sbin/lazaro-actualizador live/usr/sbin/lazaro-afinador live/usr/sbin/lazaro-bienvenida live/usr/sbin/lazaro-diagnostico live/usr/sbin/lazaro-flatpak live/usr/sbin/lazaro-idioma live/usr/sbin/lazaro-kernel live/usr/sbin/lazaro-nubes
 msgid "Cerrar"
 msgstr ""
 
@@ -297,7 +297,7 @@ msgstr ""
 msgid "Inicio"
 msgstr ""
 
-#: live/usr/sbin/lazaro-bienvenida
+#: live/usr/sbin/lazaro-bienvenida live/usr/sbin/lazaro-nubes
 msgid "No se pudo instalar. Revisa la conexión a internet y vuelve a intentar."
 msgstr ""
 
@@ -491,7 +491,7 @@ msgstr ""
 msgid "Falta algo para tu hardware:"
 msgstr ""
 
-#: live/usr/sbin/lazaro-controladores live/usr/sbin/lazaro-flatpak live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
+#: live/usr/sbin/lazaro-controladores live/usr/sbin/lazaro-flatpak live/usr/sbin/lazaro-nubes live/usr/share/lazaro/bienvenida/funciones/05-instalar.conf
 msgid "Instalar"
 msgstr ""
 
@@ -1210,6 +1210,29 @@ msgstr ""
 msgid "Listo. Al reiniciar se usa el kernel de Alpine."
 msgstr ""
 
+#: live/usr/sbin/lazaro-nubes live/usr/share/lazaro/bienvenida/funciones/23-nubes.conf
+msgid "Lázaro Nubes: Google Drive, OneDrive y Dropbox"
+msgstr ""
+
+#: live/usr/sbin/lazaro-nubes
+msgid ""
+"Lázaro Nubes conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n"
+"\n"
+"La contraseña de tu cuenta se escribe en la página oficial de cada servicio: la aplicación nunca la ve."
+msgstr ""
+
+#: live/usr/sbin/lazaro-nubes
+msgid "Para instalarla hace falta internet: se descargan rclone y lo que necesita (unos 25 MB) y se pide la contraseña de administrador."
+msgstr ""
+
+#: live/usr/sbin/lazaro-nubes
+msgid "Descargando rclone y lo que necesita…"
+msgstr ""
+
+#: live/usr/sbin/lazaro-nubes
+msgid "No se pudo instalar la aplicación."
+msgstr ""
+
 #: live/usr/sbin/lazaro-bienvenida
 msgid "Abrir"
 msgstr ""
@@ -1266,7 +1289,7 @@ msgstr ""
 msgid "Revisa si al wifi, la impresora, el sonido u otra parte del equipo le falta algo para funcionar, y lo instala."
 msgstr ""
 
-#: live/usr/share/lazaro/bienvenida/funciones/20-tienda.conf live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
+#: live/usr/share/lazaro/bienvenida/funciones/20-tienda.conf live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf live/usr/share/lazaro/bienvenida/funciones/23-nubes.conf live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
 msgid "Programas"
 msgstr ""
 
@@ -1280,6 +1303,10 @@ msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/funciones/22-flatpak.conf
 msgid "Activa Flatpak y Flathub e instala con un clic OnlyOffice, Google Chrome o Brave. Después, la tienda ofrece miles de aplicaciones más."
+msgstr ""
+
+#: live/usr/share/lazaro/bienvenida/funciones/23-nubes.conf
+msgid "Conecta tus cuentas de Google Drive, OneDrive o Dropbox y úsalas como carpetas del equipo. La primera vez se instala (hace falta internet)."
 msgstr ""
 
 #: live/usr/share/lazaro/bienvenida/funciones/24-youtube.conf
