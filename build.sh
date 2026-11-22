@@ -109,14 +109,17 @@ chown -R constructor:abuild "$CACHE"
 # porque la carpeta de configuración de abuild cambió entre versiones
 # (~/.abuild en 3.24, ~/.config/abuild en edge).
 LLAVE="$CACHE/llaves/lazaro-linux.rsa"
+# La parte privada, solo para root (umask 077 y chmod 600).
+mkdir -p "${LLAVE%/*}" && chmod 700 "${LLAVE%/*}"
 if [ ! -f "$LLAVE" ]; then
 	msg "Creando la llave de firma"
-	openssl genrsa -out "$LLAVE" 2048
+	(umask 077; openssl genrsa -out "$LLAVE" 2048)
 	openssl rsa -in "$LLAVE" -pubout -out "$LLAVE.pub"
 fi
 for d in "$CONSTRUCTOR_HOME/.abuild" "$CONSTRUCTOR_HOME/.config/abuild"; do
 	mkdir -p "$d"
 	cp "$LLAVE" "$LLAVE.pub" "$d/"
+	chmod 600 "$d/lazaro-linux.rsa"
 	echo "PACKAGER_PRIVKEY=\"$d/lazaro-linux.rsa\"" > "$d/abuild.conf"
 done
 cp "$LLAVE.pub" /etc/apk/keys/

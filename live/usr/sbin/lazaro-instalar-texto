@@ -140,8 +140,8 @@ Conecta el cable de red, o elige otro escritorio: todos menos
 GNOME y Plasma se instalan sin internet.
 
 Para usar wifi: cancela, escribe
-  nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"
-(con las comillas)
+  nmcli --ask device wifi connect "NOMBRE DE LA RED"
+(con las comillas; después pide la clave)
 y vuelve a abrir el instalador.')" 14 70
 done
 
@@ -236,8 +236,15 @@ while :; do
 "$(_ 'Nombre de usuario para entrar (minúsculas y números, sin espacios):')" 9 64 "$sugerido") || cancelar
 	case "$usuario" in
 		root|lazaro|"") dlg --msgbox "$(_ 'Ese nombre no se puede usar; elige otro.')" 7 50 ;;
-		[a-z]*) printf '%s' "$usuario" | grep -qx '[a-z][a-z0-9_-]*' && break
-			dlg --msgbox "$(_ 'Usa solo minúsculas, números, - y _, empezando con una letra.')" 7 64 ;;
+		[a-z]*) if ! printf '%s' "$usuario" | grep -qx '[a-z][a-z0-9_-]*'; then
+				dlg --msgbox "$(_ 'Usa solo minúsculas, números, - y _, empezando con una letra.')" 7 64
+			# Las cuentas del sistema (bin, daemon, nobody...): sin esto, el
+			# disco se borraba y recién después fallaba al crear la cuenta.
+			elif grep -q "^$usuario:" /etc/passwd /etc/group 2>/dev/null; then
+				dlg --msgbox "$(_ 'Ese nombre no se puede usar; elige otro.')" 7 50
+			else
+				break
+			fi ;;
 		*) dlg --msgbox "$(_ 'Debe empezar con una letra minúscula.')" 7 50 ;;
 	esac
 done

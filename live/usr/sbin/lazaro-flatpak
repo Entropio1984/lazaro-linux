@@ -70,6 +70,17 @@ como_root() {
 
 avance() { printf '# %s\n' "$1"; }
 
+# Un programa de Lázaro a la vez instala paquetes: si el primer arranque,
+# Controladores o el repositorio de Lázaro están usando apk, se espera el
+# turno (el mismo candado que usan ellos) en vez de fallar.
+apk_turno() { # ARGUMENTOS DE APK...
+	if command -v flock >/dev/null 2>&1 && [ -w /run ]; then
+		(exec 8>/run/lazaro-apk.lock && flock 8 && apk "$@" 8>&-)
+	else
+		apk "$@"
+	fi
+}
+
 # Paquetes de Alpine: Flatpak, los portales (lo que deja a las
 # aplicaciones de Flathub abrir y guardar archivos con las ventanas del
 # escritorio) y el complemento de la tienda.
@@ -81,21 +92,21 @@ paquetes_alpine() {
 	# Índice al día: en un equipo recién instalado que nunca actualizó, la
 	# lista vieja puede pedir versiones que ya no están. Sin red no pasa
 	# nada (apk usa lo que tenga).
-	apk update -q >&2 || true
+	apk_turno update -q >&2 || true
 	# shellcheck disable=SC2086
-	apk add $paq >&2 || {
+	apk_turno add $paq >&2 || {
 		# Con un portal que no exista en esta versión de Alpine, lo básico.
-		apk add flatpak xdg-desktop-portal xdg-desktop-portal-gtk >&2 || return 1
+		apk_turno add flatpak xdg-desktop-portal xdg-desktop-portal-gtk >&2 || return 1
 	}
 	# Para que la tienda que haya muestre lo de Flathub. Si el complemento
 	# no existe en esta versión de Alpine, Flatpak sirve igual.
 	# Si falla, se avisa al final (TIENDA_SIN_FLATHUB): Flathub funciona,
 	# pero la tienda no mostrará sus aplicaciones.
-	if command -v gnome-software >/dev/null 2>&1 && ! apk add gnome-software-plugin-flatpak >&2; then
+	if command -v gnome-software >/dev/null 2>&1 && ! apk_turno add gnome-software-plugin-flatpak >&2; then
 		echo "Aviso: no se pudo instalar el complemento de Flatpak para la tienda." >&2
 		TIENDA_SIN_FLATHUB=si
 	fi
-	if command -v plasma-discover >/dev/null 2>&1 && ! apk add discover-backend-flatpak >&2; then
+	if command -v plasma-discover >/dev/null 2>&1 && ! apk_turno add discover-backend-flatpak >&2; then
 		echo "Aviso: no se pudo instalar el complemento de Flatpak para Discover." >&2
 		TIENDA_SIN_FLATHUB=si
 	fi
@@ -228,7 +239,10 @@ ventana() {
 	if [ "$activo" = activo ] && [ -z "$elegidas" ]; then
 		return 0
 	fi
-	sal="$(mktemp)" || exit 1
+	# En una carpeta propia: el código de salida (.rc) tampoco queda a la
+	# vista de otros usuarios en /tmp.
+	sal_dir="$(mktemp -d)" || exit 1
+	sal="$sal_dir/salida"
 	# shellcheck disable=SC2086
 	( como_root "$0" --activar $elegidas 2> "$sal"; echo $? > "$sal.rc" ) |
 		zenity --progress --pulsate --auto-close --no-cancel --width=420 --title="$TITULO" \
@@ -247,7 +261,7 @@ ventana() {
 		zenity --error --width=460 --title="$TITULO" \
 			--text="$(_ 'No se pudo activar. Revisa la conexión a internet y vuelve a intentar.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
 	fi
-	rm -f "$sal" "$sal.rc"
+	rm -rf "$sal_dir"
 }
 
 case "${1:-}" in

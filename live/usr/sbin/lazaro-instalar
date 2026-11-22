@@ -1083,7 +1083,7 @@ paso_ajustes() {
 			flatpak|onlyoffice|chrome|brave)
 				# Flathub no publica aplicaciones de 32 bits.
 				[ "$BITS32" = si ] || con="$con,$e" ;;
-			fastfetch|btop|vlc|youtube|libreoffice|flatpak|onlyoffice|chrome|brave)
+			fastfetch|btop|vlc|youtube|libreoffice)
 				con="$con,$e" ;;
 			*) log "Aviso: programa adicional desconocido '$e'; se omite." ;;
 		esac
@@ -1723,9 +1723,14 @@ paso_auto() {
 # argumento, para que no se vea en la lista de procesos; root recibe la
 # misma, como en Calamares.
 paso_texto() { # DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA TECLADO VARIANTE ZONA [EXTRAS]
-	[ -n "${LAZARO_CLAVE:-}" ] || die "falta la contraseña (LAZARO_CLAVE)"
+	# Se saca del entorno enseguida: si no, la heredaban todos los
+	# programas que corre la instalación.
+	clave_texto="${LAZARO_CLAVE:-}"
+	unset LAZARO_CLAVE
+	[ -n "$clave_texto" ] || die "falta la contraseña (LAZARO_CLAVE)"
 	log "Instalación desde la consola en $1 con '$2' (se borra el disco)"
-	instalar_disco "$1" "$2" "$3" "$4" "$LAZARO_CLAVE" "$5" "$6" "$7" "$8" "$9" "${10:-base}" si
+	instalar_disco "$1" "$2" "$3" "$4" "$clave_texto" "$5" "$6" "$7" "$8" "$9" "${10:-base}" si
+	clave_texto=""
 	desmontar_destino
 	log "Instalación terminada."
 }

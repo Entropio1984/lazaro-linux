@@ -10,9 +10,9 @@ pkgdesc="Herramientas de Lázaro Linux: bienvenida, afinador, controladores, dia
 url="https://github.com/Entropio1984/lazaro-linux"
 arch="noarch"
 license="custom"
-# La Bienvenida es un programa de Python con GTK 3 (GTK ya viene con el
-# escritorio y con Firefox).
-depends="python3 py3-gobject3"
+# La Bienvenida y el Actualizador son programas de Python con GTK 3 (GTK
+# ya viene con el escritorio y con Firefox; se nombra igual por si acaso).
+depends="python3 py3-gobject3 gtk+3.0"
 install="$pkgname.post-install $pkgname.post-upgrade"
 options="!check"
 source=""

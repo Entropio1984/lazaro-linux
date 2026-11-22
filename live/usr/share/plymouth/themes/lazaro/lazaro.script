@@ -55,6 +55,8 @@ fun mostrar_mensaje (texto)
   {
     mensaje.imagen = Image.Text(texto, 0.6, 0.75, 0.9);
     mensaje.sprite.SetImage(mensaje.imagen);
+    # Puede venir de ocultar_mensaje, que lo dejó transparente.
+    mensaje.sprite.SetOpacity(1);
     mensaje.sprite.SetPosition(Window.GetX() + ancho / 2 - mensaje.imagen.GetWidth() / 2,
                                Window.GetY() + alto * 0.92, 2);
   }

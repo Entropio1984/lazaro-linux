@@ -185,6 +185,10 @@ jobs:
 
       - name: Probar el arranque en QEMU (y comparar con linux-lts)
         shell: bash
+        # La versión viene de la receta de Alpine: por env, no pegada en el
+        # guion (así un texto raro no se puede ejecutar).
+        env:
+          VERSION_KERNEL: ${{ needs.revisar.outputs.version }}
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q qemu-system-x86 cpio >/dev/null
           sudo chmod 666 /dev/kvm 2>/dev/null || true
@@ -198,7 +202,7 @@ jobs:
           grep -q '^Memoria libre al arrancar' /tmp/arranque.txt || { echo "Falta la comparación con linux-lts."; exit 1; }
           sudo sh -c 'cat /tmp/arranque.txt >> salida/kernel/resumen.txt'
           {
-            echo "### Kernel Lázaro ${{ needs.revisar.outputs.version }}"
+            echo "### Kernel Lázaro $VERSION_KERNEL"
             echo '```'
             cat salida/kernel/resumen.txt
             echo '```'

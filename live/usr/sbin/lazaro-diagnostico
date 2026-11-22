@@ -90,7 +90,10 @@ if [ "${1:-}" = "--ventana" ]; then
 	elif command -v pkexec >/dev/null 2>&1; then como="pkexec"
 	else como="doas"
 	fi
-	sal="$(mktemp)" || exit 1
+	# En una carpeta propia: el código de salida (.rc) tampoco queda a la
+	# vista de otros usuarios en /tmp.
+	sal_dir="$(mktemp -d)" || exit 1
+	sal="$sal_dir/salida"
 	# shellcheck disable=SC2086
 	( $como sh "$0" > "$sal" 2>&1; echo $? > "$sal.rc" ) |
 		zenity --progress --pulsate --auto-close --no-cancel --width=380 --title="$t" \
@@ -109,7 +112,7 @@ if [ "${1:-}" = "--ventana" ]; then
 		zenity --error --width=460 --title="$t" \
 			--text="$(_ 'No se pudo crear el informe.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>>"$registro" || true
 	fi
-	rm -f "$sal" "$sal.rc"
+	rm -rf "$sal_dir"
 	exit 0
 fi
 
@@ -146,12 +149,16 @@ corre() {
 }
 # Lo privado no sale en el informe (se comparte para pedir ayuda, a veces
 # en un sitio público): claves de direcciones y de carpetas de red
-# (password=), la mitad de cada MAC (la otra mitad dice la marca del
-# chip, que sí sirve) y las direcciones IPv6 públicas.
+# (password=, token=, psk=...), los nombres de redes wifi que aparecen en
+# los registros (SSID 'casa', connection 'casa'), la mitad de cada MAC (la
+# otra mitad dice la marca del chip, que sí sirve) y las direcciones IPv6
+# públicas.
 censurar() {
 	sed -E \
 		-e 's|://[^/@[:space:]]*@|://***@|g' \
-		-e 's/(([Pp]ass|[Pp]assword|[Pp]asswd)=)([^,[:space:]]|,,)*/\1***/g' \
+		-e 's/(([Pp]ass|[Pp]assword|[Pp]asswd|PASS|PASSWORD|[Pp]wd|PWD|[Pp]sk|PSK|[Ss]ecret|SECRET|client_secret|[Tt]oken|TOKEN)=)([^,[:space:]]|,,)*/\1***/g' \
+		-e "s/([Ss][Ss][Ii][Dd][=: ]+['\"])[^'\"]*(['\"])/\1***\2/g" \
+		-e "s/([Cc]onnection ')[^']*(')/\1***\2/g" \
 		-e 's/(^|[^[:xdigit:]:])(([[:xdigit:]]{2}:){3})[[:xdigit:]]{2}:[[:xdigit:]]{2}:[[:xdigit:]]{2}($|[^[:xdigit:]:])/\1\2xx:xx:xx\4/g' \
 		-e 's/(inet6 )[[:xdigit:]:]+(\/[0-9]+ scope global)/\1***\2/'
 }
@@ -315,7 +322,8 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 		uid_s="$(id -u "$usuario" 2>/dev/null)"
 		dir_s=""
 		for d in "/run/user/$uid_s" "/tmp/$uid_s-runtime-dir"; do
-			[ -n "$uid_s" ] && [ -d "$d" ] && { dir_s="$d"; break; }
+			# Que sea de la persona: en /tmp otro usuario podría haberla creado.
+			[ -n "$uid_s" ] && [ -d "$d" ] && [ "$(stat -c %u "$d" 2>/dev/null)" = "$uid_s" ] && { dir_s="$d"; break; }
 		done
 		if [ -n "$dir_s" ]; then
 			su "$usuario" -c "XDG_RUNTIME_DIR='$dir_s' timeout 10 wpctl status 2>/dev/null || XDG_RUNTIME_DIR='$dir_s' timeout 10 pactl info 2>/dev/null" 2>&1 | head -n 60

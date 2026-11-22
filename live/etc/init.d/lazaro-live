@@ -219,7 +219,8 @@ AVISO_POCA_MEMORIA="
      Escribe  doas lazaro-instalar-texto  y pulsa Enter.
 
    Para el wifi, antes de eso:
-     nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"
+     nmcli --ask device wifi connect \"NOMBRE DE LA RED\"
+   (después te pide la clave)
    (Si no ves una línea para escribir, pulsa Enter.)
   ==============================================================
 "

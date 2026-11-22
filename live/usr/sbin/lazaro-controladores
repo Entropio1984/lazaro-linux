@@ -72,6 +72,11 @@ B43_SHA256="f1e7067aac5b62b67b8b6e4c517990277804339ac16065eb13c731ff909ae46f"
 B43LEGACY_URL="https://downloads.openwrt.org/sources/wl_apsta-3.130.20.0.o"
 B43LEGACY_SHA256="7dba610b1d96dd14e901bcbce14cd6ecd1b1ac6f5c0035b0d6b6dc46a7c3ef90"
 P54_BASE="https://daemonizer.de/prism54/prism54-fw"
+# Sumas de los archivos de Prism54 (comprobadas el 2026-11-22 desde GitHub).
+P54PCI_SHA256="3e62fe0c55fe4138dd10ef8fe8b4841908609d2cb2386ef71d3d0508b627170b"
+P54USB_SHA256="8387dea810a8f41b9e6e3b7e499d2465d6ca8ba8fe4c99b31314edef789c21c1"
+P54USB87_SHA256="4f4f5c523d7eab58f98d3f334d9adf1e626c2fde31b32347f5cede75fb92ad60"
+P54USB86_SHA256="1a09eb666caffebda43299859563632dd8c03c7fa9f727f033ec57e887395fa7"
 
 registrar() {
 	printf '%s %s\n' "$(date '+%F %T' 2>/dev/null)" "$*" >>"$LOG" 2>/dev/null || true
@@ -389,12 +394,18 @@ servicio() { # NOMBRE: lo deja encendido al arrancar (y ya, sin raíz)
 	[ -n "$RAIZ" ] || rc-service "$1" start >/dev/null 2>&1 || true
 }
 
-descargar() { # URL DESTINO [SHA256]
-	rm -f "$2"
-	wget -q -T 30 -O "$2" "$1" 2>/dev/null || curl -fsSL --max-time 300 -o "$2" "$1" || return 1
-	if [ -n "${3:-}" ]; then
-		[ "$(sha256sum "$2" | cut -c1-64)" = "$3" ] || { aviso "Suma de $1 distinta a la esperada"; return 1; }
+descargar() { # URL DESTINO SHA256
+	# Primero a un temporal junto al destino: solo se pone en su lugar si
+	# la descarga terminó y la suma coincide. Si no, no queda nada.
+	mkdir -p "${2%/*}"
+	tmp="$(mktemp "$2.XXXXXX")" || return 1
+	if ! { wget -q -T 30 -O "$tmp" "$1" 2>/dev/null || curl -fsSL --max-time 300 -o "$tmp" "$1"; }; then
+		rm -f "$tmp"; return 1
 	fi
+	if [ "$(sha256sum "$tmp" | cut -c1-64)" != "$3" ]; then
+		rm -f "$tmp"; aviso "Suma de $1 distinta a la esperada"; return 1
+	fi
+	chmod 644 "$tmp" && mv -f "$tmp" "$2" || { rm -f "$tmp"; return 1; }
 }
 
 recargar() { # MÓDULO: para que tome el firmware nuevo, sin raíz aparte
@@ -425,11 +436,11 @@ instalar_b43() { # b43|b43legacy
 instalar_p54() { # p54pci|p54usb
 	mkdir -p "$RAIZ/lib/firmware"
 	if [ "$1" = p54pci ]; then
-		descargar "$P54_BASE/fw-softmac/2.13.12.0.arm" "$RAIZ/lib/firmware/isl3886pci" || return 1
+		descargar "$P54_BASE/fw-softmac/2.13.12.0.arm" "$RAIZ/lib/firmware/isl3886pci" "$P54PCI_SHA256" || return 1
 	else
-		descargar "$P54_BASE/fw-usb/2.5.8.0.arm" "$RAIZ/lib/firmware/isl3886usb" || return 1
-		descargar "$P54_BASE/fw-usb/2.13.25.0.lm87.arm" "$RAIZ/lib/firmware/isl3887usb" \
-			|| descargar "$P54_BASE/fw-usb/2.13.25.0.lm86.arm" "$RAIZ/lib/firmware/isl3887usb" || true
+		descargar "$P54_BASE/fw-usb/2.5.8.0.arm" "$RAIZ/lib/firmware/isl3886usb" "$P54USB_SHA256" || return 1
+		descargar "$P54_BASE/fw-usb/2.13.25.0.lm87.arm" "$RAIZ/lib/firmware/isl3887usb" "$P54USB87_SHA256" \
+			|| descargar "$P54_BASE/fw-usb/2.13.25.0.lm86.arm" "$RAIZ/lib/firmware/isl3887usb" "$P54USB86_SHA256" || true
 	fi
 	recargar "$1"
 }
@@ -579,12 +590,13 @@ ventana() {
 # un dispositivo. Solo avisa de lo nuevo, y no de lo que solo está en el
 # menú (Julián, 2026-11-04: "avisar cuando falte algo").
 vigilar() {
-	visto="${XDG_RUNTIME_DIR:-/tmp}/lazaro-controladores.visto"
+	visto="${XDG_RUNTIME_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}}/lazaro-controladores.visto"
+	mkdir -p "${visto%/*}" 2>/dev/null || true
 	: >"$visto"
 	revisar_avisar() {
 		SOLO_AUTOMATICO=si
 		nuevos="$(lista_sesion | awk -F'\t' '{ print $2 "\t" $4 }' | while IFS="$(printf '\t')" read -r c d; do
-			grep -qx "$c" "$visto" && continue
+			grep -qxF "$c" "$visto" && continue
 			echo "$c" >>"$visto"
 			echo "$d"
 		done)"

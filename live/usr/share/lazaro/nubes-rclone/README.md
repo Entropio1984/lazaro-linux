@@ -125,7 +125,8 @@ nubes-rclone --sincronizar-servicio
 
 Con el modo «equipo compartido» (botón en «Mis nubes» o `--equipo-compartido` al
 instalar), cada inicio de sesión desconecta y olvida todas las nubes y borra la
-caché, para que la siguiente persona no acceda a las cuentas de la anterior. Se
+caché (también los registros y las listas de archivos de la sincronización),
+para que la siguiente persona no acceda a las cuentas de la anterior. Se
 hace **una sola vez por sesión**: si el icono se reinicia a mitad de clase no se
 borra lo que el docente acaba de conectar. Al terminar, el menú del icono ofrece
 «Desconectar todas las cuentas»: si algún programa retiene archivos abiertos,

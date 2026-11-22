@@ -16,9 +16,11 @@ id constructor >/dev/null 2>&1 || adduser -D -G abuild constructor
 CASA=/home/constructor
 LLAVES="$CASA/.llaves"
 mkdir -p "$LLAVES"
+chmod 700 "$LLAVES"
 if [ -n "${LAZARO_APK_KEY:-}" ]; then
 	NOMBRE=lazaro.rsa
-	printf '%s\n' "$LAZARO_APK_KEY" > "$LLAVES/$NOMBRE"
+	# La clave privada nace ya solo para su dueño (sin un momento legible).
+	(umask 077; printf '%s\n' "$LAZARO_APK_KEY" > "$LLAVES/$NOMBRE")
 	openssl rsa -in "$LLAVES/$NOMBRE" -pubout -out "$LLAVES/$NOMBRE.pub" 2>/dev/null ||
 		{ echo "ERROR: LAZARO_APK_KEY no es una clave RSA válida" >&2; exit 1; }
 	if ! cmp -s "$LLAVES/$NOMBRE.pub" "$LAZARO_DIR/repo/lazaro.rsa.pub"; then
@@ -28,7 +30,7 @@ if [ -n "${LAZARO_APK_KEY:-}" ]; then
 	FIRMA=oficial
 else
 	NOMBRE=lazaro-prueba.rsa
-	[ -f "$LLAVES/$NOMBRE" ] || openssl genrsa -out "$LLAVES/$NOMBRE" 2048 2>/dev/null
+	[ -f "$LLAVES/$NOMBRE" ] || (umask 077; openssl genrsa -out "$LLAVES/$NOMBRE" 2048 2>/dev/null)
 	openssl rsa -in "$LLAVES/$NOMBRE" -pubout -out "$LLAVES/$NOMBRE.pub" 2>/dev/null
 	FIRMA=prueba
 	echo "AVISO: sin LAZARO_APK_KEY; se firma con una clave de prueba (no se publica)."

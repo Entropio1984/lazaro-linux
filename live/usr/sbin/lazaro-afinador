@@ -351,21 +351,39 @@ deshacer() {
 
 mitigaciones() { # si|no
 	case "$1" in
-		si) conf_poner MITIGACIONES apagadas
-			aviso "Protecciones del procesador APAGADAS (mitigations=off) desde el próximo arranque." ;;
-		no) conf_poner MITIGACIONES encendidas
-			aviso "Protecciones del procesador encendidas desde el próximo arranque." ;;
+		si) nuevo=apagadas ;;
+		no) nuevo=encendidas ;;
 		*) echo "Uso: lazaro-afinador --mitigaciones si|no" >&2; exit 2 ;;
 	esac
+	# GRUB arma la línea con lo anotado: se anota primero, y si GRUB falla
+	# se vuelve a lo de antes (así el Afinador nunca dice algo que no es).
+	antes="$(conf_valor MITIGACIONES)"
+	conf_poner MITIGACIONES "$nuevo"
+	if ! mitigaciones_grub "$1"; then
+		conf_poner MITIGACIONES "${antes:-encendidas}"
+		mitigaciones_grub_volver "${antes:-encendidas}" || true
+		aviso "No se pudo cambiar GRUB: las protecciones del procesador siguen como estaban."
+		exit 1
+	fi
+	if [ "$1" = si ]; then
+		aviso "Protecciones del procesador APAGADAS (mitigations=off) desde el próximo arranque."
+	else
+		aviso "Protecciones del procesador encendidas desde el próximo arranque."
+	fi
+}
+mitigaciones_grub_volver() { # apagadas|encendidas
+	if [ "$1" = apagadas ]; then mitigaciones_grub si; else mitigaciones_grub no; fi
+}
+mitigaciones_grub() { # si|no
 	if activo; then
-		grub_poner_bloque "$(parametros_grub)" || exit 1
+		grub_poner_bloque "$(parametros_grub)" || return 1
 	elif [ "$1" = si ]; then
 		# Sin el resto de ajustes, solo este parámetro.
-		grub_poner_bloque "mitigations=off" || exit 1
+		grub_poner_bloque "mitigations=off" || return 1
 	else
-		grub_quitar_bloque || exit 1
+		grub_quitar_bloque || return 1
 	fi
-	grub_regenerar || exit 1
+	grub_regenerar || return 1
 }
 
 # --- Informes ----------------------------------------------------------------
@@ -495,12 +513,26 @@ como_root() {
 # de error dejaría la ventana en blanco.
 sin_marcas() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
 
+# Desde la ventana: si no se pudo (por ejemplo, GRUB falló), se dice; si
+# la persona cerró la ventana de la contraseña (pkexec: 126), no.
+cambiar_mitigaciones() { # si|no
+	rc=0
+	salida="$(como_root "$0" --mitigaciones "$1" 2>&1)" || rc=$?
+	if [ "$rc" = 0 ]; then
+		zenity --info --width=420 --title="$(_ 'Afinador')" \
+			--text="$(_ 'Listo. Algunos ajustes se notan después de reiniciar.')" >/dev/null 2>&1 || true
+	elif [ "$rc" != 126 ]; then
+		zenity --error --width=420 --title="$(_ 'Afinador')" \
+			--text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3 | sin_marcas)" >/dev/null 2>&1 || true
+	fi
+}
+
 ventana() {
 	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
 	while :; do
 		estado="$(revisar | awk -F'\t' '{
 			s = ($1 == "aplicado") ? "✔" : ($1 == "pendiente") ? "○" : "·"
-			printf "%s %s\n", s, $3 }')"
+			printf "%s %s\n", s, $3 }' | sin_marcas)"
 		if activo; then
 			b1="$(_ 'Quitar los ajustes')"; a1=deshacer
 		else
@@ -529,11 +561,11 @@ ventana() {
 				if [ "$(conf_valor MITIGACIONES)" = apagadas ]; then
 					zenity --question --width=480 --title="$(_ 'Protecciones del procesador')" --ok-label="$(_ 'Encenderlas')" --cancel-label="$(_ 'Dejarlas apagadas')" \
 						--text="$(_ 'Las protecciones del procesador están APAGADAS.\n\nRecomendado: encenderlas si usas el equipo para navegar, el banco o el correo.')" >/dev/null 2>&1 &&
-						como_root "$0" --mitigaciones no >/dev/null 2>&1 || true
+						cambiar_mitigaciones no
 				else
 					zenity --question --width=520 --title="$(_ 'Protecciones del procesador')" --ok-label="$(_ 'Apagarlas')" --cancel-label="$(_ 'Dejarlas encendidas')" \
 						--text="$(_ 'El kernel protege al procesador de fallos de diseño (Spectre, Meltdown y otros). Esas protecciones lo frenan un poco: en procesadores Intel de 2ª a 7ª generación, entre un 5 % y un 15 %.\n\nApagarlas lo hace más rápido, pero una página web maliciosa podría leer datos de otros programas, como contraseñas.\n\nApágalas solo si el equipo no se usa para navegar, el banco o el correo. Se aplica al reiniciar y se puede volver a encender aquí.')" >/dev/null 2>&1 &&
-						como_root "$0" --mitigaciones si >/dev/null 2>&1 || true
+						cambiar_mitigaciones si
 				fi ;;
 			"$o_ker")
 				lk=/usr/local/sbin/lazaro-kernel

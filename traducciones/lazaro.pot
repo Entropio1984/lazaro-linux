@@ -182,6 +182,18 @@ msgstr ""
 msgid "Memoria comprimida (zram) todavía no está activa (la pone la configuración final)"
 msgstr ""
 
+#: live/usr/sbin/lazaro-afinador live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf
+msgid "Afinador"
+msgstr ""
+
+#: live/usr/sbin/lazaro-afinador
+msgid "Listo. Algunos ajustes se notan después de reiniciar."
+msgstr ""
+
+#: live/usr/sbin/lazaro-afinador live/usr/sbin/lazaro-kernel
+msgid "No se pudo."
+msgstr ""
+
 #: live/usr/sbin/lazaro-afinador
 msgid "Quitar los ajustes"
 msgstr ""
@@ -202,10 +214,6 @@ msgstr ""
 msgid "Ver el informe del hardware"
 msgstr ""
 
-#: live/usr/sbin/lazaro-afinador live/usr/share/lazaro/bienvenida/funciones/32-afinador.conf
-msgid "Afinador"
-msgstr ""
-
 #: live/usr/sbin/lazaro-afinador
 msgid "Ajustes para que el equipo responda mejor. Todos se pueden quitar."
 msgstr ""
@@ -220,14 +228,6 @@ msgstr ""
 
 #: live/usr/sbin/lazaro-afinador
 msgid "Acción"
-msgstr ""
-
-#: live/usr/sbin/lazaro-afinador
-msgid "Listo. Algunos ajustes se notan después de reiniciar."
-msgstr ""
-
-#: live/usr/sbin/lazaro-afinador live/usr/sbin/lazaro-kernel
-msgid "No se pudo."
 msgstr ""
 
 #: live/usr/sbin/lazaro-afinador
@@ -953,8 +953,8 @@ msgid ""
 "GNOME y Plasma se instalan sin internet.\n"
 "\n"
 "Para usar wifi: cancela, escribe\n"
-"  nmcli device wifi connect \"NOMBRE DE LA RED\" password \"CLAVE\"\n"
-"(con las comillas)\n"
+"  nmcli --ask device wifi connect \"NOMBRE DE LA RED\"\n"
+"(con las comillas; después pide la clave)\n"
 "y vuelve a abrir el instalador."
 msgstr ""
 
