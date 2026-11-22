@@ -1444,3 +1444,6 @@ msgstr "needs internet"
 
 msgid "Flatpak con Flathub: tienda de aplicaciones"
 msgstr "Flatpak with Flathub: app store"
+
+msgid "Acepto la licencia de Intel para el firmware de mi tarjeta wifi"
+msgstr "I accept the Intel license for my wifi card's firmware"

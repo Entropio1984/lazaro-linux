@@ -370,7 +370,10 @@ un aviso. Si el escritorio vuelve después, la pantalla regresa sola a
 entra sola con el usuario `lazaro` (no pide usuario ni contraseña):
 escribe `doas lazaro-instalar-texto`. Es el mismo
 instalador, con menús que se manejan con las flechas, la barra
-espaciadora y Enter, y no borra nada hasta que confirmas el resumen. Para
+espaciadora y Enter, y no borra nada hasta que confirmas el resumen.
+Revisa lo que escribes igual que el gráfico: la zona horaria tiene que ser
+una ciudad (por ejemplo `America/Bogota`, no solo `America`), el nombre
+del equipo no empieza ni termina con guion y no puede ser `localhost`. Para
 conectar el wifi antes, escribe (con las comillas):
 `nmcli device wifi connect "NOMBRE DE LA RED" password "CLAVE"`.
 
@@ -691,7 +694,7 @@ hay que conectarlo **una sola vez**:
    **Pegar**, o Ctrl+Mayús+V) y pulsa Enter:
 
    ```sh
-   wget -qO /tmp/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh /tmp/lr --activar
+   wget -qO ~/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh ~/lr --activar
    ```
 
 4. Escribe tu contraseña y pulsa Enter. Al terminar dice **Listo: las
@@ -1004,7 +1007,7 @@ instala con 1 GB:
 ```sh
 ./pruebas/qemu.sh live salida/lazaro-linux-0.2-3.24-x86.iso bios
 ./pruebas/qemu.sh poca salida/lazaro-linux-0.2-3.24-x86.iso bios
-MEM_32=1024 ./pruebas/qemu.sh instalar salida/lazaro-linux-0.2-3.24-x86.iso bios lxqt sin-red
+MEM_32=1024 ./pruebas/qemu.sh instalar salida/lazaro-linux-0.2-3.24-x86.iso bios icewm sin-red
 ```
 
 Las capturas de pantalla y los registros quedan en
@@ -1038,7 +1041,7 @@ mano, también con la siguiente (edge):
 
 Las máquinas virtuales no tienen NVIDIA, así que las decisiones de la
 revisión de gráficas se prueban aparte con `pruebas/graficas.sh`, que
-simula 13 equipos (el K53SV, PCs con tarjetas de cada generación, dos
+simula 22 casos (el K53SV, PCs con tarjetas de cada generación, dos
 NVIDIA, la elección forzada y el modo gráfico seguro). Lo mismo pasa con
 la recomendación del instalador: `pruebas/recomendacion.sh` simula
 equipos con distinta memoria, gráfica y disco. Y las reglas de

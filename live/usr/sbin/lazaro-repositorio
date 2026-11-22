@@ -32,7 +32,7 @@
 #        R (al instalar); se completa en su primer arranque con internet
 #
 # Para los equipos instalados antes de que existiera, una sola vez:
-#   wget -qO /tmp/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh /tmp/lr --activar
+#   wget -qO ~/lr https://github.com/Entropio1984/lazaro-linux/releases/download/repo-v3.24/lazaro-repositorio && doas sh ~/lr --activar
 #
 # Variables para las pruebas: LAZARO_REPO_RAIZ, LAZARO_REPO_URL.
 
@@ -155,8 +155,10 @@ repo_poner() {
 }
 repo_quitar() {
 	[ -f "$REPOS" ] || return 0
+	# Archivo nuevo y mv: un corte de luz a la mitad no deja la lista de
+	# repositorios vacía.
 	grep -vxF "$REPO_LINEA" "$REPOS" > "$REPOS.tmp" || true
-	cat "$REPOS.tmp" > "$REPOS"; rm -f "$REPOS.tmp"
+	chmod 644 "$REPOS.tmp" && mv -f "$REPOS.tmp" "$REPOS"
 }
 
 poner_tareas() {

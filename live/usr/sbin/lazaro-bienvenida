@@ -339,11 +339,19 @@ def ventana_principal(argv):
         d.get_content_area().pack_start(sw, True, True, 0)
         d.show_all()
 
+        # Si se cierra la ventana antes de que la orden termine, la orden
+        # se corta y su respuesta ya no toca la ventana (que no existe).
+        cancelar = Gio.Cancellable()
+        corriendo = {"proc": None}
+
         def listo(proc, res):
+            corriendo["proc"] = None
             try:
                 _ok, salida, error = proc.communicate_utf8_finish(res)
             except GLib.Error as e:
                 salida, error = "", str(e)
+            if cancelar.is_cancelled():
+                return
             buf.set_text((salida or "").strip() or (error or "").strip()
                          or _("La herramienta no devolvió información."))
             b_copiar.set_sensitive(True)
@@ -354,7 +362,8 @@ def ventana_principal(argv):
                 Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE)
             lanzador.setenv("PATH", RUTA, True)
             proc = lanzador.spawnv(["sh", "-c", funcion["ejecutar"]])
-            proc.communicate_utf8_async(None, None, listo)
+            corriendo["proc"] = proc
+            proc.communicate_utf8_async(None, cancelar, listo)
         except GLib.Error as e:
             buf.set_text(_("No se pudo abrir: %s") % e.message)
 
@@ -378,6 +387,9 @@ def ventana_principal(argv):
                 g.destroy()
             else:
                 break
+        cancelar.cancel()
+        if corriendo["proc"] is not None:
+            corriendo["proc"].force_exit()
         d.destroy()
 
     def abrir(_boton, ventana, funcion):

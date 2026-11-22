@@ -186,9 +186,14 @@ avance_parar() {
 	avance_leer || true
 }
 
-# Si el programa termina por un error (die), el vigía no debe quedar vivo:
-# Calamares espera a que se cierre la salida.
-trap avance_parar EXIT
+# Si el programa termina por un error (die), el vigía no debe quedar vivo
+# (Calamares espera a que se cierre la salida) ni quedar montado nada en el
+# sistema nuevo (/proc, /dev, el repositorio del USB...).
+al_salir() {
+	avance_parar
+	desmontar_propios
+}
+trap al_salir EXIT
 
 # Toda llamada a apk del instalador pasa por esta función: si cambia la
 # forma de usar apk (apk v3, por ejemplo), se cambia en un solo sitio.
@@ -279,7 +284,7 @@ montar_destino() { # RAIZ
 }
 
 desmontar_propios() {
-	for m in $MONTADOS; do
+	for m in ${MONTADOS:-}; do
 		umount "$m" 2>/dev/null || umount -l "$m" || true
 	done
 	MONTADOS=""
@@ -378,10 +383,16 @@ en_destino_vigilado() { # RAIZ COMANDO...
 			[ "$ev_quieto" -ge "$CUELGUE_LIMITE" ] || continue
 			log "Aviso: $2 lleva $((CUELGUE_LIMITE / 60)) minutos sin avanzar (una descarga se quedó colgada). Se corta (intento $ev_intento de 3)."
 			# Se cortan los procesos de dentro, no el primero: así
-			# en_destino termina normal y desmonta lo que montó.
+			# en_destino termina normal y desmonta lo que montó. Solo los
+			# que corren dentro del sistema nuevo (su raíz es $1): si el
+			# comando ya terminó con TERM, en_destino puede estar
+			# desmontando, y el KILL no debe cortar ese umount.
+			ev_r="${1%/}"
 			for ev_senal in TERM KILL; do
 				for ev_p in $(descendientes "$ev_pid"); do
-					[ "$ev_p" = "$ev_pid" ] || kill -s "$ev_senal" "$ev_p" 2>/dev/null || true
+					[ "$ev_p" != "$ev_pid" ] || continue
+					[ "$(readlink "/proc/$ev_p/root" 2>/dev/null)" = "$ev_r" ] || continue
+					kill -s "$ev_senal" "$ev_p" 2>/dev/null || true
 				done
 				sleep 2
 			done

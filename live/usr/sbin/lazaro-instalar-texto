@@ -220,12 +220,16 @@ esac
 while :; do
 	zona=$(pedir --title "$(_ 'Zona horaria')" --inputbox \
 "$(_ 'Zona horaria (para la hora del reloj). Si no sabes, deja la propuesta:')" 10 64 "$zona_def") || cancelar
-	[ -e "/usr/share/zoneinfo/$zona" ] && break
+	# Un archivo de zona de verdad: no una carpeta (America) ni una ruta
+	# que salga de zoneinfo (..), que dejarían la hora rota.
+	case "$zona" in ""|/*|*..*) ;; *) [ -f "/usr/share/zoneinfo/$zona" ] && break ;; esac
 	dlg --msgbox "$(printf "$(_ 'No conozco la zona "%s". Ejemplos: America/Bogota, Europe/Madrid.')" "$zona")" 8 60
 done
 
 # --- Usuario ----------------------------------------------------------------
 nombre=$(pedir --title "$(_ 'Usuario')" --inputbox "$(_ 'Tu nombre (como quieres que aparezca):')" 9 60 "") || cancelar
+# Sin ":" ni saltos de línea: en /etc/passwd separan los campos.
+nombre=$(printf '%s' "$nombre" | tr -d ':\n')
 sugerido=$(printf '%s' "${nombre%% *}" | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')
 while :; do
 	usuario=$(pedir --title "$(_ 'Usuario')" --inputbox \
@@ -252,7 +256,10 @@ done
 equipo=$(pedir --title "$(_ 'Nombre del equipo')" --inputbox \
 "$(_ 'Nombre del equipo en la red:')" 9 60 "lazaro-$usuario") || cancelar
 equipo=$(printf '%s' "$equipo" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-\n' '-' | cut -c1-63)
-[ -n "$equipo" ] || equipo=lazaro
+# Como el instalador gráfico: sin guiones al principio ni al final, y
+# nunca "localhost".
+equipo=$(printf '%s' "$equipo" | sed 's/^-*//; s/-*$//')
+case "$equipo" in ""|localhost) equipo=lazaro ;; esac
 
 # --- Resumen ----------------------------------------------------------------
 tam=$(printf '%s\n' "$lista" | grep -A1 -x "$disco" | sed -n 2p)
