@@ -151,7 +151,7 @@ corre() {
 censurar() {
 	sed -E \
 		-e 's|://[^/@[:space:]]*@|://***@|g' \
-		-e 's/(([Pp]ass|[Pp]assword|[Pp]asswd)=)[^,[:space:]]*/\1***/g' \
+		-e 's/(([Pp]ass|[Pp]assword|[Pp]asswd)=)([^,[:space:]]|,,)*/\1***/g' \
 		-e 's/(^|[^[:xdigit:]:])(([[:xdigit:]]{2}:){3})[[:xdigit:]]{2}:[[:xdigit:]]{2}:[[:xdigit:]]{2}($|[^[:xdigit:]:])/\1\2xx:xx:xx\4/g' \
 		-e 's/(inet6 )[[:xdigit:]:]+(\/[0-9]+ scope global)/\1***\2/'
 }
@@ -297,7 +297,8 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	done
 
 	seccion "Red"
-	corre nmcli device status
+	# Sin la columna CONNECTION: dice el nombre de la red wifi en uso.
+	corre nmcli -f DEVICE,TYPE,STATE device status
 	# Sin NAME: los nombres de las conexiones guardadas son los de las
 	# redes wifi donde estuvo el equipo.
 	corre nmcli -f TYPE,DEVICE,STATE connection show

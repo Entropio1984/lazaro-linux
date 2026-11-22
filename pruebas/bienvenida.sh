@@ -114,6 +114,7 @@ awk '/^censurar\(\) \{/,/^\}/' "$DIR/live/usr/sbin/lazaro-diagnostico" > "$TMP/c
 censura() { sh -c '. "$1"; printf "%s\n" "$2" | censurar' _ "$TMP/censurar.sh" "$1"; }
 es "el Diagnóstico tapa las contraseñas de las direcciones" '[ "$(censura "https://ana:secreto@sitio.org/alpine/v3.24/main")" = "https://***@sitio.org/alpine/v3.24/main" ]'
 es "el Diagnóstico tapa las contraseñas de carpetas de red" '[ "$(censura "//srv/doc /mnt cifs username=ana,password=s3cr3t,uid=1000 0 0")" = "//srv/doc /mnt cifs username=ana,password=***,uid=1000 0 0" ]'
+es "el Diagnóstico tapa una contraseña con comas dobles" '[ "$(censura "//srv/doc /mnt cifs password=a,,b,uid=1000 0 0")" = "//srv/doc /mnt cifs password=***,uid=1000 0 0" ]'
 es "el Diagnóstico tapa la mitad de la MAC" '[ "$(censura "link/ether 00:1b:2c:3d:4e:5f brd ff:ff:ff:ff:ff:ff")" = "link/ether 00:1b:2c:xx:xx:xx brd ff:ff:ff:xx:xx:xx" ]'
 es "el Diagnóstico tapa la IPv6 pública y deja la local" '[ "$(censura "inet6 2800:e2:1c00::5/64 scope global dynamic")" = "inet6 ***/64 scope global dynamic" ] && [ "$(censura "inet6 fe80::1/64 scope link")" = "inet6 fe80::1/64 scope link" ]'
 
