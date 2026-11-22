@@ -41,13 +41,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Instalar LaTeX, QEMU e ImageMagick
+      # Igual que en lazaro-iso.yml: caché de paquetes y otro servidor de
+      # Ubuntu si el primero está lento.
+      - name: Paquetes de LaTeX guardados
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/latex-debs
+          key: latex-debs-v1-${{ github.run_id }}
+          restore-keys: latex-debs-v1-
+
+      - name: Instalar LaTeX
+        id: latex
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends latexmk \
-            texlive-latex-extra texlive-lang-spanish texlive-fonts-recommended \
-            tex-gyre lmodern texlive-bibtex-extra biber ghostscript
-          sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf xorriso socat imagemagick optipng
+          .github/instalar-paquetes.sh latexmk texlive-latex-extra \
+            texlive-lang-spanish texlive-fonts-recommended tex-gyre lmodern \
+            texlive-bibtex-extra biber ghostscript
+
+      - name: Guardar paquetes de LaTeX
+        if: steps.latex.outputs.nuevo == '1'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/latex-debs
+          key: latex-debs-v1-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Instalar QEMU e ImageMagick
+        run: sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf xorriso socat imagemagick optipng
 
       - name: Activar KVM
         run: |

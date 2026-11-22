@@ -43,16 +43,35 @@ jobs:
   manual:
     name: Manual (PDF)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
+      # Los paquetes de LaTeX (~250 MB) se guardan entre compilaciones y,
+      # si un servidor de Ubuntu está lento, se prueba otro: la instalación
+      # se quedaba colgada hasta el límite de tiempo (2026-11-18).
+      - name: Paquetes de LaTeX guardados
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/latex-debs
+          key: latex-debs-v1-${{ github.run_id }}
+          restore-keys: latex-debs-v1-
+
       - name: Instalar LaTeX
+        id: latex
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends latexmk \
-            texlive-latex-extra texlive-lang-spanish texlive-fonts-recommended \
-            tex-gyre lmodern texlive-bibtex-extra biber ghostscript
+          .github/instalar-paquetes.sh latexmk texlive-latex-extra \
+            texlive-lang-spanish texlive-fonts-recommended tex-gyre lmodern \
+            texlive-bibtex-extra biber ghostscript
+
+      # Se guarda enseguida (aunque después falle el manual) y solo si se
+      # bajó algún paquete nuevo.
+      - name: Guardar paquetes de LaTeX
+        if: steps.latex.outputs.nuevo == '1'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/latex-debs
+          key: latex-debs-v1-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Compilar el manual
         run: |
