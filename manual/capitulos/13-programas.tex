@@ -68,6 +68,33 @@ aparecen en el menú. Si una descarga falla, un aviso lo dice: vuelve a
 pulsar el botón cuando la conexión ande bien (lo ya descargado no se baja
 otra vez). La edición de 32 bits no tiene Flathub.
 
+\subsection{Nubes: Google Drive, OneDrive y Dropbox}\label{sec:nubes}
+\textbf{Nubes Rclone} es una aplicación hecha para Lázaro que conecta tus
+cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como
+carpetas normales, dentro de tu carpeta personal (\texttt{Nubes}) y en la
+barra lateral del explorador de archivos. También puede guardar una copia
+que funciona sin internet, y un icono junto al reloj avisa si todo está al
+día, si está sincronizando o si hubo un problema. Tu contraseña se escribe
+en la página oficial de cada servicio: la aplicación nunca la ve.
+
+\begin{pasos}
+  \item Abre la Bienvenida y pulsa \menu{Nubes: Google Drive, OneDrive y
+        Dropbox} (en la página de inicio o en la sección \menu{Programas}).
+  \item La primera vez, pulsa \menu{Instalar} y escribe tu contraseña: se
+        descargan rclone y lo que necesita (unos 25 MB, hace falta
+        internet).
+  \item Se abre la aplicación: elige el servicio, ponle un nombre y pulsa
+        \menu{Conectar}. Se abre el navegador para que entres a tu cuenta
+        y aceptes; al volver, la nube ya aparece como carpeta.
+\end{pasos}
+
+\captura{nubes}{El botón \menu{Nubes} de la Bienvenida, antes de
+instalar la aplicación.}
+
+Después, el mismo botón o \menu{Nubes Rclone} en el menú la abren
+directamente. Cada persona del equipo la instala con su usuario, con sus
+propias cuentas. Funciona también en la edición de 32 bits.
+
 \subsection{Programas recomendados}
 \begin{center}
 \begin{tabularx}{\textwidth}{>{\bfseries}lX}

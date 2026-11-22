@@ -29,7 +29,7 @@ export LAZARO_BIENVENIDA_SOLO_PATH=1
 mkdir -p "$TMP/bin" "$TMP/vacio"
 for p in python3 sh; do ln -s "$(command -v "$p")" "$TMP/vacio/$p"; done
 falsos="lazaro-abrir-instalador lazaro-manual alpine-update-root.sh lazaro-actualizador lazaro-controladores
-	lazaro-afinador lazaro-kernel lazaro-diagnostico lazaro-flatpak zenity xdg-open
+	lazaro-afinador lazaro-kernel lazaro-diagnostico lazaro-flatpak lazaro-nubes zenity xdg-open
 	gtk-pipe-viewer mpv resolucion-modo-seguro"
 for p in $falsos; do printf '#!/bin/sh\n' > "$TMP/bin/$p"; chmod +x "$TMP/bin/$p"; done
 
@@ -46,6 +46,7 @@ correr instalado "$TMP/bin:$TMP/vacio" --listar > "$TMP/inst.txt"
 es "instalado: se ve el Afinador" 'grep -q "	Afinador	visible	" "$TMP/inst.txt"'
 es "instalado: se ve el Manual" 'grep -q "	Manual de Lázaro	visible	" "$TMP/inst.txt"'
 es "instalado: se ve Aplicaciones de Flathub" 'grep -q "	Aplicaciones de Flathub	visible	" "$TMP/inst.txt"'
+es "instalado: se ve Nubes" 'grep -q "	Nubes: Google Drive, OneDrive y Dropbox	visible	" "$TMP/inst.txt"'
 es "instalado: se ve el Diagnóstico" 'grep -q "	Diagnóstico	visible	" "$TMP/inst.txt"'
 es "instalado: no se ve Instalar Lázaro" 'grep -q "	Instalar Lázaro	oculta	" "$TMP/inst.txt"'
 # Sin tienda instalada (ni GNOME Software ni Discover), su botón no sale.
@@ -199,6 +200,32 @@ rc=0; FP_FALLA=com.google.Chrome fp --activar chrome > "$TMP/fp2.txt" 2>&1 || rc
 es "flatpak: si una aplicación falla termina con 3" '[ "$rc" = 3 ] && grep -q "No se pudo instalar: Google Chrome" "$TMP/fp2.txt"'
 rc=0; fp --activar zoom > /dev/null 2>&1 || rc=$?
 es "flatpak: una aplicación desconocida se rechaza" '[ "$rc" = 2 ]'
+
+# 11. lazaro-nubes (botón "Nubes"): sin paquetes de Alpine, instala la
+# aplicación de verdad (su instalar.sh) en una carpeta personal de
+# mentira, dice si está al día y la pone al día si Lázaro trae otra.
+es "sintaxis de lazaro-nubes" 'sh -n "$DIR/live/usr/sbin/lazaro-nubes"'
+es "sintaxis del instalador de Nubes Rclone" 'sh -n "$DIR/live/usr/share/lazaro/nubes-rclone/instalar.sh"'
+es "Nubes Rclone: el programa compila" 'python3 -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" "$DIR"/live/usr/share/lazaro/nubes-rclone/*.py'
+rc=0; sh "$DIR/live/usr/sbin/lazaro-nubes" --otra > /dev/null 2>&1 || rc=$?
+es "nubes: una orden desconocida se rechaza" '[ "$rc" = 2 ]'
+if [ "$(id -u)" != 0 ]; then
+	NU="$TMP/nubes"
+	mkdir -p "$NU/casa" "$NU/app"
+	cp "$DIR"/live/usr/share/lazaro/nubes-rclone/* "$NU/app/"
+	nu() { env -u DISPLAY -u WAYLAND_DISPLAY -u XDG_RUNTIME_DIR -u XDG_DATA_HOME -u XDG_CONFIG_HOME -u XDG_CACHE_HOME \
+		HOME="$NU/casa" LAZARO_NUBES_DIR="$NU/app" LAZARO_NUBES_SIN_APK=1 XDG_CURRENT_DESKTOP=XFCE \
+		sh "$DIR/live/usr/sbin/lazaro-nubes" "$@"; }
+	es "nubes: antes de instalar falta la aplicación" '[ "$(nu --estado)" = falta-app ]'
+	es "nubes: instala la aplicación en la carpeta personal" 'nu --app > "$TMP/nu1.txt" 2>&1 && [ "$(nu --estado)" = lista ]'
+	es "nubes: deja el lanzador y la entrada del menú" '"$NU/casa/.local/bin/nubes-rclone" --version | grep -q "^Nubes Rclone " && grep -q "^Exec=.*nubes-rclone" "$NU/casa/.local/share/applications/nubes-rclone.desktop"'
+	es "nubes: deja el icono junto al reloj al iniciar sesión" 'grep -q "^Exec=.*nubes-rclone --bandeja" "$NU/casa/.config/autostart/nubes-rclone-bandeja.desktop"'
+	echo "# cambio" >> "$NU/app/nubes_rclone.py"
+	es "nubes: si Lázaro trae otra versión, no está al día" '[ "$(nu --estado)" = falta-app ]'
+	es "nubes: se pone al día" 'nu --app > "$TMP/nu2.txt" 2>&1 && [ "$(nu --estado)" = lista ]'
+else
+	echo "(como administrador no se prueba instalar Nubes Rclone: su instalador no corre como root)"
+fi
 
 echo
 if [ "$fallos" -gt 0 ]; then

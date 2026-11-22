@@ -1,0 +1,136 @@
+#!/bin/sh
+# lazaro-nubes: instala y abre "Nubes Rclone", la aplicación de Julián
+# para conectar Google Drive, OneDrive y Dropbox como carpetas (con
+# rclone). Es el botón "Nubes" de la Bienvenida.
+#
+# La aplicación viene tal cual en /usr/share/lazaro/nubes-rclone (con su
+# propio instalar.sh, que la deja en la carpeta personal: ~/.local). Este
+# programa solo agrega lo que una ventana necesita: pide la contraseña
+# para los paquetes de Alpine (rclone, FUSE, Tkinter) y corre instalar.sh
+# sin terminal. Cada persona del equipo la instala una vez con el botón;
+# si Lázaro trae una versión nueva de la aplicación, el botón la pone al
+# día antes de abrirla.
+#
+#   lazaro-nubes --ventana    instala si hace falta y abre (botón de la Bienvenida)
+#   lazaro-nubes --estado     "lista", "falta-app" o "faltan-paquetes"
+#   lazaro-nubes --paquetes   instala los paquetes de Alpine (como administrador)
+#   lazaro-nubes --app        instala o pone al día la aplicación (como la persona)
+#
+# Para las pruebas: LAZARO_NUBES_DIR cambia la carpeta de la aplicación y
+# LAZARO_NUBES_SIN_APK=1 no instala paquetes (ni pide ser administrador).
+# Textos en el idioma de la sesión (idiomas/*.po); sin traducción, español.
+if [ -r "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh" ]; then . "${LAZARO_TEXTO_DIR:-/usr/share/lazaro}/texto.sh"; else _() { printf '%b' "$1"; }; fi
+
+APP_DIR="${LAZARO_NUBES_DIR:-/usr/share/lazaro/nubes-rclone}"
+DESTINO="${XDG_DATA_HOME:-$HOME/.local/share}/nubes-rclone"
+LANZADOR="$HOME/.local/bin/nubes-rclone"
+TITULO="$(_ 'Nubes: Google Drive, OneDrive y Dropbox')"
+# Lo que pide la aplicación en Alpine (rclone está en "community", que
+# Lázaro deja activo). Igual en 64 y en 32 bits.
+PAQUETES="rclone fuse3 python3 python3-tkinter py3-gobject3 xdg-utils"
+
+faltan_paquetes() {
+	[ "${LAZARO_NUBES_SIN_APK:-}" != 1 ] || return 1
+	command -v rclone >/dev/null 2>&1 || return 0
+	command -v fusermount3 >/dev/null 2>&1 || return 0
+	command -v xdg-open >/dev/null 2>&1 || return 0
+	python3 -c 'import tkinter' 2>/dev/null || return 0
+	python3 -c 'import gi' 2>/dev/null || return 0
+	return 1
+}
+
+# La copia de la persona es la misma que trae Lázaro.
+app_al_dia() {
+	[ -x "$LANZADOR" ] || return 1
+	for f in nubes_rclone.py nubes_bandeja.py nubes_sinc.py; do
+		cmp -s "$APP_DIR/$f" "$DESTINO/$f" || return 1
+	done
+}
+
+estado() {
+	if faltan_paquetes; then echo faltan-paquetes
+	elif ! app_al_dia; then echo falta-app
+	else echo lista
+	fi
+}
+
+como_root() {
+	if [ "$(id -u)" = 0 ]; then "$@"
+	elif command -v pkexec >/dev/null 2>&1; then pkexec "$@"
+	else doas "$@"
+	fi
+}
+
+paquetes() {
+	[ "${LAZARO_NUBES_SIN_APK:-}" != 1 ] || return 0
+	[ "$(id -u)" = 0 ] || { echo "Hace falta ser administrador: doas lazaro-nubes --paquetes" >&2; exit 1; }
+	# Índice al día: en un equipo que nunca actualizó, la lista vieja
+	# puede pedir versiones que ya no están.
+	apk update -q || true
+	# shellcheck disable=SC2086
+	apk add $PAQUETES || { echo "No se pudieron instalar los paquetes (¿sin internet?)." >&2; exit 1; }
+	# FUSE (lo que deja a rclone mostrar la nube como carpeta): ahora y en
+	# cada arranque.
+	[ -e /dev/fuse ] || modprobe fuse 2>/dev/null || true
+	grep -qx fuse /etc/modules 2>/dev/null || echo fuse >> /etc/modules
+	exit 0
+}
+
+# instalar.sh de la aplicación, sin paquetes (ya están) ni preguntas: la
+# deja en ~/.local, crea su lanzador en el menú y enciende el icono junto
+# al reloj (y su arranque con la sesión).
+app() {
+	[ "$(id -u)" != 0 ] || { echo "Se instala con el usuario de cada persona, no como administrador." >&2; exit 1; }
+	[ -r "$APP_DIR/instalar.sh" ] || { echo "No está la aplicación en $APP_DIR" >&2; exit 1; }
+	sh "$APP_DIR/instalar.sh" --sin-dependencias </dev/null
+}
+
+abrir() {
+	exec "$LANZADOR"
+}
+
+ventana() {
+	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
+	e="$(estado)"
+	[ "$e" != lista ] || abrir
+	if [ -x "$LANZADOR" ] && [ "$e" = falta-app ]; then
+		# Ya la usaba: se pone al día sin preguntar.
+		app >/dev/null 2>&1 || true
+		abrir
+	fi
+	texto="$(_ 'Nubes Rclone conecta tus cuentas de Google Drive, Microsoft OneDrive y Dropbox y las muestra como carpetas del equipo, dentro de tu carpeta personal (Nubes). También puede guardar una copia que funciona sin internet y avisa con un icono junto al reloj cuando todo está al día.\n\nLa contraseña de tu cuenta se escribe en la página oficial de cada servicio: la aplicación nunca la ve.')"
+	if [ "$e" = faltan-paquetes ]; then
+		texto="$texto\n\n$(_ 'Para instalarla hace falta internet: se descargan rclone y lo que necesita (unos 25 MB) y se pide la contraseña de administrador.')"
+	fi
+	zenity --question --width=480 --title="$TITULO" --ok-label="$(_ 'Instalar')" --cancel-label="$(_ 'Cerrar')" \
+		--text="$texto" >/dev/null 2>&1 || return 0
+	sal="$(mktemp)" || exit 1
+	if [ "$e" = faltan-paquetes ]; then
+		( como_root "$0" --paquetes > "$sal" 2>&1; echo $? > "$sal.rc" ) |
+			zenity --progress --pulsate --auto-close --no-cancel --width=420 --title="$TITULO" \
+				--text="$(_ 'Descargando rclone y lo que necesita…')" >/dev/null 2>&1
+		rc="$(cat "$sal.rc" 2>/dev/null || echo 1)"
+		if [ "$rc" != 0 ] || faltan_paquetes; then
+			zenity --error --width=460 --title="$TITULO" \
+				--text="$(_ 'No se pudo instalar. Revisa la conexión a internet y vuelve a intentar.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>&1 || true
+			rm -f "$sal" "$sal.rc"
+			return 1
+		fi
+	fi
+	if ! app > "$sal" 2>&1 || ! app_al_dia; then
+		zenity --error --width=460 --title="$TITULO" \
+			--text="$(_ 'No se pudo instalar la aplicación.')\n\n$(tail -n 3 "$sal" | sed 's/\x1b\[[0-9;]*m//g; s/[&<>]/ /g')" >/dev/null 2>&1 || true
+		rm -f "$sal" "$sal.rc"
+		return 1
+	fi
+	rm -f "$sal" "$sal.rc"
+	abrir
+}
+
+case "${1:-}" in
+	--estado) estado ;;
+	--paquetes) paquetes ;;
+	--app) app ;;
+	--ventana) ventana ;;
+	*) echo "Uso: lazaro-nubes --ventana | --estado | --paquetes | --app" >&2; exit 2 ;;
+esac
