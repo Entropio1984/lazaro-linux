@@ -158,10 +158,14 @@ printf 'C:Q1abc=\nP:lazaro-herramientas\nV:0.1-r502/../../../../trampa\n\n' > "$
 (cd "$TMP/trampa/indice" && tar -czf "$TMP/trampa/APKINDEX.tar.gz" APKINDEX)
 mkdir -p "$TMP/trampa/0.1-r502" && : > "$TMP/trampa/lazaro-herramientas-0.1-r502" &&
 	printf 'malo\n' > "$TMP/trampa/trampa.apk"
-if env LAZARO_REPO_RAIZ="$R" LAZARO_REPO_URL="file://$TMP/trampa" sh "$REPO_PROG" --sincronizar 2>/dev/null; then
+# Tiene que rechazarse por el nombre, antes de descargar nada (no porque
+# la descarga falle).
+if trampa="$(env LAZARO_REPO_RAIZ="$R" LAZARO_REPO_URL="file://$TMP/trampa" sh "$REPO_PROG" --sincronizar 2>&1)"; then
 	mal "índice tramposo: lo aceptó"
-else
+elif printf '%s' "$trampa" | grep -q 'nombres no válidos'; then
 	ok "índice tramposo: no se usa"
+else
+	mal "índice tramposo: falló por otra cosa: $trampa"
 fi
 [ ! -e "$R/trampa.apk" ] && [ ! -e "$R/var/trampa.apk" ] && [ -s "$L/lazaro-herramientas-0.1-r501.apk" ] &&
 	ok "índice tramposo: no escribió fuera y el repositorio anterior sigue" || mal "índice tramposo: escribió fuera o perdió el repositorio"

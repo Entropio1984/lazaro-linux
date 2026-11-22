@@ -143,8 +143,9 @@ ventana privada para iniciar sesión.
 - Ajustes en `~/.config/nubes-rclone` con permisos `0700`/`0600`.
 - Sockets de control, bloqueos y peticiones en `$XDG_RUNTIME_DIR/nubes-rclone` (privado).
 - El `client_secret` propio no aparece en la lista de procesos durante el inicio de
-  sesión (se pasa por el entorno); al terminar se guarda en `rclone.conf` con una orden
-  que dura unos milisegundos.
+  sesión (se pasa por el entorno); al terminar se escribe directamente en `rclone.conf`
+  (permisos `0600`). Solo si esa configuración está cifrada se guarda con una orden de
+  rclone, que dura unos milisegundos.
 - La caché de archivos abiertos se limita a 2 GB (`cache_max` en `ajustes.json`).
 
 ## Archivos

@@ -641,8 +641,10 @@ def guardar_secreto(nombre, secreto):
             contenido = f.read()
     except (OSError, ValueError):
         contenido = None
-    if contenido is None or contenido.lstrip().startswith("# Encrypted rclone configuration"):
-        # Configuración cifrada o no encontrada: solo rclone puede escribirla
+    if contenido is None:
+        return 1, "No se pudo leer la configuración de rclone."
+    if contenido.lstrip().startswith("# Encrypted rclone configuration"):
+        # Configuración cifrada: solo rclone puede escribirla
         return ejecutar([rclone_bin(), "config", "update", nombre,
                          "client_secret=" + secreto,
                          "config_refresh_token=false", "--no-output"], timeout=20)
@@ -668,8 +670,7 @@ def guardar_secreto(nombre, secreto):
     seccion.insert(pos, "client_secret = " + secreto)
     nuevas = lineas[:inicio + 1] + seccion + lineas[fin:]
     try:
-        escribir_atomico(ruta, "\n".join(nuevas) + "\n")
-        os.chmod(ruta, 0o600)
+        escribir_atomico(ruta, "\n".join(nuevas) + "\n", privado=True)
     except OSError as e:
         return 1, str(e)
     return 0, ""
@@ -723,19 +724,25 @@ def _uri(ruta):
     return "file://" + urllib.parse.quote(ruta)
 
 
-def escribir_atomico(archivo, contenido):
+def escribir_atomico(archivo, contenido, privado=False):
     """Escribe el archivo entero de una vez (temporal + os.replace): si se corta
     la luz a la mitad, queda el archivo de antes, no uno a medias."""
     tmp = "%s.%d.tmp" % (archivo, os.getpid())
     try:
-        with open(tmp, "w", encoding="utf-8") as f:
+        modo = os.stat(archivo).st_mode & 0o777
+    except OSError:
+        modo = 0o600
+    try:
+        # Nace privado (0600) y recién al final toma el permiso del original (o
+        # el pedido): nunca hay un momento en que otro usuario pueda leerlo.
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(contenido)
             f.flush()
             os.fsync(f.fileno())
-        try:
-            os.chmod(tmp, os.stat(archivo).st_mode & 0o7777)
-        except OSError:
-            pass
+        if privado:
+            modo = 0o600
+        os.chmod(tmp, modo)
         os.replace(tmp, archivo)
     except OSError:
         try:
@@ -1011,10 +1018,12 @@ def olvidar_todo():
             problemas.append(nombre)
             continue
         quitar_marcador(punto_montaje(nombre, ajustes))
-        codigo, _salida = eliminar_remoto(nombre)
-        if codigo != 0 or any(n == nombre for n, _ in listar_remotos()):
+        eliminar_remoto(nombre)
+        if any(n == nombre for n, _ in listar_remotos()):
             # La cuenta sigue guardada: se avisa en vez de decir que se olvidó
             problemas.append(nombre)
+        if "/" in nombre or nombre in (".", ".."):
+            continue                    # no es un nombre de rclone: no se arma ninguna ruta
         for sub in ("vfs", "vfsMeta"):
             cache = os.path.join(XDG_CACHE, "rclone", sub, nombre)
             if os.path.isdir(cache):
