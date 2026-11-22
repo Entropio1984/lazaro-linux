@@ -528,6 +528,8 @@ mismo botón, o **Lázaro Nubes** en el menú, la abre directamente. Si
 una versión nueva de Lázaro trae una versión nueva de la aplicación, el
 botón la pone al día sola. Funciona en la de 64 y en la de **32 bits**.
 
+<img src="docs/imagenes/nubes.png" alt="Ventana de Lázaro Nubes antes de instalar, con los botones Cerrar e Instalar" width="480">
+
 Cada persona del equipo la instala con su usuario (queda en su carpeta
 personal, con sus propias cuentas). Para quitarla:
 `sh /usr/share/lazaro/nubes-rclone/instalar.sh --desinstalar` (no borra
