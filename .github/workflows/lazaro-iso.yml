@@ -47,6 +47,36 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Revisión rápida antes de todo: que ningún programa tenga un error
+      # de escritura (comillas sin cerrar, un "fi" de menos...). Tarda
+      # segundos y va en este trabajo porque las ISO esperan a que termine:
+      # con un error así no se gastan horas compilando.
+      - name: Revisar que los programas estén bien escritos
+        run: |
+          mal=0
+          py() { python3 -c 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1])' "$1" ||
+                   { echo "::error file=$1::error de escritura (Python)"; mal=1; }; }
+          # -z: nombres con espacios u otros signos llegan enteros.
+          while IFS= read -r -d '' f; do
+            [ -f "$f" ] || continue
+            # Todo .py se revisa, tenga la primera línea que tenga.
+            case "$f" in *.py) py "$f"; continue ;; esac
+            case "$(head -c 80 "$f" 2>/dev/null | tr -d '\0' | head -n 1)" in
+              '#!/bin/sh'*|'#!/sbin/openrc-run'*|'#!/usr/bin/env sh'*|'#!/bin/ash'*)
+                sh -n "$f" || { echo "::error file=$f::error de escritura (sh -n)"; mal=1; } ;;
+              '#!/bin/bash'*|'#!/usr/bin/env bash'*)
+                bash -n "$f" || { echo "::error file=$f::error de escritura (bash -n)"; mal=1; } ;;
+              '#!/usr/bin/env python3'*|'#!/usr/bin/python3'*) py "$f" ;;
+              '#!'*) ;;
+              # Sin primera línea #!: los que se cargan con "." (lib.sh,
+              # config.env, texto.sh, el perfil de la ISO...).
+              *) case "$f" in
+                   *.sh|*.env)
+                     sh -n "$f" || { echo "::error file=$f::error de escritura (sh -n)"; mal=1; } ;;
+                 esac ;;
+            esac
+          done < <(git ls-files -z)
+          exit $mal
       - name: Instalar LaTeX
         run: |
           sudo apt-get update -q
@@ -468,31 +498,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
-      # Revisión rápida antes de todo: que ningún programa tenga un error
-      # de escritura (comillas sin cerrar, un "fi" de menos...). Tarda
-      # segundos y avisa antes de gastar horas compilando.
-      - name: Revisar que los programas estén bien escritos
-        run: |
-          mal=0
-          for f in $(git ls-files); do
-            [ -f "$f" ] || continue
-            case "$(head -c 80 "$f" 2>/dev/null | tr -d '\0' | head -n 1)" in
-              '#!/bin/sh'*|'#!/sbin/openrc-run'*|'#!/usr/bin/env sh'*|'#!/bin/ash'*)
-                sh -n "$f" || { echo "::error file=$f::error de escritura (sh -n)"; mal=1; } ;;
-              '#!/bin/bash'*|'#!/usr/bin/env bash'*)
-                bash -n "$f" || { echo "::error file=$f::error de escritura (bash -n)"; mal=1; } ;;
-              '#!/usr/bin/env python3'*|'#!/usr/bin/python3'*)
-                python3 -c 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1])' "$f" ||
-                  { echo "::error file=$f::error de escritura (Python)"; mal=1; } ;;
-              '#!'*) ;;
-              # Sin primera línea #!: los que se cargan con "." (lib.sh,
-              # config.env, texto.sh, el perfil de la ISO...).
-              *) case "$f" in *.sh|*.env)
-                   sh -n "$f" || { echo "::error file=$f::error de escritura (sh -n)"; mal=1; } ;;
-                 esac ;;
-            esac
-          done
-          exit $mal
       # Las pruebas con el busybox y el Python de Alpine usan la misma
       # versión que la ISO (config.env).
       - name: Versión de Alpine para las pruebas

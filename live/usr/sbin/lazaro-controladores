@@ -626,7 +626,11 @@ $(printf '%s\n' "$nuevos" | sed 's/^/• /' | head -n 5)"
 # repositorio de Lázaro (todos despiertan juntos al llegar internet).
 con_turno_apk() { # COMANDO...
 	if [ -z "$RAIZ" ] && command -v flock >/dev/null 2>&1 && [ -w /run ]; then
-		(exec 8>/run/lazaro-apk.lock && flock 8 && "$@")
+		# El candado lo guarda esta subshell; la orden no hereda el
+		# descriptor (8>&-). Si lo heredara, un programa que la orden deja
+		# corriendo (un servicio, las descargas de Flathub) mantendría el
+		# candado tomado por horas y los demás esperarían para siempre.
+		(exec 8>/run/lazaro-apk.lock && flock 8 && "$@" 8>&-)
 	else
 		"$@"
 	fi

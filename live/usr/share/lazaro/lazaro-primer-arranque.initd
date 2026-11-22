@@ -27,7 +27,10 @@ start() {
 				pa_rc=0
 				if command -v flock >/dev/null 2>&1 && exec 8>/run/lazaro-apk.lock; then
 					flock 8
-					/usr/libexec/lazaro/lazaro-postinstalacion || pa_rc=$?
+					# Sin heredar el candado (8>&-): lo que el script deje
+					# corriendo (descargas de Flathub, servicios) no debe
+					# guardarlo tomado.
+					/usr/libexec/lazaro/lazaro-postinstalacion 8>&- || pa_rc=$?
 					exec 8>&-
 				else
 					/usr/libexec/lazaro/lazaro-postinstalacion || pa_rc=$?
