@@ -235,7 +235,7 @@ activar() {
 		echo "LAZARO-REPOSITORIO-PREPARADO"
 		return 0
 	fi
-	sincronizar || die "Sin el repositorio no se puede seguir. Revisa la conexión a internet y vuelve a intentarlo."
+	sincronizar_con_candado || die "Sin el repositorio no se puede seguir. Revisa la conexión a internet y vuelve a intentarlo."
 	instalar_herramientas || exit 1
 	echo "LAZARO-REPOSITORIO-ACTIVO"
 	echo "Listo: las herramientas de Lázaro se actualizarán con las actualizaciones del sistema."
@@ -250,18 +250,41 @@ desactivar() {
 }
 
 # Servicio: espera internet hasta 30 minutos sin retrasar el arranque.
+# Un programa de Lázaro a la vez instala paquetes: apk no deja trabajar a
+# dos juntos y el segundo fallaría. Todos esperan su turno en el mismo
+# candado: la configuración del primer arranque, Controladores y el
+# repositorio de Lázaro (todos despiertan juntos al llegar internet).
+con_turno_apk() { # COMANDO...
+	if [ -z "$RAIZ" ] && command -v flock >/dev/null 2>&1 && [ -w /run ]; then
+		(exec 8>/run/lazaro-apk.lock && flock 8 && "$@")
+	else
+		"$@"
+	fi
+}
+
+# Una sola copia del repositorio a la vez: el servicio de arranque, la
+# tarea diaria y el botón "Actualizar el sistema" pueden coincidir, y dos
+# copias juntas borrarían los archivos que la otra está bajando.
+sincronizar_con_candado() {
+	if [ -z "$RAIZ" ] && command -v flock >/dev/null 2>&1 && [ -w /run ]; then
+		(exec 7>/run/lazaro-repositorio.lock && flock 7 && sincronizar)
+	else
+		sincronizar
+	fi
+}
+
 arranque() {
 	i=0
-	until sincronizar 2>/dev/null; do
+	until sincronizar_con_candado 2>/dev/null; do
 		i=$((i + 1))
 		[ "$i" -lt 60 ] || { registrar "Sin internet en 30 minutos; se intenta en el próximo arranque."; return 0; }
 		sleep 30
 	done
-	instalar_herramientas || true
+	con_turno_apk instalar_herramientas || true
 	# Mejoras de Lázaro que falten (si el sistema se actualizó sin pasar
 	# por "Actualizar el sistema", que las aplica en el momento).
 	[ ! -x "$RAIZ/usr/local/sbin/lazaro-arreglos" ] ||
-		"$RAIZ/usr/local/sbin/lazaro-arreglos" --aplicar >/dev/null 2>&1 || true
+		con_turno_apk "$RAIZ/usr/local/sbin/lazaro-arreglos" --aplicar >/dev/null 2>&1 || true
 }
 
 orden=""
@@ -279,7 +302,7 @@ done
 mkdir -p "${LOG%/*}" 2>/dev/null || true
 case "$orden" in
 	--activar) activar ;;
-	--sincronizar) sincronizar ;;
+	--sincronizar) sincronizar_con_candado ;;
 	--arranque) arranque ;;
 	--desactivar) desactivar ;;
 	*) sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;

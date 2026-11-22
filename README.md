@@ -626,7 +626,10 @@ de actualizaciones) abre una ventana con el mismo aspecto de la
 Bienvenida. Pide tu contraseña, muestra en una línea lo que va haciendo y
 al final dice si hay que reiniciar. En **Ver los detalles** está todo el
 avance, por si hay que pedir ayuda. Si existe una versión nueva de Alpine,
-antes de empezar pregunta si quieres pasar a ella o solo actualizar.
+antes de empezar pregunta si quieres pasar a ella o solo actualizar. Si el
+cambio de versión falla a la mitad, la ventana no te pide reiniciar: te
+dice que revises internet y vuelvas a intentar, porque reiniciar un
+sistema a medio cambiar podría dejarlo sin arrancar.
 
 Puedes cerrar la ventana mientras trabaja: la actualización sigue y la
 ventana vuelve a aparecer cuando termina. No apagues el equipo mientras
@@ -781,6 +784,12 @@ aparece un **aviso** en la esquina de la pantalla.
    **licencia**: léela y acéptala para poder instalarlo.
 5. Cuando diga **Listo**, reinicia si la pieza todavía no funciona.
 
+El aviso y las entradas **Controladores** y **Afinador** del menú usan
+la ruta completa del programa (`/usr/local/sbin/...`), igual que la
+Bienvenida: hay escritorios que no buscan programas en esa carpeta y,
+sin la ruta, el aviso no salía y el menú no abría nada. Los equipos ya
+instalados reciben el arreglo con la próxima versión de Lázaro.
+
 Si dice **"No falta nada"**, el equipo ya tiene todo lo que Lázaro sabe
 revisar. Si una pieza sigue sin funcionar, pide ayuda con el informe de
 diagnóstico (abajo).
@@ -827,15 +836,19 @@ ISO, para saber si un arreglo ya te llegó); después, los datos del equipo y de
 discos, el hardware (incluido lo que dice el afinador y lo que le falta
 según Controladores), la red, el sonido, la pantalla y los errores del
 arranque y de la instalación. No guarda contraseñas y solo tú puedes
-leerlo.
+leerlo. Antes de guardarlo tapa lo privado: claves de carpetas de red
+(`password=`), la mitad de cada dirección MAC (la otra mitad dice la
+marca de la tarjeta, que sí sirve), las direcciones IPv6 públicas y los
+nombres de las redes wifi guardadas. Aun así, ábrelo antes de subirlo a un
+sitio público.
 
 **Para avisar de un problema**, abre un reporte en
 [Issues](https://github.com/Entropio1984/lazaro-linux/issues) (necesitas
 una cuenta de GitHub, que es gratis), cuenta qué pasa y adjunta el
-informe. **Los reportes son públicos**: el informe trae datos de la red
-(como las direcciones IP y los nombres de las redes guardadas) y
-registros del sistema. Ábrelo antes con un editor de texto y borra lo que
-no quieras mostrar.
+informe. **Los reportes son públicos**: el informe ya tapa lo más
+privado, pero trae registros del sistema y las direcciones de tu red de
+casa (como 192.168.1.20). Ábrelo antes con un editor de texto y borra lo
+que no quieras mostrar.
 
 ## Palabras que aparecen en esta guía
 
@@ -919,7 +932,10 @@ prueban y publican solas en cada cambio de la rama principal.
    `desktop-postinstall.sh` con las opciones elegidas (oficina,
    aplicaciones) y las premarcadas de su menú. Si no hay internet, el
    script queda programado para el primer arranque con red (servicio
-   `lazaro-primer-arranque`). En la Completa el script, los controladores
+   `lazaro-primer-arranque`). Ese día Controladores y el repositorio de
+   Lázaro también despiertan al llegar internet: los tres esperan su turno
+   en el mismo candado (`/run/lazaro-apk.lock`), porque apk no deja
+   instalar a dos programas a la vez y el segundo fallaría. En la Completa el script, los controladores
    (`lazaro-controladores --instalar-alpine`) y el driver Broadcom usan
    solo el repositorio de la ISO, aunque haya internet (`completa_usb`);
    si algo falla desde el USB y hay conexión, ese paso se reintenta con

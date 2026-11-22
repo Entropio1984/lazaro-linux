@@ -614,15 +614,27 @@ $(printf '%s\n' "$nuevos" | sed 's/^/• /' | head -n 5)"
 	done
 }
 
+# Un programa de Lázaro a la vez instala paquetes: apk no deja trabajar a
+# dos juntos y el segundo fallaría. Todos esperan su turno en el mismo
+# candado: la configuración del primer arranque, Controladores y el
+# repositorio de Lázaro (todos despiertan juntos al llegar internet).
+con_turno_apk() { # COMANDO...
+	if [ -z "$RAIZ" ] && command -v flock >/dev/null 2>&1 && [ -w /run ]; then
+		(exec 8>/run/lazaro-apk.lock && flock 8 && "$@")
+	else
+		"$@"
+	fi
+}
+
 # Servicio de arranque: instala lo de Alpine que falte, esperando internet
 # si hace falta (hasta 30 minutos), sin molestar.
 arranque() {
-	instalar_alpine && return 0
+	con_turno_apk instalar_alpine && return 0
 	i=0
 	while [ $i -lt 360 ]; do
 		if wget -q --spider -T 8 "$(grep -m1 '^http' /etc/apk/repositories)/" 2>/dev/null; then
-			apk update -q >/dev/null 2>&1 || true
-			instalar_alpine || true
+			con_turno_apk apk update -q >/dev/null 2>&1 || true
+			con_turno_apk instalar_alpine || true
 			return 0
 		fi
 		i=$((i + 1))

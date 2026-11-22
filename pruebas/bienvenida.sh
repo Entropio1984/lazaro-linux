@@ -107,8 +107,16 @@ rc=0
 XDG_CONFIG_HOME="$TMP/cfg" LAZARO_BIENVENIDA_DONDE=instalado DISPLAY='' WAYLAND_DISPLAY='' python3 "$PROG" --sesion || rc=$?
 es "--sesion no abre si la persona desmarcó la casilla" '[ "$rc" = 0 ]'
 
-# El informe del Diagnóstico no lleva contraseñas de direcciones.
-es "el Diagnóstico tapa las contraseñas de las direcciones" '[ "$(echo "https://ana:secreto@sitio.org/alpine/v3.24/main" | sed "$(sed -n "s/^[[:space:]]*sed '"'"'\(s|:\/\/.*\)'"'"'$/\1/p" "$DIR/live/usr/sbin/lazaro-diagnostico")")" = "https://***@sitio.org/alpine/v3.24/main" ]'
+# El informe del Diagnóstico no lleva lo privado: contraseñas de
+# direcciones y de carpetas de red, la mitad de cada MAC ni las IPv6
+# públicas (función censurar).
+awk '/^censurar\(\) \{/,/^\}/' "$DIR/live/usr/sbin/lazaro-diagnostico" > "$TMP/censurar.sh"
+censura() { sh -c '. "$1"; printf "%s\n" "$2" | censurar' _ "$TMP/censurar.sh" "$1"; }
+es "el Diagnóstico tapa las contraseñas de las direcciones" '[ "$(censura "https://ana:secreto@sitio.org/alpine/v3.24/main")" = "https://***@sitio.org/alpine/v3.24/main" ]'
+es "el Diagnóstico tapa las contraseñas de carpetas de red" '[ "$(censura "//srv/doc /mnt cifs username=ana,password=s3cr3t,uid=1000 0 0")" = "//srv/doc /mnt cifs username=ana,password=***,uid=1000 0 0" ]'
+es "el Diagnóstico tapa una contraseña con comas dobles" '[ "$(censura "//srv/doc /mnt cifs password=a,,b,uid=1000 0 0")" = "//srv/doc /mnt cifs password=***,uid=1000 0 0" ]'
+es "el Diagnóstico tapa la mitad de la MAC" '[ "$(censura "link/ether 00:1b:2c:3d:4e:5f brd ff:ff:ff:ff:ff:ff")" = "link/ether 00:1b:2c:xx:xx:xx brd ff:ff:ff:xx:xx:xx" ]'
+es "el Diagnóstico tapa la IPv6 pública y deja la local" '[ "$(censura "inet6 2800:e2:1c00::5/64 scope global dynamic")" = "inet6 ***/64 scope global dynamic" ] && [ "$(censura "inet6 fe80::1/64 scope link")" = "inet6 fe80::1/64 scope link" ]'
 
 # El Actualizador (lazaro-actualizador), sin abrir la ventana: cuándo
 # ofrece pasar a la versión siguiente de Alpine y cómo limpia el avance.

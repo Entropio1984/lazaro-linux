@@ -144,14 +144,24 @@ corre() {
 		echo "(no está instalado: $1)"
 	fi
 }
+# Lo privado no sale en el informe (se comparte para pedir ayuda, a veces
+# en un sitio público): claves de direcciones y de carpetas de red
+# (password=), la mitad de cada MAC (la otra mitad dice la marca del
+# chip, que sí sirve) y las direcciones IPv6 públicas.
+censurar() {
+	sed -E \
+		-e 's|://[^/@[:space:]]*@|://***@|g' \
+		-e 's/(([Pp]ass|[Pp]assword|[Pp]asswd)=)([^,[:space:]]|,,)*/\1***/g' \
+		-e 's/(^|[^[:xdigit:]:])(([[:xdigit:]]{2}:){3})[[:xdigit:]]{2}:[[:xdigit:]]{2}:[[:xdigit:]]{2}($|[^[:xdigit:]:])/\1\2xx:xx:xx\4/g' \
+		-e 's/(inet6 )[[:xdigit:]:]+(\/[0-9]+ scope global)/\1***\2/'
+}
 seccion() { printf '\n==================== %s ====================\n' "$*"; }
 archivo() { # RUTA [LÍNEAS]
 	if [ -r "$1" ]; then
 		echo "--- $1"
 		# Sin contraseñas: una dirección como https://usuario:clave@sitio
 		# queda https://***@sitio.
-		if [ -n "${2:-}" ]; then tail -n "$2" "$1"; else cat "$1"; fi |
-			sed 's|://[^/@[:space:]]*@|://***@|g'
+		if [ -n "${2:-}" ]; then tail -n "$2" "$1"; else cat "$1"; fi
 	else
 		echo "--- $1 (no existe)"
 	fi
@@ -287,8 +297,11 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	done
 
 	seccion "Red"
-	corre nmcli device status
-	corre nmcli -f NAME,TYPE,DEVICE connection show
+	# Sin la columna CONNECTION: dice el nombre de la red wifi en uso.
+	corre nmcli -f DEVICE,TYPE,STATE device status
+	# Sin NAME: los nombres de las conexiones guardadas son los de las
+	# redes wifi donde estuvo el equipo.
+	corre nmcli -f TYPE,DEVICE,STATE connection show
 	corre ip addr
 	corre rfkill list
 
@@ -296,7 +309,19 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	archivo /proc/asound/cards
 	corre aplay -l
 	if [ -n "$usuario" ]; then
-		su "$usuario" -c 'timeout 10 wpctl status 2>/dev/null || timeout 10 pactl info 2>/dev/null' 2>&1 | head -n 60
+		# El sonido vive en la sesión de la persona: con doas o pkexec se
+		# pierde XDG_RUNTIME_DIR y wpctl/pactl no encuentran dónde
+		# preguntar (la sección salía vacía).
+		uid_s="$(id -u "$usuario" 2>/dev/null)"
+		dir_s=""
+		for d in "/run/user/$uid_s" "/tmp/$uid_s-runtime-dir"; do
+			[ -n "$uid_s" ] && [ -d "$d" ] && { dir_s="$d"; break; }
+		done
+		if [ -n "$dir_s" ]; then
+			su "$usuario" -c "XDG_RUNTIME_DIR='$dir_s' timeout 10 wpctl status 2>/dev/null || XDG_RUNTIME_DIR='$dir_s' timeout 10 pactl info 2>/dev/null" 2>&1 | head -n 60
+		else
+			echo "(no se encontró la sesión de $usuario: ¿tiene una sesión gráfica abierta?)"
+		fi
 	fi
 
 	seccion "Servicios (OpenRC)"
@@ -325,7 +350,7 @@ _ 'Reuniendo información... (suele tardar menos de un minuto)'; echo
 	for b in /sys/class/power_supply/BAT*; do
 		[ -d "$b" ] && echo "$(basename "$b"): $(cat "$b/status" 2>/dev/null), $(cat "$b/capacity" 2>/dev/null)%"
 	done
-} > "$tmp" 2>&1
+} 2>&1 | censurar > "$tmp"
 
 if [ -n "$usuario" ]; then
 	su -s /bin/sh "$usuario" -c 'umask 077; cat > "$1"' sh "$salida" < "$tmp"

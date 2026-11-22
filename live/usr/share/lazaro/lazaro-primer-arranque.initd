@@ -20,7 +20,19 @@ start() {
 		i=0
 		while [ $i -lt 360 ]; do
 			if wget -q --spider -T 8 "$indice"; then
-				if /usr/libexec/lazaro/lazaro-postinstalacion; then
+				# Un programa de Lázaro a la vez instala paquetes: apk
+				# no deja trabajar a dos juntos y el segundo fallaría.
+				# Controladores y el repositorio de Lázaro esperan su
+				# turno en el mismo candado (/run/lazaro-apk.lock).
+				pa_rc=0
+				if command -v flock >/dev/null 2>&1 && exec 8>/run/lazaro-apk.lock; then
+					flock 8
+					/usr/libexec/lazaro/lazaro-postinstalacion || pa_rc=$?
+					exec 8>&-
+				else
+					/usr/libexec/lazaro/lazaro-postinstalacion || pa_rc=$?
+				fi
+				if [ "$pa_rc" = 0 ]; then
 					rc-update del lazaro-primer-arranque default
 					# Fuera el aviso de la consola (ver lazaro-instalar).
 					for f in issue motd; do

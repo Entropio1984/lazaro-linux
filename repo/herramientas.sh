@@ -77,6 +77,16 @@ sed -i 's|^Exec=lazaro-bienvenida|Exec=/usr/local/sbin/lazaro-bienvenida|' \
 	"$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"
 grep -q '^Exec=/usr/local/sbin/lazaro-bienvenida --sesion$' "$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop" ||
 	die "el arranque de la Bienvenida no quedó con la ruta completa"
+sed -i 's|^Exec=lazaro-controladores|Exec=/usr/local/sbin/lazaro-controladores|' \
+	"$A/usr/share/applications/lazaro-controladores.desktop" \
+	"$A/usr/share/lazaro/lazaro-controladores-sesion.desktop"
+sed -i 's|^Exec=lazaro-afinador|Exec=/usr/local/sbin/lazaro-afinador|' \
+	"$A/usr/share/applications/lazaro-afinador.desktop"
+for f in "$A/usr/share/applications/lazaro-controladores.desktop" \
+	"$A/usr/share/lazaro/lazaro-controladores-sesion.desktop" \
+	"$A/usr/share/applications/lazaro-afinador.desktop"; do
+	grep -q '^Exec=/usr/local/sbin/' "$f" || die "${f##*/} no quedó con la ruta completa"
+done
 for t in 64x64 256x256; do
 	install -Dm644 "$L/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png" "$A/usr/share/icons/hicolor/$t/apps/lazaro-bienvenida.png"
 done
