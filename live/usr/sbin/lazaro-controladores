@@ -530,7 +530,7 @@ licencia_texto() {
 # Pide aceptar la licencia de Intel. 0 si se aceptó.
 pedir_licencia() { # CLAVE
 	zenity --text-info --width=640 --height=520 --title="$(printf "$(_ 'Licencia de Intel (%s)')" "$1")" \
-		--checkbox="Acepto la licencia de Intel para el firmware de mi tarjeta wifi" \
+		--checkbox="$(_ 'Acepto la licencia de Intel para el firmware de mi tarjeta wifi')" \
 		--filename=/dev/stdin <<-EOF
 	$(licencia_texto)
 	EOF
@@ -606,11 +606,17 @@ $(printf '%s\n' "$nuevos" | sed 's/^/• /' | head -n 5)"
 	sleep 20
 	revisar_avisar
 	command -v udevadm >/dev/null 2>&1 || return 0
+	fin=0
 	udevadm monitor --udev --subsystem-match=usb --subsystem-match=pci 2>/dev/null | while read -r l; do
 		case "$l" in *" add "*|*"add "*) ;; *) continue ;; esac
-		# Varios eventos por dispositivo: se espera a que lleguen todos.
+		# Un dispositivo USB manda de 5 a 15 eventos: los que llegaron
+		# mientras se revisaba ya quedaron cubiertos por esa revisión
+		# (en un equipo de un núcleo, revisar diez veces se nota).
+		[ $(( $(date +%s) - fin )) -ge 2 ] || continue
+		# Se espera a que lleguen todos los del mismo dispositivo.
 		sleep 3
 		revisar_avisar
+		fin="$(date +%s)"
 	done
 }
 

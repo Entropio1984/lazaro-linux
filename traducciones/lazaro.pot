@@ -449,6 +449,10 @@ msgstr ""
 msgid "Licencia de Intel (%s)"
 msgstr ""
 
+#: live/usr/sbin/lazaro-controladores
+msgid "Acepto la licencia de Intel para el firmware de mi tarjeta wifi"
+msgstr ""
+
 #: live/usr/sbin/lazaro-controladores live/usr/share/lazaro/bienvenida/funciones/14-controladores.conf
 msgid "Controladores"
 msgstr ""

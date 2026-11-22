@@ -248,7 +248,7 @@ grub_quitar_bloque() {
 	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '
 		$0 == i { dentro = 1; next }
 		dentro && $0 == f { dentro = 0; next }
-		!dentro { print }' "$g" > "$g.tmp.$$" && cat "$g.tmp.$$" > "$g"
+		!dentro { print }' "$g" > "$g.tmp.$$" && chmod 644 "$g.tmp.$$" && mv -f "$g.tmp.$$" "$g"
 	rm -f "$g.tmp.$$"
 }
 grub_poner_bloque() { # PARÁMETROS
@@ -491,6 +491,10 @@ como_root() {
 	fi
 }
 
+# Zenity lee el texto como marcas (Pango): un "&" o un "<" en un mensaje
+# de error dejaría la ventana en blanco.
+sin_marcas() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
+
 ventana() {
 	command -v zenity >/dev/null 2>&1 || { echo "Falta zenity" >&2; exit 1; }
 	while :; do
@@ -519,7 +523,7 @@ ventana() {
 						--text="$(_ 'Listo. Algunos ajustes se notan después de reiniciar.')" >/dev/null 2>&1 || true
 				else
 					zenity --error --width=420 --title="$(_ 'Afinador')" \
-						--text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+						--text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3 | sin_marcas)" >/dev/null 2>&1 || true
 				fi ;;
 			"$o_mit")
 				if [ "$(conf_valor MITIGACIONES)" = apagadas ]; then

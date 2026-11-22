@@ -19,6 +19,11 @@ on:
       - .github/workflows/manual-capturas.yml
       - live/usr/share/lazaro/pruebas/zz-lazaro-capturas.start
 
+# Por defecto el token de cada trabajo solo puede leer el código; los que
+# publican piden lo suyo (permissions dentro del trabajo).
+permissions:
+  contents: read
+
 concurrency:
   group: manual-capturas-${{ github.ref }}
   cancel-in-progress: true

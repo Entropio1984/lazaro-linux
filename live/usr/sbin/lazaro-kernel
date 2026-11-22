@@ -73,7 +73,7 @@ grub_quitar_bloque() {
 	awk -v i="$MARCA_INI" -v f="$MARCA_FIN" '
 		$0 == i { dentro = 1; next }
 		dentro && $0 == f { dentro = 0; next }
-		!dentro { print }' "$g" > "$g.tmp.$$" && cat "$g.tmp.$$" > "$g"
+		!dentro { print }' "$g" > "$g.tmp.$$" && chmod 644 "$g.tmp.$$" && mv -f "$g.tmp.$$" "$g"
 	rm -f "$g.tmp.$$"
 }
 # GRUB_DEFAULT=saved: el kernel por defecto lo eligen grub-set-default y
@@ -203,7 +203,9 @@ nueva_version() {
 }
 
 mostrar_estado() {
-	v="$(apk info -e linux-lazaro 2>/dev/null && apk info linux-lazaro 2>/dev/null | sed -n '1s/ description:$//p')"
+	# Desde la base de apk de $R, igual que version_instalada.
+	v="$(version_instalada)"
+	[ -z "$v" ] || v="linux-lazaro-$v"
 	case "$(estado)" in
 		no) _ 'Kernel Lázaro: no instalado.'; echo ;;
 		prueba) _ 'Kernel Lázaro: instalado, espera su arranque de prueba (reinicia).'; echo ;;
@@ -213,6 +215,10 @@ mostrar_estado() {
 	[ -z "$v" ] || printf "$(_ 'Paquete: %s')\n" "$v"
 	printf "$(_ 'Kernel en uso ahora: %s')\n" "$(kernel_en_uso)"
 }
+
+# Zenity lee el texto como marcas (Pango): un "&" o un "<" en un mensaje
+# de error dejaría la ventana en blanco.
+sin_marcas() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
 
 como_root() {
 	if [ "$(id -u)" = 0 ]; then "$@"
@@ -230,9 +236,9 @@ ventana() {
 				--text="$texto\n$(_ 'Al instalarlo, el próximo arranque es de prueba: si algo falla, reinicia y el equipo vuelve solo al kernel de Alpine. Necesita internet.')" >/dev/null 2>&1 || return 0
 			if salida="$(como_root "$0" --instalar 2>&1)"; then
 				zenity --question --width=420 --title="$(_ 'Kernel Lázaro')" --ok-label="$(_ 'Reiniciar ahora')" --cancel-label="$(_ 'Después')" \
-					--text="$(_ 'Instalado. El próximo arranque prueba el kernel Lázaro.')" >/dev/null 2>&1 && { loginctl reboot 2>/dev/null || reboot; }
+					--text="$(_ 'Instalado. El próximo arranque prueba el kernel Lázaro.')" >/dev/null 2>&1 && { loginctl reboot 2>/dev/null || como_root reboot; }
 			else
-				zenity --error --width=460 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'No se pudo instalar.')\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+				zenity --error --width=460 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'No se pudo instalar.')\n\n$(printf '%s' "$salida" | tail -n 3 | sin_marcas)" >/dev/null 2>&1 || true
 			fi ;;
 		*)
 			zenity --question --width=520 --title="$(_ 'Kernel Lázaro')" --ok-label="$(_ 'Volver al kernel de Alpine')" --cancel-label="$(_ 'Cerrar')" \
@@ -240,7 +246,7 @@ ventana() {
 			if salida="$(como_root "$0" --quitar 2>&1)"; then
 				zenity --info --width=380 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'Listo. Al reiniciar se usa el kernel de Alpine.')" >/dev/null 2>&1 || true
 			else
-				zenity --error --width=460 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3)" >/dev/null 2>&1 || true
+				zenity --error --width=460 --title="$(_ 'Kernel Lázaro')" --text="$(_ 'No se pudo.')\n\n$(printf '%s' "$salida" | tail -n 3 | sin_marcas)" >/dev/null 2>&1 || true
 			fi ;;
 	esac
 }

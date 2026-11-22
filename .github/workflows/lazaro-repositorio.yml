@@ -241,9 +241,11 @@ jobs:
       # recompilar el kernel).
       - name: Probar el índice de 32 bits
         run: |
+          . ./config.env
+          case "$ALPINE_BRANCH" in edge) t=edge ;; *) t="${ALPINE_BRANCH#v}" ;; esac
           mkdir -p /tmp/repo-x86
           cp salida/herramientas/x86_64/lazaro-herramientas-*.apk /tmp/repo-x86/
-          docker run --rm -v /tmp/repo-x86:/r -w /r alpine:3.24 \
+          docker run --rm -v /tmp/repo-x86:/r -w /r "alpine:$t" \
             sh -c 'apk index --quiet --allow-untrusted -o APKINDEX.tar.gz --rewrite-arch x86 ./*.apk'
           tar -xzOf /tmp/repo-x86/APKINDEX.tar.gz APKINDEX | grep -qx 'A:x86'
           tar -xzOf /tmp/repo-x86/APKINDEX.tar.gz APKINDEX | grep -qx 'P:lazaro-herramientas'

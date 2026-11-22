@@ -20,6 +20,11 @@ on:
     - cron: "17 6 * * 1"
   workflow_dispatch:
 
+# Por defecto el token de cada trabajo solo puede leer el código; los que
+# publican piden lo suyo (permissions dentro del trabajo).
+permissions:
+  contents: read
+
 concurrency:
   group: lazaro-iso-${{ github.ref }}
   cancel-in-progress: true
@@ -327,8 +332,8 @@ jobs:
             pruebas/resultados/*.ppm
           retention-days: 14
 
-  # ISO de 32 bits (Alpine x86): para equipos anteriores a 2008. Solo XFCE
-  # y LXQt, sin Flatpak ni kernel Lázaro, con NetSurf como navegador
+  # ISO de 32 bits (Alpine x86): para equipos anteriores a 2008. Solo IceWM,
+  # sin Flatpak ni kernel Lázaro, con NetSurf como navegador
   # liviano. Va en trabajos aparte: si falla, las ediciones de 64 bits se
   # prueban y se publican igual. Solo con la versión estable de Alpine.
   iso-32:
@@ -463,39 +468,71 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+      # Revisión rápida antes de todo: que ningún programa tenga un error
+      # de escritura (comillas sin cerrar, un "fi" de menos...). Tarda
+      # segundos y avisa antes de gastar horas compilando.
+      - name: Revisar que los programas estén bien escritos
+        run: |
+          mal=0
+          for f in $(git ls-files); do
+            [ -f "$f" ] || continue
+            case "$(head -c 80 "$f" 2>/dev/null | tr -d '\0' | head -n 1)" in
+              '#!/bin/sh'*|'#!/sbin/openrc-run'*|'#!/usr/bin/env sh'*|'#!/bin/ash'*)
+                sh -n "$f" || { echo "::error file=$f::error de escritura (sh -n)"; mal=1; } ;;
+              '#!/bin/bash'*|'#!/usr/bin/env bash'*)
+                bash -n "$f" || { echo "::error file=$f::error de escritura (bash -n)"; mal=1; } ;;
+              '#!/usr/bin/env python3'*|'#!/usr/bin/python3'*)
+                python3 -c 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1])' "$f" ||
+                  { echo "::error file=$f::error de escritura (Python)"; mal=1; } ;;
+              '#!'*) ;;
+              # Sin primera línea #!: los que se cargan con "." (lib.sh,
+              # config.env, texto.sh, el perfil de la ISO...).
+              *) case "$f" in *.sh|*.env)
+                   sh -n "$f" || { echo "::error file=$f::error de escritura (sh -n)"; mal=1; } ;;
+                 esac ;;
+            esac
+          done
+          exit $mal
+      # Las pruebas con el busybox y el Python de Alpine usan la misma
+      # versión que la ISO (config.env).
+      - name: Versión de Alpine para las pruebas
+        run: |
+          . ./config.env
+          case "$ALPINE_BRANCH" in edge) t=edge ;; *) t="${ALPINE_BRANCH#v}" ;; esac
+          echo "ALPINE_TAG=$t" >> "$GITHUB_ENV"
       - run: sh pruebas/graficas.sh
       - run: sh pruebas/recomendacion.sh
       # lazaro-controladores, también con el busybox de Alpine (su awk,
       # tar y dd son los que usa la ISO).
       - run: sh pruebas/controladores.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh pruebas/controladores.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh pruebas/controladores.sh
       # lazaro-afinador: qué ajustes elige en equipos viejos y nuevos, y que
       # aplicar y deshacer dejen GRUB y sysctl.d como estaban.
       - run: sh pruebas/afinador.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh pruebas/afinador.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh pruebas/afinador.sh
       # lazaro-bienvenida: los archivos de funciones (un botón cada uno)
       # están bien escritos y se muestran donde corresponde. También con
       # el Python de Alpine.
       - run: sh pruebas/bienvenida.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
       # Idioma de la sesión de prueba: qué traducciones se guardan de cada
       # paquete -lang (en Alpine, con uno de verdad) y lo que escribe el
       # selector de idioma y teclado de la Bienvenida.
       - run: sh pruebas/idioma.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 tar && sh pruebas/idioma.sh'
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q python3 tar && sh pruebas/idioma.sh'
       # lazaro-kernel: instalar, arranque de prueba bien y mal, actualizar
       # y quitar, con GRUB y apk falsos.
       - run: sh pruebas/kernel.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q curl && sh pruebas/kernel.sh'
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q curl && sh pruebas/kernel.sh'
       # Mejoras para equipos ya instalados: lazaro-arreglos (una vez cada
       # uno, en orden), lazaro-actualizar-raiz y el arreglo de la tienda.
       - run: sh pruebas/arreglos.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/arreglos.sh'
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q python3 && sh pruebas/arreglos.sh'
       # Traducciones de las herramientas (inglés y portugués de Brasil):
       # completas, con los mismos %s, y leídas igual por el shell y por
       # Python (también con el awk de busybox, el de la ISO).
       - run: sh pruebas/traducciones.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src alpine:3.24 sh -c 'apk add -q python3 && sh pruebas/traducciones.sh'
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q python3 && sh pruebas/traducciones.sh'
 
   pruebas:
     name: Prueba ${{ matrix.prueba }} (${{ matrix.alpine }})
@@ -629,7 +666,7 @@ jobs:
           etiqueta=en-desarrollo
           notas="ISO de prueba compilada desde main ($GITHUB_SHA) y verificada en QEMU (BIOS y UEFI). No es una versión final: pruébala solo en una máquina virtual o en un equipo de sobra.
 
-          El archivo que termina en x86.iso es la de 32 bits, para equipos anteriores a 2008 (solo XFCE y LXQt).
+          El archivo que termina en x86.iso es la de 32 bits, para equipos anteriores a 2008 (solo IceWM).
 
           Esta es la edición Ligera. La edición Completa (unos 4,5 GB, se instala sin internet con cualquiera de los 7 escritorios) está en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Completa/"
           if gh release view "$etiqueta" >/dev/null 2>&1; then
@@ -839,7 +876,7 @@ jobs:
             echo
             echo "- **Ligera** (menos de 2 GB): el archivo .iso de abajo, o en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Versiones/$version/"
             echo "- **Completa** (unos 4,6 GB, se instala sin internet): solo en SourceForge, misma carpeta."
-            echo "- **32 bits** (para equipos anteriores a 2008; solo XFCE y LXQt): el archivo que termina en x86.iso, abajo o en SourceForge."
+            echo "- **32 bits** (para equipos anteriores a 2008; solo IceWM): el archivo que termina en x86.iso, abajo o en SourceForge."
             echo
             echo "Cómo instalarla: https://github.com/$GH_REPO#guía-de-instalación-paso-a-paso"
             echo
