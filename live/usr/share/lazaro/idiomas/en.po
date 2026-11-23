@@ -1471,3 +1471,9 @@ msgstr "The app could not be installed."
 
 msgid "Conecta tus cuentas de Google Drive, OneDrive o Dropbox y úsalas como carpetas del equipo. La primera vez se instala (hace falta internet)."
 msgstr "Connect your Google Drive, OneDrive or Dropbox accounts and use them as folders on this computer. The first time it gets installed (internet needed)."
+
+msgid "No se pudo abrir la carpeta. El informe está en:"
+msgstr "The folder could not be opened. The report is at:"
+
+msgid "LXQt y Sway tienen editor de texto, y los botones \"Abrir la carpeta\" funcionan en todos los escritorios"
+msgstr "LXQt and Sway have a text editor, and the \"Open the folder\" buttons work on every desktop"

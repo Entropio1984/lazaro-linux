@@ -434,6 +434,41 @@ if [ "$ALPINE_ARCH" = x86 ]; then
 	done
 fi
 
+# --- 64 bits: idiomas de Firefox -----------------------------------------
+# El Firefox de Alpine viene solo en inglés: en su primer arranque ofrece
+# bajar el idioma del sistema, y sin internet se quedaba en inglés (VM con
+# la Completa, 23 de noviembre de 2026). Se llevan los paquetes de idioma
+# oficiales de Mozilla (firmados) de la misma versión de Firefox que trae
+# la ISO; lazaro-instalar los deja en el sistema nuevo
+# (paso_firefox_idiomas). Al actualizarse Firefox, se renuevan solos
+# desde addons.mozilla.org. Si Mozilla no tiene esa versión, se sigue
+# sin ellos (Firefox los ofrecerá con internet, como antes).
+if [ "$ALPINE_ARCH" = x86_64 ]; then
+	msg "Idiomas de Firefox"
+	ff_ver="$(tar -xzOf "$INDICES/community.tar.gz" APKINDEX |
+		awk '/^P:/ { p = ($0 == "P:firefox") } p && /^V:/ { v = substr($0, 3); sub(/-r[0-9]+$/, "", v); print v; exit }')"
+	ff_dir="$DATOS_HW/usr/share/lazaro/firefox-idiomas"
+	mkdir -p "$ff_dir"
+	ff_n=0
+	for ff_l in es-ES es-MX es-AR es-CL pt-BR pt-PT; do
+		[ -n "$ff_ver" ] || break
+		if curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 -o "$ff_dir/langpack-$ff_l@firefox.mozilla.org.xpi" \
+			"https://releases.mozilla.org/pub/firefox/releases/$ff_ver/linux-x86_64/xpi/$ff_l.xpi" &&
+			unzip -l "$ff_dir/langpack-$ff_l@firefox.mozilla.org.xpi" 2>/dev/null | grep -q 'manifest.json'; then
+			ff_n=$((ff_n + 1))
+		else
+			rm -f "$ff_dir/langpack-$ff_l@firefox.mozilla.org.xpi"
+			echo "AVISO: no se pudo bajar el idioma $ff_l de Firefox $ff_ver"
+		fi
+	done
+	echo "  Firefox ${ff_ver:-?}: $ff_n idiomas ($(du -sk "$ff_dir" | cut -f1) KB)"
+	if [ "$ff_n" -gt 0 ]; then
+		chown -R constructor:abuild "$ff_dir"
+	else
+		rmdir "$ff_dir"
+	fi
+fi
+
 # --- ISO ----------------------------------------------------------------
 msg "Generando la ISO"
 mkdir -p "$SALIDA"

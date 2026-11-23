@@ -576,7 +576,15 @@ prueba_instalar() {
 			grep '^\[lazaro\] Aviso: .*se intenta de nuevo con internet' "$serie" >&2 || true
 			return 1
 		fi
-		echo "OK: Completa ($red): sistema base, controladores y configuración final desde el USB, sin descargar nada."
+		# Firefox en el idioma del sistema sin internet: sus paquetes de
+		# idioma vienen en el USB.
+		if [ "$de" != ninguno ] && ! grep -q '^\[lazaro\] LAZARO-FIREFOX-IDIOMAS [1-9]' "$serie"; then
+			terminar "$pid"
+			echo "FALLO: en la Completa Firefox quedó sin sus idiomas ($red)." >&2
+			grep -i 'firefox' "$serie" | tail -n 10 >&2 || true
+			return 1
+		fi
+		echo "OK: Completa ($red): sistema base, controladores y configuración final desde el USB, sin descargar nada; Firefox con sus idiomas."
 	fi
 	if [ "$completa" = si ] && [ "$de" != ninguno ]; then
 		if ! grep -q 'LAZARO-FLATPAK-USB-OK org.onlyoffice.desktopeditors' "$serie" \
