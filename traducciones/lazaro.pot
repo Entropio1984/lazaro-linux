@@ -1432,3 +1432,7 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/006-editor-y-carpetas.sh
 msgid "LXQt y Sway tienen editor de texto, y los botones \"Abrir la carpeta\" funcionan en todos los escritorios"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/007-tienda-sin-cuelgues.sh
+msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
+msgstr ""
