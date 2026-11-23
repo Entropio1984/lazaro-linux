@@ -1458,7 +1458,7 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 	# flathub not found" en el registro, que asusta y no es un error).
 	fp_quitar_flathub() {
 		flatpak --installation="$FP_INSTALACION" remotes 2>/dev/null | grep -q '^flathub' || return 0
-		fp_quitar_flathub
+		fp remote-delete --force flathub || true
 	}
 	fp_quitar_flathub
 	if ! fp remote-add --no-gpg-verify flathub "file://$fu_dir/repo"; then
