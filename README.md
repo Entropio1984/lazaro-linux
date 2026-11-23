@@ -34,7 +34,7 @@ imprimir.
   a mano: idioma, teclado, sonido, wifi, impresoras y controladores de
   video quedan listos solos. Firefox viene siempre (salvo si eliges
   "Sin escritorio"). Todos los escritorios traen editor de texto
-  (FeatherPad en LXQt, Mousepad en XFCE, Sway e IceWM).
+  (Mousepad en XFCE, LXQt, Sway e IceWM).
 - **Funciona sin internet.** La edición Completa trae todo dentro del USB
   y se instala en un equipo que no tiene red. Aunque haya internet, la
   Completa instala todo desde el USB y no descarga nada (el teclado

@@ -1454,7 +1454,13 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 	StorageType=harddisk
 	EOF
 	fp() { flatpak --installation="$FP_INSTALACION" "$@" </dev/null >>"$LOG" 2>&1; }
-	fp remote-delete --force flathub || true
+	# Borra Flathub solo si está (si no, flatpak deja "error: Remote
+	# flathub not found" en el registro, que asusta y no es un error).
+	fp_quitar_flathub() {
+		flatpak --installation="$FP_INSTALACION" remotes 2>/dev/null | grep -q '^flathub' || return 0
+		fp_quitar_flathub
+	}
+	fp_quitar_flathub
 	if ! fp remote-add --no-gpg-verify flathub "file://$fu_dir/repo"; then
 		log "Aviso: no se pudo abrir el repositorio de Flatpak del USB."
 		fu_apps=""
@@ -1469,7 +1475,7 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 		fi
 	done
 	avance_parar
-	fp remote-delete --force flathub || true
+	fp_quitar_flathub
 	# Agregar Flathub también intenta bajar su descripción por internet:
 	# si la red se corta, flatpak esperaba hasta agotar su tiempo ("Timeout
 	# was reached"). Con 60 segundos alcanza; si se corta antes de tiempo,

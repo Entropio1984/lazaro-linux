@@ -315,7 +315,7 @@ editor
 es "editor: sin internet queda pendiente" '[ "$rc" = 1 ]'
 rm "$TMP/sin-internet"
 editor
-es "editor: LXQt recibe FeatherPad y xdg-utils" '[ "$rc" = 0 ] && grep -qx "P:featherpad" "$E/lib/apk/db/installed" && grep -qx "P:xdg-utils" "$E/lib/apk/db/installed" && ! grep -q mousepad "$TMP/llamadas"'
+es "editor: LXQt recibe Mousepad y xdg-utils" '[ "$rc" = 0 ] && grep -qx "P:mousepad" "$E/lib/apk/db/installed" && grep -qx "P:xdg-utils" "$E/lib/apk/db/installed" && ! grep -q featherpad "$TMP/llamadas"'
 editor
 es "editor: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
 printf 'P:sway\nP:xdg-utils\n' > "$E/lib/apk/db/installed"

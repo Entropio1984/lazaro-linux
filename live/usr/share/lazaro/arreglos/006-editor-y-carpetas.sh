@@ -6,7 +6,8 @@
 # botones "Abrir la carpeta" del Diagnóstico y los enlaces de la
 # Bienvenida: no hacían nada (VM con la Completa, 23 de noviembre de
 # 2026). Copia de install_daily_apps de desktop-postinstall.sh desde esa
-# fecha: FeatherPad en LXQt, Mousepad en Sway y xdg-utils en todos.
+# fecha: Mousepad en LXQt y Sway (FeatherPad, el de LXQt, no está en
+# Alpine) y xdg-utils en todos.
 #
 # LAZARO_ARREGLO_RAIZ: para las pruebas, sistema de mentira.
 
@@ -19,10 +20,7 @@ instalado xorg-server || instalado sway || exit 11
 
 faltan=""
 instalado xdg-utils || faltan="xdg-utils"
-if instalado lxqt-desktop && ! instalado featherpad; then
-	faltan="$faltan featherpad"
-fi
-if instalado sway && ! instalado mousepad; then
+if { instalado lxqt-desktop || instalado sway; } && ! instalado mousepad; then
 	faltan="$faltan mousepad"
 fi
 [ -n "$faltan" ] || exit 10
