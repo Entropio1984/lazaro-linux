@@ -1405,6 +1405,21 @@ def iniciar_interfaz():
               file=sys.stderr)
         return 1
 
+    # Colores y letra del escritorio (nubes_tema.py, Lázaro). Sin ese
+    # archivo, la aplicación sigue con su aspecto de siempre.
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import nubes_tema as nt
+    except ImportError:
+        class nt:  # noqa: N801
+            FAMILIA, FIJA = "TkDefaultFont", "TkFixedFont"
+            COLORES = {"ayuda_fondo": "#ffffe0", "ayuda_texto": "#222", "apagado": "#555",
+                       "base": "white", "texto_base": "#222", "ok": "#1a7f37", "mal": "#c62828"}
+
+            @staticmethod
+            def aplicar(_raiz, _estilo):
+                return False
+
     class Ayuda:
         """Muestra un mensaje explicativo al pasar el ratón sobre un elemento."""
 
@@ -1423,7 +1438,7 @@ def iniciar_interfaz():
             self.ventana.wm_overrideredirect(True)
             self.ventana.wm_geometry("+%d+%d" % (x, y))
             tk.Label(self.ventana, text=self.texto, justify="left", wraplength=360,
-                     background="#ffffe0", foreground="#222", relief="solid",
+                     background=nt.COLORES["ayuda_fondo"], foreground=nt.COLORES["ayuda_texto"], relief="solid",
                      borderwidth=1, padx=6, pady=4).pack()
 
         def ocultar(self, _evento=None):
@@ -1446,10 +1461,11 @@ def iniciar_interfaz():
             estilo = ttk.Style(self)
             if "clam" in estilo.theme_names():
                 estilo.theme_use("clam")
-            estilo.configure("Titulo.TLabel", font=("TkDefaultFont", 14, "bold"))
-            estilo.configure("Ok.TLabel", foreground="#1a7f37")
-            estilo.configure("Mal.TLabel", foreground="#c62828")
-            estilo.configure("Acento.TButton", font=("TkDefaultFont", 10, "bold"))
+            nt.aplicar(self, estilo)
+            estilo.configure("Titulo.TLabel", font=(nt.FAMILIA, 14, "bold"))
+            estilo.configure("Ok.TLabel", foreground=nt.COLORES["ok"])
+            estilo.configure("Mal.TLabel", foreground=nt.COLORES["mal"])
+            estilo.configure("Acento.TButton", font=(nt.FAMILIA, 10, "bold"))
 
             self.estado = tk.StringVar(value="Listo.")
             ttk.Label(self, textvariable=self.estado, anchor="w", padding=(10, 4),
@@ -1598,7 +1614,7 @@ def iniciar_interfaz():
 
             self.marco_instalar = ttk.LabelFrame(p, text=" Cómo instalar lo que falta ", padding=10)
             self.texto_instalar = tk.Text(self.marco_instalar, height=3, wrap="word",
-                                          font=("TkFixedFont", 10))
+                                          font=(nt.FIJA, 10))
             self.texto_instalar.pack(fill="x")
             fila = ttk.Frame(self.marco_instalar)
             fila.pack(fill="x", pady=(6, 0))
@@ -1654,9 +1670,9 @@ def iniciar_interfaz():
             for fila, (nombre, ok, detalle, ayuda) in enumerate(checks):
                 icono = ttk.Label(self.marco_checks, text="✔" if ok else "✘",
                                   style="Ok.TLabel" if ok else "Mal.TLabel",
-                                  font=("TkDefaultFont", 13, "bold"))
+                                  font=(nt.FAMILIA, 13, "bold"))
                 icono.grid(row=fila, column=0, sticky="w", padx=(0, 8), pady=3)
-                etiqueta = ttk.Label(self.marco_checks, text=nombre, font=("TkDefaultFont", 10, "bold"))
+                etiqueta = ttk.Label(self.marco_checks, text=nombre, font=(nt.FAMILIA, 10, "bold"))
                 etiqueta.grid(row=fila, column=1, sticky="w", pady=3)
                 detalle_etq = ttk.Label(self.marco_checks, text=detalle,
                                         wraplength=max(200, self.marco_checks.winfo_width() - 290)
@@ -1776,7 +1792,7 @@ def iniciar_interfaz():
             self.combo_scope.grid(row=0, column=1, sticky="w", padx=6)
             self.combo_scope.bind("<<ComboboxSelected>>", lambda e: self.explicar_permisos())
             self.texto_scope = ttk.Label(self.fila_scope, wraplength=600, justify="left",
-                                         foreground="#555")
+                                         foreground=nt.COLORES["apagado"])
             self.texto_scope.grid(row=1, column=0, columnspan=2, sticky="w")
             Ayuda(self.combo_scope, "Qué puede hacer rclone con tu cuenta. Si tu institución (colegio, "
                                     "universidad, empresa) bloquea la conexión pidiendo la aprobación de "
@@ -1872,7 +1888,7 @@ def iniciar_interfaz():
             registro = ttk.LabelFrame(p, text=" Progreso ", padding=6)
             registro.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(10, 0))
             self.log = tk.Text(registro, height=5, wrap="word", state="disabled",
-                               font=("TkFixedFont", 9), background="white", foreground="#222")
+                               font=(nt.FIJA, 9), background=nt.COLORES["base"], foreground=nt.COLORES["texto_base"])
             barra = ttk.Scrollbar(registro, command=self.log.yview)
             self.log.configure(yscrollcommand=barra.set)
             self.log.pack(side="left", fill="both", expand=True)
@@ -2766,7 +2782,7 @@ def iniciar_interfaz():
 
         # =========================== PESTAÑA AYUDA ===========================
         def construir_ayuda(self):
-            texto = tk.Text(self.pest_ayu, wrap="word", font=("TkDefaultFont", 10), padx=8, pady=8)
+            texto = tk.Text(self.pest_ayu, wrap="word", font=(nt.FAMILIA, 10), padx=8, pady=8)
             barra = ttk.Scrollbar(self.pest_ayu, command=texto.yview)
             texto.configure(yscrollcommand=barra.set)
             barra.pack(side="right", fill="y")

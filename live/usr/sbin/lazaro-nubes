@@ -42,7 +42,7 @@ faltan_paquetes() {
 # La copia de la persona es la misma que trae Lázaro.
 app_al_dia() {
 	[ -x "$LANZADOR" ] || return 1
-	for f in nubes_rclone.py nubes_bandeja.py nubes_sinc.py; do
+	for f in nubes_rclone.py nubes_bandeja.py nubes_sinc.py nubes_tema.py; do
 		cmp -s "$APP_DIR/$f" "$DESTINO/$f" || return 1
 	done
 }

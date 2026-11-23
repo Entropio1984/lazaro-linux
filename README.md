@@ -538,7 +538,8 @@ reloj** que avisa si todo está al día, si está sincronizando o si hay un
 problema. La contraseña de tu cuenta se escribe en la página oficial de
 cada servicio: la aplicación nunca la ve. Por dentro usa
 [rclone](https://rclone.org), un programa muy conocido para copiar
-archivos a la nube.
+archivos a la nube. Toma los colores (claros u
+oscuros) y la letra del escritorio que uses, como la Bienvenida.
 
 Se instala desde la Bienvenida con el botón **Lázaro Nubes: Google Drive,
 OneDrive y Dropbox** (sección **Programas**). La primera vez pide tu contraseña de administrador y descarga
