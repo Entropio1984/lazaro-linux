@@ -363,6 +363,9 @@ io_total() { # PID...
 		awk '/^(rchar|wchar):/ { s += $2 } END { printf "%.0f\n", s }'
 }
 
+# Lo más que espera la instalación por la lista de la tienda (opcional).
+TIENDA_LIMITE=${TIENDA_LIMITE:-180}
+
 # en_destino_vigilado RAIZ COMANDO...: como en_destino (con la salida en
 # $LOG), pero si el comando y todos sus procesos pasan CUELGUE_LIMITE
 # segundos (3 minutos) sin leer ni escribir nada, se cortan y se intenta
@@ -1220,11 +1223,30 @@ paso_ajustes() {
 		# de internet el script no pudo bajarla. Con internet se baja ya
 		# (unos pocos MB, no instala nada); si no, la tarea de cada hora
 		# lo hace cuando haya conexión.
+		# Es opcional: con una red lenta o que corta las descargas, la
+		# tarea podía tener la instalación esperando hasta 20 minutos
+		# (10 para instalar el programa que la baja y 10 para bajarla).
+		# Aquí espera como mucho TIENDA_LIMITE segundos; lo que siga
+		# vivo lo corta matar_restos al salir del sistema nuevo, y como
+		# la tarea no dejó su marca de hecha, la tarea de cada hora lo
+		# vuelve a intentar con el equipo ya instalado.
 		if [ "$red_script" = no ] && [ "$red_ajustes" = si ] &&
 			[ -x "$raiz/etc/periodic/hourly/alpine-tienda-catalogo" ]; then
-			log "Descargando la lista de programas de la tienda (no instala nada)..."
-			en_destino "$raiz" /etc/periodic/hourly/alpine-tienda-catalogo </dev/null >>"$LOG" 2>&1 ||
+			log "Descargando la lista de programas de la tienda (no instala nada; espera como mucho $((TIENDA_LIMITE / 60)) minutos)..."
+			ti=0
+			ti_desde=$(date +%s)
+			en_destino "$raiz" timeout "$TIENDA_LIMITE" /etc/periodic/hourly/alpine-tienda-catalogo </dev/null >>"$LOG" 2>&1 || ti=$?
+			if [ "$ti" = 0 ]; then
+				log "LAZARO-TIENDA-AL-INSTALAR lista"
+			# busybox timeout y el de coreutils no devuelven el mismo
+			# número al cortar: se mira el tiempo que pasó.
+			elif [ $(($(date +%s) - ti_desde)) -ge "$TIENDA_LIMITE" ]; then
+				log "Aviso: la lista de la tienda no llegó en $((TIENDA_LIMITE / 60)) minutos (internet lento); se bajará sola una hora después del primer arranque con internet."
+				log "LAZARO-TIENDA-AL-INSTALAR tiempo"
+			else
 				log "Aviso: no se pudo bajar la lista de la tienda; se bajará sola con internet."
+				log "LAZARO-TIENDA-AL-INSTALAR fallo"
+			fi
 			cat "$raiz/var/log/alpine-tienda-catalogo.log" >>"$LOG" 2>/dev/null || true
 		fi
 		flatpak_desde_usb "$raiz" "$extras"
@@ -1432,7 +1454,13 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 	StorageType=harddisk
 	EOF
 	fp() { flatpak --installation="$FP_INSTALACION" "$@" </dev/null >>"$LOG" 2>&1; }
-	fp remote-delete --force flathub || true
+	# Borra Flathub solo si está (si no, flatpak deja "error: Remote
+	# flathub not found" en el registro, que asusta y no es un error).
+	fp_quitar_flathub() {
+		flatpak --installation="$FP_INSTALACION" remotes 2>/dev/null | grep -q '^flathub' || return 0
+		fp remote-delete --force flathub || true
+	}
+	fp_quitar_flathub
 	if ! fp remote-add --no-gpg-verify flathub "file://$fu_dir/repo"; then
 		log "Aviso: no se pudo abrir el repositorio de Flatpak del USB."
 		fu_apps=""
@@ -1447,7 +1475,7 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 		fi
 	done
 	avance_parar
-	fp remote-delete --force flathub || true
+	fp_quitar_flathub
 	# Agregar Flathub también intenta bajar su descripción por internet:
 	# si la red se corta, flatpak esperaba hasta agotar su tiempo ("Timeout
 	# was reached"). Con 60 segundos alcanza; si se corta antes de tiempo,

@@ -1477,3 +1477,6 @@ msgstr "Não foi possível abrir a pasta. O relatório está em:"
 
 msgid "LXQt y Sway tienen editor de texto, y los botones \"Abrir la carpeta\" funcionan en todos los escritorios"
 msgstr "LXQt e Sway têm editor de texto, e os botões \"Abrir a pasta\" funcionam em todos os ambientes"
+
+msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
+msgstr "A lista de programas da loja não trava mais com uma conexão lenta"

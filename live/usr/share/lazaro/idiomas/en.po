@@ -1477,3 +1477,6 @@ msgstr "The folder could not be opened. The report is at:"
 
 msgid "LXQt y Sway tienen editor de texto, y los botones \"Abrir la carpeta\" funcionan en todos los escritorios"
 msgstr "LXQt and Sway have a text editor, and the \"Open the folder\" buttons work on every desktop"
+
+msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
+msgstr "The app store's program list no longer hangs on a slow connection"

@@ -172,6 +172,30 @@ activar() {
 	exit 0
 }
 
+# Discover se queda corriendo escondido después de cerrar su ventana
+# mientras espera algo de internet (por ejemplo, las calificaciones de
+# los programas con una red que corta). Así no se vuelve a abrir: la copia
+# nueva le pasa el pedido a la escondida y se cierra sin mostrar nada (VM
+# con la Completa y LXQt, 23 de noviembre de 2026). Si este usuario ya
+# tiene un Discover y no se está instalando nada, se cierra antes de abrir
+# uno nuevo. Si tenía la ventana abierta, vuelve a aparecer enseguida.
+discover_escondido() {
+	de_pids="$(pgrep -u "$(id -u)" -x plasma-discover 2>/dev/null)" || return 0
+	# apk o flatpak trabajando: puede ser una instalación de esa tienda.
+	if pgrep -x apk >/dev/null 2>&1 ||
+		pgrep -f 'flatpak (install|update|uninstall)' >/dev/null 2>&1; then
+		return 0
+	fi
+	# shellcheck disable=SC2086 # una lista de números
+	kill $de_pids 2>/dev/null || return 0
+	for _i in 1 2 3 4 5 6; do
+		pgrep -u "$(id -u)" -x plasma-discover >/dev/null 2>&1 || return 0
+		sleep 0.5
+	done
+	# shellcheck disable=SC2086
+	kill -9 $de_pids 2>/dev/null || true
+}
+
 tienda() {
 	# La del escritorio en uso primero: Discover en Plasma y LXQt (Qt),
 	# GNOME Software en los demás (GTK).
@@ -180,7 +204,9 @@ tienda() {
 		*) orden="gnome-software plasma-discover" ;;
 	esac
 	for t in $orden; do
-		command -v "$t" >/dev/null 2>&1 && exec "$t"
+		command -v "$t" >/dev/null 2>&1 || continue
+		[ "$t" != plasma-discover ] || discover_escondido
+		exec "$t"
 	done
 	msg="$(_ 'Este sistema no tiene tienda de aplicaciones.')"
 	zenity --error --width=380 --title="$(_ 'Tienda de aplicaciones')" --text="$msg" >/dev/null 2>&1 || echo "$msg" >&2

@@ -34,13 +34,15 @@ imprimir.
   a mano: idioma, teclado, sonido, wifi, impresoras y controladores de
   video quedan listos solos. Firefox viene siempre (salvo si eliges
   "Sin escritorio"). Todos los escritorios traen editor de texto
-  (FeatherPad en LXQt, Mousepad en XFCE, Sway e IceWM).
+  (Mousepad en XFCE, LXQt, Sway e IceWM).
 - **Funciona sin internet.** La edición Completa trae todo dentro del USB
   y se instala en un equipo que no tiene red. Aunque haya internet, la
   Completa instala todo desde el USB y no descarga nada (el teclado
   tampoco; Flathub queda puesto desde el USB y solo intenta bajar su
-  descripción, con un minuto como máximo): tarda lo mismo con buena o
-  mala conexión. En 64 bits, Firefox queda en tu idioma sin internet: la
+  descripción, con un minuto como máximo; la lista de programas de la
+  tienda se espera 3 minutos como máximo y, si no llega, se baja sola
+  después del primer arranque): tarda lo mismo con buena o mala
+  conexión. En 64 bits, Firefox queda en tu idioma sin internet: la
   ISO trae sus paquetes de idioma (español y portugués), de la misma
   versión de Firefox. Las versiones nuevas llegan después, con el
   aviso de actualizaciones. Si instalas sin internet
@@ -469,7 +471,10 @@ siempre queda en el menú como **Bienvenida**.
 | <img src="docs/imagenes/bienvenida-claro.png" alt="Bienvenida, sección Tu equipo, con colores claros"> | <img src="docs/imagenes/bienvenida-oscuro.png" alt="Bienvenida, sección Ayuda, con colores oscuros"> |
 
 Cada botón solo aparece si sirve en tu equipo: por ejemplo, la tienda se
-muestra cuando hay una tienda instalada.
+muestra cuando hay una tienda instalada. Si Discover quedó corriendo
+escondido después de cerrarlo (pasa cuando espera algo de internet) y
+ya no se abre desde el menú, el botón de la tienda lo cierra y abre uno
+nuevo (salvo que se esté instalando algo).
 
 **Agregar un botón** es crear un archivo de texto, sin tocar el programa.
 Los de Lázaro están en `/usr/share/lazaro/bienvenida/funciones/` y los
@@ -987,7 +992,17 @@ prueban y publican solas en cada cambio de la rama principal.
    (`[lazaro] Hora ...`), para saber cuál tarda. Al terminar, el sistema instalado queda con los repositorios
    de internet para las actualizaciones y, si hay conexión, baja la lista
    de programas de la tienda (el catálogo AppStream de Alpine, unos pocos
-   MB, que no viene en ningún paquete). Lo que nunca viene en el USB:
+   MB, que no viene en ningún paquete) con `TIENDA_LIMITE` (180 s) como
+   máximo: con una red lenta la tarea podía demorar la instalación hasta
+   20 minutos (`timeout 600` para instalar `alpine-appstream-downloader`
+   y otros 600 para bajar la lista). Si se corta, no queda la marca
+   `/var/lib/swcatalog/.ultima-descarga` y la tarea de cada hora la baja
+   en el equipo instalado; el registro dice `LAZARO-TIENDA-AL-INSTALAR
+   lista|tiempo|fallo`. La tarea corre `alpine-appstream-downloader`
+   (que usa `requests` sin tiempo límite y se quedaba esperando para
+   siempre si el servidor dejaba de mandar datos) con 60 s por conexión y
+   hasta 3 intentos; el arreglo `007-tienda-sin-cuelgues` lo lleva a los
+   equipos ya instalados. Lo que nunca viene en el USB:
    esa lista, Google Chrome (botón de la Bienvenida) y el firmware que no
    se puede repartir (b43, Prism54, Intel 2100/2200), que se descarga con
    permiso. En 64 bits, `paso_firefox_idiomas` deja los paquetes de idioma
