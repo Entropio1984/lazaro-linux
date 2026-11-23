@@ -38,15 +38,38 @@ rclone version | head -n 1
 
 config="$(mktemp)"
 trap 'rm -f "$config"' EXIT
-# Se queda solo con lo que va entre llaves, por si se copió de más.
-token="$(printf '%s' "$DRIVE_TOKEN" | tr -d '\r\n' | sed 's/^[^{]*//; s/[^}]*$//')"
-case "$token" in
-	"{"*"refresh_token"*"}") ;;
-	*)
-		echo "::error::El secreto GDRIVE_TOKEN no parece un permiso de rclone (debe empezar con { y tener refresh_token)."
-		exit 1
-		;;
-esac
+# Las versiones nuevas de rclone entregan el permiso codificado (un texto
+# largo de letras, tipo eyJ0b2tlbiI6...) y las viejas como {...}. Se
+# aceptan las dos, aunque se haya copiado de más ("Paste the following",
+# "<---End paste"). Nunca se imprime el permiso.
+token="$(printf '%s' "$DRIVE_TOKEN" | python3 -I -c '
+import base64, json, re, sys
+texto = sys.stdin.read().replace("\r", "").replace("\n", "")
+def es_token(t):
+    try:
+        return "refresh_token" in json.loads(t)
+    except Exception:
+        return False
+llaves = re.search(r"\{.*\}", texto)
+if llaves and es_token(llaves.group(0)):
+    print(llaves.group(0))
+    sys.exit(0)
+for blob in sorted(re.findall(r"[A-Za-z0-9_\-+/=]{20,}", texto), key=len, reverse=True):
+    try:
+        datos = json.loads(base64.urlsafe_b64decode(blob.replace("+", "-").replace("/", "_").rstrip("=") + "=="))
+    except Exception:
+        continue
+    t = datos.get("token") if isinstance(datos, dict) else None
+    if isinstance(t, dict):
+        t = json.dumps(t)
+    if isinstance(t, str) and es_token(t):
+        print(t)
+        sys.exit(0)
+sys.exit(1)
+')" || {
+	echo "::error::El secreto GDRIVE_TOKEN no parece un permiso de rclone: vuelve a copiar lo que aparece entre \"Paste the following\" y \"<---End paste\"."
+	exit 1
+}
 cat > "$config" <<EOF
 [drive]
 type = drive
