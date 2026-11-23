@@ -10,10 +10,12 @@
 # es de tipo "drive.file": rclone solo ve y toca lo que él mismo subió,
 # nunca los demás archivos del Drive.
 #
-# La carpeta de Drive queda igual a CARPETA_LOCAL: la ISO nueva se sube y
-# la anterior se borra (sin pasar por la papelera, que también ocupa
-# espacio). La carpeta "Lázaro Linux" no cambia, así que su enlace
-# compartido sigue sirviendo.
+# La carpeta de Drive queda igual a CARPETA_LOCAL: la ISO anterior se
+# borra (sin pasar por la papelera, que también ocupa espacio) y se sube
+# la nueva. La carpeta "Lázaro Linux" la crea rclone y no cambia, así que
+# su enlace compartido sigue sirviendo. No hay que crearla a mano: con el
+# permiso drive.file rclone no vería una carpeta hecha desde la web y
+# crearía otra con el mismo nombre.
 #
 # Sin el secreto no hace nada: solo avisa.
 
@@ -55,17 +57,23 @@ chmod 600 "$config"
 export RCLONE_CONFIG="$config"
 
 ls -l "$origen"
-# Sin ISO no se sincroniza: una carpeta vacía borraría la de Drive.
+# Sin ISO no se toca Drive: se borraría la ISO de allá sin subir otra.
 if ! ls "$origen"/*.iso >/dev/null 2>&1; then
 	echo "::error::No hay ninguna ISO en $origen: no se toca Google Drive."
 	exit 1
 fi
+# Primero se borra lo que haya en la carpeta de Drive y después se sube
+# lo nuevo. Así nunca hacen falta dos ISO de espacio a la vez, y Drive no
+# guarda versiones viejas de la ISO (reemplazar un archivo con el mismo
+# nombre deja la versión anterior ocupando espacio hasta 30 días).
+# --drive-use-trash=false: se borra de verdad (la papelera también
+# ocupa). Mientras sube (unos minutos) la carpeta queda vacía.
+rclone mkdir "drive:$raiz/$destino"
+rclone delete "drive:$raiz/$destino" --drive-use-trash=false -v
 intento=1
 while :; do
-	# --drive-use-trash=false: la ISO vieja se borra de verdad (15 GB
-	# gratis: la papelera también cuenta).
-	if rclone sync "$origen" "drive:$raiz/$destino" \
-		--drive-use-trash=false --drive-chunk-size 128M \
+	if rclone copy "$origen" "drive:$raiz/$destino" \
+		--drive-chunk-size 128M \
 		--retries 3 --low-level-retries 20 --stats 1m --stats-one-line -v; then
 		break
 	fi

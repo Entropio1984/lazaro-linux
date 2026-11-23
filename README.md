@@ -1169,8 +1169,10 @@ La Completa de cada compilación de main también se copia en Google
 Drive (carpeta **Lázaro Linux/Completa**), que a muchos les baja más
 rápido. La copia la hace `.github/subir-drive.sh` con rclone, después de
 SourceForge; si Drive falla, SourceForge y lo demás siguen igual. Solo
-queda la última ISO (la anterior se borra) y la carpeta tiene siempre el
-mismo enlace. Necesita el secreto `GDRIVE_TOKEN`: el permiso que da
+queda la última ISO (la anterior se borra antes de subir la nueva, así
+alcanza con espacio para una) y la carpeta tiene siempre el mismo
+enlace. La carpeta la crea rclone: no hay que crearla a mano desde la
+web. Necesita el secreto `GDRIVE_TOKEN`: el permiso que da
 `rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"` en un equipo
 con navegador (ese texto raro pide el permiso más chico, `drive.file`:
 rclone solo ve lo que él mismo subió, nunca el resto del Drive). Si
