@@ -24,11 +24,16 @@ Para quitar un programa, búscalo en la tienda (o en la pestaña
 
 \begin{nota}
 La lista de programas para instalar se descarga de internet: Lázaro la
-baja al instalar (esperando como mucho 3 minutos) y la renueva sola una
-vez al día. Si la conexión con el servidor de Alpine se traba, lo
-vuelve a intentar en vez de quedarse esperando. Si instalaste sin
-internet, la lista aparece a más tardar una hora después de conectarte;
-mientras tanto la tienda solo muestra lo que ya tienes instalado.
+baja al instalar (esperando como mucho 3 minutos), la renueva sola una
+vez al día y, además, \textbf{cada vez que abres la tienda} (si no se
+renovó en la última media hora). La tienda se abre enseguida y la lista
+se baja por detrás; sin internet, simplemente no se baja. Si la conexión
+con el servidor de Alpine se traba, lo vuelve a intentar en vez de
+quedarse esperando. Si instalaste sin internet y la tienda todavía no
+tiene ninguna lista, al abrirla con internet aparece un aviso
+\enquote{Descargando la lista de programas de la tienda} que espera
+como mucho 3 minutos (\menu{Abrir ya} no espera). Mientras no haya
+lista, la tienda solo muestra lo que ya tienes instalado.
 \end{nota}
 
 \begin{nota}
@@ -61,7 +66,7 @@ continuación.
 \subsection{Aplicaciones de Flathub desde la Bienvenida}\label{sec:flathub-bienvenida}
 Google Chrome no se ofrece al instalar: se instala desde la Bienvenida
 (está en el menú), con el botón \menu{Aplicaciones de Flathub}, en la
-página de inicio y en la sección \menu{Programas}. El mismo botón activa
+sección \menu{Programas}. El mismo botón activa
 Flathub si no lo marcaste al instalar, y suma OnlyOffice o Brave.
 La ventana muestra el espacio libre del disco y las aplicaciones que aún
 no están instaladas. Marca las que quieras, pulsa \menu{Activar} (o
@@ -88,7 +93,7 @@ en la página oficial de cada servicio: la aplicación nunca la ve.
 
 \begin{pasos}
   \item Abre la Bienvenida y pulsa \menu{Lázaro Nubes: Google Drive, OneDrive y
-        Dropbox} (en la página de inicio o en la sección \menu{Programas}).
+        Dropbox} (en la sección \menu{Programas}).
   \item La primera vez, pulsa \menu{Instalar} y escribe tu contraseña: se
         descargan rclone y lo que necesita (unos 25 MB, hace falta
         internet).

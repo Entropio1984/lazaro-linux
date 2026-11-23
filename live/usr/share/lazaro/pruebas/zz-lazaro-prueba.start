@@ -136,6 +136,17 @@ idioma_sesion() {
 			rc-service apk-polkit-server status >/dev/null 2>&1 || falta="$falta servicio-detenido"
 		fi
 		[ -x /etc/periodic/hourly/alpine-tienda-catalogo ] || falta="$falta sin-tarea-diaria"
+		# La lista también se pide al abrir la tienda: el paso previo, el
+		# programa que la baja y el permiso de polkit sin contraseña.
+		for t in gnome-software plasma-discover; do
+			[ -x "/usr/bin/$t" ] || continue
+			grep -q alpine-tienda-abrir "/usr/local/bin/$t" 2>/dev/null || falta="$falta sin-tarea-al-abrir-$t"
+		done
+		for f in /usr/local/libexec/alpine-tienda-abrir /usr/local/sbin/alpine-tienda-lista-ahora \
+			/usr/share/polkit-1/actions/org.alpinelinux.tienda-lista.policy \
+			/etc/polkit-1/rules.d/50-alpine-tienda-lista.rules; do
+			[ -e "$f" ] || falta="$falta sin-tarea-al-abrir:$f"
+		done
 		rc-service crond status >/dev/null 2>&1 || falta="$falta servicio-crond-detenido"
 		programas="$(appstreamcli status 2>/dev/null | sed -n 's/.* \([0-9][0-9]*\) software components.*/\1/p')"
 		[ "${programas:-0}" -ge 300 ] || falta="$falta catalogo-con-${programas:-0}-programas"
@@ -144,6 +155,21 @@ idioma_sesion() {
 		else
 			echo "LAZARO-TIENDA-NO$falta"
 			ls -la /var/lib/swcatalog/xml 2>&1 | head -n 5
+		fi
+	fi
+	# LXQt: capturas con Imprimir Pantalla (ScreenGrab) y los ajustes de
+	# XScreenSaver sin el aviso "the xscreensaver-gl* packages are
+	# required", con la pantalla en negro como salvapantallas.
+	if [ ! -e /etc/runlevels/default/lazaro-primer-arranque ] && command -v lxqt-session >/dev/null 2>&1; then
+		falta=""
+		command -v screengrab >/dev/null 2>&1 || falta="$falta screengrab"
+		[ -x /usr/libexec/xscreensaver/xscreensaver-gl-visual ] || command -v xscreensaver-gl-visual >/dev/null 2>&1 ||
+			falta="$falta xscreensaver-gl-visual"
+		grep -q '^mode:.*blank' /home/prueba/.xscreensaver 2>/dev/null || falta="$falta .xscreensaver"
+		if [ -z "$falta" ]; then
+			echo "LAZARO-LXQT-OK"
+		else
+			echo "LAZARO-LXQT-NO$falta"
 		fi
 	fi
 	if [ -z "$ajenos" ]; then

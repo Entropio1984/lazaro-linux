@@ -334,6 +334,53 @@ rm -f "$TC"
 sincuelgue
 es "sin cuelgues: sin tarea se vuelve a mirar" '[ "$rc" = 11 ]'
 
+# 008-lxqt-capturas-salvapantallas con el mismo apk falso.
+X="$TMP/lxqt"
+mkdir -p "$X/lib/apk/db" "$X/etc/skel" "$X/home/ana" "$X/home/beto"
+printf 'ana:x:1000:1000::/home/ana:/bin/sh\nbeto:x:1001:1001::/home/beto:/bin/sh\n' > "$X/etc/passwd"
+echo "mode: random" > "$X/home/beto/.xscreensaver"
+mkdir -p "$TMP/bin-lxqt"
+sed "s#$E/lib#$X/lib#" "$B/apk" > "$TMP/bin-lxqt/apk"
+chmod 755 "$TMP/bin-lxqt/apk"
+lxqt() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-lxqt:$PATH" LAZARO_ARREGLO_RAIZ="$X" sh "$REALES/008-lxqt-capturas-salvapantallas.sh" > /dev/null 2>&1 || rc=$?; }
+: > "$X/lib/apk/db/installed"
+lxqt
+es "LXQt: sin LXQt no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
+echo "P:lxqt-desktop" > "$X/lib/apk/db/installed"
+: > "$TMP/sin-internet"
+lxqt
+es "LXQt: sin internet queda pendiente" '[ "$rc" = 1 ] && [ ! -e "$X/home/ana/.xscreensaver" ]'
+rm "$TMP/sin-internet"
+lxqt
+es "LXQt: recibe ScreenGrab y lo que pide XScreenSaver" '[ "$rc" = 0 ] && grep -qx "P:screengrab" "$X/lib/apk/db/installed" && grep -qx "P:xscreensaver-gl-extras" "$X/lib/apk/db/installed"'
+es "LXQt: pantalla en negro para quien no eligió, sin tocar al que sí" 'grep -q "^mode:.*blank" "$X/home/ana/.xscreensaver" && grep -q "^mode:.*blank" "$X/etc/skel/.xscreensaver" && grep -qx "mode: random" "$X/home/beto/.xscreensaver"'
+lxqt
+es "LXQt: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
+
+# 009-tienda-al-abrir en un sistema de mentira.
+TA="$TMP/tienda-abrir"
+tabrir() { rc=0; LAZARO_ARREGLO_RAIZ="$TA" sh "$REALES/009-tienda-al-abrir.sh" > /dev/null 2>&1 || rc=$?; }
+mkdir -p "$TA/usr/bin" "$TA/etc/periodic/hourly" "$TA/usr/share/applications"
+tabrir
+es "tienda al abrir: sin tienda se vuelve a mirar" '[ "$rc" = 11 ]'
+printf '#!/bin/sh\n' > "$TA/usr/bin/plasma-discover"
+printf '#!/bin/sh\n' > "$TA/usr/bin/gnome-software"
+chmod 755 "$TA/usr/bin/plasma-discover" "$TA/usr/bin/gnome-software"
+tabrir
+es "tienda al abrir: sin la tarea de la lista se vuelve a mirar" '[ "$rc" = 11 ]'
+printf '#!/bin/sh\n' > "$TA/etc/periodic/hourly/alpine-tienda-catalogo"
+chmod 755 "$TA/etc/periodic/hourly/alpine-tienda-catalogo"
+printf '[Desktop Entry]\nName=Software\nExec=gnome-software %%U\nDBusActivatable=true\n' > "$TA/usr/share/applications/org.gnome.Software.desktop"
+tabrir
+es "tienda al abrir: pone el paso previo de las dos tiendas" '[ "$rc" = 0 ] && grep -q "alpine-tienda-abrir /usr/bin/plasma-discover" "$TA/usr/local/bin/plasma-discover" && grep -q "alpine-tienda-abrir /usr/bin/gnome-software" "$TA/usr/local/bin/gnome-software" && [ -x "$TA/usr/local/bin/gnome-software" ]'
+es "tienda al abrir: el que baja la lista, sus permisos y el acceso directo sin D-Bus" 'sh -n "$TA/usr/local/sbin/alpine-tienda-lista-ahora" && sh -n "$TA/usr/local/libexec/alpine-tienda-abrir" && [ -x "$TA/usr/local/sbin/alpine-tienda-lista-ahora" ] && grep -q "org.alpinelinux.tienda-lista" "$TA/etc/polkit-1/rules.d/50-alpine-tienda-lista.rules" && grep -q "alpine-tienda-lista-ahora" "$TA/usr/share/polkit-1/actions/org.alpinelinux.tienda-lista.policy" && ! grep -q DBusActivatable "$TA/usr/local/share/applications/org.gnome.Software.desktop" && grep -q "^Exec=gnome-software" "$TA/usr/local/share/applications/org.gnome.Software.desktop"'
+tabrir
+es "tienda al abrir: ya está, no hace falta" '[ "$rc" = 10 ]'
+# El paso previo deja abrir la tienda aunque no haya pkexec ni lista.
+printf '#!/bin/sh\necho abierta "$@"\n' > "$TMP/tienda-real"
+chmod 755 "$TMP/tienda-real"
+es "tienda al abrir: abre la tienda con sus opciones" '[ "$(PATH=/usr/bin:/bin sh "$TA/usr/local/libexec/alpine-tienda-abrir" "$TMP/tienda-real" --uno dos)" = "abierta --uno dos" ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

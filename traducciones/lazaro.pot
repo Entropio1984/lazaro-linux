@@ -1436,3 +1436,11 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/007-tienda-sin-cuelgues.sh
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/008-lxqt-capturas-salvapantallas.sh
+msgid "LXQt: la tecla Imprimir Pantalla saca capturas (ScreenGrab) y los ajustes del salvapantallas ya no piden paquetes"
+msgstr ""
+
+#: live/usr/share/lazaro/arreglos/009-tienda-al-abrir.sh
+msgid "La lista de programas de la tienda se renueva cada vez que abres la tienda"
+msgstr ""

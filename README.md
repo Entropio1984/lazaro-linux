@@ -333,9 +333,15 @@ Al terminar, reinicia y saca el USB.
 - Para instalar más programas, abre la **tienda de aplicaciones** desde
   el menú (Discover en Plasma y LXQt, GNOME Software en los demás).
   La lista de programas para instalar se descarga sola de internet al
-  instalar y se renueva una vez al día. Si instalaste sin internet,
-  aparece a más tardar una hora después de conectarte; mientras tanto la
-  tienda solo muestra lo que ya está instalado.
+  instalar, se renueva una vez al día y también **cada vez que abres la
+  tienda** (por detrás, sin hacerla esperar; sin internet no pasa nada).
+  Si instalaste sin internet y la tienda todavía no tiene lista, al
+  abrirla con internet un aviso espera a que llegue, como mucho 3
+  minutos (**Abrir ya** no espera); mientras tanto la tienda solo
+  muestra lo que ya está instalado.
+- Para sacar una **captura de pantalla**, pulsa la tecla Imprimir
+  Pantalla: cada escritorio abre su programa de capturas (en LXQt,
+  ScreenGrab).
 - Cuando haya actualizaciones, un icono en la barra te avisa; al hacer
   clic se abre **Actualizar el sistema**, que solo pide tu contraseña.
   (En KDE Plasma se actualiza desde Discover.)
@@ -464,7 +470,10 @@ controladores, tienda de aplicaciones, aplicaciones de Flathub, nubes
 Afinador, Kernel Lázaro, Diagnóstico y cómo pedir ayuda. Toma los colores,
 letras e iconos del escritorio que hayas elegido. Si no quieres verla en
 cada inicio, desmarca la casilla "Mostrar esta ventana al iniciar sesión";
-siempre queda en el menú como **Bienvenida**.
+siempre queda en el menú como **Bienvenida**. La página de **Inicio** deja a mano
+solo lo más usado: el **Manual de Lázaro** y **Actualizar el sistema**
+(en la sesión de prueba, **Instalar Lázaro** e **Idioma y teclado**); el
+resto está en sus secciones.
 
 | Con un escritorio claro | Con un escritorio oscuro |
 |---|---|
@@ -500,7 +509,7 @@ en Alpine (OnlyOffice, Google Chrome, Brave, Spotify, Zoom...).
 **Flatpak** es el sistema que los instala. Al instalar se pueden marcar
 Flatpak, OnlyOffice y Brave; **Google Chrome** solo se instala desde la
 Bienvenida, con el botón **Aplicaciones de Flathub** (sección
-**Programas**, y también en la página de inicio). El mismo botón sirve
+**Programas**). El mismo botón sirve
 para activar Flathub o sumar OnlyOffice y Brave si no los marcaste.
 
 La ventana muestra el espacio libre del disco y deja marcar las que aún
@@ -532,8 +541,7 @@ cada servicio: la aplicación nunca la ve. Por dentro usa
 archivos a la nube.
 
 Se instala desde la Bienvenida con el botón **Lázaro Nubes: Google Drive,
-OneDrive y Dropbox** (sección **Programas**, y también en la página de
-inicio). La primera vez pide tu contraseña de administrador y descarga
+OneDrive y Dropbox** (sección **Programas**). La primera vez pide tu contraseña de administrador y descarga
 rclone y lo que necesita (unos 25 MB, **necesita internet**); después el
 mismo botón, o **Lázaro Nubes** en el menú, la abre directamente. Si
 una versión nueva de Lázaro trae una versión nueva de la aplicación, el
@@ -793,6 +801,12 @@ Los que hay:
   Chrome o Brave todavía no terminaron de bajar, el reintento espera
   internet sin gastar intentos y, si Flathub no responde, vuelve a probar
   cada vez más espaciado en lugar de rendirse a los 20 minutos.
+- **Capturas y salvapantallas en LXQt** (008): instala ScreenGrab para
+  que la tecla Imprimir Pantalla saque capturas, y lo que pedía la
+  ventana de ajustes de XScreenSaver. A quien nunca eligió un
+  salvapantallas le deja la pantalla en negro (no gasta procesador).
+- **Lista de la tienda al abrirla** (009): la lista de programas de la
+  tienda se renueva cada vez que se abre la tienda, sin hacerla esperar.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en
