@@ -471,7 +471,10 @@ siempre queda en el menú como **Bienvenida**.
 | <img src="docs/imagenes/bienvenida-claro.png" alt="Bienvenida, sección Tu equipo, con colores claros"> | <img src="docs/imagenes/bienvenida-oscuro.png" alt="Bienvenida, sección Ayuda, con colores oscuros"> |
 
 Cada botón solo aparece si sirve en tu equipo: por ejemplo, la tienda se
-muestra cuando hay una tienda instalada.
+muestra cuando hay una tienda instalada. Si Discover quedó corriendo
+escondido después de cerrarlo (pasa cuando espera algo de internet) y
+ya no se abre desde el menú, el botón de la tienda lo cierra y abre uno
+nuevo (salvo que se esté instalando algo).
 
 **Agregar un botón** es crear un archivo de texto, sin tocar el programa.
 Los de Lázaro están en `/usr/share/lazaro/bienvenida/funciones/` y los

@@ -198,6 +198,33 @@ echo org.otra.Aplicacion >> "$FP/apps"
 es "flatpak: --instaladas solo nombra las de la lista" '! fp --instaladas | grep -q otra'
 rc=0; FP_FALLA=com.google.Chrome fp --activar chrome > "$TMP/fp2.txt" 2>&1 || rc=$?
 es "flatpak: si una aplicación falla termina con 3" '[ "$rc" = 3 ] && grep -q "No se pudo instalar: Google Chrome" "$TMP/fp2.txt"'
+
+# Tienda: un Discover escondido (sigue vivo tras cerrar su ventana) se
+# cierra antes de abrir uno nuevo; si apk trabaja, se deja.
+TD="$TMP/tienda"
+mkdir -p "$TD/bin"
+cat > "$TD/bin/plasma-discover" <<'EOF2'
+#!/bin/sh
+echo abierta >> "$TD_DIR/log"
+EOF2
+cat > "$TD/bin/pgrep" <<'EOF2'
+#!/bin/sh
+case "$*" in
+	*plasma-discover*) p="$(cat "$TD_DIR/vivo" 2>/dev/null)" && kill -0 "$p" 2>/dev/null && echo "$p" ;;
+	*apk*) [ -e "$TD_DIR/apk" ] ;;
+	*) exit 1 ;;
+esac
+EOF2
+chmod +x "$TD/bin/"*
+td() { : > "$TD/log"; TD_DIR="$TD" PATH="$TD/bin:$PATH" XDG_CURRENT_DESKTOP=LXQt sh "$DIR/live/usr/sbin/lazaro-flatpak" --tienda >/dev/null 2>&1; }
+td
+es "tienda: sin Discover corriendo solo lo abre" '[ "$(cat "$TD/log")" = abierta ]'
+# El Discover escondido es un proceso de verdad (sleep).
+sleep 60 & echo $! > "$TD/vivo"; td
+es "tienda: un Discover escondido se cierra y se abre otro" '! kill -0 "$(cat "$TD/vivo")" 2>/dev/null && [ "$(cat "$TD/log")" = abierta ]'
+sleep 60 & echo $! > "$TD/vivo"; touch "$TD/apk"; td
+es "tienda: si apk trabaja no se cierra" 'kill -0 "$(cat "$TD/vivo")" 2>/dev/null && [ "$(cat "$TD/log")" = abierta ]'
+kill "$(cat "$TD/vivo")" 2>/dev/null || true
 rc=0; fp --activar zoom > /dev/null 2>&1 || rc=$?
 es "flatpak: una aplicación desconocida se rechaza" '[ "$rc" = 2 ]'
 
