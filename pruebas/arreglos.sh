@@ -379,6 +379,9 @@ es "tienda al abrir: pone el paso previo de las dos tiendas" '[ "$rc" = 0 ] && g
 es "tienda al abrir: el que baja la lista, sus permisos y el acceso directo sin D-Bus" 'sh -n "$TA/usr/local/sbin/alpine-tienda-lista-ahora" && sh -n "$TA/usr/local/libexec/alpine-tienda-abrir" && [ -x "$TA/usr/local/sbin/alpine-tienda-lista-ahora" ] && grep -q "org.alpinelinux.tienda-lista" "$TA/etc/polkit-1/rules.d/50-alpine-tienda-lista.rules" && grep -q "alpine-tienda-lista-ahora" "$TA/usr/share/polkit-1/actions/org.alpinelinux.tienda-lista.policy" && ! grep -q DBusActivatable "$TA/usr/local/share/applications/org.gnome.Software.desktop" && grep -q "^Exec=gnome-software" "$TA/usr/local/share/applications/org.gnome.Software.desktop"'
 tabrir
 es "tienda al abrir: ya está, no hace falta" '[ "$rc" = 10 ]'
+rm "$TA/usr/local/share/applications/org.gnome.Software.desktop"
+tabrir
+es "tienda al abrir: sin el acceso directo de GNOME Software, se vuelve a poner" '[ "$rc" = 0 ] && [ -f "$TA/usr/local/share/applications/org.gnome.Software.desktop" ]'
 # El paso previo deja abrir la tienda aunque no haya pkexec ni lista.
 printf '#!/bin/sh\necho abierta "$@"\n' > "$TMP/tienda-real"
 chmod 755 "$TMP/tienda-real"
