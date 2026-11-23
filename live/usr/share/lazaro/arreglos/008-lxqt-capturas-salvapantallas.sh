@@ -31,18 +31,26 @@ hizo=""
 [ -z "$faltan" ] || hizo=si
 for base in "$R/etc/skel" $(awk -F: '$3 >= 1000 && $3 < 60000 && $6 ~ /^\/home\// { print $6 }' "$R/etc/passwd" 2>/dev/null); do
 	case "$base" in /home/*) base="$R$base" ;; esac
-	[ -d "$base" ] && [ ! -e "$base/.xscreensaver" ] || continue
-	cat > "$base/.xscreensaver" <<'XSCREENSAVER' || exit 1
+	[ -d "$base" ] || continue
+	# Ya existe (aunque sea un enlace roto): es de la persona, no se toca.
+	{ [ -e "$base/.xscreensaver" ] || [ -L "$base/.xscreensaver" ]; } && continue
+	# A un archivo nuevo y después a su lugar sin pisar nada (mv -n): así
+	# nunca se escribe, como root, a través de un enlace.
+	xs="$(mktemp "$base/.xscreensaver.XXXXXX")" || exit 1
+	cat > "$xs" <<'XSCREENSAVER' || { rm -f "$xs"; exit 1; }
 # Lazaro Linux: solo lo que cambia; lo demas lo pone XScreenSaver.
 # Pantalla en negro (sin animaciones que gasten procesador) y, en la
 # lista, solo las animaciones instaladas.
 mode:		blank
 ignoreUninstalledPrograms: True
 XSCREENSAVER
+	chmod 644 "$xs"
 	case "$base" in
 		*/etc/skel) ;;
-		*) chown "$(stat -c %u:%g "$base")" "$base/.xscreensaver" 2>/dev/null || true ;;
+		*) chown "$(stat -c %u:%g "$base")" "$xs" 2>/dev/null || true ;;
 	esac
+	mv -n "$xs" "$base/.xscreensaver" 2>/dev/null || true
+	rm -f "$xs"
 	hizo=si
 done
 [ -n "$hizo" ] || exit 10

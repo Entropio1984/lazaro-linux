@@ -339,6 +339,9 @@ X="$TMP/lxqt"
 mkdir -p "$X/lib/apk/db" "$X/etc/skel" "$X/home/ana" "$X/home/beto"
 printf 'ana:x:1000:1000::/home/ana:/bin/sh\nbeto:x:1001:1001::/home/beto:/bin/sh\n' > "$X/etc/passwd"
 echo "mode: random" > "$X/home/beto/.xscreensaver"
+mkdir -p "$X/home/caro"
+printf 'caro:x:1002:1002::/home/caro:/bin/sh\n' >> "$X/etc/passwd"
+ln -s "$TMP/no-tocar" "$X/home/caro/.xscreensaver"
 mkdir -p "$TMP/bin-lxqt"
 sed "s#$E/lib#$X/lib#" "$B/apk" > "$TMP/bin-lxqt/apk"
 chmod 755 "$TMP/bin-lxqt/apk"
@@ -353,7 +356,7 @@ es "LXQt: sin internet queda pendiente" '[ "$rc" = 1 ] && [ ! -e "$X/home/ana/.x
 rm "$TMP/sin-internet"
 lxqt
 es "LXQt: recibe ScreenGrab y lo que pide XScreenSaver" '[ "$rc" = 0 ] && grep -qx "P:screengrab" "$X/lib/apk/db/installed" && grep -qx "P:xscreensaver-gl-extras" "$X/lib/apk/db/installed"'
-es "LXQt: pantalla en negro para quien no eligió, sin tocar al que sí" 'grep -q "^mode:.*blank" "$X/home/ana/.xscreensaver" && grep -q "^mode:.*blank" "$X/etc/skel/.xscreensaver" && grep -qx "mode: random" "$X/home/beto/.xscreensaver"'
+es "LXQt: pantalla en negro para quien no eligió, sin tocar al que sí" 'grep -q "^mode:.*blank" "$X/home/ana/.xscreensaver" && grep -q "^mode:.*blank" "$X/etc/skel/.xscreensaver" && grep -qx "mode: random" "$X/home/beto/.xscreensaver" && [ ! -e "$TMP/no-tocar" ] && [ -L "$X/home/caro/.xscreensaver" ] && ! ls "$X"/home/*/.xscreensaver.* >/dev/null 2>&1'
 lxqt
 es "LXQt: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
 

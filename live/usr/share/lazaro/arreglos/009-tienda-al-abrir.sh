@@ -47,17 +47,22 @@ marca=/var/lib/swcatalog/.ultima-descarga
 [ -x "$tarea" ] || exit 0
 # Renovada hace menos de 30 minutos: ya esta al dia.
 [ -n "$(find "$marca" -mmin -30 2>/dev/null)" ] && exit 0
-# Una sola descarga a la vez (abrir la tienda dos veces no baja dos).
+# Una sola descarga a la vez (abrir la tienda dos veces no baja dos); la
+# tarea de cada hora usa el mismo candado.
 exec 9>/run/alpine-tienda-lista.lock || exit 0
-flock -n 9 || exit 0
-# Sin internet no hay nada que esperar.
-_repo="$(grep -m1 -E '^https?://' /etc/apk/repositories 2>/dev/null)" || exit 0
+if command -v flock >/dev/null 2>&1; then
+    flock -n 9 || exit 0
+fi
+# Sin internet no hay nada que esperar (las lineas pueden empezar con
+# una etiqueta "@nombre").
+_repo="$(sed -n 's/^\(@[^[:space:]]*[[:space:]]*\)\{0,1\}\(https\{0,1\}:\/\/[^[:space:]]*\).*/\2/p' /etc/apk/repositories 2>/dev/null | head -n 1)"
+[ -n "$_repo" ] || exit 0
 wget -q --spider -T 8 "$_repo/$(apk --print-arch)/APKINDEX.tar.gz" 2>/dev/null || exit 0
 # La tarea solo descarga si su marca tiene mas de un dia: se aparta y,
 # si esta vez no llega la lista, se devuelve (la tarea de cada hora
 # sigue igual que antes).
 [ ! -e "$marca" ] || mv -f "$marca" "$marca.antes"
-"$tarea" || true
+ALPINE_TIENDA_CANDADO=ya "$tarea" || true
 if [ -e "$marca" ]; then
     rm -f "$marca.antes"
 elif [ -e "$marca.antes" ]; then
@@ -122,7 +127,7 @@ if command -v pkexec >/dev/null 2>&1 && [ -x /usr/local/sbin/alpine-tienda-lista
             esac
             _n=0
             while [ "$_n" -lt 180 ] && kill -0 "$_pid" 2>/dev/null; do
-                echo "#$_m"
+                echo "#$_m" || break
                 sleep 1
                 _n=$((_n + 1))
             done | zenity --progress --pulsate --auto-close --width=420 \
