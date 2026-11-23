@@ -322,6 +322,18 @@ printf 'P:sway\nP:xdg-utils\n' > "$E/lib/apk/db/installed"
 editor
 es "editor: Sway recibe Mousepad" '[ "$rc" = 0 ] && grep -qx "P:mousepad" "$E/lib/apk/db/installed" && ! grep -q featherpad "$TMP/llamadas"'
 
+# 007-tienda-sin-cuelgues sobre la tarea que dejó 001-tienda arriba.
+sincuelgue() { rc=0; LAZARO_ARREGLO_RAIZ="$T" sh "$REALES/007-tienda-sin-cuelgues.sh" > /dev/null 2>&1 || rc=$?; }
+TC="$T/etc/periodic/hourly/alpine-tienda-catalogo"
+sincuelgue
+es "sin cuelgues: cambia la descarga por la que tiene tiempo límite" '[ "$rc" = 0 ] && grep -q "timeout=60" "$TC" && ! grep -q "timeout 600 alpine-appstream-downloader" "$TC" && [ -x "$TC" ] && sh -n "$TC"'
+es "sin cuelgues: el resto de la tarea queda igual" 'grep -q "touch \"\$marca\"" "$TC" && grep -q "Catalogo descargado" "$TC"'
+sincuelgue
+es "sin cuelgues: ya cambiada, no hace falta" '[ "$rc" = 10 ]'
+rm -f "$TC"
+sincuelgue
+es "sin cuelgues: sin tarea se vuelve a mirar" '[ "$rc" = 11 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

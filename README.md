@@ -998,7 +998,11 @@ prueban y publican solas en cada cambio de la rama principal.
    y otros 600 para bajar la lista). Si se corta, no queda la marca
    `/var/lib/swcatalog/.ultima-descarga` y la tarea de cada hora la baja
    en el equipo instalado; el registro dice `LAZARO-TIENDA-AL-INSTALAR
-   lista|tiempo|fallo`. Lo que nunca viene en el USB:
+   lista|tiempo|fallo`. La tarea corre `alpine-appstream-downloader`
+   (que usa `requests` sin tiempo límite y se quedaba esperando para
+   siempre si el servidor dejaba de mandar datos) con 60 s por conexión y
+   hasta 3 intentos; el arreglo `007-tienda-sin-cuelgues` lo lleva a los
+   equipos ya instalados. Lo que nunca viene en el USB:
    esa lista, Google Chrome (botón de la Bienvenida) y el firmware que no
    se puede repartir (b43, Prism54, Intel 2100/2200), que se descarga con
    permiso. En 64 bits, `paso_firefox_idiomas` deja los paquetes de idioma
