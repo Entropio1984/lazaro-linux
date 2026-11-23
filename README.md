@@ -1165,6 +1165,20 @@ para cualquiera) es una foto fija de una compilación que ya funcionó en
 equipos reales: tiene su propia Release en GitHub, que no se borra, y su
 carpeta `Versiones/X.Y` en SourceForge con las dos ediciones.
 
+La Completa de cada compilación de main también se copia en Google
+Drive (carpeta **Lázaro Linux/Completa**), que a muchos les baja más
+rápido. La copia la hace `.github/subir-drive.sh` con rclone, después de
+SourceForge; si Drive falla, SourceForge y lo demás siguen igual. Solo
+queda la última ISO (la anterior se borra antes de subir la nueva, así
+alcanza con espacio para una) y la carpeta tiene siempre el mismo
+enlace. La carpeta la crea rclone: no hay que crearla a mano desde la
+web. Necesita el secreto `GDRIVE_TOKEN`: el permiso que da
+`rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"` en un equipo
+con navegador (ese texto raro pide el permiso más chico, `drive.file`:
+rclone solo ve lo que él mismo subió, nunca el resto del Drive). Si
+algún día deja de subir con `invalid_grant`, el permiso venció o se
+quitó: repite ese comando y pega el resultado nuevo en el secreto.
+
 1. Revisa que `ISO_VERSION` en `config.env` sea el número que quieres
    sacar y que la última compilación de main esté en verde.
 2. En GitHub: pestaña **Actions** → **Sacar una versión** → **Run

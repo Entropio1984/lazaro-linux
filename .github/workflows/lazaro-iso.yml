@@ -706,9 +706,10 @@ jobs:
         run: sh .github/subir-sourceforge.sh Ligera iso
 
   # La Completa no cabe en una Release de GitHub (2 GB por archivo): se
-  # publica solo en SourceForge, carpeta Completa.
+  # publica en SourceForge (carpeta Completa) y en el Google Drive de
+  # Julián (carpeta "Lázaro Linux/Completa").
   publicar-completa:
-    name: Publicar ISO Completa en SourceForge
+    name: Publicar ISO Completa (SourceForge y Google Drive)
     needs: [pruebas-completa, graficas]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
@@ -732,6 +733,17 @@ jobs:
         env:
           SF_LLAVE: ${{ secrets.SOURCEFORGE_SSH_KEY }}
         run: sh .github/subir-sourceforge.sh Completa iso
+
+      # Copia en Google Drive (carpeta "Lázaro Linux/Completa"). Corre
+      # aunque SourceForge haya fallado, y si falla solo avisa: nunca
+      # frena lo demás. Sin el secreto GDRIVE_TOKEN no hace nada.
+      - name: Subir a Google Drive
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        timeout-minutes: 90
+        env:
+          DRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
+        run: sh .github/subir-drive.sh Completa iso
 
   # ISO de 32 bits: a la misma Release "en-desarrollo" y a SourceForge,
   # carpeta 32-bits. Trabajo aparte: no depende de las de 64 bits ni las
