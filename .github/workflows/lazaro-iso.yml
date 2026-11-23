@@ -36,6 +36,9 @@ env:
   # (sourceforge.net/projects/lazaro-linux, carpetas Ligera y Completa).
   SF_USUARIO: entropio
   SF_PROYECTO: lazaro-linux
+  # Carpeta "Lázaro Linux" del Google Drive de Julián (la crea y comparte
+  # .github/subir-drive.sh; el enlace no cambia).
+  DRIVE_ENLACE: https://drive.google.com/drive/folders/1T-KnU3UL_eWXOe4IfULU6H8iJpawKRq4
 
 jobs:
   # Manual de Lázaro (manual/, LaTeX): se compila primero porque el PDF va
@@ -673,7 +676,7 @@ jobs:
 
           El archivo que termina en x86.iso es la de 32 bits, para equipos anteriores a 2008 (solo IceWM).
 
-          Esta es la edición Ligera. La edición Completa (unos 4,5 GB, se instala sin internet con cualquiera de los 7 escritorios) está en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Completa/"
+          Esta es la edición Ligera. La edición Completa (unos 4,5 GB, se instala sin internet con cualquiera de los 7 escritorios) está en Google Drive (más rápido, carpeta Completa): $DRIVE_ENLACE y en SourceForge: https://sourceforge.net/projects/$SF_PROYECTO/files/Completa/"
           if gh release view "$etiqueta" >/dev/null 2>&1; then
             gh release edit "$etiqueta" --prerelease --notes "$notas"
           else
