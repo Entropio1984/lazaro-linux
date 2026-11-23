@@ -197,8 +197,10 @@ avance_parar() {
 # (Calamares espera a que se cierre la salida) ni quedar montado nada en el
 # sistema nuevo (/proc, /dev, el repositorio del USB...).
 al_salir() {
+	al_rc=$?
 	avance_parar
 	desmontar_propios
+	[ -z "${orden:-}" ] || hora "fin del paso $orden (código $al_rc)"
 }
 trap al_salir EXIT
 

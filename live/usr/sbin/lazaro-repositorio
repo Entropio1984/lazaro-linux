@@ -144,12 +144,10 @@ sincronizar() {
 	# conexión se cortaba, el informe decía "¿Hay internet?" en lugar de
 	# "llega con la próxima versión" (VM, 23 de noviembre de 2026).
 	SALTAR_HERRAMIENTAS=no
-	if ! instalado lazaro-herramientas; then
-		n_sis="$(nivel_sistema)"
-		n_pub="$(nivel_de "$t/APKINDEX.tar.gz")"
-		if [ -n "$n_sis" ] && [ -n "$n_pub" ] && [ "$n_pub" -lt "$n_sis" ]; then
-			SALTAR_HERRAMIENTAS=si
-		fi
+	n_sis="$(nivel_sistema)"
+	n_pub="$(nivel_de "$t/APKINDEX.tar.gz")"
+	if [ -n "$n_sis" ] && [ -n "$n_pub" ] && [ "$n_pub" -lt "$n_sis" ]; then
+		SALTAR_HERRAMIENTAS=si
 	fi
 	# Solo lo que este equipo usa: el kernel (decenas de MB) solo si está
 	# instalado o se va a instalar.

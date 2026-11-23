@@ -37,11 +37,12 @@ imprimir.
   (FeatherPad en LXQt, Mousepad en XFCE, Sway e IceWM).
 - **Funciona sin internet.** La edición Completa trae todo dentro del USB
   y se instala en un equipo que no tiene red. Aunque haya internet, la
-  Completa instala todo desde el USB y no descarga nada (ni el teclado
-  ni Flathub salen a internet): tarda lo mismo con buena o mala
-  conexión. Firefox queda en tu idioma sin internet: la ISO trae sus
-  paquetes de idioma (español y portugués), de la misma versión de
-  Firefox. Las versiones nuevas llegan después, con el
+  Completa instala todo desde el USB y no descarga nada (el teclado
+  tampoco; Flathub queda puesto desde el USB y solo intenta bajar su
+  descripción, con un minuto como máximo): tarda lo mismo con buena o
+  mala conexión. En 64 bits, Firefox queda en tu idioma sin internet: la
+  ISO trae sus paquetes de idioma (español y portugués), de la misma
+  versión de Firefox. Las versiones nuevas llegan después, con el
   aviso de actualizaciones. Si instalas sin internet
   con la edición Ligera, lo que falta se completa la primera vez que el
   equipo se conecte (ver el [paso 7](#paso-7-el-primer-arranque)).

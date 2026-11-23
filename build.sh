@@ -452,7 +452,7 @@ if [ "$ALPINE_ARCH" = x86_64 ]; then
 	ff_n=0
 	for ff_l in es-ES es-MX es-AR es-CL pt-BR pt-PT; do
 		[ -n "$ff_ver" ] || break
-		if curl -fsSL --retry 3 -o "$ff_dir/langpack-$ff_l@firefox.mozilla.org.xpi" \
+		if curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 -o "$ff_dir/langpack-$ff_l@firefox.mozilla.org.xpi" \
 			"https://releases.mozilla.org/pub/firefox/releases/$ff_ver/linux-x86_64/xpi/$ff_l.xpi" &&
 			unzip -l "$ff_dir/langpack-$ff_l@firefox.mozilla.org.xpi" 2>/dev/null | grep -q 'manifest.json'; then
 			ff_n=$((ff_n + 1))
