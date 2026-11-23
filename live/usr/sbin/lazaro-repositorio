@@ -138,6 +138,19 @@ sincronizar() {
 		esac
 	done)"
 	[ -z "$malos" ] || { rm -rf "$t"; aviso "El índice del repositorio de Lázaro trae nombres no válidos: no se usa."; return 1; }
+	# Herramientas más nuevas en este sistema que las publicadas (ISO en
+	# desarrollo): ese paquete no se baja, porque igual no se instala
+	# (ver instalar_herramientas). Antes se bajaba igual y, si la
+	# conexión se cortaba, el informe decía "¿Hay internet?" en lugar de
+	# "llega con la próxima versión" (VM, 23 de noviembre de 2026).
+	SALTAR_HERRAMIENTAS=no
+	if ! instalado lazaro-herramientas; then
+		n_sis="$(nivel_sistema)"
+		n_pub="$(nivel_de "$t/APKINDEX.tar.gz")"
+		if [ -n "$n_sis" ] && [ -n "$n_pub" ] && [ "$n_pub" -lt "$n_sis" ]; then
+			SALTAR_HERRAMIENTAS=si
+		fi
+	fi
 	# Solo lo que este equipo usa: el kernel (decenas de MB) solo si está
 	# instalado o se va a instalar.
 	paquetes="$(printf '%s\n' "$todos" | while IFS='	' read -r n a; do
@@ -165,6 +178,7 @@ quiere() { # PAQUETE
 	case "$1" in
 		linux-lazaro) [ "$CON_KERNEL" = si ] || instalado linux-lazaro ;;
 		linux-lazaro-dev) { [ "$CON_KERNEL" = si ] && instalado akms; } || instalado linux-lazaro-dev ;;
+		lazaro-herramientas) [ "$SALTAR_HERRAMIENTAS" != si ] ;;
 		*) return 0 ;;
 	esac
 }
@@ -222,8 +236,9 @@ poner_tareas() {
 nivel_sistema() {
 	sed -n 's/^LAZARO_NIVEL="\{0,1\}\([0-9][0-9]*\)"\{0,1\}$/\1/p' "$RAIZ/usr/share/lazaro/version.env" 2>/dev/null | head -n 1
 }
-nivel_publicado() {
-	tar -xzOf "$DIR/$(arquitectura)/APKINDEX.tar.gz" APKINDEX 2>/dev/null |
+nivel_publicado() { nivel_de "$DIR/$(arquitectura)/APKINDEX.tar.gz"; }
+nivel_de() { # APKINDEX.tar.gz
+	tar -xzOf "$1" APKINDEX 2>/dev/null |
 		awk '/^P:/ { p = ($0 == "P:lazaro-herramientas") } p && /^V:/ { v = substr($0, 3); sub(/.*-r/, "", v); print v; exit }'
 }
 
@@ -315,6 +330,7 @@ arranque() {
 
 orden=""
 CON_KERNEL=no
+SALTAR_HERRAMIENTAS=no
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--raiz) RAIZ="${2%/}"; shift; ajustar_rutas ;;

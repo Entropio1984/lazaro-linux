@@ -181,10 +181,15 @@ echo 'LAZARO_NIVEL="600"' > "$R/usr/share/lazaro/version.env"
 salida="$(lr --activar 2>&1)" || mal "nivel: activar terminó con error: $salida"
 case "$salida" in *LAZARO-REPOSITORIO-ESPERA-VERSION*) ok "nivel: espera a la próxima versión" ;; *) mal "nivel: no esperó: $salida" ;; esac
 grep -q 'apk add lazaro-herramientas' "$ANOTA" && mal "nivel: instaló herramientas más viejas" || ok "nivel: no instala herramientas más viejas"
+# Ni siquiera lo baja: con una conexión que se corta, el informe decía
+# "¿Hay internet?" en vez de "llega con la próxima versión".
+[ ! -e "$L/lazaro-herramientas-0.1-r501.apk" ] && ok "nivel: no baja las herramientas más viejas" || mal "nivel: bajó las herramientas más viejas"
+contiene "nivel: lo anota" "se instalan con la próxima versión" "$R/var/log/lazaro-repositorio.log"
 echo 'LAZARO_NIVEL="501"' > "$R/usr/share/lazaro/version.env"
 : > "$ANOTA"
 lr --activar >/dev/null 2>&1 || mal "nivel igual: activar terminó con error"
 contiene "nivel igual: instala la versión publicada" "apk add lazaro-herramientas@lazaro" "$ANOTA"
+[ -s "$L/lazaro-herramientas-0.1-r501.apk" ] && ok "nivel igual: baja las herramientas" || mal "nivel igual: no bajó las herramientas"
 rm -f "$R/usr/share/lazaro/version.env"
 cp "$TMP/installed.antes" "$R/lib/apk/db/installed"
 

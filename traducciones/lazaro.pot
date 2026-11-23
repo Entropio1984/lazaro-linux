@@ -504,6 +504,10 @@ msgid "Diagnóstico de Lázaro"
 msgstr ""
 
 #: live/usr/sbin/lazaro-diagnostico
+msgid "No se pudo abrir la carpeta. El informe está en:"
+msgstr ""
+
+#: live/usr/sbin/lazaro-diagnostico
 msgid ""
 "Revisa el equipo y reúne en un archivo de texto su hardware, el estado del sistema y los errores del arranque, para compartirlo al pedir ayuda.\n"
 "\n"
@@ -1423,4 +1427,8 @@ msgstr ""
 
 #: live/usr/share/lazaro/arreglos/005-reintentos-flathub.sh
 msgid "OnlyOffice, Chrome y Brave: si Flathub no responde, la descarga se reintenta con más paciencia"
+msgstr ""
+
+#: live/usr/share/lazaro/arreglos/006-editor-y-carpetas.sh
+msgid "LXQt y Sway tienen editor de texto, y los botones \"Abrir la carpeta\" funcionan en todos los escritorios"
 msgstr ""

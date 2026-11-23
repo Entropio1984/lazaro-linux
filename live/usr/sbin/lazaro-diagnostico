@@ -52,6 +52,25 @@ diagnostico_en_terminal() {
 # --ventana: lo mismo con ventanas (botón de la Bienvenida y menú): pide
 # la contraseña con la ventana del escritorio (pkexec), muestra que está
 # trabajando y al final dice dónde quedó el archivo.
+# Abre una carpeta en el administrador de archivos. Antes solo con
+# xdg-open, y LXQt no lo trae: el botón "Abrir la carpeta" no hacía nada
+# (VM con la Completa, 23 de noviembre de 2026). Ahora, si xdg-open falta
+# o falla, gio y luego el administrador de archivos de cada escritorio.
+# Lo que falle queda en $registro.
+abrir_carpeta() { # CARPETA
+	for ac in "xdg-open" "gio open" pcmanfm-qt pcmanfm thunar caja nautilus dolphin nemo; do
+		command -v "${ac%% *}" >/dev/null 2>&1 || continue
+		# shellcheck disable=SC2086
+		if $ac "$1" >/dev/null 2>>"${registro:-/dev/null}"; then
+			return 0
+		fi
+		echo "$ac no pudo abrir $1" >> "${registro:-/dev/null}"
+	done
+	zenity --info --width=460 --title="$(_ 'Diagnóstico de Lázaro')" \
+		--text="$(_ 'No se pudo abrir la carpeta. El informe está en:')\n\n$1" >/dev/null 2>&1 || true
+	return 1
+}
+
 if [ "${1:-}" = "--ventana" ]; then
 	# Lo que digan las ventanas (zenity) y por qué fallan queda en
 	# ~/.cache/lazaro-diagnostico-ventana.log: si no aparece nada en
@@ -107,7 +126,7 @@ if [ "${1:-}" = "--ventana" ]; then
 		[ ! -x /usr/sbin/lazaro-instalar ] || nota="\n\n$(_ 'Estás en la sesión de prueba (live): copia el archivo a otro USB o envíalo antes de apagar.')"
 		zenity --question --width=480 --title="$t" --ok-label="$(_ 'Abrir la carpeta')" --cancel-label="$(_ 'Cerrar')" \
 			--text="$(_ 'Listo. El informe quedó en:')\n\n$informe\n\n$(_ 'Adjunta ese archivo cuando pidas ayuda.')$nota" >/dev/null 2>>"$registro" &&
-			xdg-open "$(dirname "$informe")" >/dev/null 2>&1
+			abrir_carpeta "$(dirname "$informe")"
 	else
 		zenity --error --width=460 --title="$t" \
 			--text="$(_ 'No se pudo crear el informe.')\n\n$(tail -n 3 "$sal" | sed 's/[&<>]/ /g')" >/dev/null 2>>"$registro" || true

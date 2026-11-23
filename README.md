@@ -33,11 +33,15 @@ imprimir.
 - **Sin pasos técnicos.** No hay que escribir comandos ni configurar nada
   a mano: idioma, teclado, sonido, wifi, impresoras y controladores de
   video quedan listos solos. Firefox viene siempre (salvo si eliges
-  "Sin escritorio").
+  "Sin escritorio"). Todos los escritorios traen editor de texto
+  (FeatherPad en LXQt, Mousepad en XFCE, Sway e IceWM).
 - **Funciona sin internet.** La edición Completa trae todo dentro del USB
   y se instala en un equipo que no tiene red. Aunque haya internet, la
-  Completa instala todo desde el USB y no descarga nada: tarda lo mismo
-  con buena o mala conexión. Las versiones nuevas llegan después, con el
+  Completa instala todo desde el USB y no descarga nada (ni el teclado
+  ni Flathub salen a internet): tarda lo mismo con buena o mala
+  conexión. Firefox queda en tu idioma sin internet: la ISO trae sus
+  paquetes de idioma (español y portugués), de la misma versión de
+  Firefox. Las versiones nuevas llegan después, con el
   aviso de actualizaciones. Si instalas sin internet
   con la edición Ligera, lo que falta se completa la primera vez que el
   equipo se conecte (ver el [paso 7](#paso-7-el-primer-arranque)).
@@ -974,13 +978,22 @@ prueban y publican solas en cada cambio de la rama principal.
    (`lazaro-controladores --instalar-alpine`) y el driver Broadcom usan
    solo el repositorio de la ISO, aunque haya internet (`completa_usb`);
    si algo falla desde el USB y hay conexión, ese paso se reintenta con
-   internet. Al terminar, el sistema instalado queda con los repositorios
+   internet. También el teclado de consola (`setup-keymap`, que instala
+   `kbd-bkeymaps`) usa solo el USB, y Flathub queda puesto desde el
+   `flathub.flatpakrepo` del USB (`flatpak_desde_usb`, con 60 segundos
+   para bajar su descripción). Cada parte deja en
+   `/var/log/lazaro-instalar.log` la hora en que empieza y termina
+   (`[lazaro] Hora ...`), para saber cuál tarda. Al terminar, el sistema instalado queda con los repositorios
    de internet para las actualizaciones y, si hay conexión, baja la lista
    de programas de la tienda (el catálogo AppStream de Alpine, unos pocos
    MB, que no viene en ningún paquete). Lo que nunca viene en el USB:
    esa lista, Google Chrome (botón de la Bienvenida) y el firmware que no
    se puede repartir (b43, Prism54, Intel 2100/2200), que se descarga con
-   permiso.
+   permiso. En 64 bits, `paso_firefox_idiomas` deja los paquetes de idioma
+   de Firefox que `build.sh` baja de Mozilla (misma versión que el Firefox
+   de la ISO; `/usr/share/lazaro/firefox-idiomas`) en
+   `/etc/firefox/policies/policies.json`, con `intl.locale.requested`
+   vacío para que Firefox use el idioma del sistema.
 7. `lazaro-afinador --aplicar --raiz`: los ajustes recomendados para el
    hardware (bloque con marcas en `/etc/default/grub`,
    `/etc/sysctl.d/60-lazaro-afinador.conf` y el servicio
@@ -1129,7 +1142,9 @@ Así las mejoras llegan a los equipos instalados solo con las versiones
 `version.env` (`LAZARO_NIVEL`, lo calcula `build.sh`; hace falta la
 historia completa de git); `lazaro-repositorio` no instala
 `lazaro-herramientas` si el publicado tiene un nivel menor, para no
-cambiar las herramientas de una ISO en desarrollo por otras más viejas.
+cambiar las herramientas de una ISO en desarrollo por otras más viejas
+(ni siquiera lo descarga: el informe del Diagnóstico dice entonces que
+llegan con la próxima versión).
 
 Si cambias las herramientas, no hace falta tocar nada más: el workflow
 arma el paquete solo y llega a los equipos con la próxima versión. Si un programa nuevo debe llegar a los equipos,

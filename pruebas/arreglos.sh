@@ -293,6 +293,35 @@ es "reintentos de Flathub: la lista de pendientes queda igual" 'grep -qx org.onl
 flathub
 es "reintentos de Flathub: ya cambiado, no hace falta" '[ "$rc" = 10 ]'
 
+# 006-editor-y-carpetas en un sistema de mentira, con apk falso.
+E="$TMP/editor"
+mkdir -p "$E/lib/apk/db"
+cat > "$B/apk" <<EOF2
+#!/bin/sh
+echo "apk \$*" >> "$TMP/llamadas"
+[ ! -e "$TMP/sin-internet" ] || exit 1
+for p in "\$@"; do
+	case "\$p" in -*) ;; *) echo "P:\$p" >> "$E/lib/apk/db/installed" ;; esac
+done
+EOF2
+chmod 755 "$B/apk"
+editor() { rc=0; : > "$TMP/llamadas"; PATH="$B:$PATH" LAZARO_ARREGLO_RAIZ="$E" sh "$REALES/006-editor-y-carpetas.sh" > /dev/null 2>&1 || rc=$?; }
+: > "$E/lib/apk/db/installed"
+editor
+es "editor: sin escritorio no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
+printf 'P:xorg-server\nP:lxqt-desktop\n' > "$E/lib/apk/db/installed"
+: > "$TMP/sin-internet"
+editor
+es "editor: sin internet queda pendiente" '[ "$rc" = 1 ]'
+rm "$TMP/sin-internet"
+editor
+es "editor: LXQt recibe FeatherPad y xdg-utils" '[ "$rc" = 0 ] && grep -qx "P:featherpad" "$E/lib/apk/db/installed" && grep -qx "P:xdg-utils" "$E/lib/apk/db/installed" && ! grep -q mousepad "$TMP/llamadas"'
+editor
+es "editor: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
+printf 'P:sway\nP:xdg-utils\n' > "$E/lib/apk/db/installed"
+editor
+es "editor: Sway recibe Mousepad" '[ "$rc" = 0 ] && grep -qx "P:mousepad" "$E/lib/apk/db/installed" && ! grep -q featherpad "$TMP/llamadas"'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

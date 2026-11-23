@@ -169,9 +169,15 @@ avance_vigia() { # QUÉ [RAÍZ]
 	done
 }
 
+# hora TEXTO: deja en el registro (solo en el archivo) la hora en que
+# empieza o termina cada parte, para saber cuál tarda (la Completa en una
+# VM tardó bastante y no había cómo medirlo: 23 de noviembre de 2026).
+hora() { printf '[lazaro] Hora %s: %s\n' "$(date '+%T')" "$*" >>"$LOG" 2>/dev/null || true; }
+
 avance_iniciar() { # QUÉ [RAÍZ]
 	avance_parar
 	touch "$LOG"
+	hora "empieza $1"
 	wc -l <"$LOG" >"$AVANCE_LEIDAS"
 	avance_vigia "$@" </dev/null &
 	AVANCE_PID=$!
@@ -184,6 +190,7 @@ avance_parar() {
 	AVANCE_PID=""
 	# Lo que el paso escribió después de la última vuelta del vigía.
 	avance_leer || true
+	hora "termina"
 }
 
 # Si el programa termina por un error (die), el vigía no debe quedar vivo
@@ -1112,12 +1119,20 @@ paso_ajustes() {
 		[ -z "$variante" ] || echo "    Option \"XkbVariant\" \"$variante\""
 		echo 'EndSection'
 	} > "$raiz/etc/X11/xorg.conf.d/00-keyboard.conf"
-	# ...y de la consola.
+	# ...y de la consola. setup-keymap instala kbd-bkeymaps con apk, que
+	# antes de instalar renueva las listas de paquetes: en la Completa,
+	# solo desde el USB (con internet bajaba las de Alpine y, con la red
+	# cortándose, esperaba: VM, 23 de noviembre de 2026).
+	tc_usb=no
+	if completa_usb && repos_solo_usb "$raiz"; then
+		tc_usb=si
+	fi
 	if ! en_destino "$raiz" setup-keymap "$teclado" "${variante:-$teclado}" \
 		</dev/null >>"$LOG" 2>&1; then
 		en_destino "$raiz" setup-keymap "$teclado" "$teclado" </dev/null >>"$LOG" 2>&1 \
 			|| log "Aviso: no se pudo configurar el teclado de consola '$teclado'."
 	fi
+	[ "$tc_usb" = no ] || repos_volver "$raiz"
 
 	mkdir -p "$raiz/etc/doas.d"
 	# setenv: doas borra el entorno, y sin LANG los programas de
@@ -1224,6 +1239,7 @@ paso_ajustes() {
 	fi
 
 	paso_firefox_32 "$raiz" "$extras"
+	paso_firefox_idiomas "$raiz"
 	paso_mpv_32 "$raiz"
 
 	# 32 bits con SDDM (LXQt): las gráficas de esos equipos (Intel 945 y
@@ -1306,6 +1322,44 @@ paso_firefox_32() { # RAIZ EXTRAS
 	log "LAZARO-FIREFOX-32 extensiones=$(ls "$1$ext"/*.xpi | wc -l) ff2mpv=$([ -x "$1/usr/bin/ff2mpv-rust" ] && echo si || echo no)"
 }
 
+# --- 64 bits: Firefox en el idioma del sistema ------------------------------
+# El Firefox de Alpine viene solo en inglés. La ISO trae los paquetes de
+# idioma de Mozilla de su misma versión (build.sh): se dejan en el
+# sistema nuevo, Firefox los instala desde el disco al abrir por primera
+# vez (sin internet) y usa el idioma del sistema (intl.locale.requested
+# vacío). Después se actualizan solos desde addons.mozilla.org.
+paso_firefox_idiomas() { # RAIZ
+	[ "$BITS32" = no ] || return 0
+	[ -x "$1/usr/bin/firefox" ] || return 0
+	fi_dir=/usr/share/lazaro/firefox-idiomas
+	if ! ls "$fi_dir"/*.xpi >/dev/null 2>&1; then
+		log "Aviso: la ISO no trae los idiomas de Firefox; Firefox los ofrecerá con internet."
+		return 0
+	fi
+	# Ya hay reglas para Firefox (puestas a mano): no se pisan.
+	if [ -e "$1/etc/firefox/policies/policies.json" ]; then
+		log "Aviso: Firefox ya tiene reglas propias; no se agregan sus idiomas."
+		return 0
+	fi
+	mkdir -p "$1$fi_dir" "$1/etc/firefox/policies"
+	cp "$fi_dir"/*.xpi "$1$fi_dir/"
+	fi_lista=""
+	for x in "$1$fi_dir"/*.xpi; do
+		fi_lista="$fi_lista${fi_lista:+, }\"${x#"$1"}\""
+	done
+	cat > "$1/etc/firefox/policies/policies.json" <<-EOF
+	{
+	  "policies": {
+	    "Extensions": { "Install": [ $fi_lista ] },
+	    "Preferences": {
+	      "intl.locale.requested": { "Value": "", "Status": "default" }
+	    }
+	  }
+	}
+	EOF
+	log "LAZARO-FIREFOX-IDIOMAS $(ls "$1$fi_dir"/*.xpi | wc -l)"
+}
+
 # --- 32 bits: mpv para procesadores viejos ---------------------------------
 # desktop-postinstall.sh deja /etc/mpv/mpv.conf (480p, H.264, 360p con un
 # núcleo). En 32 bits se agrega: escalado barato (perfil "fast"), sin el
@@ -1355,8 +1409,14 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 		esac
 		grep -qx "$fu_app" "$fu_dir/aplicaciones" 2>/dev/null && fu_apps="$fu_apps $fu_app"
 	done
-	[ -n "$fu_apps" ] || return 0
-	log "Instalando desde el USB (Flathub):$fu_apps"
+	# Con Flatpak elegido sin OnlyOffice ni Brave, igual se deja Flathub
+	# puesto desde el USB: desktop-postinstall.sh ya no lo agrega por
+	# internet cuando instala solo desde el USB.
+	if [ -z "$fu_apps" ]; then
+		case " $2 " in *" flatpak "* | *" chrome "*) ;; *) return 0 ;; esac
+	else
+		log "Instalando desde el USB (Flathub):$fu_apps"
+	fi
 	if ! command -v flatpak >/dev/null 2>&1 &&
 		! lz_apk add --no-network flatpak >>"$LOG" 2>&1; then
 		log "Aviso: no se pudo preparar Flatpak en la sesión live; las aplicaciones se descargarán después del primer arranque."
@@ -1386,8 +1446,17 @@ flatpak_desde_usb() { # RAIZ EXTRAS
 	done
 	avance_parar
 	fp remote-delete --force flathub || true
-	fp remote-add --if-not-exists --from flathub "$fu_dir/flathub.flatpakrepo" \
-		|| log "Aviso: no se pudo dejar Flathub configurado; se agregará después del primer arranque."
+	# Agregar Flathub también intenta bajar su descripción por internet:
+	# si la red se corta, flatpak esperaba hasta agotar su tiempo ("Timeout
+	# was reached"). Con 60 segundos alcanza; si se corta antes de tiempo,
+	# Flathub queda puesto igual y la descripción se baja en la primera
+	# actualización.
+	fu_rc=0
+	timeout 60 flatpak --installation="$FP_INSTALACION" remote-add --if-not-exists --from flathub \
+		"$fu_dir/flathub.flatpakrepo" </dev/null >>"$LOG" 2>&1 || fu_rc=$?
+	if [ "$fu_rc" != 0 ] && ! flatpak --installation="$FP_INSTALACION" remotes 2>/dev/null | grep -q '^flathub'; then
+		log "Aviso: no se pudo dejar Flathub configurado; se agregará después del primer arranque."
+	fi
 	rm -f "/etc/flatpak/installations.d/$FP_INSTALACION.conf"
 	pend="$1/etc/flatpak-pendientes"
 	for a in $fu_ok; do
@@ -1737,6 +1806,7 @@ paso_texto() { # DISCO ESCRITORIO USUARIO NOMBRE EQUIPO IDIOMA TECLADO VARIANTE 
 
 orden="${1:-}"
 [ $# -gt 0 ] && shift
+[ -z "$orden" ] || hora "paso $orden"
 case "$orden" in
 	base)       [ $# -eq 2 ] || die "uso: lazaro-instalar base RAIZ ESCRITORIO"; paso_base "$@" ;;
 	escritorio) [ $# -eq 2 ] || die "uso: lazaro-instalar escritorio RAIZ ESCRITORIO"; paso_escritorio "$@" ;;
