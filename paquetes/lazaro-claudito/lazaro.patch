@@ -118,3 +118,26 @@ diff -ruN a/quickshell/sway-bar/modules/LazaroActualizaciones.qml b/quickshell/s
 +        onClicked: Quickshell.execDetached(["sh", "-c", "exec /usr/local/bin/alpine-update-launcher.sh"])
 +    }
 +}
+diff -ruN a/.config/quickshell/sway-bar/modules/KeybindsPopup.qml b/.config/quickshell/sway-bar/modules/KeybindsPopup.qml
+--- a/.config/quickshell/sway-bar/modules/KeybindsPopup.qml	2026-11-24 09:53:36.374777324 +0000
++++ b/.config/quickshell/sway-bar/modules/KeybindsPopup.qml	2026-11-24 09:53:36.401265255 +0000
+@@ -63,7 +63,18 @@
+         root.loadError = ""
+         root.includePaths = []
+         reader.buffer = []
+-        reader.command = ["sh", "-c", "cat \"" + root.configPath.replace(/"/g, "\\\"") + "\" 2>/dev/null"]
++        // Lázaro Linux: sin configuración propia en ~/.config/sway/config
++        // se lee la del sistema (/etc/sway/config), y también los archivos
++        // de sus "include" (/etc/sway/config.d/*), donde están los atajos
++        // de Lázaro y de Claudito.
++        reader.command = ["sh", "-c",
++            "f=\"$HOME/.config/sway/config\"; [ -r \"$f\" ] || f=/etc/sway/config\n" +
++            "grep -v '^[[:space:]]*include[[:space:]]' \"$f\"\n" +
++            "sed -n 's/^[[:space:]]*include[[:space:]][[:space:]]*//p' \"$f\" | while IFS= read -r g; do\n" +
++            "  eval \"set -- $g\"\n" +
++            "  for x in \"$@\"; do [ -f \"$x\" ] && grep -v '^[[:space:]]*include[[:space:]]' \"$x\"; done\n" +
++            "done\n" +
++            "true"]
+         reader.running = true
+     }
+ 
