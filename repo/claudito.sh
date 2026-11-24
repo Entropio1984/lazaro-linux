@@ -70,7 +70,8 @@ QT="$(tar -xzOf "$QS_APK" usr/share/quickshell/qt-version 2>/dev/null)" || QT=""
 # Prueba: se instala con el índice firmado, como en un equipo, y
 # Quickshell arranca (sin pantalla solo muestra su versión).
 cp "$LLAVES/$NOMBRE.pub" /etc/apk/keys/
-apk add -q --repository "$SALIDA/$ALPINE_ARCH" lazaro-claudito
+# apk agrega la arquitectura a la ruta (SALIDA/x86_64/APKINDEX.tar.gz).
+apk add -q --repository "$SALIDA" lazaro-claudito
 qs --version
 [ -x /usr/bin/lazaro-claudito ] && [ -f /etc/sway/config.d/60-lazaro-claudito.conf ] ||
 	die "lazaro-claudito no dejó su programa o su configuración de Sway"
