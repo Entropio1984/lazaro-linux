@@ -319,6 +319,9 @@ jobs:
           # Wifi Broadcom simulada: broadcom-wl se compila sin internet.
           - instalar bios xfce sin-red broadcom
           - instalar uefi lxqt con-red
+          # Sway con su barra, Claudito Shell Fusion, desde el USB (la
+          # Ligera no la trae).
+          - instalar bios sway sin-red
     steps:
       - uses: actions/checkout@v5
 

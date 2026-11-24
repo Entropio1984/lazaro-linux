@@ -199,10 +199,11 @@ fi
 
 # --- Claudito Shell (la barra de Sway) -----------------------------------
 # Quickshell (no está en Alpine) y lazaro-claudito, con la versión fija de
-# Claudito Shell Fusion. Solo 64 bits: Sway no está en la de 32.
+# Claudito Shell Fusion. Solo en la Completa de 64 bits: no cabe en la
+# Ligera, y Sway no está en la de 32.
 # Quickshell usa partes internas de Qt: el de la caché sirve solo si se
 # compiló con el Qt que tiene hoy Alpine.
-if [ "$ALPINE_ARCH" != x86 ]; then
+if [ "$ALPINE_ARCH" != x86 ] && [ "$LAZARO_EDICION" = completa ]; then
 	QS_VER=$(sed -n 's/^pkgver=//p' "$LAZARO_DIR/paquetes/quickshell/APKBUILD")
 	QS_REL=$(sed -n 's/^pkgrel=//p' "$LAZARO_DIR/paquetes/quickshell/APKBUILD")
 	QS_APK="$REPO_PROPIO/paquetes/$ALPINE_ARCH/quickshell-$QS_VER-r$QS_REL.apk"

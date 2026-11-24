@@ -604,6 +604,17 @@ prueba_instalar() {
 
 	echo "Arrancando el sistema instalado..."
 	serie2="$RES/$nombre-arranque.log"
+	# Barra de Sway: Claudito Shell (qs) sin waybar. En la Ligera, que no
+	# lo trae en el USB, vale waybar si el instalador lo dejó pendiente
+	# (llega con internet desde el repositorio de Lázaro).
+	sway_barra_ok() {
+		if grep -q 'LAZARO-SWAY-CORRE qs' "$serie2"; then
+			! grep -q 'LAZARO-SWAY-CORRE waybar' "$serie2"
+		else
+			[ "$completa" = no ] && grep -q 'LAZARO-CLAUDITO-PENDIENTE' "$serie" &&
+				grep -q 'LAZARO-SWAY-CORRE waybar' "$serie2"
+		fi
+	}
 	rm -f "$serie2" "$mon" "$RES/$nombre-instalado.png" "$RES/$nombre-instalado.ppm" \
 		"$RES/$nombre-pantalla-inicio.png" "$RES/$nombre-pantalla-inicio.ppm"
 	# GNOME reinicia una vez en la prueba (GDM toma la resolución al
@@ -801,12 +812,11 @@ prueba_instalar() {
 			echo "FALLO: desde la pantalla de inicio no se pudo entrar a Sway." >&2
 			sed -n '/LAZARO-SESION-GREETD-NO/,$p' "$serie2" | head -n 35 >&2
 			ok=1
-		elif [ "$de" = sway ] && { ! grep -q 'LAZARO-SWAY-CORRE qs' "$serie2" \
-			|| grep -q 'LAZARO-SWAY-CORRE waybar' "$serie2" \
+		elif [ "$de" = sway ] && { ! sway_barra_ok \
 			|| ! grep -q 'LAZARO-SWAY-CORRE nm-applet' "$serie2" \
 			|| ! grep -q 'LAZARO-SWAY-CORRE polkit-gnome-au' "$serie2" \
 			|| ! grep -q 'LAZARO-SWAY-CORRE atajos' "$serie2"; }; then
-			echo "FALLO: en Sway no arrancó la barra Claudito Shell (qs) o quedó waybar, o falta el icono de wifi (nm-applet), el agente de contraseñas (polkit) o la lista de atajos." >&2
+			echo "FALLO: en Sway no arrancó la barra que corresponde (Claudito Shell, qs; en la Ligera, waybar mientras Claudito espera internet), o falta el icono de wifi (nm-applet), el agente de contraseñas (polkit) o la lista de atajos." >&2
 			sed -n '/lazaro-claudito/,+40p' "$serie2" | head -n 50 >&2 || true
 			grep LAZARO-SWAY-CORRE "$serie2" >&2 || true
 			ok=1
