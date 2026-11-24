@@ -1,0 +1,56 @@
+#!/bin/sh
+# Lázaro Linux: arranca Claudito Shell Fusion, la barra de Sway (la lanza
+# /etc/sway/config.d/60-lazaro-claudito.conf al entrar y al recargar Sway).
+#
+# - La barra (carpeta sway-bar) se copia a la carpeta de cada persona, como
+#   la instala Claudito Shell, y se reemplaza cuando llega otra versión de
+#   Lázaro. Lo que la persona ajusta (diseño, módulos, fondo, tamaño del
+#   menú) está en los archivos de al lado y no se toca.
+# - El fondo de pantalla de entrada es el de Lázaro.
+# - Si Quickshell no arranca (por ejemplo, porque Alpine actualizó Qt y
+#   Lázaro todavía no publicó el Quickshell recompilado), queda waybar, la
+#   barra de antes, para que nunca falte una barra.
+set -u
+
+ORIGEN=/usr/share/lazaro/claudito
+QS="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+VERSION="$(cat "$ORIGEN/version" 2>/dev/null || echo 0)"
+REGISTRO="${XDG_RUNTIME_DIR:-/tmp}/lazaro-claudito.log"
+
+mkdir -p "$QS" || exit 1
+if [ "$(cat "$QS/sway-bar/.lazaro-version" 2>/dev/null)" != "$VERSION" ]; then
+	rm -rf "$QS/sway-bar.nuevo"
+	if cp -r "$ORIGEN/sway-bar" "$QS/sway-bar.nuevo"; then
+		echo "$VERSION" > "$QS/sway-bar.nuevo/.lazaro-version"
+		rm -rf "$QS/sway-bar"
+		mv "$QS/sway-bar.nuevo" "$QS/sway-bar"
+	fi
+fi
+for f in bar-layout.tsv launcher-size.txt wallpaper-fillmode.txt; do
+	[ -e "$QS/$f" ] || cp "$ORIGEN/$f" "$QS/$f"
+done
+if [ ! -e "$QS/wallpaper-path.txt" ]; then
+	fondo=/usr/share/wallpapers/claudito-01.png
+	for f in /usr/share/backgrounds/lazaro/lazaro-fondo.jpg /usr/share/backgrounds/lazaro/lazaro-fondo.png; do
+		if [ -f "$f" ]; then
+			fondo="$f"
+			break
+		fi
+	done
+	printf '%s' "$fondo" > "$QS/wallpaper-path.txt"
+fi
+
+# Al recargar Sway: la barra que ya corría se cierra y se abre de nuevo.
+pkill -x qs 2>/dev/null && sleep 1
+pkill -x waybar 2>/dev/null || true
+
+inicio=$(date +%s)
+rc=0
+sh "$QS/sway-bar/launch-with-icon-theme.sh" > "$REGISTRO" 2>&1 || rc=$?
+# Cerrada por otra recarga (pkill) o tras un buen rato: nada que hacer.
+[ "$rc" -ne 0 ] || exit 0
+[ "$rc" -lt 128 ] || exit 0
+[ $(($(date +%s) - inicio)) -lt 30 ] || exit 0
+echo "lazaro-claudito: Quickshell no arrancó (código $rc); queda waybar." >> "$REGISTRO"
+command -v waybar >/dev/null 2>&1 && exec waybar
+exit "$rc"

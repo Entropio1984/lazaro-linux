@@ -283,7 +283,7 @@ El instalador pregunta, en este orden:
    | **KDE Plasma** | El más completo y vistoso; pide un equipo más nuevo |
    | **GNOME** | Moderno y diferente a Windows; pide un equipo más nuevo |
    | **XFCE Wayland** | XFCE con tecnología nueva, en prueba |
-   | **Sway** | Para usuarios avanzados que usan mucho el teclado |
+   | **Sway** | Para usuarios avanzados que usan mucho el teclado, con la barra [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion) (en la Completa viene en el USB; en la Ligera llega en el primer arranque con internet) |
    | **Sin escritorio** | Solo pantalla de texto, para servidores |
 
 3. **Software adicional**: casillas para agregar programas. Si no sabes,
@@ -802,19 +802,21 @@ Los que hay:
   Chrome o Brave todavía no terminaron de bajar, el reintento espera
   internet sin gastar intentos y, si Flathub no responde, vuelve a probar
   cada vez más espaciado en lugar de rendirse a los 20 minutos.
-- **Capturas y salvapantallas en LXQt** (008): instala ScreenGrab para
+- **Capturas y salvapantallas en LXQt** (009): instala ScreenGrab para
   que la tecla Imprimir Pantalla saque capturas, y lo que pedía la
   ventana de ajustes de XScreenSaver. A quien nunca eligió un
   salvapantallas le deja la pantalla en negro (no gasta procesador).
-- **Lista de la tienda al abrirla** (009): la lista de programas de la
+- **Lista de la tienda al abrirla** (010): la lista de programas de la
   tienda se renueva cada vez que se abre la tienda, sin hacerla esperar.
-- **Sway sin manchas** (010): en equipos sin aceleración 3D (por ejemplo,
+- **Sway sin manchas** (011): en equipos sin aceleración 3D (por ejemplo,
   una máquina virtual), Sway usa su modo de dibujo simple y el menú ya
   no deja manchas. Con tarjeta de video Intel, AMD o NVIDIA (nouveau)
   sigue el modo normal.
-- **Volumen de Sway** (011): el clic en el icono de volumen de la barra
-  abre una barrita con deslizador, como en los otros escritorios (clic
-  derecho: el mezclador completo). Una barra que la persona cambió a su
+- **Volumen de Sway** (012): cuando la barra de Sway es la sencilla
+  (waybar: en la Ligera hasta el primer arranque con internet, o si
+  Claudito Shell no arranca), el clic en el icono de volumen abre una
+  barrita con deslizador, como en los otros escritorios (clic derecho:
+  el mezclador completo). Una barra que la persona cambió a su
   gusto no se toca.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
@@ -1112,7 +1114,8 @@ mano, también con la siguiente (edge):
 | Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo, el botón Aplicaciones de Flathub de la Bienvenida funciona, y la pantalla de inicio recuerda la resolución que eligió el usuario |
 | Instalación | UEFI | KDE Plasma | Sí | Lo mismo con Plasma |
 | Instalación | BIOS | GNOME | Sí | Lo mismo con GNOME (reinicia una vez y mide la pantalla de inicio) |
-| Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos |
+| Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos. La Ligera no trae Claudito Shell en el USB: la barra es waybar hasta que Claudito llega por internet |
+| Completa: instalación | BIOS | Sway | No | Claudito Shell sale del USB y su barra (qs) arranca en lugar de waybar |
 | Instalación | UEFI | LXQt | Sí | La sesión queda en el idioma elegido |
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
 | Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |

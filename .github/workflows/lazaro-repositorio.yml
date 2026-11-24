@@ -18,6 +18,11 @@
 #   Lázaro con la receta (kernel/) de la última versión publicada. No es
 #   una mejora de Lázaro sino de Alpine, que también llega a diario a los
 #   equipos con el kernel normal.
+# Quickshell y lazaro-claudito (la barra de Sway, Claudito Shell Fusion)
+# van igual que las herramientas, con una excepción como la del kernel:
+# Quickshell usa partes internas de Qt, así que la revisión diaria también
+# mira si Alpine cambió Qt y, si es así, lo recompila (con la receta de la
+# última versión publicada) y lo publica.
 # Para volver a publicar una versión a mano: Actions → "Repositorio
 # Lázaro" → Run workflow, eligiendo la etiqueta (por ejemplo v0.2) en
 # lugar de main.
@@ -30,6 +35,9 @@ on:
       - "kernel/**"
       - "repo/**"
       - "paquetes/lazaro-herramientas/**"
+      - "paquetes/quickshell/**"
+      - "paquetes/lazaro-claudito/**"
+      - "repo/claudito.sh"
       - "live/usr/sbin/**"
       - "live/usr/share/lazaro/**"
       - "live/usr/share/applications/**"
@@ -41,6 +49,9 @@ on:
       - "kernel/**"
       - "repo/**"
       - "paquetes/lazaro-herramientas/**"
+      - "paquetes/quickshell/**"
+      - "paquetes/lazaro-claudito/**"
+      - "repo/claudito.sh"
       - "live/usr/sbin/**"
       - "live/usr/share/lazaro/**"
       - "live/usr/share/applications/**"
@@ -74,6 +85,8 @@ jobs:
       etiqueta: ${{ steps.r.outputs.etiqueta }}
       fuente: ${{ steps.r.outputs.fuente }}
       herramientas: ${{ steps.r.outputs.herramientas }}
+      claudito: ${{ steps.r.outputs.claudito }}
+      qs_rel: ${{ steps.r.outputs.qs_rel }}
       publicar: ${{ steps.r.outputs.publicar }}
     steps:
       - uses: actions/checkout@v5
@@ -117,6 +130,9 @@ jobs:
                   fuente="$ultima"
                   publicar=si
                   git checkout -q "$ultima" -- kernel
+                  # Quickshell: también con la receta de esa versión (si ya
+                  # la tenía).
+                  git checkout -q "$ultima" -- paquetes repo 2>/dev/null || true
                 fi
               fi
               ;;
@@ -151,6 +167,45 @@ jobs:
           esac
           # Diaria en main sin ninguna versión todavía: nada.
           [ "$publicar" = si ] || [ "$herramientas" = si ] || kernel=no
+          # --- Quickshell y lazaro-claudito ---------------------------------
+          # QS_REL sube en 1 cada vez que se recompila Quickshell con otro Qt,
+          # para que los equipos lo actualicen. Lo publicado queda anotado en
+          # quickshell-qt.txt ("QS_REL QT") de la Release.
+          claudito=no
+          qs_rel=0
+          if [ -f paquetes/quickshell/APKBUILD ] && [ -f repo/claudito.sh ]; then
+            qt_hoy="$(curl -fsSL --retry 3 "$ALPINE_REPO_COMMUNITY/x86_64/APKINDEX.tar.gz" | tar -xzO APKINDEX |
+              awk '/^P:/ { p = ($0 == "P:qt6-qtdeclarative") } p && /^V:/ { print substr($0, 3); exit }')"
+            [ -n "$qt_hoy" ] || { echo "No se encontró qt6-qtdeclarative en el índice de Alpine."; exit 1; }
+            anotado="$(gh release download "$etiqueta" -p quickshell-qt.txt -O - 2>/dev/null || true)"
+            qs_pub="$(printf '%s\n' "$anotado" | awk 'NR == 1 { print $1 }')"
+            qt_pub="$(printf '%s\n' "$anotado" | awk 'NR == 1 { print $2 }')"
+            if [ -z "$qs_pub" ]; then
+              qs_rel=0
+            elif [ "$qt_pub" = "$qt_hoy" ]; then
+              qs_rel="$qs_pub"
+            else
+              qs_rel=$((qs_pub + 1))
+            fi
+            case "$EVENTO" in
+              schedule) [ -n "$qs_pub" ] && [ "$qt_pub" != "$qt_hoy" ] && claudito=si ;;
+              workflow_dispatch) claudito=si ;;
+              push) claudito=no ;;
+              *)
+                if [ -n "$ANTES" ] && git cat-file -e "$ANTES" 2>/dev/null; then
+                  git diff --name-only "$ANTES" HEAD | grep -qE '^(paquetes/(quickshell|lazaro-claudito)/|repo/(claudito|firma)\.sh$)' && claudito=si
+                else
+                  claudito=si
+                fi
+                ;;
+            esac
+            # Una versión publica siempre lo de esa versión.
+            case "$GITHUB_REF" in refs/tags/v*) claudito=si ;; esac
+            [ "$publicar" = si ] || [ "$herramientas" = si ] || claudito=no
+            echo "Quickshell: Qt de Alpine $qt_hoy, publicado ${anotado:-nada}; QS_REL=$qs_rel compilar=$claudito"
+          fi
+          echo "claudito=$claudito" >> "$GITHUB_OUTPUT"
+          echo "qs_rel=$qs_rel" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
           echo "kernel=$kernel" >> "$GITHUB_OUTPUT"
@@ -259,16 +314,49 @@ jobs:
           path: salida/herramientas
           retention-days: 14
 
+  claudito:
+    name: Armar Quickshell y lazaro-claudito
+    needs: revisar
+    if: needs.revisar.outputs.claudito == 'si' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # En la revisión diaria, la receta de la última versión publicada.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.revisar.outputs.fuente }}
+          fetch-depth: 0
+      - name: Armar
+        env:
+          LAZARO_APK_KEY: ${{ github.event_name != 'pull_request' && secrets.LAZARO_APK_KEY || '' }}
+          QS_REL: ${{ needs.revisar.outputs.qs_rel }}
+        run: |
+          # lazaro-claudito: como las herramientas, cada cambio de
+          # lazaro-linux es una versión nueva.
+          LAZARO_REL="$(git rev-list --count HEAD)" ./repo/claudito.sh
+          {
+            echo "### Quickshell y lazaro-claudito"
+            echo '```'
+            cat salida/claudito/resumen.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: claudito
+          path: salida/claudito
+          retention-days: 14
+
   publicar:
     name: Publicar el repositorio
-    needs: [revisar, kernel, herramientas]
+    needs: [revisar, kernel, herramientas, claudito]
     # Solo una versión (etiqueta vX.Y) o el kernel de la revisión diaria
     # (ver arriba). Un cambio de main ya no se publica.
     if: >-
       !cancelled() && needs.revisar.outputs.publicar == 'si' && github.event_name != 'pull_request' &&
       (needs.herramientas.result == 'success' || (needs.herramientas.result == 'skipped' && needs.revisar.outputs.herramientas == 'no')) &&
       (needs.kernel.result == 'success' || needs.kernel.result == 'skipped') &&
-      (needs.herramientas.result == 'success' || needs.kernel.result == 'success')
+      (needs.claudito.result == 'success' || needs.claudito.result == 'skipped') &&
+      (needs.herramientas.result == 'success' || needs.kernel.result == 'success' || needs.claudito.result == 'success')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -293,6 +381,12 @@ jobs:
         with:
           name: kernel-lazaro
           path: nuevo/kernel-lazaro
+
+      - uses: actions/download-artifact@v7
+        if: needs.claudito.result == 'success'
+        with:
+          name: claudito
+          path: nuevo/claudito
 
       - name: Juntar con lo publicado y firmar el índice
         env:
@@ -326,6 +420,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           ETIQUETA: ${{ needs.revisar.outputs.etiqueta }}
           HERRAMIENTAS: ${{ needs.herramientas.result }}
+          CLAUDITO: ${{ needs.claudito.result }}
+          QS_REL: ${{ needs.revisar.outputs.qs_rel }}
         run: |
           # De qué versión de Lázaro son las herramientas publicadas.
           if [ "$HERRAMIENTAS" = success ]; then
@@ -364,6 +460,13 @@ jobs:
             gh release upload "$ETIQUETA" lazaro-repositorio repo/lazaro.rsa.pub version-lazaro.txt --clobber
           fi
           gh release upload "$ETIQUETA" repo-x86_64/APKINDEX.tar.gz --clobber
+          # Con qué Qt está compilado el Quickshell publicado (lo mira la
+          # revisión diaria).
+          if [ "$CLAUDITO" = success ]; then
+            qt="$(sed -n 's/^QT=//p' nuevo/claudito/resumen.txt)"
+            [ -n "$qt" ] && printf '%s %s\n' "$QS_REL" "$qt" > quickshell-qt.txt &&
+              gh release upload "$ETIQUETA" quickshell-qt.txt --clobber
+          fi
           cp repo-x86/APKINDEX.tar.gz APKINDEX-x86.tar.gz
           gh release upload "$ETIQUETA" APKINDEX-x86.tar.gz --clobber
           # Las versiones anteriores ya no las nombra el índice.

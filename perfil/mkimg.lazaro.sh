@@ -205,7 +205,8 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 # (alpine-conf 3.22.0) más lo que desktop-postinstall.sh agrega en ese
 # escritorio (applets de red y sonido, barra de Sway, agente de
 # contraseñas). GNOME y Plasma no caben (más de 2 GB) y se descargan.
-# Unos 240 MB en total.
+# Unos 240 MB en total. La barra de Sway, Claudito Shell Fusion, va solo
+# en la Completa (ver LAZARO_COMPLETA).
 LAZARO_ESCRITORIOS="
 	mate-desktop-environment polkit mate-media mate-polkit
 	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
@@ -256,13 +257,22 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 # agrega solo, como las traducciones de cada programa) y la deja en
 # $LAZARO_PAQUETES_COMPLETA. Las aplicaciones de Flathub van aparte, en la
 # carpeta flatpak/ de la ISO (section_lazaro_flatpak).
+# La barra de Sway, Claudito Shell Fusion (lazaro-claudito, con
+# Quickshell, que compila build.sh). Con lo que pide (Qt Quick, la fuente
+# JetBrainsMono Nerd...) son más de 100 MB: no cabe en la Ligera, que
+# queda a pocos MB de los 2 GB. En la Ligera, Sway arranca con waybar y
+# Claudito llega en el primer arranque con internet (lazaro-repositorio).
+LAZARO_CLAUDITO="lazaro-claudito"
+[ "$LAZARO_ARCH" != x86 ] || LAZARO_CLAUDITO=""
+
 LAZARO_COMPLETA="gnome gnome-apps-core gdm
 	plasma-desktop-meta kde-applications-base sddm plasma-nm plasma-pa
 	plasma-desktop-lang kdeplasma-addons-lang xdg-desktop-portal-kde
 	seatd mesa-egl xwayland
 	linux-firmware lang
 	linux-lts-dev build-base
-	$LAZARO_HARDWARE_COMPLETA"
+	$LAZARO_HARDWARE_COMPLETA
+	$LAZARO_CLAUDITO"
 
 profile_lazaro() {
 	profile_standard

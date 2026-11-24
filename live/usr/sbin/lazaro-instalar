@@ -890,6 +890,34 @@ preinstalar_extras() { # RAIZ IDIOMA EXTRAS
 	else
 		log "Aviso: no se pudieron instalar desde el USB (código $pe_rc); se descargarán."
 	fi
+	paso_claudito "$1"
+}
+
+# Sway: su barra es Claudito Shell Fusion (paquete lazaro-claudito, con
+# Quickshell), en lugar de waybar. waybar queda instalada: la pone
+# desktop-postinstall.sh y lazaro-claudito vuelve a ella si Quickshell no
+# arranca. Va aparte de los programas adicionales para que un problema
+# aquí no deje a los demás sin instalar.
+# La Completa lo trae en el USB. La Ligera no (no cabe): Sway arranca con
+# waybar y lazaro-repositorio pone Claudito en el primer arranque con
+# internet (marca /etc/lazaro/claudito-pendiente).
+paso_claudito() { # RAIZ
+	[ "$BITS32" = no ] || return 0
+	en_destino "$1" apk info -e sway >/dev/null 2>&1 || return 0
+	if [ "$LAZARO_EDICION" != completa ]; then
+		mkdir -p "$1/etc/lazaro"
+		: > "$1/etc/lazaro/claudito-pendiente"
+		log "LAZARO-CLAUDITO-PENDIENTE: Sway empieza con waybar; Claudito Shell llega con internet."
+		return 0
+	fi
+	log "Sway: instalando su barra, Claudito Shell Fusion, desde el USB"
+	pc_rc=0
+	en_destino "$1" apk add --no-network lazaro-claudito </dev/null >>"$LOG" 2>&1 || pc_rc=$?
+	if [ "$pc_rc" = 0 ]; then
+		log "LAZARO-CLAUDITO-INSTALADO"
+	else
+		log "Aviso: no se pudo instalar Claudito Shell (código $pc_rc); Sway queda con waybar."
+	fi
 }
 
 # Controladores que le faltan al hardware (lazaro-controladores): se deja
