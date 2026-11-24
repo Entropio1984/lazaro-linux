@@ -8,17 +8,7 @@
 #
 # Va una versión fija de Claudito (_commit): cambia casi a diario y su
 # configuración depende de la versión de Quickshell. Para subirla, cambiar
-# _commit y _fecha, dejar sha512sums="
-f33a532e20fc56393b9425c0bb82cd7d948cea01eaa35bae4b0775e8747f0faa396850d45409d9da7ec53481fb12a99b3e3b501f4d9bc742848c85c9c9e234c3  claudito-quickshell-20261120.tar.gz
-da0b92bd075cf0e907366d8971ca9528b13819bc8bac54b10dc8f9f7455997a979fc240976b76ab6d12b69f3b061673eb94650169f74885563284e9e3a9c2581  claudito-iconos-claros-20261120.tar.gz
-980aefc6b45c425ad6b71bed6370137b48f89e818bf7d2e4da67551ec2eb6ba235ec43cfbb21dbe97d1413c65fb62082f441c095bf9460067d1f7537a04ee210  claudito-iconos-oscuros-20261120.tar.gz
-b7f5f41d633f8125449d57b6fb855ed97c2fad416102edd59051c37dcbe73a4d1e7e15977a0edac2dbc8547de97319c2ae8ac624801c456ef687dce847578f49  claudito-fondos-20261120.tar.gz
-9f0a1de507da32634c3c50672a550b4abb59baa424655b1a1e9b90e7a45b88a340e34cbad2b3c59357453be765c29590603fba0f1170d6ea5e1c710a40f6984d  claudito-programas-20261120.tar.gz
-142b2495ea0be0efed3679d2814da54915ac9836aeea8530fa5e41d268c1863e31f34bbb4e6d4742bb171b13fe8b9179773b4ddf342d1d1be0d38674fe624751  claudito-paleta-20261120.tar.gz
-a82fd5592096dfba152505e6b766136ac282d996a865d7a5d876969f44b346bce4c9e83adbf09391297af462dbed50c326d8612bb67ba2affaa9478e2a694153  lazaro.patch
-50f02838b66bcc959dd7170805bc44b142497ba476ae43a429e63456ada2dc75f94cc33b8061db76d17feb6bca5b265b9823375c394c5d1ad650ca395e43f63c  lazaro-claudito
-f8d20baf50984cf697ed238d56bc63cb48135d7394c2dc001bee0ab439564871e15ab60f0edd2e4150eeebeb3d28fbc53dec9202b7a25aba5854534440c7f8e5  60-lazaro-claudito.conf
-" (build.sh muestra las sumas nuevas)
+# _commit y _fecha, dejar sha512sums="" (build.sh muestra las sumas nuevas)
 # y revisar que lazaro.patch siga aplicando.
 #
 # Solo se baja lo que usa la barra de Sway (GitLab entrega carpetas
