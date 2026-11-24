@@ -724,6 +724,10 @@ prueba_instalar() {
 			echo "FALLO: la tienda de aplicaciones no quedó lista (servicio de Alpine o lista de programas para instalar)." >&2
 			grep -A 5 LAZARO-TIENDA "$serie2" >&2 || true
 			ok=1
+		elif [ "$de" = lxqt ] && [ "$configurado" = si ] && ! grep -q LAZARO-LXQT-OK "$serie2"; then
+			echo "FALLO: LXQt quedó sin programa de capturas (ScreenGrab) o sin lo que pide la ventana de XScreenSaver." >&2
+			grep LAZARO-LXQT "$serie2" >&2 || echo "(no se encontró la revisión de LXQt)" >&2
+			ok=1
 		elif [ "$de" = icewm ] && ! grep -q LAZARO-ICEWM-OK "$serie2"; then
 			echo "FALLO: la sesión de IceWM (estilo LXDE) no arrancó completa (lxsession, pcmanfm, nm-applet y lxpolkit) o quedó sin el logo de Lázaro de fondo." >&2
 			grep -A 30 LAZARO-ICEWM "$serie2" >&2 || echo "(no se encontró la sesión de IceWM)" >&2

@@ -1436,3 +1436,19 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/007-tienda-sin-cuelgues.sh
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/009-lxqt-capturas-salvapantallas.sh
+msgid "LXQt: la tecla Imprimir Pantalla saca capturas (ScreenGrab) y los ajustes del salvapantallas ya no piden paquetes"
+msgstr ""
+
+#: live/usr/share/lazaro/arreglos/010-tienda-al-abrir.sh
+msgid "La lista de programas de la tienda se renueva cada vez que abres la tienda"
+msgstr ""
+
+#: live/usr/share/lazaro/arreglos/011-sway-sin-3d.sh
+msgid "Sway: el menú y las ventanas ya no dejan manchas en equipos sin aceleración 3D"
+msgstr ""
+
+#: live/usr/share/lazaro/arreglos/012-sway-volumen.sh
+msgid "Sway: el icono de volumen abre una barrita con deslizador en vez del mezclador completo"
+msgstr ""

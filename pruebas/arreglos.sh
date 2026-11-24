@@ -334,6 +334,101 @@ rm -f "$TC"
 sincuelgue
 es "sin cuelgues: sin tarea se vuelve a mirar" '[ "$rc" = 11 ]'
 
+# 009-lxqt-capturas-salvapantallas con el mismo apk falso.
+X="$TMP/lxqt"
+mkdir -p "$X/lib/apk/db" "$X/etc/skel" "$X/home/ana" "$X/home/beto"
+printf 'ana:x:1000:1000::/home/ana:/bin/sh\nbeto:x:1001:1001::/home/beto:/bin/sh\n' > "$X/etc/passwd"
+echo "mode: random" > "$X/home/beto/.xscreensaver"
+mkdir -p "$X/home/caro"
+printf 'caro:x:1002:1002::/home/caro:/bin/sh\n' >> "$X/etc/passwd"
+ln -s "$TMP/no-tocar" "$X/home/caro/.xscreensaver"
+mkdir -p "$TMP/bin-lxqt"
+sed "s#$E/lib#$X/lib#" "$B/apk" > "$TMP/bin-lxqt/apk"
+chmod 755 "$TMP/bin-lxqt/apk"
+lxqt() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-lxqt:$PATH" LAZARO_ARREGLO_RAIZ="$X" sh "$REALES/009-lxqt-capturas-salvapantallas.sh" > /dev/null 2>&1 || rc=$?; }
+: > "$X/lib/apk/db/installed"
+lxqt
+es "LXQt: sin LXQt no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
+echo "P:lxqt-desktop" > "$X/lib/apk/db/installed"
+: > "$TMP/sin-internet"
+lxqt
+es "LXQt: sin internet queda pendiente" '[ "$rc" = 1 ] && [ ! -e "$X/home/ana/.xscreensaver" ]'
+rm "$TMP/sin-internet"
+lxqt
+es "LXQt: recibe ScreenGrab y lo que pide XScreenSaver" '[ "$rc" = 0 ] && grep -qx "P:screengrab" "$X/lib/apk/db/installed" && grep -qx "P:xscreensaver-gl-extras" "$X/lib/apk/db/installed"'
+es "LXQt: pantalla en negro para quien no eligió, sin tocar al que sí" 'grep -q "^mode:.*blank" "$X/home/ana/.xscreensaver" && grep -q "^mode:.*blank" "$X/etc/skel/.xscreensaver" && grep -qx "mode: random" "$X/home/beto/.xscreensaver" && [ ! -e "$TMP/no-tocar" ] && [ -L "$X/home/caro/.xscreensaver" ] && ! ls "$X"/home/*/.xscreensaver.* >/dev/null 2>&1'
+lxqt
+es "LXQt: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
+
+# 010-tienda-al-abrir en un sistema de mentira.
+TA="$TMP/tienda-abrir"
+tabrir() { rc=0; LAZARO_ARREGLO_RAIZ="$TA" sh "$REALES/010-tienda-al-abrir.sh" > /dev/null 2>&1 || rc=$?; }
+mkdir -p "$TA/usr/bin" "$TA/etc/periodic/hourly" "$TA/usr/share/applications"
+tabrir
+es "tienda al abrir: sin tienda se vuelve a mirar" '[ "$rc" = 11 ]'
+printf '#!/bin/sh\n' > "$TA/usr/bin/plasma-discover"
+printf '#!/bin/sh\n' > "$TA/usr/bin/gnome-software"
+chmod 755 "$TA/usr/bin/plasma-discover" "$TA/usr/bin/gnome-software"
+tabrir
+es "tienda al abrir: sin la tarea de la lista se vuelve a mirar" '[ "$rc" = 11 ]'
+printf '#!/bin/sh\n' > "$TA/etc/periodic/hourly/alpine-tienda-catalogo"
+chmod 755 "$TA/etc/periodic/hourly/alpine-tienda-catalogo"
+printf '[Desktop Entry]\nName=Software\nExec=gnome-software %%U\nDBusActivatable=true\n' > "$TA/usr/share/applications/org.gnome.Software.desktop"
+tabrir
+es "tienda al abrir: pone el paso previo de las dos tiendas" '[ "$rc" = 0 ] && grep -q "alpine-tienda-abrir /usr/bin/plasma-discover" "$TA/usr/local/bin/plasma-discover" && grep -q "alpine-tienda-abrir /usr/bin/gnome-software" "$TA/usr/local/bin/gnome-software" && [ -x "$TA/usr/local/bin/gnome-software" ]'
+es "tienda al abrir: el que baja la lista, sus permisos y el acceso directo sin D-Bus" 'sh -n "$TA/usr/local/sbin/alpine-tienda-lista-ahora" && sh -n "$TA/usr/local/libexec/alpine-tienda-abrir" && [ -x "$TA/usr/local/sbin/alpine-tienda-lista-ahora" ] && grep -q "org.alpinelinux.tienda-lista" "$TA/etc/polkit-1/rules.d/50-alpine-tienda-lista.rules" && grep -q "alpine-tienda-lista-ahora" "$TA/usr/share/polkit-1/actions/org.alpinelinux.tienda-lista.policy" && ! grep -q DBusActivatable "$TA/usr/local/share/applications/org.gnome.Software.desktop" && grep -q "^Exec=gnome-software" "$TA/usr/local/share/applications/org.gnome.Software.desktop"'
+tabrir
+es "tienda al abrir: ya está, no hace falta" '[ "$rc" = 10 ]'
+rm "$TA/usr/local/share/applications/org.gnome.Software.desktop"
+tabrir
+es "tienda al abrir: sin el acceso directo de GNOME Software, se vuelve a poner" '[ "$rc" = 0 ] && [ -f "$TA/usr/local/share/applications/org.gnome.Software.desktop" ]'
+# El paso previo deja abrir la tienda aunque no haya pkexec ni lista.
+printf '#!/bin/sh\necho abierta "$@"\n' > "$TMP/tienda-real"
+chmod 755 "$TMP/tienda-real"
+es "tienda al abrir: abre la tienda con sus opciones" '[ "$(PATH=/usr/bin:/bin sh "$TA/usr/local/libexec/alpine-tienda-abrir" "$TMP/tienda-real" --uno dos)" = "abierta --uno dos" ]'
+
+# 011-sway-sin-3d en un sistema de mentira.
+SW="$TMP/sway"
+mkdir -p "$SW/lib/apk/db"
+: > "$SW/lib/apk/db/installed"
+sway3d() { rc=0; LAZARO_ARREGLO_RAIZ="$SW" sh "$REALES/011-sway-sin-3d.sh" > /dev/null 2>&1 || rc=$?; }
+sway3d
+es "Sway sin 3D: sin Sway se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -e "$SW/usr/local/bin/sway" ]'
+echo "P:sway" > "$SW/lib/apk/db/installed"
+sway3d
+es "Sway sin 3D: pone el arranque que elige el modo de dibujo" '[ "$rc" = 0 ] && [ -x "$SW/usr/local/bin/sway" ] && sh -n "$SW/usr/local/bin/sway" && grep -q "WLR_RENDERER=pixman" "$SW/usr/local/bin/sway" && grep -q "^exec /usr/bin/sway" "$SW/usr/local/bin/sway"'
+sway3d
+es "Sway sin 3D: ya está, no hace falta" '[ "$rc" = 10 ]'
+sed 's#^exec /usr/bin/sway "\$@"#echo "$WLR_RENDERER"#' "$SW/usr/local/bin/sway" > "$TMP/sway-eco"
+es "Sway sin 3D: respeta el modo que la persona eligió" '[ "$(WLR_RENDERER=gles2 sh "$TMP/sway-eco")" = gles2 ]'
+
+# 012-sway-volumen con el mismo apk falso.
+SV="$TMP/swayvol"
+mkdir -p "$SV/lib/apk/db" "$SV/etc/sway/config.d" "$SV/etc/skel/.config/waybar" "$SV/home/ana/.config/waybar" "$SV/home/beto/.config/waybar" "$TMP/bin-swayvol"
+printf 'ana:x:1000:1000::/home/ana:/bin/sh\nbeto:x:1001:1001::/home/beto:/bin/sh\n' > "$SV/etc/passwd"
+echo "bar bar-0 swaybar_command waybar" > "$SV/etc/sway/config.d/50-lazaro-barra.conf"
+for d in "$SV/etc/skel" "$SV/home/ana"; do
+	printf '{\n    "modules-left": ["custom/menu", "custom/atajos"],\n    "pulseaudio": {\n        "format": "{volume}%%",\n        "on-click": "pavucontrol"\n    },\n    "network": {\n        "on-click": "foot nmtui"\n    }\n}\n' > "$d/.config/waybar/config.jsonc"
+done
+printf '{\n    "pulseaudio": {\n        "on-click": "pavucontrol"\n    }\n}\n' > "$SV/home/beto/.config/waybar/config.jsonc"
+sed "s#$E/lib#$SV/lib#" "$B/apk" > "$TMP/bin-swayvol/apk"
+chmod 755 "$TMP/bin-swayvol/apk"
+swayvol() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-swayvol:$PATH" LAZARO_ARREGLO_RAIZ="$SV" sh "$REALES/012-sway-volumen.sh" > /dev/null 2>&1 || rc=$?; }
+echo "P:sway" > "$SV/lib/apk/db/installed"
+swayvol
+es "Sway volumen: sin waybar se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -e "$SV/usr/local/bin/sway-volumen" ]'
+printf 'P:sway\nP:waybar\n' > "$SV/lib/apk/db/installed"
+: > "$TMP/sin-internet"
+swayvol
+es "Sway volumen: sin internet queda pendiente" '[ "$rc" = 1 ] && grep -qx "        \"on-click\": \"pavucontrol\"" "$SV/home/ana/.config/waybar/config.jsonc"'
+rm "$TMP/sin-internet"
+swayvol
+es "Sway volumen: instala lo que necesita y la barrita" '[ "$rc" = 0 ] && grep -qx "P:pulseaudio-utils" "$SV/lib/apk/db/installed" && grep -qx "P:py3-gobject3" "$SV/lib/apk/db/installed" && [ -x "$SV/usr/local/bin/sway-volumen" ] && python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$SV/usr/local/bin/sway-volumen"'
+es "Sway volumen: la barrita flota bajo el puntero" 'grep -q "for_window \[app_id=\"sway-volumen\"\] floating enable" "$SV/etc/sway/config.d/50-lazaro-barra.conf"'
+es "Sway volumen: cambia las barras de Lázaro y no la que la persona cambió" 'grep -q "\"on-click\": \"sway-volumen || pavucontrol\"," "$SV/home/ana/.config/waybar/config.jsonc" && grep -q "\"on-click-right\": \"pavucontrol\"" "$SV/etc/skel/.config/waybar/config.jsonc" && grep -q "foot nmtui" "$SV/home/ana/.config/waybar/config.jsonc" && grep -qx "        \"on-click\": \"pavucontrol\"" "$SV/home/beto/.config/waybar/config.jsonc" && ! ls "$SV"/home/*/.config/waybar/config.jsonc.* >/dev/null 2>&1'
+swayvol
+es "Sway volumen: ya está, no hace falta" '[ "$rc" = 10 ] && [ "$(grep -c sway-volumen "$SV/etc/sway/config.d/50-lazaro-barra.conf")" = 1 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

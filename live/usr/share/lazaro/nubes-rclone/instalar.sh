@@ -311,6 +311,11 @@ instalar_aplicacion() {
     mkdir -p "$DESTINO" "$BIN" "$DATA/applications" "$(dirname "$ICONO")"
     cp "$ORIGEN/nubes_rclone.py" "$ORIGEN/nubes_bandeja.py" "$ORIGEN/nubes_sinc.py" "$DESTINO/"
     chmod 755 "$DESTINO/nubes_rclone.py" "$DESTINO/nubes_bandeja.py" "$DESTINO/nubes_sinc.py"
+    # Colores y letra del escritorio (opcional: sin él, el aspecto de siempre).
+    if [ -f "$ORIGEN/nubes_tema.py" ]; then
+        cp "$ORIGEN/nubes_tema.py" "$DESTINO/"
+        chmod 644 "$DESTINO/nubes_tema.py"
+    fi
 
     cat > "$BIN/$APP_ID" <<EOF
 #!/bin/sh

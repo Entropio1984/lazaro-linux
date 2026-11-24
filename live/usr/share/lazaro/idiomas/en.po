@@ -1480,3 +1480,15 @@ msgstr "LXQt and Sway have a text editor, and the \"Open the folder\" buttons wo
 
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr "The app store's program list no longer hangs on a slow connection"
+
+msgid "LXQt: la tecla Imprimir Pantalla saca capturas (ScreenGrab) y los ajustes del salvapantallas ya no piden paquetes"
+msgstr "LXQt: the Print Screen key takes screenshots (ScreenGrab) and the screensaver settings no longer ask for packages"
+
+msgid "La lista de programas de la tienda se renueva cada vez que abres la tienda"
+msgstr "The app store's program list is refreshed every time you open the store"
+
+msgid "Sway: el menú y las ventanas ya no dejan manchas en equipos sin aceleración 3D"
+msgstr "Sway: the menu and windows no longer leave smudges on computers without 3D acceleration"
+
+msgid "Sway: el icono de volumen abre una barrita con deslizador en vez del mezclador completo"
+msgstr "Sway: the volume icon opens a small slider instead of the full mixer"

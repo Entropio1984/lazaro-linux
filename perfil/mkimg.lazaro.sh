@@ -211,9 +211,10 @@ LAZARO_ESCRITORIOS="
 	mate-desktop-environment polkit mate-media mate-polkit
 	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
 	udisks2 adwaita-qt oxygen lxqt-policykit xdg-desktop-portal-lxqt
+	screengrab
 	sway swaybg swayidle swaylockd foot grim i3status brightnessctl
 	util-linux-login wl-clipboard wmenu xwayland waybar font-awesome fuzzel
-	pavucontrol polkit-gnome greetd-gtkgreet seatd
+	pavucontrol polkit-gnome greetd-gtkgreet seatd pulseaudio-utils
 	labwc adwaita-icon-theme network-manager-applet"
 
 # 32 bits: solo IceWM (lo que instalan lazaro-instalar y

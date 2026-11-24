@@ -234,6 +234,10 @@ es "flatpak: una aplicación desconocida se rechaza" '[ "$rc" = 2 ]'
 es "sintaxis de lazaro-nubes" 'sh -n "$DIR/live/usr/sbin/lazaro-nubes"'
 es "sintaxis del instalador de Lázaro Nubes" 'sh -n "$DIR/live/usr/share/lazaro/nubes-rclone/instalar.sh"'
 es "Lázaro Nubes: el programa compila" 'python3 -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" "$DIR"/live/usr/share/lazaro/nubes-rclone/*.py'
+# Colores del escritorio (nubes_tema.py): sin pantalla no cambia nada y
+# las cuentas de colores dan lo esperado.
+es "Lázaro Nubes: sin pantalla sigue con su aspecto de siempre" 'env -u DISPLAY -u WAYLAND_DISPLAY python3 -B -c "import sys; sys.path.insert(0, sys.argv[1]); import nubes_tema as t; sys.exit(0 if t.leer_tema() is None and t.FAMILIA == \"TkDefaultFont\" else 1)" "$DIR/live/usr/share/lazaro/nubes-rclone"'
+es "Lázaro Nubes: mezcla y brillo de colores" 'python3 -B -c "import sys; sys.path.insert(0, sys.argv[1]); import nubes_tema as t; sys.exit(0 if t._mezcla(\"#000000\", \"#ffffff\", 0.5) == \"#808080\" and t._luz(\"#303030\") < 0.5 < t._luz(\"#f6f5f4\") else 1)" "$DIR/live/usr/share/lazaro/nubes-rclone"'
 rc=0; sh "$DIR/live/usr/sbin/lazaro-nubes" --otra > /dev/null 2>&1 || rc=$?
 es "nubes: una orden desconocida se rechaza" '[ "$rc" = 2 ]'
 if [ "$(id -u)" != 0 ]; then

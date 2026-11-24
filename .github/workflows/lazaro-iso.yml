@@ -46,7 +46,7 @@ jobs:
   manual:
     name: Manual (PDF)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -80,12 +80,26 @@ jobs:
             esac
           done < <(git ls-files -z)
           exit $mal
+      # Los paquetes de LaTeX (~300 MB) se guardan entre compilaciones: el
+      # servidor de Ubuntu a veces va tan lento que la descarga sola pasaba
+      # de 30 minutos (24 de noviembre de 2026).
+      - name: Recordar los paquetes de LaTeX
+        uses: actions/cache@v5
+        with:
+          path: ~/latex-debs
+          key: manual-latex-ubuntu-24.04-v1
+
       - name: Instalar LaTeX
         run: |
+          mkdir -p ~/latex-debs/partial
           sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends latexmk \
+          sudo apt-get install -y -q --no-install-recommends \
+            -o Dir::Cache::Archives="$HOME/latex-debs" -o Acquire::Retries=3 latexmk \
             texlive-latex-extra texlive-lang-spanish texlive-fonts-recommended \
             tex-gyre lmodern texlive-bibtex-extra biber ghostscript
+          # Para que la caché pueda guardarlos (apt los deja como root).
+          sudo rm -rf ~/latex-debs/partial ~/latex-debs/lock
+          sudo chown -R "$(id -u):$(id -g)" ~/latex-debs
 
       - name: Compilar el manual
         run: |
