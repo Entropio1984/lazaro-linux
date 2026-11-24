@@ -95,7 +95,10 @@ EOC
 	sleep 25
 	pid=$(pgrep -u prueba -x "$3" | head -n 1 || true)
 	if [ -n "$pid" ]; then
-		awk -v n="$1" '/^Rss:/{r=$2} /^Pss:/{p=$2} END {printf "MEMORIA %s: RSS %.0f MB, PSS %.0f MB\n", n, r/1024, p/1024}' "/proc/$pid/smaps_rollup"
+		# Como el mismo usuario (Docker no deja a root leer smaps de otro).
+		su prueba -c "cat /proc/$pid/smaps_rollup" 2>/dev/null |
+			awk -v n="$1" '/^Rss:/{r=$2} /^Pss:/{p=$2} END {printf "MEMORIA %s: RSS %.0f MB, PSS %.0f MB\n", n, r/1024, p/1024}' || true
+		grep -E '^(VmRSS|RssAnon|RssFile|RssShmem)' "/proc/$pid/status" | tr -s ' \t' ' ' | sed "s/^/MEMORIA $1 /" || true
 		echo "CPU $1 (segundos de procesador en 25 s): $(awk '{printf "%.1f", ($14+$15)/100}' "/proc/$pid/stat")"
 	else
 		echo "$1: el proceso $3 no está corriendo"
