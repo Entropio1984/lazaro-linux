@@ -1,0 +1,129 @@
+# Maintainer: Julián <173747797+Entropio1984@users.noreply.github.com>
+#
+# Claudito Shell Fusion (Linux en Casa, GPLv3) como barra de Sway en Lázaro
+# Linux: barra, menú de aplicaciones, notificaciones, wifi, bluetooth,
+# volumen, energía y fondos, hecha con Quickshell (paquete quickshell, que
+# compila Lázaro). Reemplaza a waybar, la barra que pone
+# desktop-postinstall.sh (decisión de Julián, 2026-11-24).
+#
+# Va una versión fija de Claudito (_commit): cambia casi a diario y su
+# configuración depende de la versión de Quickshell. Para subirla, cambiar
+# _commit y _fecha, dejar sha512sums="
+f33a532e20fc56393b9425c0bb82cd7d948cea01eaa35bae4b0775e8747f0faa396850d45409d9da7ec53481fb12a99b3e3b501f4d9bc742848c85c9c9e234c3  claudito-quickshell-20261120.tar.gz
+da0b92bd075cf0e907366d8971ca9528b13819bc8bac54b10dc8f9f7455997a979fc240976b76ab6d12b69f3b061673eb94650169f74885563284e9e3a9c2581  claudito-iconos-claros-20261120.tar.gz
+980aefc6b45c425ad6b71bed6370137b48f89e818bf7d2e4da67551ec2eb6ba235ec43cfbb21dbe97d1413c65fb62082f441c095bf9460067d1f7537a04ee210  claudito-iconos-oscuros-20261120.tar.gz
+b7f5f41d633f8125449d57b6fb855ed97c2fad416102edd59051c37dcbe73a4d1e7e15977a0edac2dbc8547de97319c2ae8ac624801c456ef687dce847578f49  claudito-fondos-20261120.tar.gz
+9f0a1de507da32634c3c50672a550b4abb59baa424655b1a1e9b90e7a45b88a340e34cbad2b3c59357453be765c29590603fba0f1170d6ea5e1c710a40f6984d  claudito-programas-20261120.tar.gz
+142b2495ea0be0efed3679d2814da54915ac9836aeea8530fa5e41d268c1863e31f34bbb4e6d4742bb171b13fe8b9179773b4ddf342d1d1be0d38674fe624751  claudito-paleta-20261120.tar.gz
+a82fd5592096dfba152505e6b766136ac282d996a865d7a5d876969f44b346bce4c9e83adbf09391297af462dbed50c326d8612bb67ba2affaa9478e2a694153  lazaro.patch
+50f02838b66bcc959dd7170805bc44b142497ba476ae43a429e63456ada2dc75f94cc33b8061db76d17feb6bca5b265b9823375c394c5d1ad650ca395e43f63c  lazaro-claudito
+f8d20baf50984cf697ed238d56bc63cb48135d7394c2dc001bee0ab439564871e15ab60f0edd2e4150eeebeb3d28fbc53dec9202b7a25aba5854534440c7f8e5  60-lazaro-claudito.conf
+" (build.sh muestra las sumas nuevas)
+# y revisar que lazaro.patch siga aplicando.
+#
+# Solo se baja lo que usa la barra de Sway (GitLab entrega carpetas
+# sueltas del repositorio, que entero pesa 1,2 GB):
+#   - .config/quickshell: la barra sway-bar y sus ajustes de entrada,
+#   - los iconos Reversal-blue y Reversal-blue-dark (modo claro y oscuro),
+#   - el fondo claudito-01, claudito-theme (tema claro/oscuro para GTK y
+#     Qt) y su paleta.
+# lazaro.patch agrega a la barra el botón de actualizaciones (el aviso que
+# tenía waybar).
+pkgname=lazaro-claudito
+_commit=3aaa56b9c7b6a0a2b85b8a99661f4ce0891b3bbb
+_fecha=20261120
+pkgver=0.$_fecha
+pkgrel=0
+pkgdesc="Claudito Shell Fusion: la barra y el escritorio de Sway en Lázaro Linux"
+url="https://gitlab.com/linux-en-casa/claudito-shell-fusion"
+arch="noarch"
+license="GPL-3.0-only"
+# Lo que usan los módulos de la barra (README de sway-bar): Quickshell, la
+# fuente de los iconos, red (nmcli), batería (UPower), bloqueo (swaylock),
+# brillo, música, notificaciones, portapapeles, el tema claro/oscuro
+# (claudito-theme es de bash y usa adw-gtk3 y gsettings) y waybar, que
+# queda por si Quickshell no arranca.
+depends="
+	quickshell
+	font-jetbrains-mono-nerd
+	bash
+	adw-gtk3
+	glib
+	upower
+	networkmanager-cli
+	swaylock
+	brightnessctl
+	playerctl
+	libnotify
+	wl-clipboard
+	waybar
+	"
+options="!check"
+_url="https://gitlab.com/linux-en-casa/claudito-shell-fusion/-/archive/$_commit/claudito-shell-fusion-$_commit.tar.gz?path="
+source="
+	claudito-quickshell-$_fecha.tar.gz::$_url.config/quickshell
+	claudito-iconos-claros-$_fecha.tar.gz::${_url}usr/share/icons/Reversal-blue
+	claudito-iconos-oscuros-$_fecha.tar.gz::${_url}usr/share/icons/Reversal-blue-dark
+	claudito-fondos-$_fecha.tar.gz::${_url}usr/share/wallpapers
+	claudito-programas-$_fecha.tar.gz::${_url}usr/local/bin
+	claudito-paleta-$_fecha.tar.gz::${_url}usr/share/claudito-shell
+	lazaro.patch
+	lazaro-claudito
+	60-lazaro-claudito.conf
+	"
+builddir="$srcdir/claudito"
+
+unpack() {
+	# Cada carpeta viene en su propio archivo; se juntan en una sola.
+	mkdir -p "$builddir"
+	for f in $source; do
+		case "${f%%::*}" in
+		*.tar.gz) tar -xzf "$srcdir/${f%%::*}" -C "$builddir" --strip-components=1 ;;
+		esac
+	done
+}
+
+prepare() {
+	default_prepare
+}
+
+package() {
+	local d="$pkgdir/usr/share/lazaro/claudito"
+	mkdir -p "$d"
+	cp -r .config/quickshell/sway-bar "$d/"
+	for f in bar-layout.tsv launcher-size.txt wallpaper-fillmode.txt; do
+		install -m644 ".config/quickshell/$f" "$d/$f"
+	done
+	echo "$pkgver-r$pkgrel" > "$d/version"
+
+	mkdir -p "$pkgdir/usr/share/icons"
+	cp -r usr/share/icons/Reversal-blue usr/share/icons/Reversal-blue-dark "$pkgdir/usr/share/icons/"
+	# En el repositorio de Claudito los iconos repetidos son copias (386 MB);
+	# como enlaces quedan en unos 57 MB.
+	(
+		cd "$pkgdir/usr/share/icons"
+		find Reversal-blue Reversal-blue-dark -type f -print0 | xargs -0 sha1sum | sort |
+			awk '{ h = $1; sub(/^[^ ]+  /, ""); if (h == prev) print first "\t" $0; else { prev = h; first = $0 } }' |
+			while IFS="$(printf '\t')" read -r original copia; do
+				ln -sf "/usr/share/icons/$original" "$copia"
+			done
+	)
+	install -Dm644 usr/share/wallpapers/claudito-01.png "$pkgdir/usr/share/wallpapers/claudito-01.png"
+	install -Dm755 usr/local/bin/claudito-theme "$pkgdir/usr/bin/claudito-theme"
+	install -Dm644 usr/share/claudito-shell/palette.conf "$pkgdir/usr/share/claudito-shell/palette.conf"
+
+	install -Dm755 "$srcdir/lazaro-claudito" "$pkgdir/usr/bin/lazaro-claudito"
+	install -Dm644 "$srcdir/60-lazaro-claudito.conf" "$pkgdir/etc/sway/config.d/60-lazaro-claudito.conf"
+}
+
+sha512sums="
+f33a532e20fc56393b9425c0bb82cd7d948cea01eaa35bae4b0775e8747f0faa396850d45409d9da7ec53481fb12a99b3e3b501f4d9bc742848c85c9c9e234c3  claudito-quickshell-20261120.tar.gz
+da0b92bd075cf0e907366d8971ca9528b13819bc8bac54b10dc8f9f7455997a979fc240976b76ab6d12b69f3b061673eb94650169f74885563284e9e3a9c2581  claudito-iconos-claros-20261120.tar.gz
+980aefc6b45c425ad6b71bed6370137b48f89e818bf7d2e4da67551ec2eb6ba235ec43cfbb21dbe97d1413c65fb62082f441c095bf9460067d1f7537a04ee210  claudito-iconos-oscuros-20261120.tar.gz
+b7f5f41d633f8125449d57b6fb855ed97c2fad416102edd59051c37dcbe73a4d1e7e15977a0edac2dbc8547de97319c2ae8ac624801c456ef687dce847578f49  claudito-fondos-20261120.tar.gz
+9f0a1de507da32634c3c50672a550b4abb59baa424655b1a1e9b90e7a45b88a340e34cbad2b3c59357453be765c29590603fba0f1170d6ea5e1c710a40f6984d  claudito-programas-20261120.tar.gz
+142b2495ea0be0efed3679d2814da54915ac9836aeea8530fa5e41d268c1863e31f34bbb4e6d4742bb171b13fe8b9179773b4ddf342d1d1be0d38674fe624751  claudito-paleta-20261120.tar.gz
+a82fd5592096dfba152505e6b766136ac282d996a865d7a5d876969f44b346bce4c9e83adbf09391297af462dbed50c326d8612bb67ba2affaa9478e2a694153  lazaro.patch
+50f02838b66bcc959dd7170805bc44b142497ba476ae43a429e63456ada2dc75f94cc33b8061db76d17feb6bca5b265b9823375c394c5d1ad650ca395e43f63c  lazaro-claudito
+f8d20baf50984cf697ed238d56bc63cb48135d7394c2dc001bee0ab439564871e15ab60f0edd2e4150eeebeb3d28fbc53dec9202b7a25aba5854534440c7f8e5  60-lazaro-claudito.conf
+"

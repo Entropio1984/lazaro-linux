@@ -196,6 +196,54 @@ else
 	tail -n 5 "$REGISTRO"
 fi
 fi
+
+# --- Claudito Shell (la barra de Sway) -----------------------------------
+# Quickshell (no está en Alpine) y lazaro-claudito, con la versión fija de
+# Claudito Shell Fusion. Solo 64 bits: Sway no está en la de 32.
+# Quickshell usa partes internas de Qt: el de la caché sirve solo si se
+# compiló con el Qt que tiene hoy Alpine.
+if [ "$ALPINE_ARCH" != x86 ]; then
+	QS_VER=$(sed -n 's/^pkgver=//p' "$LAZARO_DIR/paquetes/quickshell/APKBUILD")
+	QS_REL=$(sed -n 's/^pkgrel=//p' "$LAZARO_DIR/paquetes/quickshell/APKBUILD")
+	QS_APK="$REPO_PROPIO/paquetes/$ALPINE_ARCH/quickshell-$QS_VER-r$QS_REL.apk"
+	QT_HOY=$(for i in /var/cache/apk/APKINDEX.*.tar.gz; do tar -xzOf "$i" APKINDEX; done 2>/dev/null |
+		awk '/^P:/ { p = ($0 == "P:qt6-qtdeclarative") } p && /^V:/ { print substr($0, 3); exit }')
+	if [ -f "$QS_APK" ] && [ "$(tar -xzOf "$QS_APK" usr/share/quickshell/qt-version 2>/dev/null)" != "$QT_HOY" ]; then
+		msg "El Quickshell de la caché es de otro Qt (hoy: $QT_HOY); se recompila"
+		rm -f "$REPO_PROPIO/paquetes/$ALPINE_ARCH"/quickshell-*.apk
+	fi
+	for pq in quickshell lazaro-claudito; do
+		PQ_VER=$(sed -n 's/^pkgver=//p' "$LAZARO_DIR/paquetes/$pq/APKBUILD" | sed "s/\$_fecha/$(sed -n 's/^_fecha=//p' "$LAZARO_DIR/paquetes/$pq/APKBUILD")/")
+		PQ_REL=$(sed -n 's/^pkgrel=//p' "$LAZARO_DIR/paquetes/$pq/APKBUILD")
+		# lazaro-claudito lleva el nivel de esta ISO (cuántos cambios tiene
+		# lazaro-linux), como en el repositorio de Lázaro: así el publicado
+		# reemplaza al del USB solo si es más nuevo.
+		if [ "$pq" = lazaro-claudito ]; then
+			PQ_REL="${LAZARO_NIVEL:-0}"
+			sed -i "s/^pkgrel=.*/pkgrel=$PQ_REL/" "$TRABAJO/paquetes/$pq/APKBUILD"
+		fi
+		if ls "$REPO_PROPIO/paquetes/$ALPINE_ARCH/$pq-$PQ_VER-r$PQ_REL.apk" >/dev/null 2>&1; then
+			msg "$pq $PQ_VER ya está empaquetado (caché)"
+			continue
+		fi
+		msg "Empaquetando $pq $PQ_VER"
+		rm -f "$REPO_PROPIO/paquetes/$ALPINE_ARCH/$pq"-[0-9]*.apk
+		cd "$TRABAJO/paquetes/$pq"
+		if grep -q '^sha512sums=""' APKBUILD; then
+			su constructor -c "abuild checksum"
+			echo "AVISO: fija esta suma en paquetes/$pq/APKBUILD:"
+			sed -n '/^sha512sums/,$p' APKBUILD
+		fi
+		REGISTRO="$CACHE/abuild-$pq.log"
+		if ! su constructor -c "REPODEST=$REPO_PROPIO abuild -r" > "$REGISTRO" 2>&1; then
+			echo "Últimas líneas útiles de $REGISTRO:" >&2
+			sed -n '/Uninstalling dependencies/q;p' "$REGISTRO" | tail -n 80 >&2
+			die "falló el empaquetado de $pq"
+		fi
+		tail -n 5 "$REGISTRO"
+		ls -l "$REPO_PROPIO/paquetes/$ALPINE_ARCH/$pq"-[0-9]*.apk
+	done
+fi
 cd "$LAZARO_DIR"
 
 # --- aports/scripts (mkimage.sh) ---------------------------------------

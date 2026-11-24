@@ -205,7 +205,8 @@ LAZARO_DESTINO="$(grep -v '^#' "${LAZARO_DIR:?}/live/usr/share/lazaro/paquetes-b
 # (alpine-conf 3.22.0) más lo que desktop-postinstall.sh agrega en ese
 # escritorio (applets de red y sonido, barra de Sway, agente de
 # contraseñas). GNOME y Plasma no caben (más de 2 GB) y se descargan.
-# Unos 240 MB en total.
+# Unos 240 MB en total. En Sway, la barra es Claudito Shell Fusion
+# (lazaro-claudito, con Quickshell; unos 15 MB), que compila build.sh.
 LAZARO_ESCRITORIOS="
 	mate-desktop-environment polkit mate-media mate-polkit
 	lxqt-desktop lximage-qt obconf-qt pavucontrol-qt arandr sddm openbox
@@ -213,7 +214,8 @@ LAZARO_ESCRITORIOS="
 	sway swaybg swayidle swaylockd foot grim i3status brightnessctl
 	util-linux-login wl-clipboard wmenu xwayland waybar font-awesome fuzzel
 	pavucontrol polkit-gnome greetd-gtkgreet seatd
-	labwc adwaita-icon-theme network-manager-applet"
+	labwc adwaita-icon-theme network-manager-applet
+	lazaro-claudito"
 
 # 32 bits: solo IceWM (lo que instalan lazaro-instalar y
 # desktop-postinstall.sh para IceWM; paquetes-completa.sh agrega además

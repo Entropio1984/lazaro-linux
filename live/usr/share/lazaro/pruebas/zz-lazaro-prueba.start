@@ -58,12 +58,13 @@ idioma_sesion() {
 		fi
 		echo "LAZARO-MEMORIA-SESION usada=$(awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {print int((t-a)/1024)}' /proc/meminfo) disponible=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo) MB"
 	fi
-	# En Sway la barra es waybar: también se mira su idioma.
+	# En Sway la barra es Claudito Shell (proceso qs): también se mira su
+	# idioma.
 	if [ "$(cat "$panel/comm")" = sway ]; then
 		for c in /proc/[0-9]*/comm; do
-			[ "$(cat "$c" 2>/dev/null)" = waybar ] || continue
+			[ "$(cat "$c" 2>/dev/null)" = qs ] || continue
 			idioma="$(tr '\0' '\n' < "${c%/comm}/environ" 2>/dev/null | sed -n 's/^LANG=//p')"
-			echo "LAZARO-IDIOMA-SESION waybar ${idioma:-sin-LANG}"
+			echo "LAZARO-IDIOMA-SESION qs ${idioma:-sin-LANG}"
 			break
 		done
 	fi
@@ -450,13 +451,16 @@ idioma_sesion() {
 			if cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$proc"; then
 				sleep 20
 				echo "LAZARO-SESION-GREETD-OK $ses"
-				# Sway: barra waybar con el icono de wifi (nm-applet).
+				# Sway: la barra es Claudito Shell (proceso qs, no waybar),
+				# con el icono de wifi (nm-applet).
 				if [ "$proc" = sway ]; then
-					for b in waybar nm-applet polkit-gnome-au; do
+					for b in qs waybar nm-applet polkit-gnome-au; do
 						cat /proc/[0-9]*/comm 2>/dev/null | grep -qx "$b" \
 							&& echo "LAZARO-SWAY-CORRE $b"
 					done
 					cat /etc/sway/config.d/*.conf 2>/dev/null
+					# Lo que dijo Claudito al arrancar (errores de la barra).
+					head -n 40 /run/user/*/lazaro-claudito.log 2>/dev/null
 					# Lista de atajos del botón de la barra, en español.
 					LANG=es_CO.UTF-8 HOME=/home/prueba sway-atajos --lista 2>&1 \
 						| grep -q 'Super+F1  →  Ver esta lista de atajos' \

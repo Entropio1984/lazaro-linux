@@ -1480,3 +1480,6 @@ msgstr "LXQt e Sway têm editor de texto, e os botões \"Abrir a pasta\" funcion
 
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr "A lista de programas da loja não trava mais com uma conexão lenta"
+
+msgid "Sway tiene una barra nueva: Claudito Shell Fusion"
+msgstr "O Sway tem uma barra nova: Claudito Shell Fusion"

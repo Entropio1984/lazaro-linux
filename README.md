@@ -283,7 +283,7 @@ El instalador pregunta, en este orden:
    | **KDE Plasma** | El más completo y vistoso; pide un equipo más nuevo |
    | **GNOME** | Moderno y diferente a Windows; pide un equipo más nuevo |
    | **XFCE Wayland** | XFCE con tecnología nueva, en prueba |
-   | **Sway** | Para usuarios avanzados que usan mucho el teclado |
+   | **Sway** | Para usuarios avanzados que usan mucho el teclado, con la barra [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion) |
    | **Sin escritorio** | Solo pantalla de texto, para servidores |
 
 3. **Software adicional**: casillas para agregar programas. Si no sabes,
@@ -1089,7 +1089,7 @@ mano, también con la siguiente (edge):
 | Instalación | UEFI | XFCE | Sí | Además: Flathub queda listo, el botón Aplicaciones de Flathub de la Bienvenida funciona, y la pantalla de inicio recuerda la resolución que eligió el usuario |
 | Instalación | UEFI | KDE Plasma | Sí | Lo mismo con Plasma |
 | Instalación | BIOS | GNOME | Sí | Lo mismo con GNOME (reinicia una vez y mide la pantalla de inicio) |
-| Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra, el wifi, el agente de contraseñas y la lista de atajos |
+| Instalación | BIOS | Sway | Sí | Su pantalla de inicio (gtkgreet) en el idioma elegido, se puede entrar, y arrancan la barra Claudito Shell (no waybar), el wifi, el agente de contraseñas y la lista de atajos |
 | Instalación | UEFI | LXQt | Sí | La sesión queda en el idioma elegido |
 | Instalación | BIOS | MATE | Sí | La pantalla de inicio recuerda la resolución y la sesión queda en el idioma elegido |
 | Instalación | UEFI / BIOS | MATE, LXQt, XFCE Wayland | No | Se instalan solos desde la ISO y el sistema arranca con su pantalla de inicio |

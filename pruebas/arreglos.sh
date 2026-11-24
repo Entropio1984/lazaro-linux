@@ -334,6 +334,33 @@ rm -f "$TC"
 sincuelgue
 es "sin cuelgues: sin tarea se vuelve a mirar" '[ "$rc" = 11 ]'
 
+# 008-sway-claudito en un sistema de mentira, con el apk falso de 006.
+SC="$TMP/sway-claudito"
+mkdir -p "$SC/lib/apk/db"
+cat > "$B/apk" <<EOF2
+#!/bin/sh
+echo "apk \$*" >> "$TMP/llamadas"
+[ ! -e "$TMP/sin-internet" ] || exit 1
+for p in "\$@"; do
+	case "\$p" in -*) ;; *) echo "P:\${p%@*}" >> "$SC/lib/apk/db/installed" ;; esac
+done
+EOF2
+claudito() { rc=0; : > "$TMP/llamadas"; PATH="$B:$PATH" LAZARO_ARREGLO_RAIZ="$SC" sh "$REALES/008-sway-claudito.sh" > /dev/null 2>&1 || rc=$?; }
+printf 'P:xorg-server\nP:xfce4\n' > "$SC/lib/apk/db/installed"
+claudito
+es "Claudito: sin Sway no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
+if [ "$(uname -m)" = x86_64 ]; then
+	printf 'P:sway\nP:waybar\n' > "$SC/lib/apk/db/installed"
+	: > "$TMP/sin-internet"
+	claudito
+	es "Claudito: sin internet queda pendiente" '[ "$rc" = 1 ]'
+	rm "$TMP/sin-internet"
+	claudito
+	es "Claudito: con Sway instala lazaro-claudito" '[ "$rc" = 0 ] && grep -qx "apk add -q lazaro-claudito@lazaro quickshell@lazaro" "$TMP/llamadas"'
+	claudito
+	es "Claudito: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
+fi
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'
