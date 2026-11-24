@@ -177,8 +177,10 @@ quiere() { # PAQUETE
 		linux-lazaro) [ "$CON_KERNEL" = si ] || instalado linux-lazaro ;;
 		linux-lazaro-dev) { [ "$CON_KERNEL" = si ] && instalado akms; } || instalado linux-lazaro-dev ;;
 		lazaro-herramientas) [ "$SALTAR_HERRAMIENTAS" != si ] ;;
-		# La barra de Sway (Claudito Shell): solo en equipos con Sway.
-		quickshell|lazaro-claudito) instalado lazaro-claudito || instalado sway ;;
+		# La barra de Sway (Claudito Shell): solo donde ya está o la dejó
+		# pendiente el instalador de la Ligera. Los Sway instalados antes
+		# siguen con waybar (decisión de Julián, 2026-11-24).
+		quickshell|lazaro-claudito) instalado lazaro-claudito || [ -e "$RAIZ/etc/lazaro/claudito-pendiente" ] ;;
 		*) return 0 ;;
 	esac
 }

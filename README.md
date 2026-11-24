@@ -283,7 +283,7 @@ El instalador pregunta, en este orden:
    | **KDE Plasma** | El más completo y vistoso; pide un equipo más nuevo |
    | **GNOME** | Moderno y diferente a Windows; pide un equipo más nuevo |
    | **XFCE Wayland** | XFCE con tecnología nueva, en prueba |
-   | **Sway** | Para usuarios avanzados que usan mucho el teclado, con la barra [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion) (en la Completa viene en el USB; en la Ligera llega en el primer arranque con internet) |
+   | **Sway** | Para usuarios avanzados que usan mucho el teclado, con la barra [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion) (en la Completa viene en el USB; en la Ligera llega en el primer arranque con internet; los equipos con Sway instalados antes siguen con waybar) |
    | **Sin escritorio** | Solo pantalla de texto, para servidores |
 
 3. **Software adicional**: casillas para agregar programas. Si no sabes,
