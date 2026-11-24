@@ -25,8 +25,6 @@ cp "$H/.abuild/prueba.rsa.pub" /etc/apk/keys/
 cp -r /src/paquetes/quickshell "$H/quickshell"
 chown -R constructor:abuild "$H"
 cd "$H/quickshell"
-su constructor -c "abuild checksum"
-echo "--- sumas para fijar en el APKBUILD:"; sed -n '/^sha512sums/,$p' APKBUILD
 inicio=$(date +%s)
 rc=0
 su constructor -c "REPODEST=$H/repo abuild -r" > /tmp/abuild.log 2>&1 || rc=$?
@@ -75,6 +73,9 @@ apk info -e qs >/dev/null 2>&1 || true
 command -v qs || ls /usr/bin | grep -i quick
 qs --version || quickshell --version || true
 adduser -D prueba
+# El sway de Alpine trae "capacidades" de archivo que Docker no deja usar
+# ("Operation not permitted"): una copia simple las pierde.
+cp /usr/bin/sway /usr/local/bin/sway
 U=/home/prueba
 git clone -q --depth 1 --filter=blob:none --sparse https://gitlab.com/linux-en-casa/claudito-shell-fusion.git /tmp/cs
 ( cd /tmp/cs && git sparse-checkout set .config/quickshell && git log -1 --format='Claudito Shell Fusion: %h %ad %s' --date=short )
@@ -90,7 +91,7 @@ exec $2
 EOC
 	chown prueba "$U/.config/sway/config"
 	rm -f /tmp/barra.log
-	su prueba -c "cd; export XDG_RUNTIME_DIR=$U/run WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 QT_QUICK_BACKEND=software LANG=es_ES.UTF-8; exec dbus-run-session sway" > /tmp/barra.log 2>&1 &
+	su prueba -c "cd; export XDG_RUNTIME_DIR=$U/run WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 QT_QUICK_BACKEND=software LANG=es_ES.UTF-8; exec dbus-run-session /usr/local/bin/sway" > /tmp/barra.log 2>&1 &
 	sleep 25
 	pid=$(pgrep -u prueba -x "$3" | head -n 1 || true)
 	if [ -n "$pid" ]; then

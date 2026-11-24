@@ -76,4 +76,7 @@ package() {
 	DESTDIR="$pkgdir" cmake --install build
 }
 
-sha512sums=""
+sha512sums="
+c1f945af518bcdde69eb3084e4c845da2bf63b9396f197d6d97d3c71b3651e6b457adbf6b6e988bfd478d5b3963bb902cb1e3d2897a1407e260456a0afe2c99f  quickshell-0.3.2.tar.gz
+895fb61e4c9974ee8e8d4681fb880a10126a412f24bb147d558d465d78fe784a044c5443edf1ce20fc9936901073073d795b034e0c02bdb3c8aa74c9d6ac811c  CLI11-2.5.0.tar.gz
+"
