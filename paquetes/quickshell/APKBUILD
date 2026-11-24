@@ -1,0 +1,79 @@
+# Maintainer: Julián <173747797+Entropio1984@users.noreply.github.com>
+#
+# PRUEBA (rama prueba-quickshell, no se fusiona): Quickshell, la base de
+# Claudito Shell, no está en Alpine (ni 3.24 ni edge; revisado en aports el
+# 2026-11-24). Chimera Linux (que también usa musl) y Void lo empaquetan
+# sin parches, así que debería compilar. Se prueba aquí para saber cuánto
+# pesa compilado contra el Qt 6 de Alpine en vez de traerlo de Nix.
+#
+# - CLI11 (solo cabeceras) no está en Alpine: se arma dentro del paquete.
+# - cpptrace tampoco: se apaga el informe de fallos (CRASH_HANDLER=OFF).
+# - Quickshell usa partes internas de Qt: hay que recompilarlo cada vez que
+#   Alpine actualiza Qt.
+pkgname=quickshell
+pkgver=0.3.2
+pkgrel=0
+_cli11ver=2.5.0
+pkgdesc="Herramientas QtQuick para barras y escritorios (compilado para Lázaro Linux)"
+url="https://quickshell.org"
+arch="x86_64"
+license="LGPL-3.0-only"
+depends="qt6-qtsvg"
+makedepends="
+	cmake
+	samurai
+	pkgconf
+	qt6-qtbase-dev
+	qt6-qtbase-private-dev
+	qt6-qtdeclarative-dev
+	qt6-qtdeclarative-private-dev
+	qt6-qtwayland-dev
+	qt6-qtshadertools-dev
+	qt6-qtsvg-dev
+	spirv-tools
+	wayland-dev
+	wayland-protocols
+	libdrm-dev
+	mesa-dev
+	vulkan-headers
+	libxcb-dev
+	pipewire-dev
+	linux-pam-dev
+	polkit-dev
+	glib-dev
+	jemalloc-dev
+	"
+options="!check"
+source="quickshell-$pkgver.tar.gz::https://git.outfoxxed.me/quickshell/quickshell/archive/v$pkgver.tar.gz
+	CLI11-$_cli11ver.tar.gz::https://github.com/CLIUtils/CLI11/archive/refs/tags/v$_cli11ver.tar.gz
+	"
+builddir="$srcdir/quickshell"
+
+prepare() {
+	default_prepare
+	cmake -S "$srcdir/CLI11-$_cli11ver" -B "$srcdir/cli11-build" -G Ninja \
+		-DCMAKE_INSTALL_PREFIX="$srcdir/cli11" \
+		-DCLI11_BUILD_TESTS=OFF -DCLI11_BUILD_EXAMPLES=OFF -DCLI11_BUILD_DOCS=OFF
+	cmake --build "$srcdir/cli11-build"
+	cmake --install "$srcdir/cli11-build"
+}
+
+build() {
+	cmake -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_INSTALL_LIBDIR=lib \
+		-DCMAKE_BUILD_TYPE=MinSizeRel \
+		-DCMAKE_PREFIX_PATH="$srcdir/cli11" \
+		-DDISTRIBUTOR="Lázaro Linux" \
+		-DINSTALL_QML_PREFIX=lib/qt6/qml \
+		-DCRASH_HANDLER=OFF \
+		-DBUILD_TESTING=OFF \
+		-DNO_PCH=ON
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+sha512sums=""
