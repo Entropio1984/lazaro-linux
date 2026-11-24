@@ -387,6 +387,21 @@ printf '#!/bin/sh\necho abierta "$@"\n' > "$TMP/tienda-real"
 chmod 755 "$TMP/tienda-real"
 es "tienda al abrir: abre la tienda con sus opciones" '[ "$(PATH=/usr/bin:/bin sh "$TA/usr/local/libexec/alpine-tienda-abrir" "$TMP/tienda-real" --uno dos)" = "abierta --uno dos" ]'
 
+# 010-sway-sin-3d en un sistema de mentira.
+SW="$TMP/sway"
+mkdir -p "$SW/lib/apk/db"
+: > "$SW/lib/apk/db/installed"
+sway3d() { rc=0; LAZARO_ARREGLO_RAIZ="$SW" sh "$REALES/010-sway-sin-3d.sh" > /dev/null 2>&1 || rc=$?; }
+sway3d
+es "Sway sin 3D: sin Sway se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -e "$SW/usr/local/bin/sway" ]'
+echo "P:sway" > "$SW/lib/apk/db/installed"
+sway3d
+es "Sway sin 3D: pone el arranque que elige el modo de dibujo" '[ "$rc" = 0 ] && [ -x "$SW/usr/local/bin/sway" ] && sh -n "$SW/usr/local/bin/sway" && grep -q "WLR_RENDERER=pixman" "$SW/usr/local/bin/sway" && grep -q "^exec /usr/bin/sway" "$SW/usr/local/bin/sway"'
+sway3d
+es "Sway sin 3D: ya está, no hace falta" '[ "$rc" = 10 ]'
+sed 's#^exec /usr/bin/sway "\$@"#echo "$WLR_RENDERER"#' "$SW/usr/local/bin/sway" > "$TMP/sway-eco"
+es "Sway sin 3D: respeta el modo que la persona eligió" '[ "$(WLR_RENDERER=gles2 sh "$TMP/sway-eco")" = gles2 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

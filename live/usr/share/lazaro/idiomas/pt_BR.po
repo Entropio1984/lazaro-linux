@@ -1486,3 +1486,6 @@ msgstr "LXQt: a tecla Print Screen tira capturas de tela (ScreenGrab) e as confi
 
 msgid "La lista de programas de la tienda se renueva cada vez que abres la tienda"
 msgstr "A lista de programas da loja é atualizada toda vez que você abre a loja"
+
+msgid "Sway: el menú y las ventanas ya no dejan manchas en equipos sin aceleración 3D"
+msgstr "Sway: o menu e as janelas não deixam mais manchas em computadores sem aceleração 3D"

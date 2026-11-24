@@ -1486,3 +1486,6 @@ msgstr "LXQt: the Print Screen key takes screenshots (ScreenGrab) and the screen
 
 msgid "La lista de programas de la tienda se renueva cada vez que abres la tienda"
 msgstr "The app store's program list is refreshed every time you open the store"
+
+msgid "Sway: el menú y las ventanas ya no dejan manchas en equipos sin aceleración 3D"
+msgstr "Sway: the menu and windows no longer leave smudges on computers without 3D acceleration"

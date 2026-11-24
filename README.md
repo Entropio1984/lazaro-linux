@@ -808,6 +808,10 @@ Los que hay:
   salvapantallas le deja la pantalla en negro (no gasta procesador).
 - **Lista de la tienda al abrirla** (009): la lista de programas de la
   tienda se renueva cada vez que se abre la tienda, sin hacerla esperar.
+- **Sway sin manchas** (010): en equipos sin aceleración 3D (por ejemplo,
+  una máquina virtual), Sway usa su modo de dibujo simple y el menú ya
+  no deja manchas. Con tarjeta de video Intel, AMD o NVIDIA (nouveau)
+  sigue el modo normal.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en
