@@ -1436,3 +1436,7 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/007-tienda-sin-cuelgues.sh
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/008-sway-claudito.sh
+msgid "Sway tiene una barra nueva: Claudito Shell Fusion"
+msgstr ""

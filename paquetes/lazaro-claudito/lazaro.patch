@@ -1,0 +1,120 @@
+diff -ruN a/quickshell/bar-layout.tsv b/quickshell/bar-layout.tsv
+--- a/.config/quickshell/bar-layout.tsv	2026-11-24 01:50:09.394348808 +0000
++++ b/.config/quickshell/bar-layout.tsv	2026-11-24 02:42:36.932937198 +0000
+@@ -15,6 +15,7 @@
+ temp	right	1
+ volume	right	1
+ network	right	1
++actualizaciones	right	1
+ systray	right	1
+ notifications	right	1
+ keybinds	right	1
+@@ -36,6 +37,7 @@
+ temp	right	1
+ volume	right	1
+ network	right	1
++actualizaciones	right	1
+ systray	right	1
+ notifications	right	1
+ keybinds	right	1
+@@ -56,6 +58,7 @@
+ temp	right	0
+ volume	right	1
+ network	right	0
++actualizaciones	right	1
+ systray	right	1
+ notifications	right	1
+ keybinds	right	1
+diff -ruN a/quickshell/sway-bar/modules/BarConfig.qml b/quickshell/sway-bar/modules/BarConfig.qml
+--- a/.config/quickshell/sway-bar/modules/BarConfig.qml	2026-11-24 01:50:09.409474593 +0000
++++ b/.config/quickshell/sway-bar/modules/BarConfig.qml	2026-11-24 02:42:36.931030652 +0000
+@@ -48,6 +48,7 @@
+             { id: "temp", enabled: false, zone: "right" },
+             { id: "volume", enabled: false, zone: "right" },
+             { id: "network", enabled: false, zone: "right" },
++            { id: "actualizaciones", enabled: true, zone: "right" },
+             { id: "systray", enabled: true, zone: "right" },
+             { id: "notifications", enabled: true, zone: "right" },
+             { id: "keybinds", enabled: true, zone: "right" },
+diff -ruN a/quickshell/sway-bar/modules/BarConfigPopup.qml b/quickshell/sway-bar/modules/BarConfigPopup.qml
+--- a/.config/quickshell/sway-bar/modules/BarConfigPopup.qml	2026-11-24 01:50:09.409474593 +0000
++++ b/.config/quickshell/sway-bar/modules/BarConfigPopup.qml	2026-11-24 02:42:36.932744844 +0000
+@@ -63,7 +63,7 @@
+             power: "Energía", island: "Isla",
+             configDock: "Dock de configuración",
+             clockIsland: "Reloj con visualizador", bluetooth: "Bluetooth",
+-            windowlist: "Lista de ventanas"
++            windowlist: "Lista de ventanas", actualizaciones: "Actualizaciones"
+         }
+         return names[id] || id
+     }
+diff -ruN a/quickshell/sway-bar/modules/BarModule.qml b/quickshell/sway-bar/modules/BarModule.qml
+--- a/.config/quickshell/sway-bar/modules/BarModule.qml	2026-11-24 01:50:09.409474593 +0000
++++ b/.config/quickshell/sway-bar/modules/BarModule.qml	2026-11-24 02:42:36.930834336 +0000
+@@ -17,7 +17,7 @@
+         const files = { config: "ConfigButton.qml", menu: "MenuButton.qml", workspaces: "Workspaces.qml", activeWindow: "ActiveWindow.qml",
+             cpu: "Cpu.qml", ram: "Ram.qml", temp: "Temp.qml", volume: "VolumeIndicator.qml",
+             network: "NetworkIndicator.qml", systray: "SysTray.qml", notifications: "NotificationCenterButton.qml",
+-            keybinds: "KeybindsButton.qml", configDock: "ConfigDockButton.qml", battery: "BatteryIndicator.qml", bluetooth: "BluetoothIndicator.qml", windowlist: "WindowListButton.qml", clock: "Clock.qml", power: "PowerMenu.qml", island: "Island.qml", clockIsland: "ClockIsland.qml" }
++            keybinds: "KeybindsButton.qml", configDock: "ConfigDockButton.qml", battery: "BatteryIndicator.qml", bluetooth: "BluetoothIndicator.qml", windowlist: "WindowListButton.qml", clock: "Clock.qml", power: "PowerMenu.qml", island: "Island.qml", clockIsland: "ClockIsland.qml", actualizaciones: "LazaroActualizaciones.qml" }
+         return files[moduleId] || ""
+     }
+     onLoaded: {
+diff -ruN a/quickshell/sway-bar/modules/LazaroActualizaciones.qml b/quickshell/sway-bar/modules/LazaroActualizaciones.qml
+--- a/.config/quickshell/sway-bar/modules/LazaroActualizaciones.qml	1970-01-01 00:00:00.000000000 +0000
++++ b/.config/quickshell/sway-bar/modules/LazaroActualizaciones.qml	2026-11-24 02:42:36.880120340 +0000
+@@ -0,0 +1,54 @@
++import QtQuick
++import Quickshell
++import Quickshell.Io
++
++// Lázaro Linux: aviso de actualizaciones del sistema, como el que tenía
++// waybar. Cuántas hay lo cuenta cada hora la tarea alpine-update-revisar
++// (desktop-postinstall.sh) en /var/lib/alpine-update/pendientes. Sin
++// actualizaciones el botón no se muestra; con un clic abre "Actualizar el
++// sistema".
++Rectangle {
++    id: root
++    property string screenName: ""
++    property int pendientes: 0
++    readonly property bool present: root.pendientes > 0
++    implicitWidth: label.implicitWidth + 14
++    implicitHeight: Scaling.pxFor(screenName, 22)
++    radius: Scaling.pxFor(screenName, 4)
++    color: mouseArea.containsMouse ? Theme.outline : Theme.surfaceContainerHigh
++
++    Process {
++        id: leer
++        command: ["sh", "-c", "cat /var/lib/alpine-update/pendientes 2>/dev/null || echo 0"]
++        stdout: StdioCollector {
++            onStreamFinished: {
++                const n = parseInt(text.trim())
++                root.pendientes = isNaN(n) ? 0 : n
++            }
++        }
++    }
++
++    Timer {
++        interval: 60000
++        running: true
++        repeat: true
++        triggeredOnStart: true
++        onTriggered: leer.running = true
++    }
++
++    Text {
++        id: label
++        anchors.centerIn: parent
++        text: " " + root.pendientes
++        font.family: "JetBrainsMono Nerd Font"
++        font.pixelSize: Scaling.pxFor(screenName, 13)
++        color: Theme.accent
++    }
++
++    MouseArea {
++        id: mouseArea
++        anchors.fill: parent
++        hoverEnabled: true
++        onClicked: Quickshell.execDetached(["sh", "-c", "exec /usr/local/bin/alpine-update-launcher.sh"])
++    }
++}

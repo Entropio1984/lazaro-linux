@@ -177,6 +177,8 @@ quiere() { # PAQUETE
 		linux-lazaro) [ "$CON_KERNEL" = si ] || instalado linux-lazaro ;;
 		linux-lazaro-dev) { [ "$CON_KERNEL" = si ] && instalado akms; } || instalado linux-lazaro-dev ;;
 		lazaro-herramientas) [ "$SALTAR_HERRAMIENTAS" != si ] ;;
+		# La barra de Sway (Claudito Shell): solo en equipos con Sway.
+		quickshell|lazaro-claudito) instalado lazaro-claudito || instalado sway ;;
 		*) return 0 ;;
 	esac
 }
@@ -261,6 +263,27 @@ instalar_herramientas() {
 	fi
 }
 
+# Claudito Shell (la barra de Sway): el instalador lo pone desde el USB,
+# sin la etiqueta @lazaro (en ese momento este repositorio todavía no
+# existe). Con el repositorio ya copiado se fija a él, para que reciba las
+# versiones nuevas y el Quickshell recompilado cuando Alpine cambia Qt.
+# La Ligera no lo trae en el USB: el instalador deja la marca
+# claudito-pendiente y aquí se instala, con internet, en un Sway nuevo.
+fijar_claudito() {
+	pendiente="$RAIZ/etc/lazaro/claudito-pendiente"
+	if ! instalado lazaro-claudito; then
+		[ -e "$pendiente" ] && instalado sway || return 0
+	fi
+	grep -qx 'lazaro-claudito@lazaro' "$RAIZ/etc/apk/world" 2>/dev/null && return 0
+	ls "$DIR/$(arquitectura)"/lazaro-claudito-*.apk >/dev/null 2>&1 || return 0
+	if apk add lazaro-claudito@lazaro quickshell@lazaro >>"$LOG" 2>&1; then
+		rm -f "$pendiente"
+		registrar "Claudito Shell fijado al repositorio de Lázaro."
+	else
+		aviso "No se pudo fijar Claudito Shell al repositorio de Lázaro (detalles en $LOG)."
+	fi
+}
+
 activar() {
 	poner_llave
 	poner_tareas
@@ -272,6 +295,7 @@ activar() {
 	fi
 	sincronizar_con_candado || die "Sin el repositorio no se puede seguir. Revisa la conexión a internet y vuelve a intentarlo."
 	con_turno_apk instalar_herramientas || exit 1
+	con_turno_apk fijar_claudito || true
 	echo "LAZARO-REPOSITORIO-ACTIVO"
 	echo "Listo: las herramientas de Lázaro se actualizarán con las actualizaciones del sistema."
 }
@@ -320,6 +344,7 @@ arranque() {
 		sleep 30
 	done
 	con_turno_apk instalar_herramientas || true
+	con_turno_apk fijar_claudito || true
 	# Mejoras de Lázaro que falten (si el sistema se actualizó sin pasar
 	# por "Actualizar el sistema", que las aplica en el momento).
 	[ ! -x "$RAIZ/usr/local/sbin/lazaro-arreglos" ] ||
