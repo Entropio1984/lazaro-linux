@@ -106,11 +106,15 @@ varias épocas.
 | Escritorios sin internet | XFCE, MATE, LXQt, Sway, XFCE Wayland | Los 7, en todos los idiomas |
 | Firmware (controladores de wifi y otros) | El de red, completo | Todo |
 | Módems USB 3G/4G, ADSL (PPPoE), internet del celular por cable o Bluetooth (los módems 3G/4G y el Bluetooth, en el sistema instalado) | Sí | Sí |
-| Descargar | [GitHub](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo) o [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/Ligera/) | [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/Completa/) |
+| Descargar | [GitHub](https://github.com/Entropio1984/lazaro-linux/releases/tag/en-desarrollo) o [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/Ligera/) | [Google Drive](https://drive.google.com/drive/folders/1T-KnU3UL_eWXOe4IfULU6H8iJpawKRq4) (carpeta Completa) o [SourceForge](https://sourceforge.net/projects/lazaro-linux/files/Completa/) |
 
 **Si dudas, elige la Ligera**: descarga más rápido y alcanza para la
 mayoría. Elige la Completa si el equipo no va a tener internet o si la
 conexión es lenta. No hace falta crear ninguna cuenta para descargar.
+Desde Google Drive la Completa suele bajar más rápido; como es un
+archivo grande, Drive avisa que no puede revisarlo en busca de virus:
+toca **Descargar de todos modos**. Si muchas personas la bajan el mismo
+día, Drive puede bloquearla unas horas: en ese caso usa SourceForge.
 
 ### Lázaro de 32 bits
 
