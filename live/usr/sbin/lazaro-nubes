@@ -78,8 +78,29 @@ paquetes() {
 	# Índice al día: en un equipo que nunca actualizó, la lista vieja
 	# puede pedir versiones que ya no están.
 	apk_turno update -q || true
+	# --upgrade: si el Python del equipo es más viejo que el de internet,
+	# se pone al día junto con lo nuevo. Si no, apk choca al traer una
+	# parte de Python que antes venía dentro de él (pasó con python3-ndbm:
+	# «trying to overwrite ... owned by python3»).
+	sal_apk="$(mktemp)" || exit 1
+	rc=0
 	# shellcheck disable=SC2086
-	apk_turno add $PAQUETES || { echo "No se pudieron instalar los paquetes (¿sin internet?)." >&2; exit 1; }
+	apk_turno add --upgrade $PAQUETES >"$sal_apk" 2>&1 || rc=$?
+	cat "$sal_apk" >&2
+	if [ "$rc" != 0 ] && grep -q "trying to overwrite" "$sal_apk"; then
+		# Mismo archivo, de la versión vieja a la nueva: se reemplaza.
+		echo "Aviso: un archivo pasó de un paquete a otro; se reemplaza y se intenta de nuevo." >&2
+		rc=0
+		# shellcheck disable=SC2086
+		apk_turno add --upgrade --force-overwrite $PAQUETES >&2 || rc=$?
+	fi
+	if [ "$rc" != 0 ]; then
+		grep -q "trying to overwrite\|ERROR: unable to select\|breaks:" "$sal_apk" \
+			|| echo "No se pudieron instalar los paquetes (¿sin internet?)." >&2
+		rm -f "$sal_apk"
+		exit 1
+	fi
+	rm -f "$sal_apk"
 	# FUSE (lo que deja a rclone mostrar la nube como carpeta): ahora y en
 	# cada arranque.
 	[ -e /dev/fuse ] || modprobe fuse 2>/dev/null || true
