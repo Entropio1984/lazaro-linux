@@ -394,6 +394,7 @@ demás escritorios.
 |---|---|
 | Windows + D | Abre el menú de programas |
 | Windows + Enter | Abre una terminal |
+| Windows + E | Abre el explorador de archivos (Thunar) |
 | Windows + Mayús + Q | Cierra la ventana |
 | Windows + Alt + K | Muestra todos los atajos |
 | Windows + Alt + W | Cambia el fondo de pantalla |
@@ -1034,6 +1035,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Comprobaciones dentro del sistema de prueba | `live/usr/share/lazaro/pruebas/` | Solo las usa la instalación desatendida |
 | Compilación automática | `.github/workflows/lazaro-iso.yml` | Estable en cada cambio; edge solo los lunes y a mano |
 | Versiones numeradas | `.github/workflows/lazaro-version.yml` + `ISO_VERSION` en `config.env` | Ver [Sacar una versión](#sacar-una-versión) |
+| Claudito Shell al día | `.github/workflows/claudito-revisar.yml` | Cada martes mira si Claudito Shell Fusion cambió en GitLab. Si cambió, prepara el cambio (PR, rama `claudito-actualizar`) con la versión nueva y sus sumas, avisa si el botón de actualizaciones de Lázaro (`lazaro.patch`) ya no encaja y lanza las pruebas. Al fusionarlo, la barra nueva llega con la siguiente versión |
 | Sello de compilación | `build.sh` → `/usr/share/lazaro/version.env` | Versión, edición, canal (`en-desarrollo`, `versión`, `prueba` o `local`), fecha, commit de la ISO y del script; lo muestra `lazaro-diagnostico` |
 
 ### Qué pasa al instalar

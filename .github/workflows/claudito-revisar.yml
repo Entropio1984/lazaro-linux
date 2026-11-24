@@ -1,0 +1,186 @@
+# Revisión semanal de Claudito Shell Fusion (la barra de Sway).
+#
+# Lázaro usa una versión fija de Claudito (_commit en
+# paquetes/lazaro-claudito/APKBUILD): lo que cambie en GitLab no llega
+# solo. Cada semana este flujo mira si en GitLab hay algo nuevo y, si lo
+# hay, prepara el cambio (PR) con la versión nueva para que Julián lo
+# revise y lo fusione (decisión de Julián, 2026-11-24): rama
+# claudito-actualizar, sumas nuevas y aviso si el agregado de Lázaro
+# (lazaro.patch, el botón de actualizaciones) ya no encaja. Después lanza
+# las pruebas de siempre sobre esa rama. Al fusionarlo, la barra nueva
+# llega a los equipos con la siguiente versión de Lázaro.
+name: Revisar Claudito Shell
+
+on:
+  schedule:
+    # Martes temprano: no choca con la compilación de los lunes.
+    - cron: "23 5 * * 2"
+  workflow_dispatch:
+  # Un cambio de este flujo se prueba en su PR sin abrir nada: solo
+  # busca la versión nueva y prepara las sumas.
+  pull_request:
+    paths:
+      - ".github/workflows/claudito-revisar.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: claudito-revisar
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    name: Buscar una versión nueva en GitLab
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RAMA: claudito-actualizar
+      APKBUILD: paquetes/lazaro-claudito/APKBUILD
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Último cambio de Claudito en GitLab
+        id: gitlab
+        run: |
+          api="https://gitlab.com/api/v4/projects/linux-en-casa%2Fclaudito-shell-fusion/repository/commits?per_page=1"
+          curl -fsS --retry 5 --retry-delay 30 --retry-all-errors "$api" > ultimo.json
+          nuevo="$(jq -r '.[0].id' ultimo.json)"
+          fecha="$(jq -r '.[0].committed_date' ultimo.json | cut -c1-10 | tr -d -)"
+          titulo="$(jq -r '.[0].title' ultimo.json)"
+          rm -f ultimo.json
+          case "$nuevo" in
+            *[!0-9a-f]*|"") echo "::error::GitLab devolvió un commit raro: $nuevo"; exit 1 ;;
+          esac
+          case "$fecha" in
+            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
+            *) echo "::error::GitLab devolvió una fecha rara: $fecha"; exit 1 ;;
+          esac
+          actual="$(sed -n 's/^_commit=//p' "$APKBUILD")"
+          echo "En Lázaro: $actual"
+          echo "En GitLab: $nuevo ($fecha) $titulo"
+          hay=no
+          [ "$nuevo" = "$actual" ] || hay=si
+          # Si la rama ya tiene esa versión (PR abierto), no se repite.
+          if [ "$hay" = si ] && git fetch -q origin "$RAMA" 2>/dev/null; then
+            if git show "FETCH_HEAD:$APKBUILD" | grep -qx "_commit=$nuevo"; then
+              echo "El cambio con esa versión ya está preparado en la rama $RAMA."
+              hay=ya
+            fi
+          fi
+          {
+            echo "hay=$hay"
+            echo "nuevo=$nuevo"
+            echo "fecha=$fecha"
+            echo "actual=$actual"
+          } >> "$GITHUB_OUTPUT"
+          printf '%s' "$titulo" > "$RUNNER_TEMP/titulo"
+
+      - name: Preparar la versión nueva (sumas y agregado de Lázaro)
+        if: steps.gitlab.outputs.hay == 'si'
+        id: preparar
+        env:
+          NUEVO: ${{ steps.gitlab.outputs.nuevo }}
+          FECHA: ${{ steps.gitlab.outputs.fecha }}
+        run: |
+          . ./config.env
+          sed -i "s/^_commit=.*/_commit=$NUEVO/; s/^_fecha=.*/_fecha=$FECHA/" "$APKBUILD"
+          # Sumas nuevas: abuild checksum las calcula (las de los archivos
+          # de Lázaro no cambian). GitLab a veces contesta "429": se
+          # reintenta con esperas.
+          cat > "$RUNNER_TEMP/preparar.sh" <<'PREP'
+          set -eu
+          apk add -q abuild patch tar
+          adduser -D constructor
+          cp -r /src/paquetes/lazaro-claudito /home/constructor/pq
+          chown -R constructor /home/constructor/pq
+          cd /home/constructor/pq
+          export SRCDEST=/home/constructor/fuentes
+          mkdir -p "$SRCDEST"; chown constructor "$SRCDEST"
+          sed -i '/^sha512sums="/,/^"/d' APKBUILD
+          for espera in 30 90 180 0; do
+            su constructor -c "SRCDEST=$SRCDEST abuild checksum" && break
+            [ "$espera" = 0 ] && exit 3
+            sleep "$espera"
+          done
+          cp APKBUILD /src/paquetes/lazaro-claudito/APKBUILD
+          # ¿El agregado de Lázaro (lazaro.patch) sigue encajando?
+          if su constructor -c "SRCDEST=$SRCDEST abuild unpack prepare" > /tmp/prepare.log 2>&1; then
+            echo PARCHE-OK > /src/.parche
+          else
+            tail -n 40 /tmp/prepare.log > /src/.parche
+          fi
+          PREP
+          docker run --rm -v "$PWD:/src" -v "$RUNNER_TEMP:/t:ro" "alpine:${ALPINE_BRANCH#v}" sh /t/preparar.sh
+          sudo chown -R "$(id -u):$(id -g)" .
+          if [ "$(cat .parche)" = PARCHE-OK ]; then
+            echo "parche=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "parche=falla" >> "$GITHUB_OUTPUT"
+            echo "::warning::lazaro.patch ya no encaja con la versión nueva de Claudito."
+            cat .parche
+            { echo "### lazaro.patch ya no encaja"; echo '```'; cat .parche; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          mv .parche "$RUNNER_TEMP/parche.txt"
+          git diff --stat
+
+      - name: Abrir el cambio (PR) y lanzar las pruebas
+        if: steps.gitlab.outputs.hay == 'si' && github.event_name != 'pull_request'
+        env:
+          NUEVO: ${{ steps.gitlab.outputs.nuevo }}
+          ACTUAL: ${{ steps.gitlab.outputs.actual }}
+          FECHA: ${{ steps.gitlab.outputs.fecha }}
+          PARCHE: ${{ steps.preparar.outputs.parche }}
+        run: |
+          corto="$(printf '%s' "$NUEVO" | cut -c1-7)"
+          dia="$(printf '%s' "$FECHA" | sed 's/\(....\)\(..\)\(..\)/\3\/\2\/\1/')"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -B "$RAMA"
+          git commit -qam "Claudito Shell Fusion: versión del $dia ($corto)"
+          git push -q -f origin "$RAMA"
+          {
+            echo "Revisión semanal: hay una versión nueva de Claudito Shell Fusion en GitLab."
+            echo
+            echo "- Antes: [\`$(printf '%s' "$ACTUAL" | cut -c1-7)\`](https://gitlab.com/linux-en-casa/claudito-shell-fusion/-/commit/$ACTUAL)"
+            echo "- Ahora: [\`$corto\`](https://gitlab.com/linux-en-casa/claudito-shell-fusion/-/commit/$NUEVO) del $dia: $(cat "$RUNNER_TEMP/titulo")"
+            echo "- Todos los cambios: https://gitlab.com/linux-en-casa/claudito-shell-fusion/-/compare/$ACTUAL...$NUEVO"
+            echo
+            if [ "$PARCHE" = ok ]; then
+              echo "El agregado de Lázaro (botón de actualizaciones, \`lazaro.patch\`) sigue encajando."
+            else
+              echo "**Atención:** el agregado de Lázaro (\`lazaro.patch\`) ya no encaja con esta versión. Hay que ajustarlo antes de fusionar:"
+              echo '```'
+              cat "$RUNNER_TEMP/parche.txt"
+              echo '```'
+            fi
+            echo
+            echo "Las pruebas (ISO y repositorio) se lanzan solas sobre esta rama. Si quedan en verde, se puede fusionar: la barra nueva llega a los equipos con la siguiente versión de Lázaro."
+          } > "$RUNNER_TEMP/cuerpo.md"
+          titulo="Claudito Shell Fusion: versión del $dia"
+          if gh pr view "$RAMA" --json state -q .state 2>/dev/null | grep -qx OPEN; then
+            gh pr edit "$RAMA" --title "$titulo" --body-file "$RUNNER_TEMP/cuerpo.md"
+          elif ! gh pr create --base main --head "$RAMA" --title "$titulo" --body-file "$RUNNER_TEMP/cuerpo.md"; then
+            # Si GitHub no deja que los flujos abran PR (Configuración >
+            # Actions > "Allow GitHub Actions to create ... pull requests"),
+            # queda un aviso con el enlace para abrirlo con un clic.
+            {
+              echo "No pude abrir el PR solo (GitHub no deja que los flujos abran PR en este repositorio)."
+              echo "Ábrelo con un clic: https://github.com/$GH_REPO/compare/main...$RAMA?expand=1"
+              echo
+              cat "$RUNNER_TEMP/cuerpo.md"
+            } > "$RUNNER_TEMP/aviso.md"
+            gh issue create --title "$titulo" --body-file "$RUNNER_TEMP/aviso.md"
+          fi
+          # Los PR que abre un flujo no lanzan las pruebas solos: se lanzan
+          # aquí sobre la rama (solo con la versión estable de Alpine).
+          gh workflow run lazaro-iso.yml --ref "$RAMA" -f solo_estable=true
+          gh workflow run lazaro-repositorio.yml --ref "$RAMA"

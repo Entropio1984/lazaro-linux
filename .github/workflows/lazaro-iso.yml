@@ -19,6 +19,11 @@ on:
     # Cada lunes: detecta cambios de Alpine aunque nadie toque el repo.
     - cron: "17 6 * * 1"
   workflow_dispatch:
+    inputs:
+      solo_estable:
+        description: "Probar solo con la versión estable de Alpine (sin edge)"
+        type: boolean
+        default: false
 
 # Por defecto el token de cada trabajo solo puede leer el código; los que
 # publican piden lo suyo (permissions dentro del trabajo).
@@ -150,7 +155,7 @@ jobs:
         # Alpine) solo en la compilación de los lunes y al lanzarla a mano:
         # avisa con tiempo qué se romperá al cambiar de versión, sin
         # demorar ni ensuciar cada PR (decisión de Julián, 2026-11-03).
-        alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/'))) && '["estable", "edge"]' || '["estable"]') }}
+        alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/') && !inputs.solo_estable)) && '["estable", "edge"]' || '["estable"]') }}
     steps:
       - uses: actions/checkout@v5
         # Historia completa: build.sh cuenta los cambios (LAZARO_NIVEL).
@@ -568,7 +573,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/'))) && '["estable", "edge"]' || '["estable"]') }}
+        alpine: ${{ fromJSON((github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/') && !inputs.solo_estable)) && '["estable", "edge"]' || '["estable"]') }}
         prueba:
           - live bios
           - live uefi

@@ -1452,3 +1452,7 @@ msgstr ""
 #: live/usr/share/lazaro/arreglos/012-sway-volumen.sh
 msgid "Sway: el icono de volumen abre una barrita con deslizador en vez del mezclador completo"
 msgstr ""
+
+#: live/usr/share/lazaro/arreglos/013-sway-thunar.sh
+msgid "Sway tiene explorador de archivos: Thunar, que se abre con Windows + E"
+msgstr ""
