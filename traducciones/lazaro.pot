@@ -1437,10 +1437,6 @@ msgstr ""
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr ""
 
-#: live/usr/share/lazaro/arreglos/008-sway-claudito.sh
-msgid "Sway tiene una barra nueva: Claudito Shell Fusion"
-msgstr ""
-
 #: live/usr/share/lazaro/arreglos/009-lxqt-capturas-salvapantallas.sh
 msgid "LXQt: la tecla Imprimir Pantalla saca capturas (ScreenGrab) y los ajustes del salvapantallas ya no piden paquetes"
 msgstr ""

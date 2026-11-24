@@ -69,6 +69,13 @@ imprimir.
   Flathub con miles de programas, y puedes elegir de entrada OnlyOffice
   o Brave. Google Chrome se instala después, con un clic, desde la
   Bienvenida.
+- **Tus nubes como carpetas.** Con
+  [Lázaro Nubes](#lázaro-nubes-google-drive-onedrive-y-dropbox), tus
+  archivos de Google Drive, OneDrive o Dropbox aparecen como una carpeta
+  más, y se instala con un botón de la Bienvenida.
+- **Sway con una barra moderna.** Quien elige Sway recibe
+  [Claudito Shell Fusion](#sway-con-claudito-shell-fusion): barra, menú
+  de programas, wifi, volumen, avisos y fondos en un solo lugar.
 
 ## ¿Funciona en mi equipo?
 
@@ -283,7 +290,7 @@ El instalador pregunta, en este orden:
    | **KDE Plasma** | El más completo y vistoso; pide un equipo más nuevo |
    | **GNOME** | Moderno y diferente a Windows; pide un equipo más nuevo |
    | **XFCE Wayland** | XFCE con tecnología nueva, en prueba |
-   | **Sway** | Para usuarios avanzados que usan mucho el teclado, con la barra [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion) (en la Completa viene en el USB; en la Ligera llega en el primer arranque con internet) |
+   | **Sway** | Para usuarios avanzados que usan mucho el teclado, con la barra [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion) (en la Completa viene en el USB; en la Ligera llega en el primer arranque con internet; los equipos con Sway instalados antes siguen con waybar) |
    | **Sin escritorio** | Solo pantalla de texto, para servidores |
 
 3. **Software adicional**: casillas para agregar programas. Si no sabes,
@@ -362,6 +369,52 @@ Detalles: sección "YouTube ligero" del
   hay arreglo en la versión de Alpine, se puede tomar el de la versión en
   desarrollo:
   `doas apk upgrade --repository https://dl-cdn.alpinelinux.org/alpine/edge/community yt-dlp yt-dlp-ejs yt-dlp-ejs-rt-quickjs`.
+
+## Sway con Claudito Shell Fusion
+
+Si eliges **Sway** al instalar, su barra es
+[**Claudito Shell Fusion**](https://gitlab.com/linux-en-casa/claudito-shell-fusion),
+un proyecto libre (licencia GPLv3) de la comunidad
+[Linux en Casa](https://www.youtube.com/@LinuxenCasa), hecho con
+[Quickshell](https://quickshell.org). Reúne en un solo lugar la barra, el
+menú de programas, el wifi, el volumen, el bluetooth, la batería, los
+avisos, el menú de apagado y el cambio de fondo y de modo claro u oscuro.
+Lázaro le agrega el botón que avisa de las actualizaciones, como en los
+demás escritorios.
+
+<p align="center">
+  <img src="docs/imagenes/sway-claudito.png" width="720" alt="Sway con la barra Claudito Shell Fusion arriba, una terminal y el editor de texto">
+</p>
+
+| Tecla | Qué hace |
+|---|---|
+| Windows + D | Abre el menú de programas |
+| Windows + Enter | Abre una terminal |
+| Windows + Mayús + Q | Cierra la ventana |
+| Windows + Alt + K | Muestra todos los atajos |
+| Windows + Alt + W | Cambia el fondo de pantalla |
+| Windows + Alt + T | Pasa del modo claro al oscuro |
+| Windows + Mayús + X | Menú para apagar, reiniciar o cerrar sesión |
+
+Cómo llega a tu equipo:
+
+- **Completa:** viene en el USB y queda puesta al instalar, aunque no
+  haya internet.
+- **Ligera:** no cabe en el USB (pasaría de 2 GB). Hasta el primer
+  arranque con internet la barra es la sencilla (*waybar*); después
+  Claudito se instala solo y aparece al volver a entrar.
+- **Equipos con Sway instalados antes:** siguen con waybar.
+- **Si Claudito no arranca** (por ejemplo, justo después de una
+  actualización grande de Alpine), vuelve waybar sola, para que nunca
+  falte la barra.
+
+Lázaro usa una versión de Claudito ya probada y no la última del día,
+porque el proyecto cambia muy seguido. Quickshell no está en Alpine:
+Lázaro lo compila y lo publica en su propio repositorio, firmado (ver
+[Repositorio de Lázaro](#repositorio-de-lázaro-compilar-y-publicar)). El
+script [alpine-desktop-setup](https://github.com/Entropio1984/alpine-desktop-setup)
+también pone Claudito en cualquier Alpine de 64 bits con Sway. Gasta unos
+70 MB más de memoria que waybar y se ve mejor con aceleración 3D.
 
 ## Problemas comunes
 
@@ -813,8 +866,8 @@ Los que hay:
   no deja manchas. Con tarjeta de video Intel, AMD o NVIDIA (nouveau)
   sigue el modo normal.
 - **Volumen de Sway** (012): cuando la barra de Sway es la sencilla
-  (waybar: en la Ligera hasta el primer arranque con internet, o si
-  Claudito Shell no arranca), el clic en el icono de volumen abre una
+  (waybar: en los equipos instalados antes de Claudito Shell, o si
+  Claudito no arranca), el clic en el icono de volumen abre una
   barrita con deslizador, como en los otros escritorios (clic derecho:
   el mezclador completo). Una barra que la persona cambió a su
   gusto no se toca.
@@ -1248,6 +1301,25 @@ Alpine conviene sacar una versión nueva.
 ## Pendiente
 
 - Cifrado de disco (desactivado por ahora).
+
+## Agradecimientos
+
+Lázaro se apoya en el trabajo de muchos proyectos libres. Los
+principales:
+
+- [Alpine Linux](https://alpinelinux.org): la base de todo el sistema.
+- [Calamares](https://calamares.io): el instalador gráfico.
+- [alpine-desktop-setup](https://github.com/Entropio1984/alpine-desktop-setup):
+  el script que deja el escritorio listo (del mismo autor que Lázaro).
+- [Claudito Shell Fusion](https://gitlab.com/linux-en-casa/claudito-shell-fusion),
+  de Linux en Casa, y [Quickshell](https://quickshell.org): la barra de
+  Sway.
+- [rclone](https://rclone.org): lo que usa Lázaro Nubes para hablar con
+  Google Drive, OneDrive y Dropbox.
+- [Flathub](https://flathub.org), [mpv](https://mpv.io),
+  [Pipe Viewer](https://github.com/trizen/pipe-viewer) y
+  [yt-dlp](https://github.com/yt-dlp/yt-dlp): la tienda de aplicaciones y
+  YouTube ligero.
 
 ## Licencia
 

@@ -1481,9 +1481,6 @@ msgstr "LXQt and Sway have a text editor, and the \"Open the folder\" buttons wo
 msgid "La lista de programas de la tienda ya no se queda colgada con una conexión lenta"
 msgstr "The app store's program list no longer hangs on a slow connection"
 
-msgid "Sway tiene una barra nueva: Claudito Shell Fusion"
-msgstr "Sway has a new bar: Claudito Shell Fusion"
-
 msgid "LXQt: la tecla Imprimir Pantalla saca capturas (ScreenGrab) y los ajustes del salvapantallas ya no piden paquetes"
 msgstr "LXQt: the Print Screen key takes screenshots (ScreenGrab) and the screensaver settings no longer ask for packages"
 

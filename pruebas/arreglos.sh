@@ -334,32 +334,6 @@ rm -f "$TC"
 sincuelgue
 es "sin cuelgues: sin tarea se vuelve a mirar" '[ "$rc" = 11 ]'
 
-# 008-sway-claudito en un sistema de mentira, con el apk falso de 006.
-SC="$TMP/sway-claudito"
-mkdir -p "$SC/lib/apk/db"
-cat > "$B/apk" <<EOF2
-#!/bin/sh
-echo "apk \$*" >> "$TMP/llamadas"
-[ ! -e "$TMP/sin-internet" ] || exit 1
-for p in "\$@"; do
-	case "\$p" in -*) ;; *) echo "P:\${p%@*}" >> "$SC/lib/apk/db/installed" ;; esac
-done
-EOF2
-claudito() { rc=0; : > "$TMP/llamadas"; PATH="$B:$PATH" LAZARO_ARREGLO_RAIZ="$SC" sh "$REALES/008-sway-claudito.sh" > /dev/null 2>&1 || rc=$?; }
-printf 'P:xorg-server\nP:xfce4\n' > "$SC/lib/apk/db/installed"
-claudito
-es "Claudito: sin Sway no hace nada, y se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
-if [ "$(uname -m)" = x86_64 ]; then
-	printf 'P:sway\nP:waybar\n' > "$SC/lib/apk/db/installed"
-	: > "$TMP/sin-internet"
-	claudito
-	es "Claudito: sin internet queda pendiente" '[ "$rc" = 1 ]'
-	rm "$TMP/sin-internet"
-	claudito
-	es "Claudito: con Sway instala lazaro-claudito" '[ "$rc" = 0 ] && grep -qx "apk add -q lazaro-claudito@lazaro quickshell@lazaro" "$TMP/llamadas"'
-	claudito
-	es "Claudito: ya está, no hace falta" '[ "$rc" = 10 ] && [ ! -s "$TMP/llamadas" ]'
-fi
 # 009-lxqt-capturas-salvapantallas con el mismo apk falso.
 X="$TMP/lxqt"
 mkdir -p "$X/lib/apk/db" "$X/etc/skel" "$X/home/ana" "$X/home/beto"
@@ -369,7 +343,7 @@ mkdir -p "$X/home/caro"
 printf 'caro:x:1002:1002::/home/caro:/bin/sh\n' >> "$X/etc/passwd"
 ln -s "$TMP/no-tocar" "$X/home/caro/.xscreensaver"
 mkdir -p "$TMP/bin-lxqt"
-sed "s#$E/lib#$X/lib#; s#$SC/lib#$X/lib#" "$B/apk" > "$TMP/bin-lxqt/apk"
+sed "s#$E/lib#$X/lib#" "$B/apk" > "$TMP/bin-lxqt/apk"
 chmod 755 "$TMP/bin-lxqt/apk"
 lxqt() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-lxqt:$PATH" LAZARO_ARREGLO_RAIZ="$X" sh "$REALES/009-lxqt-capturas-salvapantallas.sh" > /dev/null 2>&1 || rc=$?; }
 : > "$X/lib/apk/db/installed"
@@ -437,7 +411,7 @@ for d in "$SV/etc/skel" "$SV/home/ana"; do
 	printf '{\n    "modules-left": ["custom/menu", "custom/atajos"],\n    "pulseaudio": {\n        "format": "{volume}%%",\n        "on-click": "pavucontrol"\n    },\n    "network": {\n        "on-click": "foot nmtui"\n    }\n}\n' > "$d/.config/waybar/config.jsonc"
 done
 printf '{\n    "pulseaudio": {\n        "on-click": "pavucontrol"\n    }\n}\n' > "$SV/home/beto/.config/waybar/config.jsonc"
-sed "s#$E/lib#$SV/lib#; s#$SC/lib#$SV/lib#" "$B/apk" > "$TMP/bin-swayvol/apk"
+sed "s#$E/lib#$SV/lib#" "$B/apk" > "$TMP/bin-swayvol/apk"
 chmod 755 "$TMP/bin-swayvol/apk"
 swayvol() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-swayvol:$PATH" LAZARO_ARREGLO_RAIZ="$SV" sh "$REALES/012-sway-volumen.sh" > /dev/null 2>&1 || rc=$?; }
 echo "P:sway" > "$SV/lib/apk/db/installed"
