@@ -34,14 +34,19 @@ apk update -q
 
 msg "Sway sin pantalla con Claudito"
 apk add -q lazaro-claudito sway foot fastfetch dbus grim font-dejavu font-noto \
-	adwaita-icon-theme mesa-dri-gallium musl-locales mousepad
+	adwaita-icon-theme mesa-dri-gallium musl-locales mousepad mousepad-lang
 cp /usr/bin/sway /usr/local/bin/sway
 install -Dm644 /src/live/usr/share/backgrounds/lazaro/lazaro-fondo.jpg \
 	/usr/share/backgrounds/lazaro/lazaro-fondo.jpg
-echo 'output HEADLESS-1 resolution 1366x768' > /etc/sway/config.d/00-captura.conf
+cat > /etc/sway/config.d/00-captura.conf <<'EOC'
+output HEADLESS-1 resolution 1366x768
+for_window [app_id="org.xfce.mousepad"] floating enable, resize set 700 420, move position 600 200
+EOC
+sway -C -c /etc/sway/config && echo "configuración de Sway válida" 
 adduser -D -s /bin/sh julian
 U=/home/julian
-mkdir -p "$U/run" "$U/.config/fastfetch"
+mkdir -p "$U/run" "$U/Documentos"
+printf 'Lista de compras\n\n- Pan\n- Leche\n- Café\n- Manzanas\n' > "$U/Documentos/compras.txt"
 chmod 700 "$U/run"
 chown -R julian "$U"
 su julian -c "cd; export XDG_RUNTIME_DIR=$U/run WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 QT_QUICK_BACKEND=software LANG=es_ES.UTF-8 LC_ALL=es_ES.UTF-8; exec dbus-run-session /usr/local/bin/sway" > /tmp/sway.log 2>&1 &
@@ -51,8 +56,7 @@ ipc=$(ls "$U/run"/sway-ipc.* 2>/dev/null | head -n 1)
 como() { su julian -c "export XDG_RUNTIME_DIR=$U/run WAYLAND_DISPLAY=${sock##*/} SWAYSOCK=$ipc LANG=es_ES.UTF-8; $*"; }
 foto() { sleep "${2:-6}"; como grim "/tmp/$1.png" && cp "/tmp/$1.png" "/out/$1.png" && echo "captura $1 OK"; }
 pgrep -u julian -x qs >/dev/null && echo "Claudito (qs) corriendo" || { echo "qs NO corre"; cat "$U/run/lazaro-claudito.log" 2>/dev/null; }
-como "swaymsg exec 'foot -e sh -c \"fastfetch; exec sh\"'"
-como "swaymsg exec mousepad"
+como "swaymsg exec 'mousepad $U/Documentos/compras.txt'"
 foto sway-claudito 10
 como "qs -c sway-bar ipc call launcher toggle"
 foto sway-claudito-menu
