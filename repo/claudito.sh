@@ -52,7 +52,13 @@ for pq in quickshell lazaro-claudito; do
 	esac
 	chown -R constructor:abuild "$T"
 	msg "Armando $pq"
-	if ! su constructor -c "cd $T && REPODEST=$REPO abuild -r" > "$CASA/abuild-$pq.log" 2>&1; then
+	# GitLab a veces contesta "429 Too Many Requests": se reintenta la
+	# descarga con esperas (lo ya bajado queda guardado).
+	for espera in 30 90 180 0; do
+		su constructor -c "cd $T && abuild fetch" >> "$CASA/abuild-$pq.log" 2>&1 && break
+		[ "$espera" = 0 ] || { echo "Descarga de $pq falló; otro intento en $espera s"; sleep "$espera"; }
+	done
+	if ! su constructor -c "cd $T && REPODEST=$REPO abuild -r" >> "$CASA/abuild-$pq.log" 2>&1; then
 		sed -n '/Uninstalling dependencies/q;p' "$CASA/abuild-$pq.log" | tail -n 80 >&2
 		die "falló el armado de $pq"
 	fi

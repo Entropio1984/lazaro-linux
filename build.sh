@@ -236,7 +236,14 @@ if [ "$ALPINE_ARCH" != x86 ] && [ "$LAZARO_EDICION" = completa ]; then
 			sed -n '/^sha512sums/,$p' APKBUILD
 		fi
 		REGISTRO="$CACHE/abuild-$pq.log"
-		if ! su constructor -c "REPODEST=$REPO_PROPIO abuild -r" > "$REGISTRO" 2>&1; then
+		: > "$REGISTRO"
+		# GitLab a veces contesta "429 Too Many Requests": se reintenta la
+		# descarga con esperas (lo ya bajado queda guardado).
+		for espera in 30 90 180 0; do
+			su constructor -c "abuild fetch" >> "$REGISTRO" 2>&1 && break
+			[ "$espera" = 0 ] || { msg "Descarga de $pq falló; otro intento en $espera s"; sleep "$espera"; }
+		done
+		if ! su constructor -c "REPODEST=$REPO_PROPIO abuild -r" >> "$REGISTRO" 2>&1; then
 			echo "Últimas líneas útiles de $REGISTRO:" >&2
 			sed -n '/Uninstalling dependencies/q;p' "$REGISTRO" | tail -n 80 >&2
 			die "falló el empaquetado de $pq"
