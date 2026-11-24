@@ -812,6 +812,10 @@ Los que hay:
   una máquina virtual), Sway usa su modo de dibujo simple y el menú ya
   no deja manchas. Con tarjeta de video Intel, AMD o NVIDIA (nouveau)
   sigue el modo normal.
+- **Volumen de Sway** (011): el clic en el icono de volumen de la barra
+  abre una barrita con deslizador, como en los otros escritorios (clic
+  derecho: el mezclador completo). Una barra que la persona cambió a su
+  gusto no se toca.
 
 Para ver cuáles se aplicaron: `lazaro-arreglos --listar` en una terminal
 (también sale en el informe del **Diagnóstico**). El detalle queda en

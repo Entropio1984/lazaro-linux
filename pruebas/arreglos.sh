@@ -402,6 +402,33 @@ es "Sway sin 3D: ya está, no hace falta" '[ "$rc" = 10 ]'
 sed 's#^exec /usr/bin/sway "\$@"#echo "$WLR_RENDERER"#' "$SW/usr/local/bin/sway" > "$TMP/sway-eco"
 es "Sway sin 3D: respeta el modo que la persona eligió" '[ "$(WLR_RENDERER=gles2 sh "$TMP/sway-eco")" = gles2 ]'
 
+# 011-sway-volumen con el mismo apk falso.
+SV="$TMP/swayvol"
+mkdir -p "$SV/lib/apk/db" "$SV/etc/sway/config.d" "$SV/etc/skel/.config/waybar" "$SV/home/ana/.config/waybar" "$SV/home/beto/.config/waybar" "$TMP/bin-swayvol"
+printf 'ana:x:1000:1000::/home/ana:/bin/sh\nbeto:x:1001:1001::/home/beto:/bin/sh\n' > "$SV/etc/passwd"
+echo "bar bar-0 swaybar_command waybar" > "$SV/etc/sway/config.d/50-lazaro-barra.conf"
+for d in "$SV/etc/skel" "$SV/home/ana"; do
+	printf '{\n    "modules-left": ["custom/menu", "custom/atajos"],\n    "pulseaudio": {\n        "format": "{volume}%%",\n        "on-click": "pavucontrol"\n    },\n    "network": {\n        "on-click": "foot nmtui"\n    }\n}\n' > "$d/.config/waybar/config.jsonc"
+done
+printf '{\n    "pulseaudio": {\n        "on-click": "pavucontrol"\n    }\n}\n' > "$SV/home/beto/.config/waybar/config.jsonc"
+sed "s#$E/lib#$SV/lib#" "$B/apk" > "$TMP/bin-swayvol/apk"
+chmod 755 "$TMP/bin-swayvol/apk"
+swayvol() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-swayvol:$PATH" LAZARO_ARREGLO_RAIZ="$SV" sh "$REALES/011-sway-volumen.sh" > /dev/null 2>&1 || rc=$?; }
+echo "P:sway" > "$SV/lib/apk/db/installed"
+swayvol
+es "Sway volumen: sin waybar se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -e "$SV/usr/local/bin/sway-volumen" ]'
+printf 'P:sway\nP:waybar\n' > "$SV/lib/apk/db/installed"
+: > "$TMP/sin-internet"
+swayvol
+es "Sway volumen: sin internet queda pendiente" '[ "$rc" = 1 ] && grep -qx "        \"on-click\": \"pavucontrol\"" "$SV/home/ana/.config/waybar/config.jsonc"'
+rm "$TMP/sin-internet"
+swayvol
+es "Sway volumen: instala lo que necesita y la barrita" '[ "$rc" = 0 ] && grep -qx "P:pulseaudio-utils" "$SV/lib/apk/db/installed" && grep -qx "P:py3-gobject3" "$SV/lib/apk/db/installed" && [ -x "$SV/usr/local/bin/sway-volumen" ] && python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$SV/usr/local/bin/sway-volumen"'
+es "Sway volumen: la barrita flota bajo el puntero" 'grep -q "for_window \[app_id=\"sway-volumen\"\] floating enable" "$SV/etc/sway/config.d/50-lazaro-barra.conf"'
+es "Sway volumen: cambia las barras de Lázaro y no la que la persona cambió" 'grep -q "\"on-click\": \"sway-volumen || pavucontrol\"," "$SV/home/ana/.config/waybar/config.jsonc" && grep -q "\"on-click-right\": \"pavucontrol\"" "$SV/etc/skel/.config/waybar/config.jsonc" && grep -q "foot nmtui" "$SV/home/ana/.config/waybar/config.jsonc" && grep -qx "        \"on-click\": \"pavucontrol\"" "$SV/home/beto/.config/waybar/config.jsonc" && ! ls "$SV"/home/*/.config/waybar/config.jsonc.* >/dev/null 2>&1'
+swayvol
+es "Sway volumen: ya está, no hace falta" '[ "$rc" = 10 ] && [ "$(grep -c sway-volumen "$SV/etc/sway/config.d/50-lazaro-barra.conf")" = 1 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'

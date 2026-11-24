@@ -213,7 +213,7 @@ LAZARO_ESCRITORIOS="
 	screengrab
 	sway swaybg swayidle swaylockd foot grim i3status brightnessctl
 	util-linux-login wl-clipboard wmenu xwayland waybar font-awesome fuzzel
-	pavucontrol polkit-gnome greetd-gtkgreet seatd
+	pavucontrol polkit-gnome greetd-gtkgreet seatd pulseaudio-utils
 	labwc adwaita-icon-theme network-manager-applet"
 
 # 32 bits: solo IceWM (lo que instalan lazaro-instalar y

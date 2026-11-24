@@ -1489,3 +1489,6 @@ msgstr "A lista de programas da loja é atualizada toda vez que você abre a loj
 
 msgid "Sway: el menú y las ventanas ya no dejan manchas en equipos sin aceleración 3D"
 msgstr "Sway: o menu e as janelas não deixam mais manchas em computadores sem aceleração 3D"
+
+msgid "Sway: el icono de volumen abre una barrita con deslizador en vez del mezclador completo"
+msgstr "Sway: o ícone de volume abre um pequeno controle deslizante em vez do mixer completo"
