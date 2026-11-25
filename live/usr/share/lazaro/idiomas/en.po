@@ -1492,3 +1492,6 @@ msgstr "Sway: the menu and windows no longer leave smudges on computers without 
 
 msgid "Sway: el icono de volumen abre una barrita con deslizador en vez del mezclador completo"
 msgstr "Sway: the volume icon opens a small slider instead of the full mixer"
+
+msgid "Sway tiene explorador de archivos: Thunar, que se abre con Windows + E"
+msgstr "Sway has a file manager: Thunar, opened with Windows + E"

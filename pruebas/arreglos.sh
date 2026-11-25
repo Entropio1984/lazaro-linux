@@ -429,6 +429,27 @@ es "Sway volumen: cambia las barras de Lázaro y no la que la persona cambió" '
 swayvol
 es "Sway volumen: ya está, no hace falta" '[ "$rc" = 10 ] && [ "$(grep -c sway-volumen "$SV/etc/sway/config.d/50-lazaro-barra.conf")" = 1 ]'
 
+# 013-sway-thunar con el mismo apk falso.
+ST="$TMP/swaythunar"
+mkdir -p "$ST/lib/apk/db" "$ST/etc/sway/config.d" "$ST/usr/local/bin" "$TMP/bin-swaythunar"
+echo "bar bar-0 swaybar_command waybar" > "$ST/etc/sway/config.d/50-lazaro-barra.conf"
+printf '        if (c ~ /^exec sway-atajos/) return "Ver esta lista de atajos"\n        if (c == "kill") return "Cerrar la ventana"\n' > "$ST/usr/local/bin/sway-atajos"
+sed "s#$E/lib#$ST/lib#" "$B/apk" > "$TMP/bin-swaythunar/apk"
+chmod 755 "$TMP/bin-swaythunar/apk"
+swaythunar() { rc=0; : > "$TMP/llamadas"; PATH="$TMP/bin-swaythunar:$PATH" LAZARO_ARREGLO_RAIZ="$ST" sh "$REALES/013-sway-thunar.sh" > /dev/null 2>&1 || rc=$?; }
+echo "P:xfce4" > "$ST/lib/apk/db/installed"
+swaythunar
+es "Sway Thunar: sin Sway se vuelve a mirar" '[ "$rc" = 11 ] && [ ! -s "$TMP/llamadas" ]'
+echo "P:sway" > "$ST/lib/apk/db/installed"
+: > "$TMP/sin-internet"
+swaythunar
+es "Sway Thunar: sin internet queda pendiente" '[ "$rc" = 1 ] && ! grep -q thunar "$ST/etc/sway/config.d/50-lazaro-barra.conf"'
+rm "$TMP/sin-internet"
+swaythunar
+es "Sway Thunar: instala Thunar, Super+E, carpetas y lista de atajos" '[ "$rc" = 0 ] && grep -qx "P:thunar" "$ST/lib/apk/db/installed" && grep -qx "P:gvfs" "$ST/lib/apk/db/installed" && grep -qx "bindsym --no-warn \$mod+e exec thunar" "$ST/etc/sway/config.d/50-lazaro-barra.conf" && grep -qx "inode/directory=thunar.desktop" "$ST/etc/xdg/sway-mimeapps.list" && grep -q "Abrir el explorador de archivos" "$ST/usr/local/bin/sway-atajos"'
+swaythunar
+es "Sway Thunar: ya está, no hace falta" '[ "$rc" = 10 ] && [ "$(grep -c "exec thunar" "$ST/etc/sway/config.d/50-lazaro-barra.conf")" = 1 ] && [ "$(grep -c "explorador de archivos" "$ST/usr/local/bin/sway-atajos")" = 1 ]'
+
 # --- Lo que va al paquete y al sistema instalado ----------------------------
 for p in lazaro-arreglos lazaro-actualizar-raiz; do
 	es "$p va en el paquete y lo copia el instalador" 'grep -v "^[[:space:]]*#" "$DIR/repo/herramientas.sh" | grep -q "$p" && grep -q "^[[:space:]]*install -Dm755 /usr/sbin/$p \"\$1/usr/local/sbin/$p\"$" "$DIR/live/usr/sbin/lazaro-instalar"'
