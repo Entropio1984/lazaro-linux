@@ -232,24 +232,28 @@ es "flatpak: una aplicación desconocida se rechaza" '[ "$rc" = 2 ]'
 # aplicación de verdad (su instalar.sh) en una carpeta personal de
 # mentira, dice si está al día y la pone al día si Lázaro trae otra.
 es "sintaxis de lazaro-nubes" 'sh -n "$DIR/live/usr/sbin/lazaro-nubes"'
-es "sintaxis del instalador de Lázaro Nubes" 'sh -n "$DIR/live/usr/share/lazaro/nubes-rclone/instalar.sh"'
-es "Lázaro Nubes: el programa compila" 'python3 -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" "$DIR"/live/usr/share/lazaro/nubes-rclone/*.py'
+# La aplicación vive en su propio repositorio: se descarga como al
+# compilar (con LAZARO_NUBES=/ruta se usa una copia local).
+NUBES_APP="$TMP/nubes-app"
+es "Lázaro Nubes: se descarga de su repositorio" 'sh "$DIR/perfil/traer-nubes.sh" "$NUBES_APP" > "$TMP/traer-nubes.txt" 2>&1 && [ -s "$NUBES_APP/.commit" ]'
+es "sintaxis del instalador de Lázaro Nubes" 'sh -n "$NUBES_APP/instalar.sh"'
+es "Lázaro Nubes: el programa compila" 'python3 -c "import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]" "$NUBES_APP"/*.py'
 # Colores del escritorio (nubes_tema.py): sin pantalla no cambia nada y
 # las cuentas de colores dan lo esperado.
-es "Lázaro Nubes: sin pantalla sigue con su aspecto de siempre" 'env -u DISPLAY -u WAYLAND_DISPLAY python3 -B -c "import sys; sys.path.insert(0, sys.argv[1]); import nubes_tema as t; sys.exit(0 if t.leer_tema() is None and t.FAMILIA == \"TkDefaultFont\" else 1)" "$DIR/live/usr/share/lazaro/nubes-rclone"'
-es "Lázaro Nubes: mezcla y brillo de colores" 'python3 -B -c "import sys; sys.path.insert(0, sys.argv[1]); import nubes_tema as t; sys.exit(0 if t._mezcla(\"#000000\", \"#ffffff\", 0.5) == \"#808080\" and t._luz(\"#303030\") < 0.5 < t._luz(\"#f6f5f4\") else 1)" "$DIR/live/usr/share/lazaro/nubes-rclone"'
+es "Lázaro Nubes: sin pantalla sigue con su aspecto de siempre" 'env -u DISPLAY -u WAYLAND_DISPLAY python3 -B -c "import sys; sys.path.insert(0, sys.argv[1]); import nubes_tema as t; sys.exit(0 if t.leer_tema() is None and t.FAMILIA == \"TkDefaultFont\" else 1)" "$NUBES_APP"'
+es "Lázaro Nubes: mezcla y brillo de colores" 'python3 -B -c "import sys; sys.path.insert(0, sys.argv[1]); import nubes_tema as t; sys.exit(0 if t._mezcla(\"#000000\", \"#ffffff\", 0.5) == \"#808080\" and t._luz(\"#303030\") < 0.5 < t._luz(\"#f6f5f4\") else 1)" "$NUBES_APP"'
 rc=0; sh "$DIR/live/usr/sbin/lazaro-nubes" --otra > /dev/null 2>&1 || rc=$?
 es "nubes: una orden desconocida se rechaza" '[ "$rc" = 2 ]'
 if [ "$(id -u)" != 0 ]; then
 	NU="$TMP/nubes"
 	mkdir -p "$NU/casa" "$NU/app"
-	cp "$DIR"/live/usr/share/lazaro/nubes-rclone/* "$NU/app/"
+	cp "$NUBES_APP"/* "$NU/app/"
 	nu() { env -u DISPLAY -u WAYLAND_DISPLAY -u XDG_RUNTIME_DIR -u XDG_DATA_HOME -u XDG_CONFIG_HOME -u XDG_CACHE_HOME \
 		HOME="$NU/casa" LAZARO_NUBES_DIR="$NU/app" LAZARO_NUBES_SIN_APK=1 XDG_CURRENT_DESKTOP=XFCE \
 		sh "$DIR/live/usr/sbin/lazaro-nubes" "$@"; }
 	es "nubes: antes de instalar falta la aplicación" '[ "$(nu --estado)" = falta-app ]'
 	es "nubes: instala la aplicación en la carpeta personal" 'nu --app > "$TMP/nu1.txt" 2>&1 && [ "$(nu --estado)" = lista ]'
-	es "nubes: deja el lanzador y la entrada del menú" '"$NU/casa/.local/bin/nubes-rclone" --version | grep -q "^Lázaro Nubes " && grep -q "^Exec=.*nubes-rclone" "$NU/casa/.local/share/applications/nubes-rclone.desktop"'
+	es "nubes: deja el lanzador y la entrada del menú" '"$NU/casa/.local/bin/nubes-rclone" --version | grep -q " [0-9]" && grep -q "^Exec=.*nubes-rclone" "$NU/casa/.local/share/applications/nubes-rclone.desktop"'
 	es "nubes: deja el icono junto al reloj al iniciar sesión" 'grep -q "^Exec=.*nubes-rclone --bandeja" "$NU/casa/.config/autostart/nubes-rclone-bandeja.desktop"'
 	echo "# cambio" >> "$NU/app/nubes_rclone.py"
 	es "nubes: si Lázaro trae otra versión, no está al día" '[ "$(nu --estado)" = falta-app ]'

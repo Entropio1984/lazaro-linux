@@ -544,7 +544,7 @@ jobs:
       # están bien escritos y se muestran donde corresponde. También con
       # el Python de Alpine.
       - run: sh pruebas/bienvenida.sh
-      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q python3 && sh pruebas/bienvenida.sh'
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh -c 'apk add -q python3 git && sh pruebas/bienvenida.sh'
       # Idioma de la sesión de prueba: qué traducciones se guardan de cada
       # paquete -lang (en Alpine, con uno de verdad) y lo que escribe el
       # selector de idioma y teclado de la Bienvenida.

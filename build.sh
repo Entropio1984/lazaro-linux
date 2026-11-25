@@ -19,6 +19,9 @@
 #   descargan de Flathub después del primer arranque, como en la Ligera.
 # Con una copia local de desktop-postinstall.sh:
 #   LAZARO_SCRIPT=../alpine-desktop-setup/desktop-postinstall.sh ./build.sh
+#
+# Con una copia local de Lázaro Nubes (en vez de bajarla de GitHub):
+#   LAZARO_NUBES=../lazaro-nubes ./build.sh
 
 set -eu
 
@@ -62,6 +65,9 @@ if [ "${1:-}" != "--dentro" ]; then
 	if [ -n "${LAZARO_SCRIPT:-}" ]; then
 		set -- -v "$(realpath "$LAZARO_SCRIPT"):/postinstall.sh:ro" -e LAZARO_SCRIPT=/postinstall.sh
 	fi
+	if [ -n "${LAZARO_NUBES:-}" ]; then
+		set -- "$@" -v "$(realpath "$LAZARO_NUBES"):/nubes:ro" -e LAZARO_NUBES=/nubes
+	fi
 	if [ -n "${LAZARO_FLATPAK_USB:-}" ]; then
 		set -- "$@" -v "$(realpath "$LAZARO_FLATPAK_USB"):/flatpak-usb:ro" -e LAZARO_FLATPAK_USB=/flatpak-usb
 	fi
@@ -70,7 +76,7 @@ if [ "${1:-}" != "--dentro" ]; then
 	[ "$ALPINE_ARCH" != x86 ] || set -- --platform linux/386 "$@"
 	exec docker run --rm "$@" \
 		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR \
-		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL -e LAZARO_EDICION \
+		-e CALAMARES_VERSION -e ISO_VERSION -e POSTINSTALL_URL -e NUBES_REPO -e NUBES_RAMA -e LAZARO_EDICION \
 		-e LAZARO_COMMIT -e LAZARO_FECHA -e LAZARO_CANAL -e LAZARO_SCRIPT_COMMIT -e LAZARO_NIVEL \
 		-e SALIDA=/salida -e CACHE=/cache \
 		-v "$LAZARO_DIR:/src:ro" \
@@ -312,6 +318,16 @@ else
 fi
 sh -n "$SCRIPT" || die "desktop-postinstall.sh tiene errores de sintaxis"
 chown constructor:abuild "$SCRIPT"
+
+# --- Lázaro Nubes ---------------------------------------------------------
+# La aplicación de nubes vive en su propio repositorio (como el script) y
+# se descarga al compilar; entra en la ISO con los datos de hardware, así
+# las dos ediciones la traen en el USB.
+NUBES_DIR="$CONSTRUCTOR_HOME/nubes-rclone"
+msg "Descargando Lázaro Nubes"
+NUBES_REPO="$NUBES_REPO" NUBES_RAMA="$NUBES_RAMA" sh "$LAZARO_DIR/perfil/traer-nubes.sh" "$NUBES_DIR" ||
+	die "no se pudo traer Lázaro Nubes"
+LAZARO_NUBES_COMMIT="$(cat "$NUBES_DIR/.commit")"
 # Con build.sh --dentro directo (sin Docker) nadie los calculó antes.
 if [ -z "${LAZARO_COMMIT:-}" ]; then
 	LAZARO_COMMIT="$(git -C "$LAZARO_DIR" rev-parse --short=12 HEAD 2>/dev/null)" || LAZARO_COMMIT=""
@@ -324,6 +340,7 @@ LAZARO_COMMIT="${LAZARO_COMMIT:-desconocido}"
 LAZARO_NIVEL="${LAZARO_NIVEL:-}"
 LAZARO_SCRIPT_COMMIT="$LAZARO_SCRIPT_COMMIT"
 LAZARO_SCRIPT_SHA256="$(sha256sum "$SCRIPT" | cut -c1-64)"
+LAZARO_NUBES_COMMIT="$LAZARO_NUBES_COMMIT"
 EOF
 msg "Sello de compilación"
 cat "$CONSTRUCTOR_HOME/version.env"
@@ -395,6 +412,7 @@ fi
 DATOS_HW="$CONSTRUCTOR_HOME/datos-hardware"
 rm -rf "$DATOS_HW"
 mkdir -p "$DATOS_HW/usr/share/lazaro/firmware-licencia/ipw2x00"
+cp -a "$NUBES_DIR" "$DATOS_HW/usr/share/lazaro/nubes-rclone"
 msg "Datos de hardware: lectores de huellas y firmware de Intel 2100/2200"
 # Lectores de huellas que reconoce libfprint (de su tabla de udev), como
 # "vvvv:pppp" para compararlos con los USB conectados.
