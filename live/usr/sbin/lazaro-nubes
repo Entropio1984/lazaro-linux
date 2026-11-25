@@ -3,7 +3,9 @@
 # para conectar Google Drive, OneDrive y Dropbox como carpetas (con
 # rclone). Es el botón "Nubes" de la Bienvenida.
 #
-# La aplicación viene tal cual en /usr/share/lazaro/nubes-rclone (con su
+# La aplicación tiene su propio repositorio (github.com/Entropio1984/
+# lazaro-nubes): al compilar, perfil/traer-nubes.sh la descarga y la
+# deja tal cual en /usr/share/lazaro/nubes-rclone (con su
 # propio instalar.sh, que la deja en la carpeta personal: ~/.local). Este
 # programa solo agrega lo que una ventana necesita: pide la contraseña
 # para los paquetes de Alpine (rclone, FUSE, Tkinter) y corre instalar.sh

@@ -22,7 +22,7 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 if [ "${1:-}" != "--dentro" ]; then
 	mkdir -p "$SALIDA"
 	exec docker run --rm \
-		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR -e LAZARO_APK_KEY -e LAZARO_REL \
+		-e ALPINE_BRANCH -e ALPINE_ARCH -e ALPINE_MIRROR -e LAZARO_APK_KEY -e LAZARO_REL -e NUBES_REPO -e NUBES_RAMA \
 		-e SALIDA=/salida \
 		-v "$LAZARO_DIR:/src:ro" \
 		-v "$SALIDA:/salida" \
@@ -69,7 +69,10 @@ install -Dm644 "$L/etc/xdg/autostart/lazaro-controladores.desktop" "$A/usr/share
 # con la sesión.
 cp -r "$L/usr/share/lazaro/bienvenida" "$A/usr/share/lazaro/"
 # Lázaro Nubes (botón "Nubes" de la Bienvenida; la instala cada persona).
-cp -r "$L/usr/share/lazaro/nubes-rclone" "$A/usr/share/lazaro/"
+# Vive en su propio repositorio: se descarga su última versión.
+apk add -q git
+NUBES_REPO="$NUBES_REPO" NUBES_RAMA="$NUBES_RAMA" sh "$LAZARO_DIR/perfil/traer-nubes.sh" "$A/usr/share/lazaro/nubes-rclone" ||
+	die "no se pudo traer Lázaro Nubes"
 install -Dm644 "$L/usr/share/applications/lazaro-bienvenida.desktop" "$A/usr/share/applications/lazaro-bienvenida.desktop"
 install -Dm644 "$L/usr/share/lazaro/lazaro-bienvenida-sesion.desktop" "$A/usr/share/lazaro/lazaro-bienvenida-sesion.desktop"
 # Con la ruta completa: hay sesiones gráficas que no traen

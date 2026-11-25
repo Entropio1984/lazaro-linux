@@ -587,7 +587,7 @@ de **32 bits** no hay Flathub (no publica programas para 32 bits).
 
 ### Lázaro Nubes: Google Drive, OneDrive y Dropbox
 
-**Lázaro Nubes** es una aplicación hecha para Lázaro que conecta tus
+**Lázaro Nubes** es una aplicación hecha por Julián para Lázaro que conecta tus
 cuentas de **Google Drive**, **Microsoft OneDrive** y **Dropbox** y las
 muestra como carpetas normales (en `~/Nubes`, y en la barra lateral del
 explorador de archivos). También puede guardar una **copia que funciona
@@ -605,6 +605,14 @@ rclone y lo que necesita (unos 25 MB, **necesita internet**); después el
 mismo botón, o **Lázaro Nubes** en el menú, la abre directamente. Si
 una versión nueva de Lázaro trae una versión nueva de la aplicación, el
 botón la pone al día sola. Funciona en la de 64 y en la de **32 bits**.
+
+La aplicación tiene su propio repositorio,
+[lazaro-nubes](https://github.com/Entropio1984/lazaro-nubes): Lázaro no
+guarda una copia aparte, sino que toma la última versión de allí cada vez
+que se arma la ISO. Por eso viene dentro del USB en las dos ediciones (la
+Completa también), y las mejoras que se hagan en ese repositorio llegan
+solas con la siguiente ISO y con la siguiente actualización de las
+herramientas de Lázaro.
 
 <img src="docs/imagenes/nubes.png" alt="Ventana de Lázaro Nubes antes de instalar, con los botones Cerrar e Instalar" width="480">
 
@@ -1010,7 +1018,8 @@ Alpine soporta oficialmente con `setup-desktop` y, al final, se ejecuta
 `desktop-postinstall.sh` sin hacer preguntas. Ese script vive en su
 propio repositorio,
 [alpine-desktop-setup](https://github.com/Entropio1984/alpine-desktop-setup),
-y se descarga al compilar la ISO. Las dos ediciones se compilan,
+y se descarga al compilar la ISO. Lo mismo pasa con la aplicación
+[Lázaro Nubes](https://github.com/Entropio1984/lazaro-nubes). Las dos ediciones se compilan,
 prueban y publican solas en cada cambio de la rama principal.
 
 ## Cómo está armada
@@ -1019,6 +1028,7 @@ prueban y publican solas en cada cambio de la rama principal.
 |---|---|---|
 | Versión de Alpine y de Calamares | `config.env` | Un solo lugar para cambiar de versión |
 | Origen de `desktop-postinstall.sh` | `config.env` (`POSTINSTALL_URL`) | Se descarga en cada compilación |
+| Origen de Lázaro Nubes | `config.env` (`NUBES_REPO`, `NUBES_RAMA`) + `perfil/traer-nubes.sh` | Se descarga en cada compilación (ISO y paquete de herramientas) y queda en `/usr/share/lazaro/nubes-rclone` |
 | Calamares | `paquetes/calamares/APKBUILD` | Alpine no lo empaqueta, así que se compila |
 | Perfil de la ISO | `perfil/mkimg.lazaro.sh` | Lo usa `mkimage.sh` de aports |
 | Sesión live | `perfil/genapkovl-lazaro.sh` + `live/` | Usuario `lazaro`, inicio automático, Calamares |
@@ -1036,7 +1046,7 @@ prueban y publican solas en cada cambio de la rama principal.
 | Compilación automática | `.github/workflows/lazaro-iso.yml` | Estable en cada cambio; edge solo los lunes y a mano |
 | Versiones numeradas | `.github/workflows/lazaro-version.yml` + `ISO_VERSION` en `config.env` | Ver [Sacar una versión](#sacar-una-versión) |
 | Claudito Shell al día | `.github/workflows/claudito-revisar.yml` | Cada martes mira si Claudito Shell Fusion cambió en GitLab. Si cambió, prepara el cambio (PR, rama `claudito-actualizar`) con la versión nueva y sus sumas, avisa si el botón de actualizaciones de Lázaro (`lazaro.patch`) ya no encaja y lanza las pruebas. Al fusionarlo, la barra nueva llega con la siguiente versión |
-| Sello de compilación | `build.sh` → `/usr/share/lazaro/version.env` | Versión, edición, canal (`en-desarrollo`, `versión`, `prueba` o `local`), fecha, commit de la ISO y del script; lo muestra `lazaro-diagnostico` |
+| Sello de compilación | `build.sh` → `/usr/share/lazaro/version.env` | Versión, edición, canal (`en-desarrollo`, `versión`, `prueba` o `local`), fecha, commit de la ISO, del script y de Lázaro Nubes; lo muestra `lazaro-diagnostico` |
 
 ### Qué pasa al instalar
 
@@ -1131,6 +1141,12 @@ repositorio, usa una copia local:
 
 ```sh
 LAZARO_SCRIPT=../alpine-desktop-setup/desktop-postinstall.sh ./build.sh
+```
+
+Lo mismo con Lázaro Nubes (carpeta con una copia de su repositorio):
+
+```sh
+LAZARO_NUBES=../lazaro-nubes ./build.sh
 ```
 
 ## Probar
