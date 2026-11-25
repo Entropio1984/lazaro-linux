@@ -34,39 +34,58 @@ if [ -n "${LAZARO_NUBES:-}" ]; then
 	echo "Lázaro Nubes: copia local $LAZARO_NUBES"
 	origen="$LAZARO_NUBES"
 	commit="${LAZARO_NUBES_COMMIT:-copia-local}"
-elif command -v git >/dev/null 2>&1; then
-	# La última versión de la rama, y se anota qué commit era.
-	echo "Lázaro Nubes: $NUBES_REPO (rama $NUBES_RAMA)"
-	GIT_TERMINAL_PROMPT=0 git clone -q --depth 1 --branch "$NUBES_RAMA" "$NUBES_REPO" "$tmp/x" ||
-		die "no se pudo descargar $NUBES_REPO"
-	origen="$tmp/x"
-	commit="$(git -C "$tmp/x" rev-parse --short=12 HEAD 2>/dev/null)" || commit=desconocido
 else
-	# Sin git: el archivo comprimido de la rama que da GitHub.
-	url="$NUBES_REPO/archive/refs/heads/$NUBES_RAMA.tar.gz"
-	echo "Lázaro Nubes: $url"
-	curl -fsSL --retry 3 -o "$tmp/nubes.tar.gz" "$url" || die "no se pudo descargar $url"
-	mkdir "$tmp/x"
-	tar -xzf "$tmp/nubes.tar.gz" -C "$tmp/x" || die "el archivo descargado está dañado"
-	origen="$(find "$tmp/x" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-	[ -n "$origen" ] || die "el archivo descargado está vacío"
-	commit=desconocido
+	# La última versión de la rama, y se anota qué commit era. Con git
+	# (hasta 3 intentos) y, si no hay git o no responde, el archivo
+	# comprimido de la rama que da GitHub. Con tiempo límite: una conexión
+	# colgada no deja la compilación esperando para siempre.
+	commit=""
+	if command -v git >/dev/null 2>&1; then
+		echo "Lázaro Nubes: $NUBES_REPO (rama $NUBES_RAMA)"
+		for intento in 1 2 3; do
+			rm -rf "$tmp/x"
+			if GIT_TERMINAL_PROMPT=0 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=60 \
+				clone -q --depth 1 --branch "$NUBES_RAMA" "$NUBES_REPO" "$tmp/x"; then
+				commit="$(git -C "$tmp/x" rev-parse --short=12 HEAD 2>/dev/null)" || commit=desconocido
+				origen="$tmp/x"
+				break
+			fi
+			echo "Lázaro Nubes: falló la descarga con git (intento $intento de 3)" >&2
+			[ "$intento" = 3 ] || sleep 10
+		done
+	fi
+	if [ -z "$commit" ]; then
+		url="${NUBES_REPO%/}"
+		url="${url%.git}/archive/refs/heads/$NUBES_RAMA.tar.gz"
+		echo "Lázaro Nubes: $url"
+		curl -fsSL --retry 3 --connect-timeout 30 --max-time 600 -o "$tmp/nubes.tar.gz" "$url" ||
+			die "no se pudo descargar $url"
+		rm -rf "$tmp/x"
+		mkdir "$tmp/x"
+		tar -xzf "$tmp/nubes.tar.gz" -C "$tmp/x" || die "el archivo descargado está dañado"
+		origen="$(find "$tmp/x" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+		[ -n "$origen" ] || die "el archivo descargado está vacío"
+		commit=desconocido
+	fi
 fi
 
 # Lo mínimo para que el botón "Nubes" funcione.
-for f in instalar.sh nubes_rclone.py nubes_bandeja.py nubes_sinc.py; do
-	[ -f "$origen/$f" ] || die "falta $f en Lázaro Nubes"
+for f in instalar.sh nubes_rclone.py nubes_bandeja.py nubes_sinc.py nubes_tema.py; do
+	[ -f "$origen/$f" ] && [ ! -L "$origen/$f" ] || die "falta $f en Lázaro Nubes"
 done
 sh -n "$origen/instalar.sh" || die "instalar.sh de Lázaro Nubes tiene errores de sintaxis"
 
 rm -rf "$DEST"
 mkdir -p "$DEST"
 for f in "$origen"/*; do
+	# Solo archivos normales: un enlace podría apuntar fuera de la
+	# descarga (por ejemplo a la llave que firma los paquetes).
+	[ ! -L "$f" ] || { echo "Lázaro Nubes: se omite el enlace $(basename "$f")" >&2; continue; }
 	[ -f "$f" ] || continue
 	case "$f" in *.pyc | *.tmp) continue ;; esac
 	cp "$f" "$DEST/"
 done
 chmod 755 "$DEST/instalar.sh" "$DEST/nubes_rclone.py" "$DEST/nubes_bandeja.py" "$DEST/nubes_sinc.py"
-[ ! -f "$DEST/nubes_tema.py" ] || chmod 644 "$DEST/nubes_tema.py"
+chmod 644 "$DEST/nubes_tema.py"
 printf '%s\n' "$commit" > "$DEST/.commit"
 echo "Lázaro Nubes: commit $commit ($(ls "$DEST" | wc -l) archivos)"
