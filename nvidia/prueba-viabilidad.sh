@@ -56,7 +56,7 @@ pasos=""
 
 msg() { printf '\n==> %s\n' "$*"; printf '\n==> %s\n' "$*" >> "$INFORME"; }
 anota() { printf '%s\n' "$*"; printf '%s\n' "$*" >> "$INFORME"; }
-die() { printf 'ERROR: %s\n' "$*" >&2; [ ! -w "$(dirname "$INFORME")" ] || printf 'ERROR: %s\n' "$*" >> "$INFORME"; exit 1; }
+die() { printf 'ERROR: %s\n' "$*" >&2; { printf 'ERROR: %s\n' "$*" >> "$INFORME"; } 2>/dev/null || true; exit 1; }
 resultado() { anota "RESULTADO $1: $2"; }
 
 # --- Comprobaciones -------------------------------------------------------
@@ -127,7 +127,8 @@ paso_modulo() {
 	inicio=$(date +%s)
 	make -C "$fuente" SYSSRC="/lib/modules/$kver/build" -j"$(nproc)" modules \
 		> "$TRABAJO/compilacion.log" 2>&1 || {
-		grep -m 5 -A 3 'error:' "$TRABAJO/compilacion.log" | tee -a "$INFORME"
+		errores=$(grep -m 5 -A 3 'error:' "$TRABAJO/compilacion.log" || tail -n 40 "$TRABAJO/compilacion.log")
+		anota "$errores"
 		resultado modulo-compila FALLA
 		anota "Si el error es de una función del kernel (argumentos, tipos), esta versión del controlador es anterior al kernel $kver: prueba una más nueva con --version."
 		die "falló la compilación (ver $TRABAJO/compilacion.log)"
@@ -418,6 +419,7 @@ RUN="$TRABAJO/NVIDIA-Linux-x86_64-$NVIDIA_VERSION.run"
 EXTRAIDO="$TRABAJO/NVIDIA-Linux-x86_64-$NVIDIA_VERSION"
 [ -n "$pasos" ] || pasos="modulo raiz espacio-usuario gcompat xorg"
 
+[ "$(id -u)" -eq 0 ] || die "hay que ejecutarlo como root"
 mkdir -p "$(dirname "$INFORME")"
 comprobar
 [ -n "$modulo" ] || modulo="$(modulo_por_tarjeta)"
