@@ -56,7 +56,7 @@ pasos=""
 
 msg() { printf '\n==> %s\n' "$*"; printf '\n==> %s\n' "$*" >> "$INFORME"; }
 anota() { printf '%s\n' "$*"; printf '%s\n' "$*" >> "$INFORME"; }
-die() { printf 'ERROR: %s\n' "$*" >&2; printf 'ERROR: %s\n' "$*" >> "$INFORME"; exit 1; }
+die() { printf 'ERROR: %s\n' "$*" >&2; [ ! -w "$(dirname "$INFORME")" ] || printf 'ERROR: %s\n' "$*" >> "$INFORME"; exit 1; }
 resultado() { anota "RESULTADO $1: $2"; }
 
 # --- Comprobaciones -------------------------------------------------------
@@ -127,8 +127,9 @@ paso_modulo() {
 	inicio=$(date +%s)
 	make -C "$fuente" SYSSRC="/lib/modules/$kver/build" -j"$(nproc)" modules \
 		> "$TRABAJO/compilacion.log" 2>&1 || {
-		tail -n 40 "$TRABAJO/compilacion.log" >> "$INFORME"
+		grep -m 5 -A 3 'error:' "$TRABAJO/compilacion.log" | tee -a "$INFORME"
 		resultado modulo-compila FALLA
+		anota "Si el error es de una función del kernel (argumentos, tipos), esta versión del controlador es anterior al kernel $kver: prueba una más nueva con --version."
 		die "falló la compilación (ver $TRABAJO/compilacion.log)"
 	}
 	resultado modulo-compila "PASA en $(( $(date +%s) - inicio )) s con gcc $(gcc -dumpversion) y musl"
