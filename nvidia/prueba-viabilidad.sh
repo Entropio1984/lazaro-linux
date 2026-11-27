@@ -243,9 +243,18 @@ paso_raiz() {
 	inicio=$(date +%s)
 	# shellcheck disable=SC2086
 	: > "$TRABAJO/debootstrap.log"
-	con_avance "$TRABAJO/debootstrap.log" debootstrap --variant=minbase $llave \
+	# Hasta 3 intentos: si falla la descarga de un paquete, debootstrap se
+	# detiene al final, y al repetir reutiliza lo ya bajado.
+	intento=1
+	until con_avance "$TRABAJO/debootstrap.log" debootstrap --variant=minbase $llave \
 		--include=xserver-xorg-core,xserver-xorg-input-libinput,libglvnd0,libgl1,libglx0,libegl1,libgles2,libvulkan1,mesa-utils,vulkan-tools,x11-xserver-utils,kmod,pkg-config,xz-utils,zstd \
-		"$DEBIAN_SUITE" "$RAIZ" "$DEBIAN_MIRROR" || {
+		"$DEBIAN_SUITE" "$RAIZ" "$DEBIAN_MIRROR"; do
+		[ "$intento" -lt 3 ] || break
+		intento=$((intento + 1))
+		anota "debootstrap falló; intento $intento de 3"
+		sleep 5
+	done
+	[ -x "$RAIZ/usr/bin/Xorg" ] || {
 		tail -n 40 "$TRABAJO/debootstrap.log" >> "$INFORME" 2>/dev/null || true
 		resultado raiz FALLA
 		die "falló debootstrap (ver $TRABAJO/debootstrap.log)"
