@@ -56,8 +56,24 @@ pasos=""
 
 msg() { printf '\n==> %s\n' "$*"; printf '\n==> %s\n' "$*" >> "$INFORME"; }
 anota() { printf '%s\n' "$*"; printf '%s\n' "$*" >> "$INFORME"; }
-die() { printf 'ERROR: %s\n' "$*" >&2; printf 'ERROR: %s\n' "$*" >> "$INFORME"; exit 1; }
+die() { printf 'ERROR: %s\n' "$*" >&2; { printf 'ERROR: %s\n' "$*" >> "$INFORME"; } 2>/dev/null || true; exit 1; }
 resultado() { anota "RESULTADO $1: $2"; }
+
+# con_avance LOG ORDEN...: ejecuta ORDEN guardando su salida en LOG y,
+# mientras dura, muestra cada 15 s la última línea del log, para que la
+# pantalla no parezca colgada. Devuelve el estado de ORDEN.
+con_avance() {
+	log="$1"; shift
+	"$@" >> "$log" 2>&1 &
+	pid=$!
+	t0=$(date +%s)
+	while kill -0 "$pid" 2>/dev/null; do
+		sleep 15
+		kill -0 "$pid" 2>/dev/null || break
+		printf '   [%s s] %s\n' "$(( $(date +%s) - t0 ))" "$(tail -n 1 "$log" 2>/dev/null | cut -c1-90)"
+	done
+	wait "$pid"
+}
 
 # --- Comprobaciones -------------------------------------------------------
 
@@ -127,8 +143,10 @@ paso_modulo() {
 	inicio=$(date +%s)
 	make -C "$fuente" SYSSRC="/lib/modules/$kver/build" -j"$(nproc)" modules \
 		> "$TRABAJO/compilacion.log" 2>&1 || {
-		tail -n 40 "$TRABAJO/compilacion.log" >> "$INFORME"
+		errores=$(grep -m 5 -A 3 'error:' "$TRABAJO/compilacion.log" || tail -n 40 "$TRABAJO/compilacion.log")
+		anota "$errores"
 		resultado modulo-compila FALLA
+		anota "Si el error es de una función del kernel (argumentos, tipos), esta versión del controlador es anterior al kernel $kver: prueba una más nueva con --version."
 		die "falló la compilación (ver $TRABAJO/compilacion.log)"
 	}
 	resultado modulo-compila "PASA en $(( $(date +%s) - inicio )) s con gcc $(gcc -dumpversion) y musl"
@@ -224,9 +242,19 @@ paso_raiz() {
 	mkdir -p "$RAIZ" "$TRABAJO"
 	inicio=$(date +%s)
 	# shellcheck disable=SC2086
-	debootstrap --variant=minbase $llave \
+	: > "$TRABAJO/debootstrap.log"
+	# Hasta 3 intentos: si falla la descarga de un paquete, debootstrap se
+	# detiene al final, y al repetir reutiliza lo ya bajado.
+	intento=1
+	until con_avance "$TRABAJO/debootstrap.log" debootstrap --variant=minbase $llave \
 		--include=xserver-xorg-core,xserver-xorg-input-libinput,libglvnd0,libgl1,libglx0,libegl1,libgles2,libvulkan1,mesa-utils,vulkan-tools,x11-xserver-utils,kmod,pkg-config,xz-utils,zstd \
-		"$DEBIAN_SUITE" "$RAIZ" "$DEBIAN_MIRROR" > "$TRABAJO/debootstrap.log" 2>&1 || {
+		"$DEBIAN_SUITE" "$RAIZ" "$DEBIAN_MIRROR"; do
+		[ "$intento" -lt 3 ] || break
+		intento=$((intento + 1))
+		anota "debootstrap falló; intento $intento de 3"
+		sleep 5
+	done
+	[ -x "$RAIZ/usr/bin/Xorg" ] || {
 		tail -n 40 "$TRABAJO/debootstrap.log" >> "$INFORME" 2>/dev/null || true
 		resultado raiz FALLA
 		die "falló debootstrap (ver $TRABAJO/debootstrap.log)"
@@ -247,7 +275,8 @@ paso_espacio_usuario() {
 		--no-install-libglvnd --no-x-check --no-nouveau-check \
 		--no-distro-scripts --no-systemd --no-rpms --no-backup \
 		--no-check-for-alternate-installs
-	if en_raiz /bin/sh /root/nvidia.run "$@" > "$TRABAJO/instalador.log" 2>&1; then
+	: > "$TRABAJO/instalador.log"
+	if con_avance "$TRABAJO/instalador.log" en_raiz /bin/sh /root/nvidia.run "$@"; then
 		resultado espacio-usuario PASA
 	else
 		cp "$RAIZ/var/log/nvidia-installer.log" "$TRABAJO/" 2>/dev/null || true
@@ -368,11 +397,11 @@ prueba_flatpak() {
 	apk add -q flatpak || { resultado flatpak "FALLA (no se pudo instalar flatpak)"; return 0; }
 	flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 	ext="org.freedesktop.Platform.GL.nvidia-$(echo "$NVIDIA_VERSION" | tr . -)"
-	if ! flatpak install -y --noninteractive flathub "$ext" >> "$TRABAJO/flatpak.log" 2>&1; then
+	if ! con_avance "$TRABAJO/flatpak.log" flatpak install -y --noninteractive flathub "$ext"; then
 		resultado flatpak "FALLA (Flathub no tiene $ext)"
 		return 0
 	fi
-	flatpak install -y --noninteractive flathub "org.freedesktop.Sdk//$FLATPAK_RAMA" >> "$TRABAJO/flatpak.log" 2>&1 || true
+	con_avance "$TRABAJO/flatpak.log" flatpak install -y --noninteractive flathub "org.freedesktop.Sdk//$FLATPAK_RAMA" || true
 	vk=$(flatpak run --command=vulkaninfo "org.freedesktop.Sdk//$FLATPAK_RAMA" --summary 2>&1 || true)
 	printf '%s\n' "$vk" | grep -E 'deviceName|driverName' >> "$INFORME" || true
 	if printf '%s\n' "$vk" | grep -q 'driverName *= *NVIDIA'; then
@@ -417,6 +446,7 @@ RUN="$TRABAJO/NVIDIA-Linux-x86_64-$NVIDIA_VERSION.run"
 EXTRAIDO="$TRABAJO/NVIDIA-Linux-x86_64-$NVIDIA_VERSION"
 [ -n "$pasos" ] || pasos="modulo raiz espacio-usuario gcompat xorg"
 
+[ "$(id -u)" -eq 0 ] || die "hay que ejecutarlo como root"
 mkdir -p "$(dirname "$INFORME")"
 comprobar
 [ -n "$modulo" ] || modulo="$(modulo_por_tarjeta)"
