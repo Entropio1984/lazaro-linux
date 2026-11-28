@@ -109,7 +109,13 @@ descargar() {
 	apk add -q wget xz zstd tar >/dev/null 2>&1 || true
 	if [ ! -s "$RUN" ]; then
 		msg "Descargando el controlador $NVIDIA_VERSION"
-		wget -O "$RUN.part" \
+		# Si la conexión se queda colgada, a los 30 s sin datos lo vuelve a
+		# intentar y sigue donde iba (-c), hasta 10 veces. Las opciones
+		# largas son del wget de GNU; el de busybox solo entiende -T.
+		reintentos="-T 30"
+		wget --version 2>/dev/null | grep -q GNU && reintentos="--timeout=30 --tries=10 --waitretry=5"
+		# shellcheck disable=SC2086
+		wget -c $reintentos -O "$RUN.part" \
 			"https://us.download.nvidia.com/XFree86/Linux-x86_64/$NVIDIA_VERSION/NVIDIA-Linux-x86_64-$NVIDIA_VERSION.run" \
 			|| die "no se pudo descargar la versión $NVIDIA_VERSION (¿existe?)"
 		mv "$RUN.part" "$RUN"
