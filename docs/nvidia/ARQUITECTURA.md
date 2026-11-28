@@ -143,7 +143,7 @@ En Lázaro (como usuario normal, con `doas` configurado):
 doas apk add alpine-sdk linux-lts-dev
 abuild-keygen -a -i -n
 cd lazaro-linux/paquetes/nvidia-open
-abuild checksum && abuild -r
+abuild -r
 doas apk add --allow-untrusted ~/packages/paquetes/x86_64/nvidia-open-src-*.apk ~/packages/paquetes/x86_64/nvidia-open-firmware-*.apk
 akms status
 ```

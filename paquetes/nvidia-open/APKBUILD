@@ -88,4 +88,7 @@ _firmware() {
 		"$subpkgdir"/usr/share/licenses/$pkgname-firmware/LICENSE
 }
 
-sha512sums=""
+sha512sums="
+9c960eea40ec043874852fd81002fbed8f64c467842387c99f0a40a0de7cf9d9ce891ae03d34c0f9983031e268a764ed01e8370457d2067c4d7d228e15ae2569  NVIDIA-Linux-x86_64-620.73.04.run
+4319ebfbd992caeec6a2ba5deac476bded53aeb3883014d2aae3a40fe55409ba28b9d129d3015c4c09b381195c2bb13549083c373f9d8f59d50f5444f90d6e13  nvidia-open-src.modprobe
+"
