@@ -109,15 +109,47 @@ salvo la GT 540M, que no lo soporta.
 - Se extraen del mismo `.run` que el espacio de usuario: **el módulo y las
   bibliotecas tienen que ser exactamente de la misma versión**, o nada
   arranca.
-- Se compilan para cada kernel instalado (`linux-lts` y `linux-lazaro`)
-  contra su paquete `-dev`. Para recompilar al actualizar el kernel, el
-  candidato es `akms` (soporte de módulos externos de Alpine); si no
-  sirve, un disparador de `apk` propio como el de `lazaro-kernel`.
-- El firmware GSP (`gsp_*.bin`) va en `/lib/firmware/nvidia/<versión>/`.
-  No es el de `linux-firmware-nvidia`, que es el de `nouveau`.
-- `nouveau` en la lista negra, `nvidia-drm modeset=1 fbdev=1`, y los
+- Paquete `paquetes/nvidia-open` (Turing y posteriores), con el mismo
+  esquema que `broadcom-wl`, que ya usa `akms` en Alpine 3.24:
+  - `nvidia-open-src`: el código de `kernel-open` y su `AKMBUILD`. `akms`
+    lo compila para cada kernel instalado (`linux-lts` y `linux-lazaro`)
+    y lo vuelve a compilar solo cuando el kernel se actualiza.
+    Es el paquete que se instala: trae el firmware como dependencia.
+  - `nvidia-open-firmware`: el firmware GSP (`gsp_*.bin`) en
+    `/lib/firmware/nvidia/<versión>/`. No es el de
+    `linux-firmware-nvidia`, que es el de `nouveau`.
+  - Instalarlo **no activa NVIDIA**: deja los módulos en la lista negra y
+    `nouveau` sigue mandando. Sin el espacio de usuario del sysroot, el
+    escritorio musl se quedaría sin aceleración (sección 6).
+- La activación (paso 4) cambia eso: `nouveau` a la lista negra, los
+  módulos de NVIDIA fuera de ella, `nvidia-drm modeset=1 fbdev=1`, y los
   módulos en el initramfs (`mkinitfs`) para que la consola use la
-  resolución nativa desde el arranque.
+  resolución nativa desde el arranque. No hace falta tocar la línea del
+  kernel en Limine ni en GRUB: todo va por `modprobe.d`.
+- `lazaro-nvidia --rama` aplica la tabla de la sección 3 a la tarjeta del
+  equipo (la generación la decide `lazaro-graficas`). Solo la combinación
+  de las Turing y posteriores con la 620.73.04 está probada, y solo en la
+  RTX 3060. Si el equipo tiene varias NVIDIA a las que no les toca la
+  misma rama, o no es x86_64 (la ISO de 32 bits), queda `nouveau`.
+- Pendiente: los módulos cerrados de la 580 (Maxwell, Pascal y Volta), con
+  una versión de la 580 que compile en el 6.18, y la 470 (Kepler) con sus
+  parches.
+
+#### Probar el paquete en el equipo
+
+En Lázaro (como usuario normal, con `doas` configurado):
+
+```
+doas apk add alpine-sdk linux-lts-dev
+abuild-keygen -a -i -n
+cd lazaro-linux/paquetes/nvidia-open
+abuild checksum && abuild -r
+doas apk add --allow-untrusted ~/packages/paquetes/x86_64/nvidia-open-src-*.apk ~/packages/paquetes/x86_64/nvidia-open-firmware-*.apk
+akms status
+```
+
+`akms status` tiene que mostrar `nvidia-open` como `installed` para el
+kernel en uso, y `/lib/modules/$(uname -r)` tiene que tener `nvidia.ko`.
 
 ### 4.2 Sysroot glibc
 

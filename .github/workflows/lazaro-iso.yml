@@ -532,6 +532,10 @@ jobs:
           echo "ALPINE_TAG=$t" >> "$GITHUB_ENV"
       - run: sh pruebas/graficas.sh
       - run: sh pruebas/recomendacion.sh
+      # lazaro-nvidia: qué controlador de NVIDIA le toca a cada generación
+      # (docs/nvidia/ARQUITECTURA.md), también con el busybox de Alpine.
+      - run: sh pruebas/nvidia.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh pruebas/nvidia.sh
       # lazaro-controladores, también con el busybox de Alpine (su awk,
       # tar y dd son los que usa la ISO).
       - run: sh pruebas/controladores.sh

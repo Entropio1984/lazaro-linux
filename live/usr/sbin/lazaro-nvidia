@@ -1,0 +1,118 @@
+#!/bin/sh
+# lazaro-nvidia: decide qué controlador de NVIDIA le corresponde a la
+# tarjeta del equipo (tabla de docs/nvidia/ARQUITECTURA.md, sección 3).
+#
+# No instala nada todavía: es la tabla que usarán el instalador y
+# lazaro-controladores (paso 4 del plan). La generación la decide
+# lazaro-graficas, con las mismas reglas que en la sesión live.
+#
+# Uso:
+#   lazaro-nvidia --rama                 la tarjeta de este equipo
+#   lazaro-nvidia --rama GENERACION[,GENERACION...] [OPTIMUS]
+#        para una generación de lazaro-graficas (moderna, volta, pascal,
+#        maxwell, kepler, fermi, tesla, anterior, desconocida, ninguna) y
+#        si es un portátil Optimus (si/no). Con varias NVIDIA se pasan todas
+#        sus generaciones: si no les toca la misma rama, queda nouveau.
+#
+# Los controladores de NVIDIA son solo para x86_64: en otra arquitectura
+# (la ISO de 32 bits) siempre queda nouveau. LAZARO_ARCH reemplaza a
+# uname -m en las pruebas.
+#
+# Salida (variables de shell):
+#   CONTROLADOR=propietario|nouveau|ninguno
+#   MODULO=abierto|cerrado|        (solo con propietario)
+#   RAMA=actual|580|470|           (solo con propietario)
+#   VERSION=x.y.z|                 versión del .run, si ya se sabe
+#   PAQUETE=nvidia-open-src|...|   paquete que hay que instalar (trae el
+#                                  firmware como dependencia), si ya existe
+#   ESTADO=probada|sin-probar|     si esa rama y versión ya se probaron en
+#                                  al menos una tarjeta (moderna: RTX 3060)
+#   MOTIVO=texto corto
+
+set -eu
+
+# Versiones: la única probada de verdad es la de las Turing y posteriores
+# (RTX 3060, kernel 6.18, 2026-11-27). Las demás hay que elegirlas y
+# probarlas con nvidia/prueba-viabilidad.sh antes de activarlas.
+VERSION_ACTUAL=620.73.04
+VERSION_580=""          # la 580.95.05 no compila en el 6.18; falta una 580 más nueva
+VERSION_470=470.256.02  # la última de la 470; necesita parches para kernels nuevos
+
+ARCH="${LAZARO_ARCH:-$(uname -m)}"
+
+decidir_una() { # GENERACION OPTIMUS
+	gen="$1"; optimus="${2:-no}"
+	CONTROLADOR=nouveau MODULO="" RAMA="" VERSION="" PAQUETE="" ESTADO="" MOTIVO=""
+	if [ "$gen" = ninguna ] || [ -z "$gen" ]; then
+		CONTROLADOR=ninguno MOTIVO=sin-nvidia
+	elif [ "$optimus" = si ]; then
+		# Dos GPU: hace falta PRIME render offload y no está probado.
+		MOTIVO=optimus
+	else
+		case "$gen" in
+			moderna)
+				CONTROLADOR=propietario MODULO=abierto RAMA=actual
+				VERSION=$VERSION_ACTUAL PAQUETE=nvidia-open-src ESTADO=probada
+				MOTIVO=turing-o-posterior ;;
+			volta|pascal|maxwell)
+				CONTROLADOR=propietario MODULO=cerrado RAMA=580
+				VERSION=$VERSION_580 ESTADO=sin-probar
+				MOTIVO=ultima-rama-580 ;;
+			kepler)
+				CONTROLADOR=propietario MODULO=cerrado RAMA=470
+				VERSION=$VERSION_470 ESTADO=sin-probar
+				MOTIVO=legacy-470-solo-xorg ;;
+			fermi|tesla|anterior)
+				# La 390 y anteriores: sin soporte, sin Vulkan y sin PRIME.
+				MOTIVO=sin-rama-utilizable ;;
+			*)
+				MOTIVO=generacion-desconocida ;;
+		esac
+	fi
+	if [ "$CONTROLADOR" = propietario ] && [ "$ARCH" != x86_64 ]; then
+		CONTROLADOR=nouveau MODULO="" RAMA="" VERSION="" PAQUETE="" ESTADO=""
+		MOTIVO=solo-x86_64
+	fi
+}
+
+decidir() { # GENERACIONES OPTIMUS
+	lista="$(echo "$1" | tr ',' ' ')"
+	primera="" mezcla=no
+	for g in $lista; do
+		decidir_una "$g" "${2:-no}"
+		clave="$CONTROLADOR/$MODULO/$RAMA"
+		if [ -z "$primera" ]; then primera="$clave"; elif [ "$clave" != "$primera" ]; then mezcla=si; fi
+	done
+	if [ -z "$lista" ]; then
+		decidir_una ninguna "${2:-no}"
+	elif [ "$mezcla" = si ]; then
+		# Un solo módulo de NVIDIA a la vez: sin rama común, nouveau.
+		CONTROLADOR=nouveau MODULO="" RAMA="" VERSION="" PAQUETE="" ESTADO=""
+		MOTIVO=generaciones-mezcladas
+	fi
+	cat <<-EOF2
+	CONTROLADOR=$CONTROLADOR
+	MODULO=$MODULO
+	RAMA=$RAMA
+	VERSION=$VERSION
+	PAQUETE=$PAQUETE
+	ESTADO=$ESTADO
+	MOTIVO=$MOTIVO
+	EOF2
+}
+
+de_este_equipo() {
+	tmp="$(mktemp)"
+	LAZARO_GRAFICAS="$tmp" lazaro-graficas --sin-cargar >/dev/null 2>&1 || true
+	GENERACION="" GENERACIONES="" OPTIMUS=""
+	# shellcheck disable=SC1090
+	. "$tmp"
+	rm -f "$tmp"
+	decidir "${GENERACIONES:-${GENERACION:-ninguna}}" "${OPTIMUS:-no}"
+}
+
+case "${1:-}" in
+	--rama)
+		if [ $# -ge 2 ]; then decidir "$2" "${3:-no}"; else de_este_equipo; fi ;;
+	*) echo "uso: $0 --rama [GENERACION [OPTIMUS]]" >&2; exit 2 ;;
+esac
