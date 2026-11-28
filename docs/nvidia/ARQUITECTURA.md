@@ -1,9 +1,9 @@
 # Controlador propietario de NVIDIA en Lázaro Linux
 
-Estado: **borrador del paso 1 (prueba de viabilidad)**. Este documento fija
-la arquitectura que se va a probar y qué tiene que salir de la prueba para
-confirmarla o descartarla. Se actualiza con los resultados reales de
-`nvidia/prueba-viabilidad.sh` en los equipos de prueba.
+Estado: **opción A confirmada en la RTX 3060** (27-11-2026, ver la
+sección 7). Este documento fija la arquitectura y los criterios con que se
+probó. Se actualiza con los resultados reales de
+`nvidia/prueba-viabilidad.sh` en cada equipo de prueba.
 
 ## 1. El problema de fondo
 
@@ -182,3 +182,43 @@ el 4 o el 5, se pasa a la opción C.
 - Las ramas 470 y 390 ya no reciben correcciones de NVIDIA: cada kernel
   LTS nuevo puede romper la compilación del módulo de la 470.
 - Secure Boot exigiría firmar los módulos. Queda fuera por ahora.
+- **Escritorios que componen con OpenGL** (Plasma con KWin, GNOME con
+  Mutter): su gestor de ventanas es un programa musl, así que compone con
+  `llvmpipe` aunque Xorg sea el de NVIDIA. En la prueba, Plasma con el
+  módulo de NVIDIA cargado abrió "excesivamente lento". XFCE, MATE, LXQt e
+  IceWM componen con XRender o no componen, y no tienen ese problema. Para
+  Plasma y GNOME hay dos salidas: llevar KWin o Mutter al sysroot (como el
+  compositor Wayland de 4.4), o que el instalador recomiende otro
+  escritorio cuando active el controlador propietario.
+- Con el módulo de NVIDIA instalado, `nouveau` no se carga: si el Xorg del
+  sysroot no arranca, el escritorio musl queda sin aceleración. La vuelta
+  atrás automática a `nouveau` (paso 4 del plan) es obligatoria.
+
+## 7. Resultados
+
+### RTX 3060 (GA106, Ampere), Alpine v3.24, kernel 6.18.65-0-lts
+
+| Criterio | Resultado |
+|---|---|
+| 1. Módulo abierto compila y carga | **Pasa** con la 620.73.04: 35 s con gcc 15.2.0 y musl. La 580.95.05 **no** compila: es anterior al 6.18, que cambió `pci_resize_resource` a 4 argumentos. |
+| 2. `nvidia-smi` en el sysroot | **Pasa** |
+| 3. Xorg del sysroot con `nvidia_drv.so` | **Pasa** |
+| 4. OpenGL y Vulkan en el sysroot | **Pasan**, los dos con NVIDIA |
+| 5. Cliente musl en ese Xorg | **Pasa** (`xdpyinfo` de Alpine) |
+| 6. Flatpak con `GL.nvidia` | No probado todavía |
+
+Anotaciones:
+
+- Las aplicaciones musl ven `llvmpipe (LLVM 22.1.3, 256 bits)`, como se
+  esperaba.
+- **`nvidia-smi` funciona con `gcompat`**, sin glibc. Es más de lo que se
+  esperaba (sección 1). No cambia la decisión, porque Xorg y las
+  bibliotecas de OpenGL son mucho más exigentes, pero vale la pena probar
+  más adelante hasta dónde llega `gcompat`, por ejemplo con
+  `nvidia-persistenced` o `libcuda`.
+- El sysroot Debian trixie ocupa 520 MB. Tardó 67 minutos por la lentitud
+  de `deb.debian.org` desde el equipo de prueba. Para la versión final
+  conviene un espejo cercano o un sysroot ya preparado que se descargue de
+  una vez.
+- La versión del controlador no puede ser fija: tiene que salir de una
+  tabla por kernel y rama, o de la última de producción de NVIDIA.
