@@ -185,7 +185,9 @@ el 4 o el 5, se pasa a la opción C.
 - **Escritorios que componen con OpenGL** (Plasma con KWin, GNOME con
   Mutter): su gestor de ventanas es un programa musl, así que compone con
   `llvmpipe` aunque Xorg sea el de NVIDIA. En la prueba, Plasma con el
-  módulo de NVIDIA cargado abrió "excesivamente lento". XFCE, MATE, LXQt e
+  módulo de NVIDIA cargado (sesión Wayland) abrió "excesivamente lento":
+  KWin no encuentra GBM ni EGL de Mesa para la tarjeta y compone por
+  software. XFCE, MATE, LXQt e
   IceWM componen con XRender o no componen, y no tienen ese problema. Para
   Plasma y GNOME hay dos salidas: llevar KWin o Mutter al sysroot (como el
   compositor Wayland de 4.4), o que el instalador recomiende otro
@@ -211,13 +213,18 @@ Anotaciones:
 
 - Las aplicaciones musl ven `llvmpipe (LLVM 22.1.3, 256 bits)`, como se
   esperaba.
-- **`nvidia-smi` funciona con `gcompat`**, sin glibc. Es más de lo que se
+- Xorg del sysroot: `nvidia_drv.so` con aceleración 2D, monitor a
+  2560x1440 en DFP-1, OpenGL 4.6.0 NVIDIA 620.73.04. Solo avisos menores
+  (sin D-Bus del sistema ni `acpid` dentro del sysroot).
+- **`nvidia-smi` funciona con `gcompat`**, sin glibc (aunque informa
+  `CUDA UMD Version: N/A`, porque solo se copió `libnvidia-ml`). Es más de lo que se
   esperaba (sección 1). No cambia la decisión, porque Xorg y las
   bibliotecas de OpenGL son mucho más exigentes, pero vale la pena probar
   más adelante hasta dónde llega `gcompat`, por ejemplo con
   `nvidia-persistenced` o `libcuda`.
 - El sysroot Debian trixie ocupa 520 MB. Tardó 67 minutos por la lentitud
-  de `deb.debian.org` desde el equipo de prueba. Para la versión final
+  de `deb.debian.org` desde el equipo de prueba, y el primer intento de
+  `debootstrap` falló por una descarga (el reintento lo resolvió). Para la versión final
   conviene un espejo cercano o un sysroot ya preparado que se descargue de
   una vez.
 - La versión del controlador no puede ser fija: tiene que salir de una
