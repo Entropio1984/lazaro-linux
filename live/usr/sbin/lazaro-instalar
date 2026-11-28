@@ -573,6 +573,127 @@ paso_broadcom() { # RAIZ
 	echo "LAZARO-BROADCOM-OK ${bw_ko#"$1"}"
 }
 
+# --- NVIDIA con el controlador propietario -------------------------------
+# docs/nvidia/ARQUITECTURA.md: solo en la Completa de 64 bits, que trae el
+# sysroot glibc (carpeta nvidia/ de la ISO) y el paquete nvidia-open-src.
+# Solo con la rama que lazaro-nvidia marca como lista (Turing y
+# posteriores) y con los escritorios que usan LightDM y Xorg: los demás
+# (GNOME, Plasma, Sway, XFCE Wayland) componen con la GPU desde un
+# proceso musl y siguen con nouveau. Si algo falla, queda nouveau; en el
+# sistema instalado, lazaro-nvidia.initd vuelve solo a nouveau si el
+# controlador no arranca.
+nvidia_raiz_iso() { # el .tar.zst del sysroot en la ISO, o nada
+	nr_iso="$(repo_iso)"
+	[ -n "$nr_iso" ] || return 1
+	for nr_f in "${nr_iso%/apks}"/nvidia/lazaro-nvidia-raiz-*.tar.zst; do
+		[ -f "$nr_f" ] && { echo "$nr_f"; return 0; }
+	done
+	return 1
+}
+
+paso_nvidia() { # RAIZ ESCRITORIO
+	[ "$BITS32" = no ] || return 0
+	[ "$LAZARO_EDICION" = completa ] || return 0
+	command -v lazaro-nvidia >/dev/null 2>&1 || return 0
+	# Las pruebas (QEMU no tiene una NVIDIA) lo fuerzan desde el menú: se
+	# instala todo como para una Turing o posterior, y en el sistema
+	# instalado lazaro-nvidia.initd tiene que volver solo a nouveau.
+	if grep -qw 'lazaro.nvidia-propietario=forzar' /proc/cmdline 2>/dev/null; then
+		log "Prueba: se simula una NVIDIA Turing o posterior."
+		nv_tabla="$(LAZARO_ARCH=x86_64 lazaro-nvidia --rama moderna 2>/dev/null)" || return 0
+	else
+		nv_tabla="$(lazaro-nvidia --rama 2>/dev/null)" || return 0
+	fi
+	nv_ctl=$(printf '%s\n' "$nv_tabla" | sed -n 's/^CONTROLADOR=//p')
+	nv_paq=$(printf '%s\n' "$nv_tabla" | sed -n 's/^PAQUETE=//p')
+	nv_ver=$(printf '%s\n' "$nv_tabla" | sed -n 's/^VERSION=//p')
+	nv_motivo=$(printf '%s\n' "$nv_tabla" | sed -n 's/^MOTIVO=//p')
+	[ "$nv_ctl" != ninguno ] || return 0
+	if [ "$nv_ctl" != propietario ] || [ "$nv_paq" != nvidia-open-src ]; then
+		log "NVIDIA: queda nouveau ($nv_motivo)."
+		echo "LAZARO-NVIDIA-NOUVEAU $nv_motivo"
+		return 0
+	fi
+	case "$2" in
+		xfce|mate|lxqt|icewm) ;;
+		*)
+			log "NVIDIA: el controlador propietario funciona con XFCE, MATE, LXQt o IceWM; con '$2' queda nouveau."
+			echo "LAZARO-NVIDIA-NOUVEAU escritorio-$2"
+			return 0 ;;
+	esac
+	nv_tar="$(nvidia_raiz_iso)" || {
+		log "NVIDIA: la ISO no trae el sysroot; queda nouveau."
+		echo "LAZARO-NVIDIA-NOUVEAU sin-sysroot"
+		return 0
+	}
+	log "NVIDIA: se instala el controlador propietario $nv_ver (se compila el módulo y se copia el sysroot, tarda unos minutos)..."
+	avance_iniciar "el controlador de NVIDIA" "$1"
+	repos_solo_usb "$1" || true
+	nv_rc=0
+	en_destino "$1" apk add --no-progress nvidia-open-src zstd </dev/null >>"$LOG" 2>&1 || nv_rc=$?
+	nv_src=/usr/src/nvidia-open-$nv_ver
+	[ "$nv_rc" != 0 ] || [ -f "$1$nv_src/Makefile" ] || nv_rc=1
+	# El módulo se compila aquí directo, como broadcom-wl (akms no puede
+	# dentro del chroot del instalador); akms lo recompila solo con cada
+	# kernel nuevo en el sistema instalado.
+	nv_ok=""
+	if [ "$nv_rc" = 0 ]; then
+		nv_dev=""
+		for nv_f in "$1"/usr/share/kernel/*/kernel.release; do
+			[ -f "$nv_f" ] || continue
+			nv_dev="$nv_dev linux-$(basename "$(dirname "$nv_f")")-dev"
+		done
+		# shellcheck disable=SC2086
+		en_destino "$1" apk add --no-progress -t .lazaro-nvidia-compilar build-base $nv_dev </dev/null >>"$LOG" 2>&1 || nv_rc=$?
+	fi
+	if [ "$nv_rc" = 0 ]; then
+		for nv_k in "$1"/lib/modules/*; do
+			[ -d "$nv_k/build" ] || [ -L "$nv_k/build" ] || continue
+			nv_kv="${nv_k##*/}"
+			nv_c=0
+			en_destino "$1" sh -c "rm -rf /tmp/lazaro-nv && cp -a '$nv_src' /tmp/lazaro-nv && cd /tmp/lazaro-nv && make -j\$(nproc) SYSSRC='/lib/modules/$nv_kv/build' modules && mkdir -p '/lib/modules/$nv_kv/extra/nvidia' && install -m 644 nvidia.ko nvidia-modeset.ko nvidia-drm.ko nvidia-uvm.ko '/lib/modules/$nv_kv/extra/nvidia/' && depmod -a '$nv_kv'" </dev/null >>"$LOG" 2>&1 || nv_c=$?
+			rm -rf "$1/tmp/lazaro-nv"
+			if [ "$nv_c" = 0 ] && [ -f "$nv_k/extra/nvidia/nvidia.ko" ]; then
+				nv_ok="$nv_ok $nv_kv"
+			else
+				log "Aviso: falló la compilación del módulo de NVIDIA para el kernel $nv_kv (código $nv_c)."
+			fi
+		done
+		en_destino "$1" apk del --no-progress .lazaro-nvidia-compilar </dev/null >>"$LOG" 2>&1 || true
+	fi
+	# El sysroot: se descomprime dentro del sistema nuevo (con su zstd).
+	if [ -n "$nv_ok" ]; then
+		nv_c=0
+		cp "$nv_tar" "$1/tmp/lazaro-nvidia-raiz.tar.zst" || nv_c=$?
+		[ "$nv_c" != 0 ] || en_destino "$1" sh -c 'rm -rf /opt/lazaro-nvidia/raiz && mkdir -p /opt/lazaro-nvidia/raiz && zstd -dc /tmp/lazaro-nvidia-raiz.tar.zst | tar -xpf - -C /opt/lazaro-nvidia/raiz' </dev/null >>"$LOG" 2>&1 || nv_c=$?
+		rm -f "$1/tmp/lazaro-nvidia-raiz.tar.zst"
+		[ "$nv_c" = 0 ] || { nv_ok=""; log "Aviso: no se pudo copiar el sysroot de NVIDIA (código $nv_c)."; }
+	fi
+	# lazaro-nvidia y sus archivos quedan en el sistema para --desactivar.
+	if [ -n "$nv_ok" ]; then
+		install -Dm755 /usr/sbin/lazaro-nvidia "$1/usr/local/sbin/lazaro-nvidia"
+		mkdir -p "$1/usr/local/share/lazaro"
+		rm -rf "$1/usr/local/share/lazaro/nvidia"
+		cp -a "$DATOS/nvidia" "$1/usr/local/share/lazaro/nvidia"
+		LAZARO_DESTINO="$1" LAZARO_NVIDIA_DATOS="$DATOS/nvidia" sh /usr/sbin/lazaro-nvidia --activar >>"$LOG" 2>&1 || { nv_ok=""; log "Aviso: lazaro-nvidia --activar falló."; }
+	fi
+	if [ -n "$nv_ok" ]; then
+		# El initramfs, con nouveau en la lista negra desde el arranque.
+		for nv_kv in $nv_ok; do
+			en_destino "$1" mkinitfs "$nv_kv" </dev/null >>"$LOG" 2>&1 || log "Aviso: no se pudo rehacer el initramfs de $nv_kv."
+		done
+	fi
+	repos_volver "$1"
+	avance_parar
+	if [ -z "$nv_ok" ]; then
+		log "Aviso: no se pudo preparar el controlador de NVIDIA (detalles en $LOG). Queda nouveau."
+		echo "LAZARO-NVIDIA-NO"
+		return 0
+	fi
+	log "NVIDIA $nv_ver listo (kernel:$nv_ok). Si no arranca el escritorio, el sistema vuelve solo a nouveau."
+	echo "LAZARO-NVIDIA-OK $nv_ver$nv_ok"
+}
+
 # --- Paso 1: sistema base -------------------------------------------------
 paso_base() {
 	raiz="${1%/}"
@@ -831,6 +952,7 @@ paso_escritorio() {
 		avance_parar
 		servicios_a_default "$raiz"
 		log "Escritorio 'icewm' instalado."
+		paso_nvidia "$raiz" icewm
 		return 0
 	fi
 	log "Instalando el escritorio '$de' con setup-desktop..."
@@ -842,6 +964,7 @@ paso_escritorio() {
 	avance_parar
 	servicios_a_default "$raiz"
 	log "Escritorio '$de' instalado."
+	paso_nvidia "$raiz" "$de"
 }
 
 # Programas adicionales que vienen en la ISO (ver LAZARO_EXTRAS en

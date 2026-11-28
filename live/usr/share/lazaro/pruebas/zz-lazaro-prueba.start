@@ -174,6 +174,22 @@ idioma_sesion() {
 			echo "LAZARO-LXQT-NO$falta"
 		fi
 	fi
+	# NVIDIA simulada (pruebas/qemu.sh ... nvidia): sin la tarjeta el
+	# módulo no carga y lazaro-nvidia.initd vuelve solo a nouveau; el
+	# sysroot queda instalado.
+	if [ -f /var/log/lazaro-nvidia.log ]; then
+		if grep -q 'vuelta atrás' /var/log/lazaro-nvidia.log \
+			&& [ ! -e /etc/lightdm/lightdm.conf.d/50-lazaro-nvidia.conf ] \
+			&& [ ! -e /etc/modprobe.d/lazaro-nvidia.conf ] \
+			&& [ ! -e /etc/runlevels/default/lazaro-nvidia ] \
+			&& [ -x /opt/lazaro-nvidia/raiz/usr/bin/Xorg ]; then
+			echo "LAZARO-NVIDIA-VUELTA-OK"
+		else
+			echo "LAZARO-NVIDIA-VUELTA-NO"
+			ls -l /etc/lightdm/lightdm.conf.d /etc/modprobe.d 2>&1 | head -n 20
+		fi
+		head -n 20 /var/log/lazaro-nvidia.log
+	fi
 	if [ -z "$ajenos" ]; then
 		echo "LAZARO-HOME-OK"
 	else

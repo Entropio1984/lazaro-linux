@@ -11,6 +11,9 @@
 #                              los módulos; es lo que haría nvidia-modprobe)
 #   nvidia-raiz xorg ARG...    el Xorg del sysroot, para LightDM:
 #                              xserver-command=/usr/libexec/lazaro/nvidia-raiz xorg
+#   nvidia-raiz listo          el Xorg del sysroot arrancó (LightDM lo llama
+#                              con display-setup-script): borra la cuenta
+#                              de intentos de lazaro-nvidia.initd
 #   nvidia-raiz ejecutar PROG ARG...
 #                              cualquier programa del sysroot (nvidia-smi,
 #                              nvidia-persistenced, glxinfo...)
@@ -104,5 +107,6 @@ case "${1:-}" in
 	# SIGUSR1 ignorada, que es como le avisa que ya está listo.
 	xorg) shift; ejecutar /usr/bin/Xorg "$@" ;;
 	ejecutar) shift; ejecutar "$@" ;;
-	*) echo "uso: $0 montar|desmontar|dispositivos|xorg ARG...|ejecutar PROG ARG..." >&2; exit 2 ;;
+	listo) rm -f "${LAZARO_NVIDIA_ESTADO:-/var/lib/lazaro-nvidia/intentos-xorg}" ;;
+	*) echo "uso: $0 montar|desmontar|dispositivos|listo|xorg ARG...|ejecutar PROG ARG..." >&2; exit 2 ;;
 esac

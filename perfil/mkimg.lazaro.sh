@@ -265,6 +265,15 @@ LAZARO_EXTRAS="fastfetch btop vlc vlc-qt libreoffice libreoffice-lang-es
 LAZARO_CLAUDITO="lazaro-claudito"
 [ "$LAZARO_ARCH" != x86 ] || LAZARO_CLAUDITO=""
 
+# Controlador propietario de NVIDIA (docs/nvidia/ARQUITECTURA.md): el
+# código del módulo abierto y su firmware GSP (paquetes/nvidia-open, lo
+# compila lazaro-instalar en el equipo con build-base y linux-lts-dev, que
+# ya están en la Completa) y zstd para descomprimir el sysroot glibc, que
+# va aparte en la carpeta nvidia/ de la ISO (section_lazaro_nvidia). Solo
+# en la Completa de 64 bits.
+LAZARO_NVIDIA="nvidia-open-src nvidia-open-firmware zstd"
+[ "$LAZARO_ARCH" != x86 ] || LAZARO_NVIDIA=""
+
 LAZARO_COMPLETA="gnome gnome-apps-core gdm
 	plasma-desktop-meta kde-applications-base sddm plasma-nm plasma-pa
 	plasma-desktop-lang kdeplasma-addons-lang xdg-desktop-portal-kde
@@ -272,7 +281,8 @@ LAZARO_COMPLETA="gnome gnome-apps-core gdm
 	linux-firmware lang
 	linux-lts-dev build-base
 	$LAZARO_HARDWARE_COMPLETA
-	$LAZARO_CLAUDITO"
+	$LAZARO_CLAUDITO
+	$LAZARO_NVIDIA"
 
 profile_lazaro() {
 	profile_standard
@@ -411,4 +421,19 @@ section_lazaro_flatpak() {
 build_lazaro_flatpak() {
 	mkdir -p "$DESTDIR/flatpak"
 	cp -R "$LAZARO_FLATPAK_USB"/. "$DESTDIR/flatpak/"
+}
+
+# Edición Completa: el sysroot glibc de NVIDIA (nvidia/construir-raiz.sh,
+# trabajo "Sysroot de NVIDIA" del CI) en la carpeta nvidia/ de la ISO.
+# lazaro-instalar lo copia al sistema nuevo solo si la tarjeta lo usa.
+# Solo si build.sh recibió el archivo (LAZARO_NVIDIA_RAIZ).
+section_lazaro_nvidia() {
+	[ "${LAZARO_EDICION:-ligera}" = completa ] || return 0
+	[ -f "${LAZARO_NVIDIA_RAIZ:-}" ] || return 0
+	build_section lazaro_nvidia "$(basename "$LAZARO_NVIDIA_RAIZ")" "$(checksum < "$LAZARO_NVIDIA_RAIZ")"
+}
+
+build_lazaro_nvidia() {
+	mkdir -p "$DESTDIR/nvidia"
+	cp "$LAZARO_NVIDIA_RAIZ" "$DESTDIR/nvidia/"
 }

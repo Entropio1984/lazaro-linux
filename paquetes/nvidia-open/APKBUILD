@@ -20,7 +20,7 @@
 # el escritorio musl se queda sin aceleración (ver ARQUITECTURA.md, 6).
 pkgname=nvidia-open
 pkgver=620.73.04
-pkgrel=0
+pkgrel=1
 pkgdesc="Módulos abiertos del kernel de NVIDIA (Turing y posteriores)"
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
 arch="x86_64"
@@ -43,6 +43,7 @@ prepare() {
 	default_prepare
 	[ -f "$srcdir/nv/kernel-open/Makefile" ]
 	ls "$srcdir"/nv/firmware/gsp_*.bin >/dev/null
+	[ -f "$srcdir/nv/LICENSE" ]
 }
 
 package() {
@@ -81,6 +82,10 @@ _firmware() {
 	# Va con la versión en la ruta: cada versión del módulo pide la suya.
 	install -Dm644 -t "$subpkgdir"/lib/firmware/nvidia/$pkgver \
 		"$srcdir"/nv/firmware/gsp_*.bin
+	# La licencia de NVIDIA permite redistribuir el firmware sin
+	# modificar; va con él.
+	install -Dm644 "$srcdir"/nv/LICENSE \
+		"$subpkgdir"/usr/share/licenses/$pkgname-firmware/LICENSE
 }
 
 sha512sums=""

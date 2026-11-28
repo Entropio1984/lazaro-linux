@@ -226,6 +226,37 @@ Con el paquete `nvidia-open-src` ya instalado (4.1) y `akms status` en
 4. Si el escritorio no arranca: Ctrl+Alt+F2, entrar como root y
    `sh lazaro-linux/live/usr/sbin/lazaro-nvidia --desactivar && reboot`.
 
+### 4.5 Instalación desde la ISO Completa (paso 4)
+
+- La Completa de 64 bits trae `nvidia-open-src`, `nvidia-open-firmware` y
+  `zstd` en su repositorio, y el sysroot en la carpeta `nvidia/` de la ISO
+  (`LAZARO_NVIDIA_RAIZ` de `build.sh`, que en el CI sale del trabajo
+  «Sysroot de NVIDIA»).
+- `lazaro-instalar` (`paso_nvidia`, al terminar el escritorio) lo instala
+  solo si `lazaro-nvidia --rama` dice `propietario` con `nvidia-open-src`
+  y el escritorio es XFCE, MATE, LXQt o IceWM. Compila el módulo para cada
+  kernel instalado (como `broadcom-wl`: akms no puede dentro del chroot),
+  descomprime el sysroot, copia `lazaro-nvidia` y sus archivos a
+  `/usr/local`, ejecuta `lazaro-nvidia --activar` y rehace el initramfs.
+  Si algo falla, queda nouveau.
+- Vuelta atrás automática (`lazaro-nvidia.initd`): vuelve a nouveau en el
+  mismo arranque si el módulo no carga, si falta el sysroot o si el Xorg
+  del sysroot no avisa en 2 minutos que arrancó (`display-setup-script` de
+  LightDM llama a `nvidia-raiz listo`); en ese caso reinicia LightDM con
+  el Xorg de Lázaro. Queda escrito en `/var/log/lazaro-nvidia.log`.
+- Prueba en el CI: `instalar uefi xfce sin-red nvidia` simula una NVIDIA
+  (`lazaro.nvidia-propietario=forzar`), compila el módulo e instala el
+  sysroot sin internet. Al arrancar el sistema en QEMU, sin la tarjeta, el
+  módulo no carga y tiene que volver solo a nouveau con el escritorio
+  funcionando.
+
+- Licencia: la de NVIDIA permite copiar y redistribuir el controlador
+  para Linux siempre que los binarios no se modifiquen (es lo que hacen
+  Debian, Arch o Ubuntu). El sysroot lleva los archivos tal como los deja
+  el instalador de NVIDIA, con su licencia en
+  `/usr/share/doc/NVIDIA_GLX-1.0/LICENSE`, y `nvidia-open-firmware` la
+  lleva en `/usr/share/licenses/`. El módulo abierto es MIT o GPL-2.0.
+
 ### 4.4 Wayland
 
 Va después de Xorg. Mismo esquema: el compositor (Sway o labwc) se instala

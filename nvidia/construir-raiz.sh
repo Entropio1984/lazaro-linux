@@ -133,9 +133,16 @@ EOT
 
 msg "Limpieza"
 en_raiz apt-get clean >/dev/null 2>&1 || true
+# La documentación se va, salvo la de NVIDIA: su licencia permite
+# redistribuir el controlador sin modificar, y tiene que ir con él.
+nv_doc=$(cd "$RAIZ/usr/share/doc" && find . -maxdepth 1 -name "NVIDIA_GLX-*" | head -n 1)
+nv_doc="${nv_doc#./}"
+[ -n "$nv_doc" ] && [ -f "$RAIZ/usr/share/doc/$nv_doc/LICENSE" ] || die "el instalador no dejó la licencia de NVIDIA en /usr/share/doc"
+mv "$RAIZ/usr/share/doc/$nv_doc" "$TRABAJO/nv-doc"
 rm -rf "$RAIZ"/var/lib/apt/lists/* "$RAIZ"/var/cache/* "$RAIZ"/var/log/* \
 	"$RAIZ"/usr/share/doc/* "$RAIZ"/usr/share/man/* "$RAIZ"/usr/share/info/* \
 	"$RAIZ"/usr/share/locale/* "$RAIZ"/tmp/* "$RAIZ"/root/.cache
+mv "$TRABAJO/nv-doc" "$RAIZ/usr/share/doc/$nv_doc"
 echo "sysroot: $(du -sm "$RAIZ" | cut -f1) MB"
 
 msg "Empaquetando $NOMBRE"

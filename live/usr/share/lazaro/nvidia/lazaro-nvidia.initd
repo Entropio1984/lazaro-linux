@@ -3,14 +3,22 @@
 # (docs/nvidia/ARQUITECTURA.md, 4.3): carga los módulos, crea /dev/nvidia*
 # y monta lo que el Xorg del sysroot necesita, antes de LightDM.
 #
-# Solo se agrega al arranque cuando se activa NVIDIA (paso 4). Si no está
-# el sysroot o el módulo no carga, no falla el arranque: LightDM sigue
-# con su configuración de siempre si no se activó, y el paso 4 se encarga
-# de volver a nouveau.
+# Vuelta atrás automática a nouveau (lazaro-nvidia --desactivar), en el
+# mismo arranque, si:
+#   - el módulo de NVIDIA no carga (por ejemplo, un kernel nuevo para el
+#     que akms no pudo compilarlo) o falta el sysroot;
+#   - el Xorg del sysroot no avisó que arrancó (nvidia-raiz listo, desde
+#     display-setup-script de LightDM) en los 2 minutos siguientes: se
+#     desactiva y se reinicia LightDM con el Xorg de Lázaro;
+#   - ya falló así en los dos arranques anteriores.
+# Lo que pasó queda en /var/log/lazaro-nvidia.log.
 
 description="Controlador propietario de NVIDIA (sysroot glibc)"
 
 RAIZ_NV=/usr/libexec/lazaro/nvidia-raiz
+ESTADO=/var/lib/lazaro-nvidia/intentos-xorg
+REGISTRO=/var/log/lazaro-nvidia.log
+ESPERA_XORG=120
 
 depend() {
 	need localmount
@@ -18,21 +26,84 @@ depend() {
 	before lightdm display-manager nvidia-persistenced
 }
 
+anotar() {
+	echo "$(date '+%F %T') $*" >> "$REGISTRO" 2>/dev/null || true
+}
+
+lazaro_nvidia() {
+	for p in /usr/local/sbin/lazaro-nvidia /usr/sbin/lazaro-nvidia; do
+		[ -x "$p" ] && { echo "$p"; return 0; }
+	done
+	return 1
+}
+
+volver_a_nouveau() { # MOTIVO
+	ewarn "NVIDIA: $1. Se vuelve a nouveau."
+	anotar "vuelta atrás: $1"
+	if p=$(lazaro_nvidia); then
+		"$p" --desactivar >> "$REGISTRO" 2>&1 || true
+	else
+		rm -f /etc/lightdm/lightdm.conf.d/50-lazaro-nvidia.conf \
+			/etc/modprobe.d/lazaro-nvidia.conf \
+			/etc/runlevels/default/lazaro-nvidia \
+			/etc/runlevels/default/nvidia-persistenced
+	fi
+	rm -f "$ESTADO"
+	"$RAIZ_NV" desmontar 2>/dev/null || true
+	modprobe -r nvidia_drm nvidia_modeset nvidia_uvm nvidia 2>/dev/null || true
+	modprobe nouveau 2>/dev/null || true
+}
+
 start() {
 	ebegin "Cargando el controlador de NVIDIA"
-	modprobe nvidia && modprobe nvidia-modeset && modprobe nvidia-drm
-	r=$?
+	if [ ! -x /opt/lazaro-nvidia/raiz/usr/bin/Xorg ]; then
+		eend 0
+		volver_a_nouveau "no está el sysroot en /opt/lazaro-nvidia/raiz"
+		return 0
+	fi
+	if ! { modprobe nvidia && modprobe nvidia-modeset && modprobe nvidia-drm; } 2>> "$REGISTRO"; then
+		eend 0
+		volver_a_nouveau "el módulo no cargó con el kernel $(uname -r)"
+		return 0
+	fi
 	# nvidia-uvm solo hace falta para CUDA: si no carga, se sigue.
 	modprobe nvidia-uvm 2>/dev/null || true
-	eend $r || return 1
+	eend 0
+
+	mkdir -p "${ESTADO%/*}"
+	intentos=$(cat "$ESTADO" 2>/dev/null || echo 0)
+	case "$intentos" in ''|*[!0-9]*) intentos=0 ;; esac
+	if [ "$intentos" -ge 2 ]; then
+		volver_a_nouveau "el Xorg de NVIDIA no arrancó en los $intentos arranques anteriores"
+		return 0
+	fi
+	echo $((intentos + 1)) > "$ESTADO"
 
 	ebegin "Preparando el sysroot de NVIDIA"
 	"$RAIZ_NV" dispositivos && "$RAIZ_NV" montar
-	eend $?
+	r=$?
+	eend $r
+	if [ $r -ne 0 ]; then
+		volver_a_nouveau "no se pudo montar el sysroot"
+		return 0
+	fi
+
+	# Vigía: si el Xorg del sysroot no avisa a tiempo, vuelta atrás en
+	# este mismo arranque y LightDM otra vez, con el Xorg de Lázaro.
+	marca="$(cat "$ESTADO")-$$"
+	echo "$marca" > "$ESTADO.vigia"
+	(
+		sleep "$ESPERA_XORG"
+		[ -f "$ESTADO" ] && [ "$(cat "$ESTADO.vigia" 2>/dev/null)" = "$marca" ] || exit 0
+		volver_a_nouveau "el Xorg de NVIDIA no arrancó en $ESPERA_XORG s"
+		rm -f "$ESTADO.vigia"
+		rc-service lightdm restart >> "$REGISTRO" 2>&1 || true
+	) < /dev/null > /dev/null 2>&1 &
 }
 
 stop() {
 	ebegin "Desmontando el sysroot de NVIDIA"
+	rm -f "$ESTADO.vigia"
 	"$RAIZ_NV" desmontar
 	eend $?
 }

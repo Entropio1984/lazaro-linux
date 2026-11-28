@@ -32,6 +32,10 @@
 #   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red broadcom
 #       Igual, haciendo como si hubiera una wifi Broadcom que necesita
 #       broadcom-wl: el driver debe quedar compilado en el disco.
+#   pruebas/qemu.sh instalar ISO bios|uefi ESCRITORIO con-red|sin-red nvidia
+#       NVIDIA simulada (Completa): el módulo se compila y el sysroot se
+#       instala; al arrancar sin la tarjeta, el sistema vuelve solo a
+#       nouveau y el escritorio tiene que aparecer igual.
 #
 #   pruebas/qemu.sh capturas ISO uefi
 #       Capturas de pantalla para el Manual de Lázaro: el menú de
@@ -423,8 +427,13 @@ prueba_instalar() {
 	red="$2"
 	# broadcom: el instalador hace como si hubiera una wifi Broadcom que
 	# necesita broadcom-wl y debe dejarlo compilado (QEMU no tiene una).
-	broadcom="${3:-}"
-	nombre="instalar-$MODO-$de-$red${broadcom:+-$broadcom}"
+	# nvidia: lo mismo con el controlador propietario de NVIDIA.
+	broadcom="" nvidia=""
+	case "${3:-}" in
+		broadcom) broadcom=broadcom ;;
+		nvidia) nvidia=nvidia ;;
+	esac
+	nombre="instalar-$MODO-$de-$red${3:+-$3}"
 	disco="$RES/$nombre.qcow2"
 	serie="$RES/$nombre-instalacion.log"
 	mon="$SOCK_DIR/$nombre.mon"
@@ -470,7 +479,7 @@ prueba_instalar() {
 	echo "Instalando ($MODO, $de, $red)..."
 	arrancar "$nombre" "$MEM" "$serie" \
 		-kernel "$k" -initrd "$i" \
-		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda lazaro.controladores=huellas,tarjetas${broadcom:+ lazaro.broadcom=forzar}" \
+		-append "modules=$mods console=tty0 console=ttyS0,115200 lazaro.autoinstall=$de lazaro.disco=/dev/vda lazaro.controladores=huellas,tarjetas${broadcom:+ lazaro.broadcom=forzar}${nvidia:+ lazaro.nvidia-propietario=forzar}" \
 		"$@" -drive "file=$disco,if=virtio,format=qcow2" -nic "$nic"
 	if ! esperar "$serie" "$pid" 3600 LAZARO-AUTOINSTALL-OK LAZARO-AUTOINSTALL-FALLO; then
 		captura "$mon" "$RES/$nombre-instalacion-fallo"
@@ -487,6 +496,13 @@ prueba_instalar() {
 		return 1
 	fi
 	[ -z "$broadcom" ] || echo "OK: broadcom-wl compilado ($(grep -m1 -o 'LAZARO-BROADCOM-OK.*' "$serie"))."
+	if [ -n "$nvidia" ] && ! grep -q LAZARO-NVIDIA-OK "$serie"; then
+		terminar "$pid"
+		echo "FALLO: el controlador de NVIDIA no quedó instalado." >&2
+		grep -iE 'nvidia' "$serie" | tail -n 40 >&2 || true
+		return 1
+	fi
+	[ -z "$nvidia" ] || echo "OK: NVIDIA instalado ($(grep -m1 -o 'LAZARO-NVIDIA-OK.*' "$serie")); al arrancar sin la tarjeta tiene que volver a nouveau."
 	# lazaro-controladores: la prueba simula un lector de huellas y uno de
 	# tarjetas (lazaro.controladores=...); sus paquetes vienen en la ISO,
 	# así que se instalan también sin internet. Si el escritorio ya los
@@ -688,6 +704,12 @@ prueba_instalar() {
 			ok=1
 		elif grep -q LAZARO-VT-SIN-XORG "$serie2"; then
 			echo "FALLO: LightDM o SDDM está instalado pero no se encontró su pantalla de inicio (Xorg) para ver si está al frente." >&2
+			ok=1
+		elif [ -n "$nvidia" ] && ! grep -q LAZARO-NVIDIA-VUELTA-OK "$serie2"; then
+			# Sin la tarjeta, el módulo no carga: lazaro-nvidia.initd tiene
+			# que volver solo a nouveau y el escritorio aparecer igual.
+			echo "FALLO: con la NVIDIA simulada, el sistema no volvió solo a nouveau." >&2
+			grep -A 20 'LAZARO-NVIDIA-VUELTA' "$serie2" >&2 || true
 			ok=1
 		elif grep -q LAZARO-EXTRAS-NO "$serie2"; then
 			echo "FALLO: no se instaló el programa adicional marcado (fastfetch)." >&2
@@ -1026,7 +1048,7 @@ case "$orden" in
 	instalar)
 		[ $# -eq 5 ] || [ $# -eq 6 ] || uso
 		case "$5" in con-red|sin-red) ;; *) uso ;; esac
-		case "${6:-}" in "" | broadcom) ;; *) uso ;; esac
+		case "${6:-}" in "" | broadcom | nvidia) ;; *) uso ;; esac
 		prueba_instalar "$4" "$5" "${6:-}" ;;
 	capturas)
 		[ $# -eq 3 ] || uso

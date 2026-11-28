@@ -225,7 +225,7 @@ jobs:
   iso-completa:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: ISO Completa (estable)
-    needs: manual
+    needs: [manual, nvidia-raiz]
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -299,12 +299,21 @@ jobs:
           du -sh "$usb"
           df -h /
 
+      # El sysroot glibc de NVIDIA (trabajo nvidia-raiz): va en la carpeta
+      # nvidia/ de la ISO (docs/nvidia/ARQUITECTURA.md).
+      - uses: actions/download-artifact@v7
+        with:
+          name: nvidia-raiz
+          path: nvidia-raiz
+
       - name: Compilar la ISO Completa
         env:
           ALPINE_BRANCH: ${{ steps.version.outputs.branch }}
           LAZARO_EDICION: completa
           LAZARO_FLATPAK_USB: ${{ github.workspace }}/flatpak-usb
-        run: ./build.sh
+        run: |
+          (cd nvidia-raiz && sha256sum -c ./*.sha256)
+          LAZARO_NVIDIA_RAIZ="$(ls "$PWD"/nvidia-raiz/lazaro-nvidia-raiz-*.tar.zst)" ./build.sh
 
       - name: Tamaño de la ISO
         run: |
@@ -340,6 +349,10 @@ jobs:
           - instalar bios gnome sin-red
           # Wifi Broadcom simulada: broadcom-wl se compila sin internet.
           - instalar bios xfce sin-red broadcom
+          # NVIDIA simulada: el módulo propietario se compila y el sysroot
+          # se instala sin internet; al arrancar sin la tarjeta, el sistema
+          # vuelve solo a nouveau (docs/nvidia/ARQUITECTURA.md).
+          - instalar uefi xfce sin-red nvidia
           - instalar uefi lxqt con-red
           # Sway con su barra, Claudito Shell Fusion, desde el USB (la
           # Ligera no la trae).
