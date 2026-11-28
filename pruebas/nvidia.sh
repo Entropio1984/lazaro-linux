@@ -65,5 +65,44 @@ pkgver=$(sed -n 's/^pkgver=//p' "$DIR/paquetes/nvidia-open/APKBUILD")
 n=$((n + 1))
 if [ "$pkgver" = "$VERSION" ]; then echo "ok   $n APKBUILD y tabla con la misma versión ($pkgver)"; else echo "FALLO $n APKBUILD $pkgver y tabla $VERSION" >&2; fallos=$((fallos + 1)); fi
 
+# --activar y --desactivar en una raíz falsa (LAZARO_DESTINO): qué archivos
+# deja y que desactivar vuelva a nouveau sin borrar el sysroot.
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+dest="$TMP/sistema"
+mkdir -p "$TMP/raiz/usr/bin" "$TMP/raiz/etc"
+: > "$TMP/raiz/usr/bin/Xorg"; chmod +x "$TMP/raiz/usr/bin/Xorg"
+echo "VERSION=$VERSION" > "$TMP/raiz/etc/lazaro-nvidia"
+comprobar() { # NOMBRE CONDICION...
+	nombre="$1"; shift
+	n=$((n + 1))
+	if "$@"; then echo "ok   $n $nombre"; else echo "FALLO $n $nombre" >&2; fallos=$((fallos + 1)); fi
+}
+if command -v zstd >/dev/null 2>&1; then
+	tar -C "$TMP/raiz" -cf - . | zstd -q -o "$TMP/raiz.tar.zst"
+	LAZARO_DESTINO="$dest" sh "$PROG" --activar "$TMP/raiz.tar.zst" >/dev/null
+	comprobar "activar: descomprime el sysroot" [ -x "$dest/opt/lazaro-nvidia/raiz/usr/bin/Xorg" ]
+else
+	echo "(sin zstd: se prueba --activar con el sysroot ya puesto)"
+	mkdir -p "$dest/opt/lazaro-nvidia"
+	cp -a "$TMP/raiz" "$dest/opt/lazaro-nvidia/raiz"
+	LAZARO_DESTINO="$dest" sh "$PROG" --activar >/dev/null
+fi
+comprobar "activar: servicio en el arranque" [ -L "$dest/etc/runlevels/default/lazaro-nvidia" ]
+comprobar "activar: nvidia-raiz instalado" [ -x "$dest/usr/libexec/lazaro/nvidia-raiz" ]
+comprobar "activar: LightDM usa el Xorg del sysroot" grep -q 'xserver-command=/usr/libexec/lazaro/nvidia-raiz xorg' "$dest/etc/lightdm/lightdm.conf.d/50-lazaro-nvidia.conf"
+comprobar "activar: nouveau en la lista negra" grep -qx 'blacklist nouveau' "$dest/etc/modprobe.d/lazaro-nvidia.conf"
+comprobar "activar: regla de udev" [ -f "$dest/etc/udev/rules.d/60-lazaro-nvidia.rules" ]
+LAZARO_DESTINO="$dest" sh "$PROG" --desactivar >/dev/null
+sin_rastro() {
+	[ ! -e "$dest/etc/runlevels/default/lazaro-nvidia" ] &&
+		[ ! -e "$dest/etc/lightdm/lightdm.conf.d/50-lazaro-nvidia.conf" ] &&
+		[ ! -e "$dest/etc/modprobe.d/lazaro-nvidia.conf" ]
+}
+comprobar "desactivar: sin servicio ni LightDM ni lista negra" sin_rastro
+comprobar "desactivar: el sysroot sigue" [ -x "$dest/opt/lazaro-nvidia/raiz/usr/bin/Xorg" ]
+n=$((n + 1))
+if LAZARO_DESTINO="$TMP/vacio" sh "$PROG" --activar >/dev/null 2>&1; then echo "FALLO $n activar sin sysroot no falla" >&2; fallos=$((fallos + 1)); else echo "ok   $n activar sin sysroot: falla"; fi
+
 echo
 if [ "$fallos" -eq 0 ]; then echo "Todo bien ($n casos)."; else echo "$fallos de $n casos fallaron." >&2; exit 1; fi

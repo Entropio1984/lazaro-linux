@@ -1,10 +1,19 @@
 #!/bin/sh
 # lazaro-nvidia: decide qué controlador de NVIDIA le corresponde a la
-# tarjeta del equipo (tabla de docs/nvidia/ARQUITECTURA.md, sección 3).
+# tarjeta del equipo (tabla de docs/nvidia/ARQUITECTURA.md, sección 3) y
+# activa o desactiva el controlador propietario con el sysroot glibc.
 #
-# No instala nada todavía: es la tabla que usarán el instalador y
-# lazaro-controladores (paso 4 del plan). La generación la decide
-# lazaro-graficas, con las mismas reglas que en la sesión live.
+# La tabla la usarán el instalador y lazaro-controladores (paso 4 del
+# plan). La generación la decide lazaro-graficas, con las mismas reglas
+# que en la sesión live.
+#
+#   lazaro-nvidia --activar [SYSROOT.tar.zst]   (como root)
+#        instala el sysroot (si se pasa el archivo de nvidia/construir-raiz.sh),
+#        los servicios y la configuración, y deja nouveau en la lista negra.
+#        Exige el módulo de NVIDIA de la misma versión que el sysroot
+#        (paquete nvidia-open-src). Se nota después de reiniciar.
+#   lazaro-nvidia --desactivar                  (como root)
+#        vuelve a nouveau; el sysroot y el módulo quedan instalados.
 #
 # Uso:
 #   lazaro-nvidia --rama                 la tarjeta de este equipo
@@ -111,8 +120,86 @@ de_este_equipo() {
 	decidir "${GENERACIONES:-${GENERACION:-ninguna}}" "${OPTIMUS:-no}"
 }
 
+# --- Activar y desactivar --------------------------------------------------
+
+# Archivos de live/usr/share/lazaro/nvidia: junto a este programa, tanto en
+# el repositorio como en el sistema (/usr/sbin y /usr/share).
+DATOS="${LAZARO_NVIDIA_DATOS:-$(cd "$(dirname "$0")/../share/lazaro/nvidia" 2>/dev/null && pwd || echo /usr/share/lazaro/nvidia)}"
+DESTINO="${LAZARO_DESTINO:-}"   # raíz del sistema (para las pruebas)
+RAIZ_NV="$DESTINO/opt/lazaro-nvidia/raiz"
+MODPROBE_NV="$DESTINO/etc/modprobe.d/lazaro-nvidia.conf"
+LIGHTDM_NV="$DESTINO/etc/lightdm/lightdm.conf.d/50-lazaro-nvidia.conf"
+
+die() { echo "lazaro-nvidia: $*" >&2; exit 1; }
+
+# Versión del módulo instalado para el kernel en uso (vacía si no hay).
+version_modulo() {
+	modinfo -F version nvidia 2>/dev/null || true
+}
+
+rehacer_initramfs() {
+	# nouveau tiene que quedar fuera también en el arranque temprano.
+	[ -z "$DESTINO" ] || return 0
+	command -v mkinitfs >/dev/null 2>&1 || return 0
+	mkinitfs "$(uname -r)" >/dev/null || echo "aviso: no se pudo rehacer el initramfs" >&2
+}
+
+activar() {
+	[ -n "$DESTINO" ] || [ "$(id -u)" -eq 0 ] || die "hay que ejecutarlo como root"
+	[ -x "$DATOS/nvidia-raiz" ] || die "no están los archivos de $DATOS"
+	if [ -n "${1:-}" ]; then
+		[ -r "$1" ] || die "no se puede leer $1"
+		command -v zstd >/dev/null 2>&1 || die "falta zstd (apk add zstd)"
+		echo "Instalando el sysroot en $RAIZ_NV..."
+		rm -rf "$RAIZ_NV.nuevo"
+		mkdir -p "$RAIZ_NV.nuevo"
+		zstd -dc "$1" | tar -xpf - -C "$RAIZ_NV.nuevo" || { rm -rf "$RAIZ_NV.nuevo"; die "no se pudo descomprimir $1"; }
+		[ ! -d "$RAIZ_NV" ] || { "$DATOS/nvidia-raiz" desmontar 2>/dev/null || true; rm -rf "$RAIZ_NV"; }
+		mv "$RAIZ_NV.nuevo" "$RAIZ_NV"
+	fi
+	[ -x "$RAIZ_NV/usr/bin/Xorg" ] || die "no hay sysroot en $RAIZ_NV: pasa el archivo .tar.zst"
+	v_raiz=$(sed -n 's/^VERSION=//p' "$RAIZ_NV/etc/lazaro-nvidia" 2>/dev/null)
+	if [ -z "$DESTINO" ]; then
+		v_mod=$(version_modulo)
+		[ -n "$v_mod" ] || die "no está el módulo de NVIDIA para $(uname -r) (instala nvidia-open-src y revisa akms status)"
+		[ "$v_mod" = "$v_raiz" ] || die "el módulo es la $v_mod y el sysroot la $v_raiz: tienen que ser la misma versión"
+	fi
+
+	install -Dm755 "$DATOS/nvidia-raiz" "$DESTINO/usr/libexec/lazaro/nvidia-raiz"
+	install -Dm755 "$DATOS/lazaro-nvidia.initd" "$DESTINO/etc/init.d/lazaro-nvidia"
+	install -Dm755 "$DATOS/nvidia-persistenced.initd" "$DESTINO/etc/init.d/nvidia-persistenced"
+	install -Dm644 "$DATOS/60-lazaro-nvidia.rules" "$DESTINO/etc/udev/rules.d/60-lazaro-nvidia.rules"
+	install -Dm644 "$DATOS/50-lazaro-nvidia.conf" "$LIGHTDM_NV"
+	mkdir -p "$(dirname "$MODPROBE_NV")"
+	cat > "$MODPROBE_NV" <<-EOF2
+	# Lázaro Linux: controlador propietario de NVIDIA ($v_raiz), activado
+	# con lazaro-nvidia --activar. Se quita con lazaro-nvidia --desactivar.
+	blacklist nouveau
+	options nouveau modeset=0
+	options nvidia-drm modeset=1 fbdev=1
+	EOF2
+	for s in lazaro-nvidia nvidia-persistenced; do
+		mkdir -p "$DESTINO/etc/runlevels/default"
+		ln -sf "/etc/init.d/$s" "$DESTINO/etc/runlevels/default/$s"
+	done
+	rehacer_initramfs
+	echo "NVIDIA $v_raiz activado. Reinicia para usarlo; si no arranca el escritorio, lazaro-nvidia --desactivar vuelve a nouveau."
+}
+
+desactivar() {
+	[ -n "$DESTINO" ] || [ "$(id -u)" -eq 0 ] || die "hay que ejecutarlo como root"
+	for s in nvidia-persistenced lazaro-nvidia; do
+		rm -f "$DESTINO/etc/runlevels/default/$s"
+	done
+	rm -f "$LIGHTDM_NV" "$MODPROBE_NV"
+	rehacer_initramfs
+	echo "Vuelve nouveau en el próximo arranque. El sysroot ($RAIZ_NV) y el módulo siguen instalados."
+}
+
 case "${1:-}" in
 	--rama)
 		if [ $# -ge 2 ]; then decidir "$2" "${3:-no}"; else de_este_equipo; fi ;;
-	*) echo "uso: $0 --rama [GENERACION [OPTIMUS]]" >&2; exit 2 ;;
+	--activar) activar "${2:-}" ;;
+	--desactivar) desactivar ;;
+	*) echo "uso: $0 --rama [GENERACION [OPTIMUS]] | --activar [SYSROOT.tar.zst] | --desactivar" >&2; exit 2 ;;
 esac

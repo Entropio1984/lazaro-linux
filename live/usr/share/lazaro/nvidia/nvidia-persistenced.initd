@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+# nvidia-persistenced del sysroot: mantiene inicializada la tarjeta entre
+# un programa y otro (sin él, nvidia-smi y CUDA tardan en arrancar y la
+# tarjeta pierde su estado al quedar sin clientes).
+
+description="Demonio de persistencia de NVIDIA"
+
+supervisor=supervise-daemon
+command=/usr/libexec/lazaro/nvidia-raiz
+command_args="ejecutar /usr/bin/nvidia-persistenced --foreground"
+
+depend() {
+	need lazaro-nvidia
+}
