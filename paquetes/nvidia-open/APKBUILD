@@ -63,7 +63,9 @@ _src() {
 	built_modules='nvidia.ko nvidia-modeset.ko nvidia-drm.ko nvidia-uvm.ko'
 
 	build() {
-		make -j"\$(nproc)" SYSSRC="\$kernel_srcdir" modules
+		# Hasta 4 trabajos: cada uno puede pasar de 1 GB de memoria.
+		jobs=\$(nproc); [ "\$jobs" -le 4 ] || jobs=4
+		make -j"\$jobs" SYSSRC="\$kernel_srcdir" modules
 	}
 	EOT
 	install -Dm644 "$srcdir"/$pkgname-src.modprobe \

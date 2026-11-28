@@ -114,6 +114,7 @@ salvo la GT 540M, que no lo soporta.
   - `nvidia-open-src`: el código de `kernel-open` y su `AKMBUILD`. `akms`
     lo compila para cada kernel instalado (`linux-lts` y `linux-lazaro`)
     y lo vuelve a compilar solo cuando el kernel se actualiza.
+    Es el paquete que se instala: trae el firmware como dependencia.
   - `nvidia-open-firmware`: el firmware GSP (`gsp_*.bin`) en
     `/lib/firmware/nvidia/<versión>/`. No es el de
     `linux-firmware-nvidia`, que es el de `nouveau`.
@@ -127,7 +128,9 @@ salvo la GT 540M, que no lo soporta.
   kernel en Limine ni en GRUB: todo va por `modprobe.d`.
 - `lazaro-nvidia --rama` aplica la tabla de la sección 3 a la tarjeta del
   equipo (la generación la decide `lazaro-graficas`). Solo la combinación
-  de las Turing y posteriores con la 620.73.04 está probada.
+  de las Turing y posteriores con la 620.73.04 está probada, y solo en la
+  RTX 3060. Si el equipo tiene varias NVIDIA a las que no les toca la
+  misma rama, o no es x86_64 (la ISO de 32 bits), queda `nouveau`.
 - Pendiente: los módulos cerrados de la 580 (Maxwell, Pascal y Volta), con
   una versión de la 580 que compile en el 6.18, y la 470 (Kepler) con sus
   parches.

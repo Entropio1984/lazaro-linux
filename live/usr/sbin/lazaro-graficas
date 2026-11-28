@@ -104,6 +104,7 @@ revisar() {
 	principal=""
 	chips=""
 	gen=""
+	gens=""
 	for dev in "$SYS"/bus/pci/devices/*; do
 		[ -r "$dev/class" ] || continue
 		case "$(cat "$dev/class")" in
@@ -119,6 +120,7 @@ revisar() {
 		chip="$(chip_de "${dev##*/}")"
 		g="$(generacion_de_chip "$chip")"
 		chips="$chips ${chip:-?}"
+		case " $gens " in *" $g "*) ;; *) gens="${gens:+$gens }$g" ;; esac
 		if [ -z "$gen" ] || [ "$(orden "$g")" -lt "$(orden "$gen")" ]; then
 			gen="$g"
 		fi
@@ -173,6 +175,7 @@ revisar() {
 	MOTIVO=$motivo
 	GENERACION=${gen:-ninguna}
 	CHIPS="$chips"
+	GENERACIONES="$gens"
 	OPTIMUS=$optimus
 	EOF
 	resumen="decision=$decision motivo=$motivo generacion=${gen:-ninguna} chips=${chips:-ninguno} optimus=$optimus"
