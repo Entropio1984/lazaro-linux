@@ -90,18 +90,25 @@ done
 en_raiz /bin/sh /root/nvidia.run --accept-license --ui=none --no-questions \
 	--no-kernel-module --no-install-libglvnd --no-x-check --no-nouveau-check \
 	--no-distro-scripts --no-systemd --no-rpms --no-backup \
-	--no-check-for-alternate-installs || {
+	--no-check-for-alternate-installs \
+	--glvnd-egl-config-path=/usr/share/glvnd/egl_vendor.d || {
 	tail -n 60 "$RAIZ/var/log/nvidia-installer.log" >&2 || true
 	die "falló el instalador de NVIDIA"
 }
 desmontar
 rm -f "$RAIZ/root/nvidia.run"
 
-for f in usr/lib/xorg/modules/drivers/nvidia_drv.so usr/bin/nvidia-smi usr/bin/nvidia-persistenced; do
+# Sin pkg-config de libglvnd, el instalador no sabe dónde va la
+# configuración de EGL (10_nvidia.json) y la omite con un aviso: por eso
+# se le da la ruta y aquí se comprueba, junto con la de Vulkan.
+for f in usr/lib/xorg/modules/drivers/nvidia_drv.so usr/bin/nvidia-smi usr/bin/nvidia-persistenced \
+	usr/share/glvnd/egl_vendor.d/10_nvidia.json; do
 	[ -e "$RAIZ/$f" ] || die "el instalador no dejó /$f"
 done
 # Las bibliotecas de NVIDIA tienen que encontrar todo lo que piden dentro
 # del sysroot (sin la GPU no se puede probar más que esto).
+[ -n "$(cd "$RAIZ" && find usr/share/vulkan etc/vulkan -name 'nvidia_icd*.json' 2>/dev/null)" ] \
+	|| die "el instalador no dejó la configuración de Vulkan (nvidia_icd.json)"
 glx=$(cd "$RAIZ" && find usr/lib -name 'libGLX_nvidia.so.*' -type f | head -n 1)
 [ -n "$glx" ] || die "el instalador no dejó libGLX_nvidia.so"
 faltan=$(for f in "/$glx" /usr/lib/xorg/modules/drivers/nvidia_drv.so; do
