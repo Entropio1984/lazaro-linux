@@ -153,28 +153,78 @@ kernel en uso, y `/lib/modules/$(uname -r)` tiene que tener `nvidia.ko`.
 
 ### 4.2 Sysroot glibc
 
-- Base: **Debian estable**, creada con `debootstrap`. Se elige Debian y no
-  una distribución continua (Void, Arch) porque la ABI de Xorg tiene que
-  quedarse quieta durante años para la rama 470.
+- Base: **Debian estable** (trixie), creada con `debootstrap`. Se elige
+  Debian y no una distribución continua (Void, Arch) porque la ABI de Xorg
+  tiene que quedarse quieta durante años para la rama 470.
 - Contenido mínimo: `xserver-xorg-core`, `xserver-xorg-input-libinput`,
-  libglvnd y las herramientas de prueba. Unos 250 MB.
-- El espacio de usuario de NVIDIA se instala dentro con el propio `.run`
+  libglvnd, `glxinfo` y `vulkaninfo` para diagnosticar, y el espacio de
+  usuario de NVIDIA, instalado con el propio `.run`
   (`--no-kernel-module --no-install-libglvnd`).
-- Montajes hacia el sysroot: `/dev`, `/proc`, `/sys`, `/run/udev` (Xorg
-  descubre teclado y ratón con el udev de Lázaro, que es eudev) y
-  `/tmp/.X11-unix` (para que los clientes musl encuentren la pantalla).
-  En la prueba se hace con `chroot`. En la versión final, con
-  `bubblewrap` o un espacio de nombres de montaje, para que no queden
-  montajes sueltos.
+- **No se arma en el equipo**: `nvidia/construir-raiz.sh` lo arma en el CI
+  de GitHub (trabajo «Sysroot de NVIDIA») y lo deja en
+  `lazaro-nvidia-raiz-<versión>.tar.zst`, con la misma versión que
+  `lazaro-nvidia` (`VERSION_ACTUAL`). Comprueba que estén
+  `nvidia_drv.so`, `nvidia-smi` y `nvidia-persistenced`, y que a las
+  bibliotecas de NVIDIA no les falte nada dentro del sysroot. En la RTX
+  3060, armarlo con `debootstrap` tardó 67 minutos.
+- La ISO Completa (64 bits) trae ese archivo y el módulo de la rama actual
+  (decisión del 27-11-2026): Turing y posteriores se instalan sin
+  internet. Las ramas 580 y 470 se descargarán al instalar, cuando estén
+  probadas.
+- `/etc/lazaro-nvidia` dentro del sysroot guarda su versión: activarlo
+  exige que el módulo del kernel sea la misma.
 
-### 4.3 Integración con LightDM y OpenRC
+### 4.3 Integración con LightDM, OpenRC y udev
 
-- LightDM: `xserver-command=/usr/libexec/lazaro/nvidia-xorg`, un envoltorio
-  que entra al sysroot y ejecuta su Xorg.
-- OpenRC: `nvidia-persistenced` (dentro del sysroot), y carga de módulos
-  antes de `lightdm`.
-- Reglas de udev para crear `/dev/nvidia*` y `/dev/nvidia-uvm` (lo que
-  normalmente hace `nvidia-modprobe`).
+Los archivos están en `live/usr/share/lazaro/nvidia/` y los instala
+`lazaro-nvidia --activar`:
+
+| Archivo | Va en | Qué hace |
+|---|---|---|
+| `nvidia-raiz` | `/usr/libexec/lazaro/` | monta lo que el sysroot necesita, crea `/dev/nvidia*` y ejecuta programas del sysroot |
+| `lazaro-nvidia.initd` | `/etc/init.d/lazaro-nvidia` | antes de LightDM: carga los módulos, crea los dispositivos y monta |
+| `nvidia-persistenced.initd` | `/etc/init.d/nvidia-persistenced` | el demonio de persistencia del sysroot, con `supervise-daemon` |
+| `60-lazaro-nvidia.rules` | `/etc/udev/rules.d/` | crea `/dev/nvidia*` al cargar los módulos (lo que haría `nvidia-modprobe`, que es glibc) |
+| `50-lazaro-nvidia.conf` | `/etc/lightdm/lightdm.conf.d/` | `xserver-command=/usr/libexec/lazaro/nvidia-raiz xorg` |
+
+- Montajes hacia el sysroot: `/dev`, `/dev/pts`, `/dev/shm`, `/proc`,
+  `/sys`, `/run` (trae `/run/udev`, para que libinput encuentre teclado y
+  ratón, y el archivo `-auth` de LightDM), `/tmp/.X11-unix` (para que los
+  clientes musl encuentren la pantalla) y `/etc/X11/xorg.conf.d`, de solo
+  lectura (el teclado que eligió el instalador). La configuración de
+  NVIDIA del sysroot va en `/usr/share/X11/xorg.conf.d` para no quedar
+  tapada.
+- `nvidia-raiz xorg` llega a Xorg con `exec` en cada paso: Xorg conserva
+  el PID que lanzó LightDM y la señal `SIGUSR1` ignorada, que es como
+  LightDM se entera de que ya está listo.
+- `lazaro-nvidia --activar` también deja `nouveau` en la lista negra,
+  `nvidia-drm modeset=1 fbdev=1` y rehace el initramfs.
+  `lazaro-nvidia --desactivar` lo deshace y vuelve a `nouveau` en el
+  siguiente arranque, sin borrar el sysroot ni el módulo. Es la base de la
+  vuelta atrás automática del paso 4.
+- Pendiente: un espacio de nombres de montaje en lugar de montajes en el
+  sistema, y la vuelta atrás automática si Xorg no arranca.
+
+#### Probar el sysroot en el equipo (RTX 3060)
+
+Con el paquete `nvidia-open-src` ya instalado (4.1) y `akms status` en
+`installed`:
+
+1. Descargar el artefacto `nvidia-raiz` del último «Lázaro Linux ISO» de
+   GitHub Actions y descomprimir el .zip.
+2. En la carpeta del repositorio, como root:
+   ```
+   doas apk add zstd
+   doas sh live/usr/sbin/lazaro-nvidia --activar ~/Downloads/lazaro-nvidia-raiz-620.73.04.tar.zst
+   doas reboot
+   ```
+3. Tiene que aparecer LightDM y el escritorio XFCE. En una terminal:
+   `doas /usr/libexec/lazaro/nvidia-raiz ejecutar nvidia-smi` muestra la
+   tarjeta y el Xorg, y `grep NVIDIA /var/log/Xorg.0.log` (dentro del
+   sysroot: `/opt/lazaro-nvidia/raiz/var/log/Xorg.0.log`) muestra el
+   controlador.
+4. Si el escritorio no arranca: Ctrl+Alt+F2, entrar como root y
+   `sh lazaro-linux/live/usr/sbin/lazaro-nvidia --desactivar && reboot`.
 
 ### 4.4 Wayland
 

@@ -1,0 +1,108 @@
+#!/bin/sh
+# nvidia-raiz: une el sysroot glibc de NVIDIA (/opt/lazaro-nvidia/raiz)
+# con el sistema musl de Lázaro (docs/nvidia/ARQUITECTURA.md, 4.2 y 4.3).
+#
+# En el sistema instalado va en /usr/libexec/lazaro/nvidia-raiz.
+#
+#   nvidia-raiz montar         monta /dev, /proc, /sys, /run, el socket de
+#                              X y la configuración de Xorg dentro del sysroot
+#   nvidia-raiz desmontar      deshace lo anterior
+#   nvidia-raiz dispositivos   crea /dev/nvidia* (lo llama udev al cargar
+#                              los módulos; es lo que haría nvidia-modprobe)
+#   nvidia-raiz xorg ARG...    el Xorg del sysroot, para LightDM:
+#                              xserver-command=/usr/libexec/lazaro/nvidia-raiz xorg
+#   nvidia-raiz ejecutar PROG ARG...
+#                              cualquier programa del sysroot (nvidia-smi,
+#                              nvidia-persistenced, glxinfo...)
+#
+# Variables para las pruebas: LAZARO_NVIDIA_RAIZ (el sysroot), LAZARO_PROC
+# (en vez de /proc), LAZARO_DEV (en vez de /dev) y LAZARO_MKNOD (en vez de
+# mknod).
+
+set -eu
+
+RAIZ="${LAZARO_NVIDIA_RAIZ:-/opt/lazaro-nvidia/raiz}"
+PROC="${LAZARO_PROC:-/proc}"
+DEV="${LAZARO_DEV:-/dev}"
+MKNOD="${LAZARO_MKNOD:-mknod}"
+
+# Lo que se monta, en orden; se desmonta al revés. /run trae /run/udev
+# (libinput encuentra teclado y ratón con el udev de Lázaro) y el archivo
+# -auth que LightDM le pasa a Xorg (/run/lightdm/...).
+MONTAJES="dev dev/pts dev/shm proc sys run tmp/.X11-unix etc/X11/xorg.conf.d"
+
+die() { echo "nvidia-raiz: $*" >&2; exit 1; }
+
+montado() { grep -q " $1 " "$PROC/mounts"; }
+
+origen() { # carpeta del sistema que se monta en $RAIZ/$1
+	case "$1" in
+		tmp/.X11-unix) echo /tmp/.X11-unix ;;
+		*) echo "/$1" ;;
+	esac
+}
+
+montar() {
+	[ -x "$RAIZ/usr/bin/Xorg" ] || die "no está el sysroot en $RAIZ"
+	mkdir -p /tmp/.X11-unix /etc/X11/xorg.conf.d
+	chmod 1777 /tmp/.X11-unix
+	for d in $MONTAJES; do
+		o="$(origen "$d")"
+		[ -d "$o" ] || continue
+		mkdir -p "$RAIZ/$d"
+		montado "$RAIZ/$d" && continue
+		mount -o bind "$o" "$RAIZ/$d"
+		# La configuración de Xorg (el teclado que eligió el instalador)
+		# se ve desde el sysroot pero no se cambia desde ahí.
+		[ "$d" != etc/X11/xorg.conf.d ] || mount -o remount,bind,ro "$RAIZ/$d" 2>/dev/null || true
+	done
+}
+
+desmontar() {
+	invertida=""
+	for d in $MONTAJES; do invertida="$d $invertida"; done
+	for d in $invertida; do
+		! montado "$RAIZ/$d" || umount "$RAIZ/$d" || umount -l "$RAIZ/$d" || true
+	done
+}
+
+nodo() { # NOMBRE MAYOR MENOR
+	[ -e "$DEV/$1" ] || "$MKNOD" -m 666 "$DEV/$1" c "$2" "$3"
+}
+
+dispositivos() {
+	[ -d "$PROC/driver/nvidia" ] || return 0
+	i=0
+	for _g in "$PROC"/driver/nvidia/gpus/*; do
+		[ -e "$_g" ] || continue
+		nodo "nvidia$i" 195 "$i"
+		i=$((i + 1))
+	done
+	nodo nvidiactl 195 255
+	nodo nvidia-modeset 195 254
+	uvm=$(awk '$2 == "nvidia-uvm" { print $1 }' "$PROC/devices" 2>/dev/null || true)
+	if [ -n "$uvm" ]; then
+		nodo nvidia-uvm "$uvm" 0
+		nodo nvidia-uvm-tools "$uvm" 1
+	fi
+}
+
+ejecutar() {
+	[ $# -ge 1 ] || die "falta el programa"
+	montar
+	dispositivos
+	exec chroot "$RAIZ" /usr/bin/env -i \
+		PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root \
+		${DISPLAY:+DISPLAY="$DISPLAY"} "$@"
+}
+
+case "${1:-}" in
+	montar) montar ;;
+	desmontar) desmontar ;;
+	dispositivos) dispositivos ;;
+	# exec en cada paso: Xorg conserva el PID que lanzó LightDM y la señal
+	# SIGUSR1 ignorada, que es como le avisa que ya está listo.
+	xorg) shift; ejecutar /usr/bin/Xorg "$@" ;;
+	ejecutar) shift; ejecutar "$@" ;;
+	*) echo "uso: $0 montar|desmontar|dispositivos|xorg ARG...|ejecutar PROG ARG..." >&2; exit 2 ;;
+esac

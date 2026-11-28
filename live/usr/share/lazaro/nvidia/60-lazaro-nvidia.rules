@@ -1,0 +1,6 @@
+# Lázaro Linux: crea /dev/nvidia* cuando carga el controlador propietario
+# (lo que haría nvidia-modprobe, que es un programa glibc).
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="nvidia", RUN+="/usr/libexec/lazaro/nvidia-raiz dispositivos"
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="nvidia_modeset", RUN+="/usr/libexec/lazaro/nvidia-raiz dispositivos"
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="nvidia_uvm", RUN+="/usr/libexec/lazaro/nvidia-raiz dispositivos"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="nvidia", RUN+="/usr/libexec/lazaro/nvidia-raiz dispositivos"

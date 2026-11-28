@@ -536,6 +536,9 @@ jobs:
       # (docs/nvidia/ARQUITECTURA.md), también con el busybox de Alpine.
       - run: sh pruebas/nvidia.sh
       - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh pruebas/nvidia.sh
+      # nvidia-raiz: los /dev/nvidia* que crea con un /proc simulado.
+      - run: sh pruebas/nvidia-raiz.sh
+      - run: docker run --rm -v "$PWD:/src:ro" -w /src "alpine:$ALPINE_TAG" sh pruebas/nvidia-raiz.sh
       # lazaro-controladores, también con el busybox de Alpine (su awk,
       # tar y dd son los que usa la ISO).
       - run: sh pruebas/controladores.sh
@@ -639,12 +642,51 @@ jobs:
             pruebas/resultados/*.ppm
           retention-days: 14
 
+  # Sysroot glibc de NVIDIA (nvidia/construir-raiz.sh): Debian, Xorg y el
+  # espacio de usuario de NVIDIA en un .tar.zst para la ISO Completa
+  # (docs/nvidia/ARQUITECTURA.md, 4.2). Queda en caché mientras no cambien
+  # el script ni la versión del controlador.
+  nvidia-raiz:
+    name: Sysroot de NVIDIA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Versión del controlador
+        id: version
+        run: echo "nvidia=$(sed -n 's/^VERSION_ACTUAL=//p' live/usr/sbin/lazaro-nvidia)" >> "$GITHUB_OUTPUT"
+      - name: Caché del sysroot
+        id: cache
+        uses: actions/cache@v5
+        with:
+          path: salida-nvidia
+          key: nvidia-raiz-${{ steps.version.outputs.nvidia }}-${{ hashFiles('nvidia/construir-raiz.sh') }}
+      - name: Herramientas
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q debootstrap debian-archive-keyring zstd wget
+      - name: Armar el sysroot
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: sudo sh nvidia/construir-raiz.sh --salida "$PWD/salida-nvidia"
+      - name: Resultado
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" salida-nvidia
+          ls -l salida-nvidia
+          cat salida-nvidia/*.sha256
+      - uses: actions/upload-artifact@v6
+        with:
+          name: nvidia-raiz
+          path: salida-nvidia/
+          retention-days: 7
+          compression-level: 0
+
   # Un solo resultado para la regla que protege main: queda en verde solo
   # si todo lo demás pasó (lo de edge no cuenta: sus fallas solo avisan).
   todo-en-verde:
     name: Todo en verde
     if: always()
-    needs: [manual, iso, pruebas, graficas, iso-completa, pruebas-completa, iso-32, pruebas-32]
+    needs: [manual, iso, pruebas, graficas, nvidia-raiz, iso-completa, pruebas-completa, iso-32, pruebas-32]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

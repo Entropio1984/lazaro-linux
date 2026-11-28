@@ -1,0 +1,38 @@
+#!/sbin/openrc-run
+# Controlador propietario de NVIDIA con el sysroot glibc
+# (docs/nvidia/ARQUITECTURA.md, 4.3): carga los módulos, crea /dev/nvidia*
+# y monta lo que el Xorg del sysroot necesita, antes de LightDM.
+#
+# Solo se agrega al arranque cuando se activa NVIDIA (paso 4). Si no está
+# el sysroot o el módulo no carga, no falla el arranque: LightDM sigue
+# con su configuración de siempre si no se activó, y el paso 4 se encarga
+# de volver a nouveau.
+
+description="Controlador propietario de NVIDIA (sysroot glibc)"
+
+RAIZ_NV=/usr/libexec/lazaro/nvidia-raiz
+
+depend() {
+	need localmount
+	after udev-trigger udev-settle modules
+	before lightdm display-manager nvidia-persistenced
+}
+
+start() {
+	ebegin "Cargando el controlador de NVIDIA"
+	modprobe nvidia && modprobe nvidia-modeset && modprobe nvidia-drm
+	r=$?
+	# nvidia-uvm solo hace falta para CUDA: si no carga, se sigue.
+	modprobe nvidia-uvm 2>/dev/null || true
+	eend $r || return 1
+
+	ebegin "Preparando el sysroot de NVIDIA"
+	"$RAIZ_NV" dispositivos && "$RAIZ_NV" montar
+	eend $?
+}
+
+stop() {
+	ebegin "Desmontando el sysroot de NVIDIA"
+	"$RAIZ_NV" desmontar
+	eend $?
+}
