@@ -17,6 +17,9 @@
 #   LAZARO_FLATPAK_USB: repositorio de Flatpak con OnlyOffice y Brave (lo
 #   prepara el flujo de GitHub Actions). Sin él, esas aplicaciones se
 #   descargan de Flathub después del primer arranque, como en la Ligera.
+#   LAZARO_NVIDIA_RAIZ=/ruta/lazaro-nvidia-raiz-<versión>.tar.zst: el
+#   sysroot glibc de NVIDIA (nvidia/construir-raiz.sh). Sin él, la Completa
+#   instala NVIDIA con nouveau, como la Ligera.
 # Con una copia local de desktop-postinstall.sh:
 #   LAZARO_SCRIPT=../alpine-desktop-setup/desktop-postinstall.sh ./build.sh
 #
@@ -70,6 +73,10 @@ if [ "${1:-}" != "--dentro" ]; then
 	fi
 	if [ -n "${LAZARO_FLATPAK_USB:-}" ]; then
 		set -- "$@" -v "$(realpath "$LAZARO_FLATPAK_USB"):/flatpak-usb:ro" -e LAZARO_FLATPAK_USB=/flatpak-usb
+	fi
+	if [ -n "${LAZARO_NVIDIA_RAIZ:-}" ]; then
+		set -- "$@" -v "$(realpath "$LAZARO_NVIDIA_RAIZ"):/nvidia-raiz/$(basename "$LAZARO_NVIDIA_RAIZ"):ro" \
+			-e LAZARO_NVIDIA_RAIZ="/nvidia-raiz/$(basename "$LAZARO_NVIDIA_RAIZ")"
 	fi
 	# 32 bits: el mismo contenedor de Alpine en su versión i386. Un
 	# procesador de 64 bits lo ejecuta directamente, sin emulación.
@@ -201,6 +208,39 @@ else
 	fi
 	tail -n 5 "$REGISTRO"
 fi
+fi
+
+# --- nvidia-open (módulo abierto de NVIDIA, solo Completa de 64 bits) ---
+# Como broadcom-wl: el código (nvidia-open-src) y el firmware GSP
+# (nvidia-open-firmware); lazaro-instalar compila el módulo si la tarjeta
+# lo usa. Ver paquetes/nvidia-open/APKBUILD y docs/nvidia/ARQUITECTURA.md.
+if [ "$ALPINE_ARCH" != x86 ] && [ "$LAZARO_EDICION" = completa ]; then
+	NV_VER=$(sed -n 's/^pkgver=//p' "$LAZARO_DIR/paquetes/nvidia-open/APKBUILD")
+	NV_REL=$(sed -n 's/^pkgrel=//p' "$LAZARO_DIR/paquetes/nvidia-open/APKBUILD")
+	if ls "$REPO_PROPIO/paquetes/$ALPINE_ARCH/nvidia-open-src-$NV_VER-r$NV_REL.apk" >/dev/null 2>&1; then
+		msg "nvidia-open $NV_VER ya está empaquetado (caché)"
+	else
+		msg "Empaquetando nvidia-open $NV_VER"
+		rm -f "$REPO_PROPIO/paquetes/$ALPINE_ARCH"/nvidia-open-*.apk
+		cd "$TRABAJO/paquetes/nvidia-open"
+		if grep -q '^sha512sums=""' APKBUILD; then
+			su constructor -c "abuild checksum"
+			echo "AVISO: fija esta suma en paquetes/nvidia-open/APKBUILD:"
+			grep -A2 '^sha512sums' APKBUILD
+		fi
+		REGISTRO="$CACHE/abuild-nvidia-open.log"
+		if ! su constructor -c "REPODEST=$REPO_PROPIO abuild -r" > "$REGISTRO" 2>&1; then
+			echo "Últimas líneas útiles de $REGISTRO:" >&2
+			sed -n '/Uninstalling dependencies/q;p' "$REGISTRO" | tail -n 60 >&2
+			die "falló el empaquetado de nvidia-open"
+		fi
+		tail -n 5 "$REGISTRO"
+	fi
+	if [ -f "${LAZARO_NVIDIA_RAIZ:-}" ]; then
+		msg "Sysroot de NVIDIA para el USB: $(basename "$LAZARO_NVIDIA_RAIZ") ($(du -m "$LAZARO_NVIDIA_RAIZ" | cut -f1) MB)"
+	else
+		echo "AVISO: sin LAZARO_NVIDIA_RAIZ; con NVIDIA, la Completa instalará nouveau."
+	fi
 fi
 
 # --- Claudito Shell (la barra de Sway) -----------------------------------
@@ -558,6 +598,7 @@ su constructor -c "cd $CONSTRUCTOR_HOME && \
 	ALPINE_ARCH='$ALPINE_ARCH' \
 	LAZARO_PAQUETES_COMPLETA='$PAQUETES_COMPLETA' \
 	LAZARO_FLATPAK_USB='${LAZARO_FLATPAK_USB:-}' \
+	LAZARO_NVIDIA_RAIZ='${LAZARO_NVIDIA_RAIZ:-}' \
 	sh $APORTS/scripts/mkimage.sh \
 		--tag '$ISO_VERSION' \
 		--outdir '$SALIDA' \
