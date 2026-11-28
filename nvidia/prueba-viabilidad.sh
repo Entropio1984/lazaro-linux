@@ -386,10 +386,22 @@ paso_xorg() {
 
 	grep -E '\(EE\)|NVIDIA\(0\)|Using input driver' "$RAIZ/var/log/Xorg.$PANTALLA.log" 2>/dev/null \
 		| head -n 40 >> "$INFORME" || true
-	kill "$xpid" 2>/dev/null || true
-	sleep 2
+	cerrar_xorg "$xpid"
 	desmontar
 	chvt "$vt_antes" 2>/dev/null || true
+}
+
+# $! es el de la subshell, no el de Xorg dentro de chroot: el PID real
+# está en el archivo de bloqueo que Xorg deja en el /tmp del sysroot.
+cerrar_xorg() {
+	xorg=$(tr -dc 0-9 < "$RAIZ/tmp/.X$PANTALLA-lock" 2>/dev/null || true)
+	for p in $xorg "$1"; do kill "$p" 2>/dev/null || true; done
+	i=0
+	while [ -n "$xorg" ] && kill -0 "$xorg" 2>/dev/null && [ $i -lt 10 ]; do
+		sleep 1; i=$((i + 1))
+	done
+	[ -z "$xorg" ] || ! kill -0 "$xorg" 2>/dev/null || kill -9 "$xorg" 2>/dev/null || true
+	sleep 1
 }
 
 prueba_flatpak() {
