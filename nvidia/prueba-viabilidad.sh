@@ -39,7 +39,9 @@
 
 set -eu
 
-NVIDIA_VERSION="${NVIDIA_VERSION:-580.95.05}"
+# 620.73.04: probada en la RTX 3060 con el kernel 6.18 (la 580.95.05 no
+# compila en el 6.18). Para otras ramas o kernels, --version.
+NVIDIA_VERSION="${NVIDIA_VERSION:-620.73.04}"
 DEBIAN_SUITE="${DEBIAN_SUITE:-trixie}"
 DEBIAN_MIRROR="${DEBIAN_MIRROR:-https://deb.debian.org/debian}"
 FLATPAK_RAMA="${FLATPAK_RAMA:-25.08}"
@@ -336,6 +338,13 @@ paso_xorg() {
 
 	montar
 	vt_antes=$(fgconsole 2>/dev/null || echo 2)
+	# Socket y bloqueo de una ejecución anterior que no cerró bien: si su
+	# Xorg ya no vive, se borran para no confundirlos con el nuevo.
+	if [ -n "$(pid_xorg)" ]; then
+		desmontar
+		die "ya hay un Xorg en la pantalla :$PANTALLA (PID $(pid_xorg)); ciérralo antes"
+	fi
+	rm -f "/tmp/.X11-unix/X$PANTALLA" "$RAIZ/tmp/.X$PANTALLA-lock"
 	en_raiz /usr/bin/Xorg ":$PANTALLA" "vt$PANTALLA" -nolisten tcp -noreset \
 		-logfile "/var/log/Xorg.$PANTALLA.log" > /dev/null 2>&1 &
 	xpid=$!
@@ -345,7 +354,7 @@ paso_xorg() {
 		sleep 1; i=$((i + 1))
 	done
 
-	if [ -S "/tmp/.X11-unix/X$PANTALLA" ]; then
+	if [ -S "/tmp/.X11-unix/X$PANTALLA" ] && [ -n "$(pid_xorg)" ]; then
 		resultado xorg-arranca PASA
 		export DISPLAY=":$PANTALLA"
 
@@ -393,8 +402,15 @@ paso_xorg() {
 
 # $! es el de la subshell, no el de Xorg dentro de chroot: el PID real
 # está en el archivo de bloqueo que Xorg deja en el /tmp del sysroot.
+# PID del archivo de bloqueo, solo si ese proceso vive y es un Xorg.
+pid_xorg() {
+	p=$(tr -dc 0-9 < "$RAIZ/tmp/.X$PANTALLA-lock" 2>/dev/null || true)
+	[ -n "$p" ] && [ "$(cat "/proc/$p/comm" 2>/dev/null)" = Xorg ] && echo "$p"
+	return 0
+}
+
 cerrar_xorg() {
-	xorg=$(tr -dc 0-9 < "$RAIZ/tmp/.X$PANTALLA-lock" 2>/dev/null || true)
+	xorg=$(pid_xorg)
 	for p in $xorg "$1"; do kill "$p" 2>/dev/null || true; done
 	i=0
 	while [ -n "$xorg" ] && kill -0 "$xorg" 2>/dev/null && [ $i -lt 10 ]; do
@@ -402,6 +418,7 @@ cerrar_xorg() {
 	done
 	[ -z "$xorg" ] || ! kill -0 "$xorg" 2>/dev/null || kill -9 "$xorg" 2>/dev/null || true
 	sleep 1
+	[ -n "$(pid_xorg)" ] || rm -f "/tmp/.X11-unix/X$PANTALLA" "$RAIZ/tmp/.X$PANTALLA-lock"
 }
 
 prueba_flatpak() {

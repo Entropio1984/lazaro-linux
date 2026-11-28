@@ -221,4 +221,5 @@ Anotaciones:
   conviene un espejo cercano o un sysroot ya preparado que se descargue de
   una vez.
 - La versión del controlador no puede ser fija: tiene que salir de una
-  tabla por kernel y rama, o de la última de producción de NVIDIA.
+  tabla por kernel y rama, o de la última de producción de NVIDIA. Mientras
+  tanto, la prueba usa por defecto la 620.73.04, la que funcionó aquí.
