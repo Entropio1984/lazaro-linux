@@ -1,0 +1,84 @@
+# Maintainer: Julián <173747797+Entropio1984@users.noreply.github.com>
+#
+# nvidia-open: los módulos abiertos del kernel de NVIDIA (kernel-open) para
+# GPU Turing y posteriores, y su firmware GSP. Paso 2 del plan de
+# docs/nvidia/ARQUITECTURA.md.
+#
+# Se toman del mismo .run que el espacio de usuario (paso 3): el módulo y
+# las bibliotecas tienen que ser exactamente de la misma versión.
+# Probado a mano: 620.73.04 compila con gcc 15.2 y musl contra linux-lts
+# 6.18.65 de Alpine 3.24 y carga en una RTX 3060 (2026-11-27). La
+# 580.95.05 NO compila en el 6.18.
+#
+# Como broadcom-wl, va como código y lo compila akms en el equipo, y akms
+# lo vuelve a compilar solo con cada kernel nuevo (linux-lts y
+# linux-lazaro).
+#
+# Instalar este paquete NO activa NVIDIA: los módulos quedan en la lista
+# negra (nvidia-open-src.modprobe) y nouveau sigue mandando. Los activa el
+# paso 4, solo cuando el espacio de usuario del sysroot está listo; sin él,
+# el escritorio musl se queda sin aceleración (ver ARQUITECTURA.md, 6).
+pkgname=nvidia-open
+pkgver=620.73.04
+pkgrel=0
+pkgdesc="Módulos abiertos del kernel de NVIDIA (Turing y posteriores)"
+url="https://github.com/NVIDIA/open-gpu-kernel-modules"
+arch="x86_64"
+license="MIT OR GPL-2.0-only"
+makedepends="xz zstd tar"
+options="!check !strip !tracedeps"
+subpackages="$pkgname-src:_src $pkgname-firmware:_firmware"
+_run="NVIDIA-Linux-x86_64-$pkgver.run"
+source="$_run::https://us.download.nvidia.com/XFree86/Linux-x86_64/$pkgver/$_run
+	$pkgname-src.modprobe
+	"
+
+unpack() {
+	# abuild deja la descarga como enlace simbólico; makeself necesita
+	# leerse a sí mismo, así que se ejecuta desde la ruta real.
+	sh "$(readlink -f "$srcdir/$_run")" --extract-only --target "$srcdir/nv" >/dev/null
+}
+
+prepare() {
+	default_prepare
+	[ -f "$srcdir/nv/kernel-open/Makefile" ]
+	ls "$srcdir"/nv/firmware/gsp_*.bin >/dev/null
+}
+
+package() {
+	mkdir -p "$pkgdir"
+}
+
+_src() {
+	pkgdesc="$pkgdesc (código para akms)"
+	depends="akms $pkgname-firmware=$pkgver-r$pkgrel"
+	local destdir="$subpkgdir/usr/src/$pkgname-$pkgver"
+	mkdir -p "$destdir"
+	cp -a "$srcdir"/nv/kernel-open/. "$destdir"/
+	# akms compila con el Makefile de NVIDIA (hace sus "conftest" contra
+	# las cabeceras del kernel) en vez del Kbuild directo.
+	cat > "$destdir"/AKMBUILD <<-EOT
+	modname=$pkgname
+	modver=$pkgver-r$pkgrel
+	built_modules='nvidia.ko nvidia-modeset.ko nvidia-drm.ko nvidia-uvm.ko'
+
+	build() {
+		make -j"\$(nproc)" SYSSRC="\$kernel_srcdir" modules
+	}
+	EOT
+	install -Dm644 "$srcdir"/$pkgname-src.modprobe \
+		"$subpkgdir"/etc/modprobe.d/nvidia-open.conf
+	if [ -f "$srcdir"/nv/kernel-open/COPYING ]; then
+		install -Dm644 "$srcdir"/nv/kernel-open/COPYING \
+			"$subpkgdir"/usr/share/licenses/$pkgname/COPYING
+	fi
+}
+
+_firmware() {
+	pkgdesc="Firmware GSP de NVIDIA para los módulos $pkgver"
+	# Va con la versión en la ruta: cada versión del módulo pide la suya.
+	install -Dm644 -t "$subpkgdir"/lib/firmware/nvidia/$pkgver \
+		"$srcdir"/nv/firmware/gsp_*.bin
+}
+
+sha512sums=""

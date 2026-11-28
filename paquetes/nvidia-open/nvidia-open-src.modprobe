@@ -1,0 +1,9 @@
+# Lázaro Linux: los módulos de NVIDIA están instalados pero NO se cargan
+# solos (nouveau sigue manejando la tarjeta). Se activan junto con el
+# espacio de usuario del sysroot glibc, que es el que los usa: ver
+# docs/nvidia/ARQUITECTURA.md en el repositorio de Lázaro Linux.
+# Un "modprobe nvidia" a mano sí los carga.
+blacklist nvidia
+blacklist nvidia-drm
+blacklist nvidia-modeset
+blacklist nvidia-uvm
